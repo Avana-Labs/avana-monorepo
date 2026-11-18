@@ -7,7 +7,7 @@ import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
 import {ParameterStoreRisk} from "./ParameterStoreRisk.sol";
 import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";
-import {ParameterStoreLogics} from "./types/ParameterStoreLogics.sol";
+import {ParameterStoreLogics} from "./types/ParameterStoreTypes.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 

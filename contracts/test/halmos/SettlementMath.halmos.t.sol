@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {SettlementMath} from "../../src/liquidation/lp-vault-swap/SettlementMath.sol";
 import {SettlementMathHarness} from "../utils/harness/SettlementMathHarness.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -80,7 +80,7 @@ contract SettlementMathHalmosTest is Test {
             assert(ok);
             assert(inflow == outflow + abi.decode(ret, (uint256)));
         } else {
-            assert(!ok && bytes4(ret) == ILPVaultSwapErrors.InsufficientProceeds.selector);
+            assert(!ok && bytes4(ret) == ILPVaultSwapBase.InsufficientProceeds.selector);
         }
     }
 
@@ -196,9 +196,9 @@ contract SettlementMathHalmosTest is Test {
             .call(abi.encodeCall(SettlementMathHarness.shortfallTopUp, (minRec, recovered, gap, maxShortfall)));
         uint256 floorGap = minRec > recovered ? minRec - recovered : 0;
         if (floorGap > maxShortfall) {
-            assert(!ok && bytes4(ret) == ILPVaultSwapErrors.RecoveryBelowFloor.selector);
+            assert(!ok && bytes4(ret) == ILPVaultSwapBase.RecoveryBelowFloor.selector);
         } else if (gap > maxShortfall) {
-            assert(!ok && bytes4(ret) == ILPVaultSwapErrors.InsufficientProceeds.selector);
+            assert(!ok && bytes4(ret) == ILPVaultSwapBase.InsufficientProceeds.selector);
         } else {
             assert(ok);
             uint256 shortfall = abi.decode(ret, (uint256));

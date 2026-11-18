@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAvanaTimelockErrors} from "../../src/governance/timelock/IAvanaTimelockErrors.sol";
-import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterStoreAdmin.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
+import {IAvanaTimelock} from "../../src/governance/timelock/IAvanaTimelock.sol";
+import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 
@@ -43,27 +43,25 @@ contract ParameterStoreTimelockRowsUnitTest is ParameterStoreFixture {
 
         Call[] memory lower = _one(address(store), abi.encodeCall(store.tightenMinPledgeUsd, (M, 15e8)));
         _scheduleAndWait(lower, SHORT_DELAY, bytes32("lower"));
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         _execute(attacker, lower, bytes32("lower"));
         Call[] memory huge = _one(address(store), abi.encodeCall(store.tightenMinPledgeUsd, (M, 100_000e8 + 1)));
         _scheduleAndWait(huge, SHORT_DELAY, bytes32("huge"));
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         _execute(attacker, huge, bytes32("huge"));
         assertEq(store.minPledgeUsd(M), 20e8, "refused writes change nothing");
 
         Call[] memory down = _one(address(store), abi.encodeCall(store.loosenMinPledgeUsd, (M, 10e8)));
         assertEq(_required(down), NORMAL_DELAY, "loosen needs the normal delay");
         (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(down);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAvanaTimelockErrors.DelayBelowRequired.selector, SHORT_DELAY, NORMAL_DELAY)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.DelayBelowRequired.selector, SHORT_DELAY, NORMAL_DELAY));
         vm.prank(governanceMultisig);
         timelock.scheduleBatch(t, v, p, bytes32(0), bytes32("short"), SHORT_DELAY);
         _run(down, bytes32("down"));
         assertEq(store.minPledgeUsd(M), 10e8, "lowered after the normal delay");
         Call[] memory higher = _one(address(store), abi.encodeCall(store.loosenMinPledgeUsd, (M, 30e8)));
         _scheduleAndWait(higher, NORMAL_DELAY, bytes32("higher"));
-        vm.expectRevert(IParameterStoreErrors.NotLooser.selector);
+        vm.expectRevert(IParameterStoreBase.NotLooser.selector);
         _execute(attacker, higher, bytes32("higher"));
         assertTrue(start != 20e8, "the run moved the value");
     }
@@ -79,12 +77,12 @@ contract ParameterStoreTimelockRowsUnitTest is ParameterStoreFixture {
             "tightenFloorRoundingAllowance is short-eligible"
         );
         assertTrue(
-            timelock.isShortEligible(address(store), IParameterStoreAdmin.tightenMaxFlashFeeBps.selector),
+            timelock.isShortEligible(address(store), IParameterStore.tightenMaxFlashFeeBps.selector),
             "tightenMaxFlashFeeBps is short-eligible"
         );
         uint16 before = store.maxFlashFeeBps();
         uint16 next = before - 1;
-        Call[] memory c = _one(address(store), abi.encodeCall(IParameterStoreAdmin.tightenMaxFlashFeeBps, (next)));
+        Call[] memory c = _one(address(store), abi.encodeCall(IParameterStore.tightenMaxFlashFeeBps, (next)));
         assertEq(_required(c), SHORT_DELAY, "short delay");
         _run(c, bytes32("flash"));
         assertEq(store.maxFlashFeeBps(), next, "the selector ran on the deployed store");

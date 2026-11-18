@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
-import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
-import {PositionRef} from "../../src/types/PositionRef.sol";
+import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
+import {PositionRef} from "../../src/types/PositionTypes.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 
 /// @title AaveAdapterReentryRowsUnitTest
@@ -78,8 +78,8 @@ contract AaveAdapterReentryRowsUnitTest is AaveAdapterFixture {
             address(coll).staticcall(abi.encodeWithSignature("recordIdOf(uint32,bytes32)", INTEGRATION, k2));
         (bool okCredit, bytes memory r2) =
             address(coll).staticcall(abi.encodeWithSignature("getAccountCredited(address,address)", p, vt));
-        collViewsRefused = !okRecord && !okCredit && bytes4(r1) == ICollateralizationErrors.Locked.selector
-            && bytes4(r2) == ICollateralizationErrors.Locked.selector;
+        collViewsRefused = !okRecord && !okCredit && bytes4(r1) == ICollateralizationBase.Locked.selector
+            && bytes4(r2) == ICollateralizationBase.Locked.selector;
     }
 
     function _arm() internal {

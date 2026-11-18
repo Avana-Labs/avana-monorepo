@@ -3,14 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IntegrationCapabilities} from "../../../src/amm/types/IntegrationCapabilities.sol";
-import {PoolKeying} from "../../../src/amm/types/PoolKeying.sol";
-import {ILPVaultErrors} from "../../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {IntegrationCapabilities, PoolKeying} from "../../../src/amm/types/AmmTypes.sol";
+import {ILPVaultBase} from "../../../src/custody/lp-vault/ILPVaultBase.sol";
 import {ILock} from "../../../src/lock/lock/ILock.sol";
-import {PledgeCharge} from "../../../src/policy/risk-module/types/PledgeCharge.sol";
-import {PledgeCounters} from "../../../src/types/PledgeCounters.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {PledgeCharge} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {PledgeCounters, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @notice Pool token for the Collateralization suites: open mint, an optional sender-side transfer fee (an issuer that
@@ -96,7 +93,7 @@ contract CollPoolToken is ERC20 {
 /// of exactly the removed units paid to the named recipient, fees paid only to the depositor.
 /// @dev Principal per removed unit is `rate[i] / RATE_SCALE` raw units of token i, rounded down. The vault holds a
 /// float of every pool token and pays from it, so a token's transfer fee reaches the recipient.
-contract CollLPVaultMock is ILPVaultErrors {
+contract CollLPVaultMock is ILPVaultBase {
     uint256 public constant RATE_SCALE = 1e6;
 
     struct Position {

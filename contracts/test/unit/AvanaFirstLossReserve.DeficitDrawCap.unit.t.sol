@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAvanaFirstLossReserveErrors} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserveErrors.sol";
+import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {AvanaFirstLossReserveFixture, ICoverageHubSpokeCalls} from "../utils/fixtures/AvanaFirstLossReserveFixture.sol";
 
 /// @title AvanaFirstLossReserveDeficitDrawCapUnitTest
@@ -26,7 +26,7 @@ contract AvanaFirstLossReserveDeficitDrawCapUnitTest is AvanaFirstLossReserveFix
         ICoverageHubSpokeCalls(aave.hub).draw(usdcAssetId, amount, aave.cdpSpoke);
 
         vm.prank(coverageCaller);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.NothingToCover.selector, aave.cdpSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.NothingToCover.selector, aave.cdpSpoke));
         ghoCoverage.coverDeficit(aave.cdpSpoke, type(uint256).max);
 
         uint256 funded = usdcCoverage.fundedBalance();

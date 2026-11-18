@@ -9,10 +9,8 @@ import {ILitePsm} from "../../interfaces/external/sky/ILitePsm.sol";
 import {IPegModuleRoute} from "./IPegModuleRoute.sol";
 import {ISettlementRoute} from "./ISettlementRoute.sol";
 import {RouteMath} from "./RouteMath.sol";
-import {RouteReads} from "./RouteReads.sol";
 import {SwapRouteBase} from "./SwapRouteBase.sol";
-import {PegModuleKind, PegModuleStep} from "./types/PegModuleStep.sol";
-import {RouteConfig} from "./types/RouteConfig.sol";
+import {PegModuleKind, PegModuleStep, RouteConfig} from "./types/SettlementRouteTypes.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
@@ -150,7 +148,7 @@ contract PegModuleRoute is SwapRouteBase, IPegModuleRoute {
         return _answers(step.wrapper, abi.encodeCall(IERC4626.asset, ()), config.tokenIn)
             && _answers(step.module, abi.encodeCall(IGsm.UNDERLYING_ASSET, ()), step.wrapper)
             && _answers(step.module, abi.encodeCall(IGsm.GHO_TOKEN, ()), config.tokenOut)
-            && !RouteReads.hasFeeSwitch(config.tokenIn);
+            && !RouteMath.hasFeeSwitch(config.tokenIn);
     }
 
     function _litePsmLegs(
@@ -159,12 +157,12 @@ contract PegModuleRoute is SwapRouteBase, IPegModuleRoute {
     ) private view returns (bool valid, uint256 gemConversion) {
         if ((step.wrapper == address(0)) != (step.intermediate == address(0))) return (false, 0);
         (bool okDec, uint256[3] memory dec) =
-            RouteReads.words(config.tokenOut, abi.encodeCall(IERC20Metadata.decimals, ()), false);
+            RouteMath.words(config.tokenOut, abi.encodeCall(IERC20Metadata.decimals, ()), false);
         if (!okDec || dec[0] > 18) return (false, 0);
         gemConversion = 10 ** (18 - dec[0]);
         address dai = step.wrapper == address(0) ? config.tokenIn : step.intermediate;
         (bool okFactor, uint256[3] memory factor) =
-            RouteReads.words(step.module, abi.encodeCall(ILitePsm.to18ConversionFactor, ()), false);
+            RouteMath.words(step.module, abi.encodeCall(ILitePsm.to18ConversionFactor, ()), false);
         valid = okFactor && factor[0] == gemConversion
             && _answers(step.module, abi.encodeCall(ILitePsm.gem, ()), config.tokenOut)
             && _answers(step.module, abi.encodeCall(ILitePsm.dai, ()), dai);
@@ -179,7 +177,7 @@ contract PegModuleRoute is SwapRouteBase, IPegModuleRoute {
         bytes memory data,
         address expected
     ) private view returns (bool) {
-        (bool ok, address value) = RouteReads.addressOf(target, data);
+        (bool ok, address value) = RouteMath.addressOf(target, data);
         return ok && value == expected;
     }
 

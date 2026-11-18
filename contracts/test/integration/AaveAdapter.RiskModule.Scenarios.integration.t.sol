@@ -3,17 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {DebtReserveDef, MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {DriftReason, PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
 import {RiskSequencerFeed} from "../utils/mocks/RiskModuleMocks.sol";
 
@@ -74,18 +71,18 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
     function test_TEST_027_adapterBoundsPrecedeRiskGates() public {
         _stopEverythingTheRiskModuleReads();
         _pause(PauseState.Frozen, PauseReason.None);
-        _borrowExpect(abi.encodeWithSelector(IAaveAdapterErrors.ApplicationFrozen.selector));
+        _borrowExpect(abi.encodeWithSelector(IAaveAdapterBase.ApplicationFrozen.selector));
         _pause(PauseState.Paused, PauseReason.General);
-        _borrowExpect(abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector));
+        _borrowExpect(abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector));
         _pause(PauseState.None, PauseReason.None);
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.InvalidReceiver.selector, vt));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.InvalidReceiver.selector, vt));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1e18, vt, d, 0, 2);
         registry.setFrozen(alice, true);
-        _borrowExpect(abi.encodeWithSelector(IAaveAdapterErrors.AddressIsFrozen.selector, alice));
+        _borrowExpect(abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, alice));
         registry.setFrozen(alice, false);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.BadNonce.selector, 2, 9));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.BadNonce.selector, 2, 9));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1e18, alice, d, 0, 9);
         _borrowExpect(abi.encodeWithSelector(IRiskModuleErrors.SequencerDown.selector));
@@ -97,11 +94,11 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
     function test_TEST_019_withDebtPrecedence() public {
         lpOracleA.setState(PriceState.Expired, 0, false);
         _pause(PauseState.Paused, PauseReason.General);
-        _withdrawExpect(abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector));
+        _withdrawExpect(abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector));
         _pause(PauseState.Frozen, PauseReason.None);
         _withdrawExpect(abi.encodeWithSelector(IRiskModuleErrors.PriceNotLive.selector, MARKET_ID, PriceState.Expired));
         registry.setFrozen(alice, true);
-        _withdrawExpect(abi.encodeWithSelector(IAaveAdapterErrors.AddressIsFrozen.selector, alice));
+        _withdrawExpect(abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, alice));
         registry.setFrozen(alice, false);
         lpOracleA.setState(PriceState.Live, 0, true);
         vm.prank(alice);
@@ -184,7 +181,7 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
         _withdrawExpect(drift);
         uint256 d = _deadline();
         vm.expectRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.UnknownDebtReserve.selector, aave.cdpSpoke, usdcReserveId)
+            abi.encodeWithSelector(IAaveAdapterBase.UnknownDebtReserve.selector, aave.cdpSpoke, usdcReserveId)
         );
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, usdcReserveId, 1e6, alice, d, 0, 2);
@@ -219,14 +216,14 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
         swap.setActiveKeeperCount(0);
         swap.setDeleverage(1000e18, 2e12, 0);
         // The one RiskModule call an exit makes is the speed credit (REQ-RISK-005); no check is called.
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.preBorrowCheck.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.preWithdrawCheck.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.postHealthCheck.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.checkPledge.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.pokeBreakers.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.pokeConfig.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.checkRemainingRecord.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.checkAaveConfig.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preBorrowCheck.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.postHealthCheck.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.checkPledge.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.pokeBreakers.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.pokeConfig.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.checkRemainingRecord.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.checkAaveConfig.selector), 0);
         RepayWithCollateralParams memory params = _rwc(MARKET_ID, k1, 500_000_000, debtReserveId);
         vm.prank(alice);
         (uint256 repaid,) = adapterC.repayWithCollateral(params);
@@ -240,14 +237,14 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
     function test_TEST_099_exitsCallNoRiskModule() public {
         _stopEverythingTheRiskModuleReads();
         // The one RiskModule call an exit makes is the speed credit (REQ-RISK-005); no check is called.
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.preBorrowCheck.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.preWithdrawCheck.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.postHealthCheck.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.checkPledge.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.pokeBreakers.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.pokeConfig.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.checkRemainingRecord.selector), 0);
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.checkAaveConfig.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preBorrowCheck.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.postHealthCheck.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.checkPledge.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.pokeBreakers.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.pokeConfig.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.checkRemainingRecord.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.checkAaveConfig.selector), 0);
         uint256 g = _debtOf(p, debtReserveId);
         uint256 u = _debtOf(p, usdcReserveId);
         _fund(alice, debtReserveId, g);

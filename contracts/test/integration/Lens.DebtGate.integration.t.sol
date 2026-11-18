@@ -3,12 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {DebtPriceView} from "../../src/oracle/debt-oracle/types/DebtPriceView.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {PriceState, RouteSlot} from "../../src/types/OracleTypes.sol";
 import {RealStackVolatile} from "../utils/fixtures/RealStackVolatile.sol";
 import {OracleFeedMock} from "../utils/mocks/LPOracleMocks.sol";
 
@@ -93,7 +92,7 @@ contract LensDebtGateIntegrationTest is RealStackVolatile {
         assertFalse(p.pricesUsable, "the preview reports the gate liquidate enforces");
         assertTrue(mkt[mA].oracle.getPriceState().liquidationPaused, "the LPOracle serves the same USDC alternate");
         _fundCaller(keeper, p.params);
-        vm.expectRevert(ILPVaultSwapErrors.StalePrice.selector);
+        vm.expectRevert(ILPVaultSwapBase.StalePrice.selector);
         vm.prank(keeper);
         lvs.liquidate(p.params);
 
@@ -146,7 +145,7 @@ contract LensDebtGateIntegrationTest is RealStackVolatile {
         usdc.mint(keeper, p.params.debtToCover);
         vm.startPrank(keeper);
         usdc.approve(lpVaultSwap, p.params.debtToCover);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveIdV));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DebtPriceStale.selector, usdcReserveIdV));
         lvs.liquidate(p.params);
         usdc.approve(lpVaultSwap, 0);
         vm.stopPrank();

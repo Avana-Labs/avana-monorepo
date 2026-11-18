@@ -4,16 +4,18 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapLiquidation} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
+import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {LPVaultSwapLiquidationLogic} from "../../../src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol";
-import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
-import {LiquidationParams} from "../../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {RouteMode} from "../../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
+import {
+    LPVaultSwapImmutables,
+    LiquidationParams,
+    LiquidationResult,
+    RouteMode
+} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
+import {PriceState} from "../../../src/types/OracleTypes.sol";
 
 /// @notice An ERC-20 with open mint and burn (only the harness's entry points are fuzzed), a per-recipient block that
 /// makes a transfer to that address revert (so a payout goes to the PayoutEscrow), and the four vault-token views
@@ -630,7 +632,7 @@ contract LPVaultSwapLiquidationProperties {
 
     /// @notice LPVaultSwap's `liquidate`, forwarded to the logic contract by delegatecall with its calldata unchanged.
     fallback() external {
-        if (msg.sig != ILPVaultSwapLiquidation.liquidate.selector) revert();
+        if (msg.sig != ILPVaultSwap.liquidate.selector) revert();
         address logic = LOGIC;
         assembly ("memory-safe") {
             calldatacopy(0, 0, calldatasize())
@@ -821,8 +823,7 @@ contract LPVaultSwapLiquidationProperties {
         }
         Run memory run = _prepare(i, plan);
         Snap memory s0 = _snap(run.k, i);
-        (bool ok, bytes memory ret) =
-            run.k.exec(address(this), abi.encodeCall(ILPVaultSwapLiquidation.liquidate, (run.lp)));
+        (bool ok, bytes memory ret) = run.k.exec(address(this), abi.encodeCall(ILPVaultSwap.liquidate, (run.lp)));
         Snap memory s1 = _snap(run.k, i);
         run.k.exec(address(USDC), abi.encodeCall(LiqToken.approve, (address(this), 0)));
         USDC.setBlocked(address(_wallet(i)), false);

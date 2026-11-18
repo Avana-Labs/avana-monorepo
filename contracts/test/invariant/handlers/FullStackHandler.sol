@@ -8,15 +8,13 @@ import {AvanaTimelock} from "../../../src/governance/timelock/AvanaTimelock.sol"
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {IAaveAdapterErrors} from "../../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
+import {IAaveAdapterBase} from "../../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreTighten} from "../../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
-import {PledgeCounters} from "../../../src/types/PledgeCounters.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
+import {PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {PledgeCounters, PositionRef} from "../../../src/types/PositionTypes.sol";
 import {ClTestToken} from "../../utils/fixtures/ClPoolFixture.sol";
 import {FullStackLPVaultMock} from "../../utils/mocks/FullStackLPVaultMock.sol";
 import {OracleFeedMock} from "../../utils/mocks/LPOracleMocks.sol";
@@ -550,10 +548,9 @@ contract FullStackHandler is CommonBase, StdUtils {
     ) internal returns (bool blocked) {
         if (ret.length < 4) return false;
         bytes4 sel = bytes4(ret);
-        blocked = sel == IAaveAdapterErrors.ApplicationFrozen.selector
-            || sel == IAaveAdapterErrors.ApplicationPaused.selector
-            || sel == IAaveAdapterErrors.AddressIsFrozen.selector || sel == IRiskModuleErrors.BreakerTripped.selector
-            || sel == IRiskModuleErrors.DebtBreakerTripped.selector;
+        blocked = sel == IAaveAdapterBase.ApplicationFrozen.selector
+            || sel == IAaveAdapterBase.ApplicationPaused.selector || sel == IAaveAdapterBase.AddressIsFrozen.selector
+            || sel == IRiskModuleErrors.BreakerTripped.selector || sel == IRiskModuleErrors.DebtBreakerTripped.selector;
         if (blocked) ++exitBlocked;
     }
 }

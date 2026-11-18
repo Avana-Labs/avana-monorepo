@@ -3,11 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
-import {IRiskModuleViews} from "../../src/policy/risk-module/IRiskModuleViews.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
+import {PauseReason} from "../../src/types/MarketTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @title RiskModulePauseIndependenceUnitTest
@@ -32,21 +31,21 @@ contract RiskModulePauseIndependenceUnitTest is RiskModuleFixture {
         ids[0] = mid;
         c = new bytes[](12);
         c[0] = abi.encodeCall(
-            IRiskModuleChecks.checkPledge, (wallet, address(proxy), mid, V3, bytes32(uint256(1)), UNITS, k, false)
+            IRiskModule.checkPledge, (wallet, address(proxy), mid, V3, bytes32(uint256(1)), UNITS, k, false)
         );
         c[1] = abi.encodeCall(
-            IRiskModuleChecks.checkPledge, (wallet, address(proxy), mid, V3, bytes32(uint256(1)), UNITS, k, true)
+            IRiskModule.checkPledge, (wallet, address(proxy), mid, V3, bytes32(uint256(1)), UNITS, k, true)
         );
-        c[2] = abi.encodeCall(IRiskModuleChecks.preBorrowCheck, (address(proxy), GHO_RESERVE, 1));
-        c[3] = abi.encodeCall(IRiskModuleChecks.preBorrowCheck, (address(proxy), USDC_RESERVE, 1));
-        c[4] = abi.encodeCall(IRiskModuleChecks.preWithdrawCheck, (address(proxy)));
-        c[5] = abi.encodeCall(IRiskModuleChecks.postHealthCheck, (address(proxy), 1.2e18));
-        c[6] = abi.encodeCall(IRiskModuleChecks.checkAaveConfig, (address(spoke), ids));
-        c[7] = abi.encodeCall(IRiskModuleChecks.checkRemainingRecord, (mid, UNITS));
-        c[8] = abi.encodeCall(IRiskModuleViews.getBreakerStatus, (mid));
-        c[9] = abi.encodeCall(IRiskModuleViews.getDebtBreakerStatus, (address(spoke), USDC_RESERVE));
-        c[10] = abi.encodeCall(IRiskModuleViews.usdToRestore, (address(proxy)));
-        c[11] = abi.encodeCall(IRiskModuleViews.debtValueUsd, (address(proxy)));
+        c[2] = abi.encodeCall(IRiskModule.preBorrowCheck, (address(proxy), GHO_RESERVE, 1));
+        c[3] = abi.encodeCall(IRiskModule.preBorrowCheck, (address(proxy), USDC_RESERVE, 1));
+        c[4] = abi.encodeCall(IRiskModule.preWithdrawCheck, (address(proxy)));
+        c[5] = abi.encodeCall(IRiskModule.postHealthCheck, (address(proxy), 1.2e18));
+        c[6] = abi.encodeCall(IRiskModule.checkAaveConfig, (address(spoke), ids));
+        c[7] = abi.encodeCall(IRiskModule.checkRemainingRecord, (mid, UNITS));
+        c[8] = abi.encodeCall(IRiskModule.getBreakerStatus, (mid));
+        c[9] = abi.encodeCall(IRiskModule.getDebtBreakerStatus, (address(spoke), USDC_RESERVE));
+        c[10] = abi.encodeCall(IRiskModule.usdToRestore, (address(proxy)));
+        c[11] = abi.encodeCall(IRiskModule.debtValueUsd, (address(proxy)));
     }
 
     /// @dev Outcome of every call: success flag and return or revert data, hashed.

@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {CapView} from "../../types/CapView.sol";
-import {PendingView} from "../../types/PendingView.sol";
-import {BackingView} from "./types/BackingView.sol";
-import {RecordBackingView} from "./types/RecordBackingView.sol";
+import {CapView} from "../../types/MarketTypes.sol";
+import {PendingView} from "../../types/PositionTypes.sol";
+import {BackingView, RecordBackingView} from "./types/LensTypes.sol";
 
 /// @title ILensMarket
 /// @notice Market views of the Lens: backing check, record backing, pending settlement and cap headroom.

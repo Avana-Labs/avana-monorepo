@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../src/custody/collateralization/ICollateralizationAdapter.sol";
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 
 /// @title CollateralizationSpeedCreditUnitTest
@@ -178,12 +178,12 @@ contract CollateralizationSpeedCreditUnitTest is CollateralizationFixture {
             uint256 snap = vm.snapshotState();
             vm.prank(adapter);
             (bool ok, bytes memory data) = address(coll).call{gas: g}(
-                abi.encodeCall(ICollateralizationAdapter.release, (aliceProxy, vt, KEY42, uint256(UNITS)))
+                abi.encodeCall(ICollateralization.release, (aliceProxy, vt, KEY42, uint256(UNITS)))
             );
             if (ok) {
                 sawSuccess = true;
                 assertEq(riskModule.withdrawCredits(), 1, "a successful exit made the credit");
-            } else if (data.length == 68 && bytes4(data) == ICollateralizationErrors.InsufficientGas.selector) {
+            } else if (data.length == 68 && bytes4(data) == ICollateralizationBase.InsufficientGas.selector) {
                 (, uint256 required) = abi.decode(_args(data), (uint256, uint256));
                 if (required == floor) sawFloor = true;
             }

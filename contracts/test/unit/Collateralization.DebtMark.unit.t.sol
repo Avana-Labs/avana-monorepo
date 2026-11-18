@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 
@@ -62,7 +62,7 @@ contract CollateralizationDebtMarkUnitTest is CollateralizationFixture {
         vm.prank(adapter);
         lock.acquire();
         vm.prank(adapter);
-        vm.expectPartialRevert(ICollateralizationErrors.InsufficientGas.selector);
+        vm.expectPartialRevert(ICollateralizationBase.InsufficientGas.selector);
         coll.markDebtFree{gas: 1_000_000}(aliceProxy);
         vm.prank(adapter);
         coll.markDebtFree{gas: 5_000_000}(aliceProxy);

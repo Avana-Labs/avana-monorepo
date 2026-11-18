@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {LPPriceMath} from "../../../src/oracle/lp-oracle/LPPriceMath.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
+import {PriceState} from "../../../src/types/OracleTypes.sol";
 
 /// @title LPPriceMathHarness
 /// @notice External entry points over the internal library LPPriceMath, for the unit, fuzz, differential and Halmos

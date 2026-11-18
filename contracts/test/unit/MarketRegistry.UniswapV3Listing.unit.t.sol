@@ -4,16 +4,13 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IClIntegration} from "../../src/amm/IClIntegration.sol";
-import {ClMarketConfig} from "../../src/amm/types/ClMarketConfig.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ClMarketConfig} from "../../src/amm/types/AmmTypes.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
-import {Market} from "../../src/types/Market.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {Market, MarketDef} from "../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {UniswapV3IntegrationHarness} from "../utils/harness/UniswapV3IntegrationHarness.sol";
 import {RegistryAaveOracleMock, RegistrySpokeMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
@@ -143,7 +140,7 @@ contract MarketRegistryUniswapV3ListingUnitTest is MarketRegistryFixture {
         // Without listing prices (the fixture's empty data) the integration refuses the binding, and so the listing.
         d.integrationData = "";
         vm.prank(address(timelock));
-        vm.expectRevert(ILPVaultErrors.InvalidPool.selector);
+        vm.expectRevert(ILPVaultBase.InvalidPool.selector);
         registry.listCollateralMarket(d);
         d.integrationData = _prices();
         vm.prank(address(timelock));
@@ -183,7 +180,7 @@ contract MarketRegistryUniswapV3ListingUnitTest is MarketRegistryFixture {
             deps[0] = bad[i];
             address route = address(new RegistryRouteMock(address(usdc), address(gho), address(lpVaultSwap), deps));
             vm.prank(address(timelock));
-            vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+            vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
             registry.setRoute(id, address(usdc), address(gho), 0, route);
         }
         address ok = address(_newRoute(address(usdc), address(gho), "otherUniPool"));

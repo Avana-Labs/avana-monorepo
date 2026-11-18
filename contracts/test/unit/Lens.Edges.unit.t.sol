@@ -4,11 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {DebtPriceView} from "../../src/lens/lens/types/DebtPriceView.sol";
-import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
-import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
-import {PendingView} from "../../src/types/PendingView.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {DebtPriceView, LiquidationPreview, RecordView} from "../../src/lens/lens/types/LensTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
+import {PendingView} from "../../src/types/PositionTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {LensDebtOracleMock} from "../utils/mocks/LensMocks.sol";
 

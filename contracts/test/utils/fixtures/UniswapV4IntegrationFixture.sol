@@ -4,11 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IUniswapV4Integration} from "../../../src/amm/uniswap-v4/IUniswapV4Integration.sol";
-import {ILPVaultErrors} from "../../../src/custody/lp-vault/ILPVaultErrors.sol";
-import {ILPVaultEvents} from "../../../src/custody/lp-vault/ILPVaultEvents.sol";
+import {ILPVaultBase} from "../../../src/custody/lp-vault/ILPVaultBase.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {ClTestToken, IClPool} from "./ClPoolFixture.sol";
 import {UniswapV4WorldFixture} from "./UniswapV4WorldFixture.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
@@ -18,7 +16,7 @@ import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 /// `M1` on a USDC/USDT pool (fee 100, spacing 1, range [-50, 50]) and `M2` on a native ETH/USDC pool (fee 500,
 /// spacing 10, a range around $2,000), each with its Uniswap v3 reference pool.
 /// @dev The LPVault is deployed from its artifact (`deployCode`), so the test suites compile against its interface.
-abstract contract UniswapV4IntegrationFixture is UniswapV4WorldFixture, ILPVaultErrors, ILPVaultEvents {
+abstract contract UniswapV4IntegrationFixture is UniswapV4WorldFixture, ILPVaultBase {
     uint32 internal constant INTEGRATION = 3;
     uint256 internal constant M1 = 1;
     uint256 internal constant M2 = 2;

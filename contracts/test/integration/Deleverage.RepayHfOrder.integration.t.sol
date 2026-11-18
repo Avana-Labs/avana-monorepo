@@ -4,9 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
-import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
-import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -91,7 +91,7 @@ contract DeleverageRepayHfOrderIntegrationTest is RealStackFlows {
     function _hfLog(
         Vm.Log[] memory logs
     ) internal view returns (uint256 hfBefore, uint256 hfAfter) {
-        bytes32 sig = IAaveAdapterEvents.RepaidWithCollateral.selector;
+        bytes32 sig = IAaveAdapterBase.RepaidWithCollateral.selector;
         for (uint256 i = 0; i < logs.length; ++i) {
             if (logs[i].emitter == adapter && logs[i].topics[0] == sig) {
                 (,,,,, hfBefore, hfAfter) =

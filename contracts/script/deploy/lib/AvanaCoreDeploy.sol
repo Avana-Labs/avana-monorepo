@@ -3,17 +3,16 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {GovernedTargets} from "../../../src/governance/timelock/types/GovernedTargets.sol";
-import {SelectorPair} from "../../../src/governance/timelock/types/SelectorPair.sol";
-import {ILPVaultSwapAdmin} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
-import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
-import {IAaveAdapterAdmin} from "../../../src/policy/aave-adapter/IAaveAdapterAdmin.sol";
-import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
-import {IMarketRegistryListing} from "../../../src/policy/market-registry/IMarketRegistryListing.sol";
-import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
-import {IParameterStoreAdmin} from "../../../src/policy/parameter-store/IParameterStoreAdmin.sol";
-import {IRiskModuleAdmin} from "../../../src/policy/risk-module/IRiskModuleAdmin.sol";
-import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleImmutables.sol";
+import {GovernedTargets, SelectorPair} from "../../../src/governance/timelock/IAvanaTimelock.sol";
+import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
+import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
+import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
+import {IRiskModule} from "../../../src/policy/risk-module/IRiskModule.sol";
+import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {TimelockShortDelayLists} from "../../../test/utils/fixtures/TimelockShortDelayLists.sol";
 import {DeployBase} from "./DeployBase.sol";
 import {ChainInputs, UpgradeableDeployment} from "./DeployTypes.sol";
@@ -129,8 +128,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
             "MarketRegistryImplementation",
             bytes.concat(_artifact("MarketRegistry.sol", "MarketRegistry"), abi.encode(im), logics)
         );
-        d.proxy =
-            _proxy("MarketRegistry", d.implementation, abi.encodeCall(IMarketRegistryListing.initialize, (p.timelock)));
+        d.proxy = _proxy("MarketRegistry", d.implementation, abi.encodeCall(IMarketRegistry.initialize, (p.timelock)));
     }
 
     /// @notice ParameterStore: five logic contracts, the router, the proxy with the initial values (`REQ-PSTORE-001`).
@@ -158,7 +156,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         d.proxy = _proxy(
             "ParameterStore",
             d.implementation,
-            abi.encodeCall(IParameterStoreAdmin.initialize, (p.timelock, c.globals, c.initialPoolShareMaxBps))
+            abi.encodeCall(IParameterStore.initialize, (p.timelock, c.globals, c.initialPoolShareMaxBps))
         );
     }
 
@@ -207,7 +205,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2], d.logics[3], d.logics[4], d.logics[5]);
         d.implementation =
             _deploy("RiskModuleImplementation", bytes.concat(_artifact("RiskModule.sol", "RiskModule"), im, logics));
-        d.proxy = _proxy("RiskModule", d.implementation, abi.encodeCall(IRiskModuleAdmin.initialize, (p.timelock)));
+        d.proxy = _proxy("RiskModule", d.implementation, abi.encodeCall(IRiskModule.initialize, (p.timelock)));
     }
 
     /// @notice AaveAdapter: user, exit, collateral and settlement logic, the router, the proxy.
@@ -236,7 +234,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2], d.logics[3]);
         d.implementation =
             _deploy("AaveAdapterImplementation", bytes.concat(_artifact("AaveAdapter.sol", "AaveAdapter"), im, logics));
-        d.proxy = _proxy("AaveAdapter", d.implementation, abi.encodeCall(IAaveAdapterAdmin.initialize, (p.timelock)));
+        d.proxy = _proxy("AaveAdapter", d.implementation, abi.encodeCall(IAaveAdapter.initialize, (p.timelock)));
     }
 
     /// @notice LPVaultSwap: liquidation, pending and deleverage logic, the router, the proxy with the keepers.
@@ -265,9 +263,8 @@ abstract contract AvanaCoreDeploy is DeployBase {
         bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2]);
         d.implementation =
             _deploy("LPVaultSwapImplementation", bytes.concat(_artifact("LPVaultSwap.sol", "LPVaultSwap"), im, logics));
-        d.proxy = _proxy(
-            "LPVaultSwap", d.implementation, abi.encodeCall(ILPVaultSwapAdmin.initialize, (p.timelock, c.keepers))
-        );
+        d.proxy =
+            _proxy("LPVaultSwap", d.implementation, abi.encodeCall(ILPVaultSwap.initialize, (p.timelock, c.keepers)));
     }
 
     /// @notice A fixed ERC-1967 proxy at the CREATE3 address of `name`, initialised in its constructor.

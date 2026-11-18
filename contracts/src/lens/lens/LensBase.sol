@@ -11,20 +11,18 @@ import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol
 import {ILock} from "../../lock/lock/ILock.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {DebtPriceView as OracleDebtView} from "../../oracle/debt-oracle/types/DebtPriceView.sol";
-import {PriceAge} from "../../oracle/lp-oracle/PriceAge.sol";
-import {IAaveAdapterViews} from "../../policy/aave-adapter/IAaveAdapterViews.sol";
+import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
+import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
-import {IMarketRegistryErrors} from "../../policy/market-registry/IMarketRegistryErrors.sol";
-import {DebtReserveDef} from "../../policy/market-registry/types/DebtReserveDef.sol";
+import {IMarketRegistryBase} from "../../policy/market-registry/IMarketRegistryBase.sol";
+import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
-import {Market} from "../../types/Market.sol";
-import {PriceState} from "../../types/PriceState.sol";
-import {TokenPriceView} from "../../types/TokenPriceView.sol";
+import {Market} from "../../types/MarketTypes.sol";
+import {PriceState, TokenPriceView} from "../../types/OracleTypes.sol";
 import {ILensErrors} from "./ILensErrors.sol";
 import {LensConstants} from "./LensConstants.sol";
-import {DebtPriceView} from "./types/DebtPriceView.sol";
-import {PriceInput} from "./types/PriceInput.sol";
+import {DebtPriceView, PriceInput} from "./types/LensTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensBase
@@ -115,7 +113,7 @@ abstract contract LensBase is ILensErrors {
     ) internal view returns (Market memory m) {
         m = _registry().getMarket(marketId);
         // forge-lint: disable-next-line(require-revert-in-loop)
-        if (m.vaultToken == address(0)) revert IMarketRegistryErrors.UnknownMarket(marketId);
+        if (m.vaultToken == address(0)) revert IMarketRegistryBase.UnknownMarket(marketId);
     }
 
     /// @dev The market of a vault token; `UnknownMarket(0)` for an address that is no market's vault token.
@@ -131,7 +129,7 @@ abstract contract LensBase is ILensErrors {
         uint256 marketId,
         address spoke
     ) internal view returns (address proxy, bool deployed) {
-        proxy = IAaveAdapterViews(_ADAPTER).proxyOf(wallet, marketId);
+        proxy = IAaveAdapter(_ADAPTER).proxyOf(wallet, marketId);
         deployed = proxy != address(0);
         if (!deployed) proxy = IProxyManager(_PROXY_MANAGER).predictProxy(wallet, spoke, marketId);
     }
@@ -166,7 +164,7 @@ abstract contract LensBase is ILensErrors {
         }
     }
 
-    /// @dev Debt-reserve price report without the block stamp; both freshness flags apply execution's `PriceAge` rules.
+    /// @dev Debt-reserve price report without the block stamp; both freshness flags apply execution's `LPPriceMath` rules.
     function _debtView(
         address spoke,
         DebtReserveDef memory def
@@ -187,17 +185,18 @@ abstract contract LensBase is ILensErrors {
         v.acceptedPrice = r.acceptedAnswer;
         // Execution measures age from the served route's live timestamp, since it pokes first.
         v.updatedAt = r.servedUpdatedAt;
-        v.age = PriceAge.age(v.updatedAt);
+        v.age = LPPriceMath.age(v.updatedAt);
         // A route that names no feed has no source age to check, so it is never reported fresh.
         bool named = r.legFeeds[0] != address(0) || r.legFeeds[1] != address(0);
         // The oracle's own gates can close borrowing or liquidation while the state is still Live.
-        v.borrowFresh = named && PriceAge.debtBorrowable(r, debtOracle.borrowPriceMaxAge());
+        v.borrowFresh = named && LPPriceMath.debtBorrowable(r, debtOracle.borrowPriceMaxAge());
         v.liquidationFresh = named && r.state == PriceState.Live && !r.liquidationPaused;
         // LPVaultSwap's leg rule: an unused leg passes; a used one must be within its liquidation max age.
         for (uint256 j = 0; j < 2 && v.liquidationFresh; ++j) {
             address feed = r.legFeeds[j];
             if (feed != address(0)) {
-                v.liquidationFresh = PriceAge.liquidationFresh(r.legUpdatedAt[j], _store().liquidationPriceMaxAge(feed));
+                v.liquidationFresh =
+                    LPPriceMath.liquidationFresh(r.legUpdatedAt[j], _store().liquidationPriceMaxAge(feed));
             }
         }
         v.stressPriced = v.price > v.acceptedPrice;
@@ -288,12 +287,12 @@ abstract contract LensBase is ILensErrors {
         uint256 updatedAt
     ) internal view returns (PriceInput memory p) {
         (p.feed, p.updatedAt) = (feed, updatedAt);
-        p.age = PriceAge.age(updatedAt);
+        p.age = LPPriceMath.age(updatedAt);
         p.borrowPriceMaxAge = _store().borrowPriceMaxAge(feed);
         p.liquidationPriceMaxAge = _store().liquidationPriceMaxAge(feed);
         // The RiskModule refuses a borrow on a timestamp in the future; LPVaultSwap counts it age 0.
-        p.borrowFresh = PriceAge.borrowFresh(updatedAt, p.borrowPriceMaxAge);
-        p.liquidationFresh = PriceAge.liquidationFresh(updatedAt, p.liquidationPriceMaxAge);
+        p.borrowFresh = LPPriceMath.borrowFresh(updatedAt, p.borrowPriceMaxAge);
+        p.liquidationFresh = LPPriceMath.liquidationFresh(updatedAt, p.liquidationPriceMaxAge);
     }
 
     function _registry() internal view returns (IMarketRegistry) {

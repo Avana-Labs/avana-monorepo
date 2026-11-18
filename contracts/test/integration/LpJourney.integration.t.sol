@@ -4,13 +4,10 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {INonfungiblePositionManager} from "../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
-import {AccountView} from "../../src/lens/lens/types/AccountView.sol";
-import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
-import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {AccountView, LiquidationPreview, RecordView} from "../../src/lens/lens/types/LensTypes.sol";
+import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -268,7 +265,7 @@ contract LpJourneyIntegrationTest is RealStackFlows {
         _freezeWallet(alice);
         assertTrue(lens.getAccount(alice, mA).walletFrozen, "Lens: frozen wallet shown");
         uint256 nonce = adapterC.borrowNonce(proxy);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.AddressIsFrozen.selector, alice));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, alice));
         vm.prank(alice);
         adapterC.borrow(mA, usdcReserveId, 1e6, alice, _deadline(), 0, nonce);
         // A rescue top-up of an indebted account stays open ($800, within the restore amount).
@@ -287,7 +284,7 @@ contract LpJourneyIntegrationTest is RealStackFlows {
         assertEq(uint8(lens.getApplicationState(aave.hub)), uint8(PauseState.Paused), "Lens: Paused");
         assertEq(lens.getPauseReason(aave.hub), uint8(PauseReason.General), "Lens: General");
         uint256 nonce = adapterC.borrowNonce(proxy);
-        vm.expectRevert(IAaveAdapterErrors.ApplicationPaused.selector);
+        vm.expectRevert(IAaveAdapterBase.ApplicationPaused.selector);
         vm.prank(alice);
         adapterC.borrow(mA, usdcReserveId, 1e6, alice, _deadline(), 0, nonce);
         _pledgeAs(alice, mA, 400e6);
@@ -295,7 +292,7 @@ contract LpJourneyIntegrationTest is RealStackFlows {
 
         _setPause(PauseState.Paused, PauseReason.MintPathSuspect);
         bytes32 k3 = _mintPosition(alice, mA, 1000e6);
-        vm.expectRevert(IAaveAdapterErrors.ApplicationPaused.selector);
+        vm.expectRevert(IAaveAdapterBase.ApplicationPaused.selector);
         vm.prank(alice);
         adapterC.pledge(mA, _ref(k3), _deadline());
         _repayVia(alice, alice, mA, usdcReserveId, _debtOf(proxy, usdcReserveId), true);

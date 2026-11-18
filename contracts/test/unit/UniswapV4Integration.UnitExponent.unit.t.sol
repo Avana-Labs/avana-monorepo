@@ -4,11 +4,10 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
-import {RiskMetadata} from "../../src/amm/types/RiskMetadata.sol";
+import {RiskMetadata} from "../../src/amm/types/AmmTypes.sol";
 import {UniswapV4State} from "../../src/amm/uniswap-v4/UniswapV4State.sol";
 import {IUniswapV4PoolManager} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {UniswapV4IntegrationFixture} from "../utils/fixtures/UniswapV4IntegrationFixture.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";

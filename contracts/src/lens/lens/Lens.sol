@@ -3,46 +3,45 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {SpeedView} from "../../policy/risk-module/types/SpeedView.sol";
-import {CapView} from "../../types/CapView.sol";
-import {PauseState} from "../../types/PauseState.sol";
-import {PendingView} from "../../types/PendingView.sol";
-import {PriceView} from "../../types/PriceView.sol";
+import {SpeedView} from "../../policy/risk-module/types/RiskModuleTypes.sol";
+import {CapView, PauseState} from "../../types/MarketTypes.sol";
+import {PriceView} from "../../types/OracleTypes.sol";
+import {PendingView} from "../../types/PositionTypes.sol";
 import {ILens} from "./ILens.sol";
 import {ILensAccount} from "./ILensAccount.sol";
 import {ILensActions} from "./ILensActions.sol";
 import {ILensFees} from "./ILensFees.sol";
 import {ILensHubAssets} from "./ILensHubAssets.sol";
-import {ILensLiquidation} from "./ILensLiquidation.sol";
 import {ILensMarket} from "./ILensMarket.sol";
 import {ILensMarkets} from "./ILensMarkets.sol";
 import {ILensPositions} from "./ILensPositions.sol";
 import {ILensPreview} from "./ILensPreview.sol";
 import {ILensRisk} from "./ILensRisk.sol";
-import {ILensSizing} from "./ILensSizing.sol";
 import {ILensSpeed} from "./ILensSpeed.sol";
 import {LensBase} from "./LensBase.sol";
 import {LensConstants} from "./LensConstants.sol";
-import {AccountRiskView} from "./types/AccountRiskView.sol";
-import {AccountView} from "./types/AccountView.sol";
-import {ActionPreview} from "./types/ActionPreview.sol";
-import {BackingView} from "./types/BackingView.sol";
-import {BorrowSpeedView} from "./types/BorrowSpeedView.sol";
-import {CloseAccountView} from "./types/CloseAccountView.sol";
-import {DebtPriceView} from "./types/DebtPriceView.sol";
-import {DebtReserveView} from "./types/DebtReserveView.sol";
-import {DeleverageSizing} from "./types/DeleverageSizing.sol";
-import {HubAssetExposureView} from "./types/HubAssetExposureView.sol";
-import {HubAssetView} from "./types/HubAssetView.sol";
-import {LiquidationPreview} from "./types/LiquidationPreview.sol";
-import {MarketView} from "./types/MarketView.sol";
-import {PledgePreviewView} from "./types/PledgePreviewView.sol";
-import {PositionFeesView} from "./types/PositionFeesView.sol";
-import {RecordBackingView} from "./types/RecordBackingView.sol";
-import {RecordView} from "./types/RecordView.sol";
-import {RemovalSizing} from "./types/RemovalSizing.sol";
-import {TailCoverageView} from "./types/TailCoverageView.sol";
-import {WithdrawPreview} from "./types/WithdrawPreview.sol";
+import {
+    AccountRiskView,
+    AccountView,
+    ActionPreview,
+    BackingView,
+    BorrowSpeedView,
+    CloseAccountView,
+    DebtPriceView,
+    DebtReserveView,
+    DeleverageSizing,
+    HubAssetExposureView,
+    HubAssetView,
+    LiquidationPreview,
+    MarketView,
+    PledgePreviewView,
+    PositionFeesView,
+    RecordBackingView,
+    RecordView,
+    RemovalSizing,
+    TailCoverageView,
+    WithdrawPreview
+} from "./types/LensTypes.sol";
 
 /// @title Lens
 /// @notice Read-only periphery view entry point for one chain. No Avana contract calls it.
@@ -60,17 +59,14 @@ contract Lens is ILens {
     address private immutable _POSITIONS_MODULE;
     address private immutable _SPEED_MODULE;
     address private immutable _COLLATERALIZATION;
-    address private immutable _PROXY_MANAGER;
     address private immutable _ADAPTER;
     address private immutable _LOCK;
     address private immutable _MARKET_REGISTRY;
     address private immutable _PARAMETER_STORE;
-    address private immutable _RISK_MODULE;
     address private immutable _LP_VAULT_SWAP;
-    address private immutable _PAYOUT_ESCROW;
 
     /// @notice Fixes the nine modules; their core addresses must agree.
-    /// @param modules The nine modules, in `MODULES()` order.
+    /// @param modules The Account, Market, Price, Liquidation, Risk, Preview, Markets, Positions and Speed modules.
     constructor(
         address[9] memory modules
     ) {
@@ -84,9 +80,8 @@ contract Lens is ILens {
         (_LIQUIDATION_MODULE, _RISK_MODULE_LENS, _PREVIEW_MODULE) = (modules[3], modules[4], modules[5]);
         (_MARKETS_MODULE, _POSITIONS_MODULE, _SPEED_MODULE) = (modules[6], modules[7], modules[8]);
         LensBase m = LensBase(modules[0]);
-        (_COLLATERALIZATION, _PROXY_MANAGER, _ADAPTER) = (m.COLLATERALIZATION(), m.PROXY_MANAGER(), m.ADAPTER());
+        (_COLLATERALIZATION, _ADAPTER, _LP_VAULT_SWAP) = (m.COLLATERALIZATION(), m.ADAPTER(), m.LP_VAULT_SWAP());
         (_LOCK, _MARKET_REGISTRY, _PARAMETER_STORE) = (m.LOCK(), m.MARKET_REGISTRY(), m.PARAMETER_STORE());
-        (_RISK_MODULE, _LP_VAULT_SWAP, _PAYOUT_ESCROW) = (m.RISK_MODULE(), m.LP_VAULT_SWAP(), m.PAYOUT_ESCROW());
     }
 
     /// @inheritdoc ILensAccount
@@ -170,7 +165,7 @@ contract Lens is ILens {
         _forward(_MARKET_MODULE);
     }
 
-    /// @inheritdoc ILensLiquidation
+    /// @inheritdoc ILens
     function getPriceState(
         address
     ) external view override returns (PriceView memory priceView) {
@@ -178,7 +173,7 @@ contract Lens is ILens {
         _forward(_PRICE_MODULE);
     }
 
-    /// @inheritdoc ILensLiquidation
+    /// @inheritdoc ILens
     function getDebtPriceState(
         address,
         uint256
@@ -187,7 +182,7 @@ contract Lens is ILens {
         _forward(_PRICE_MODULE);
     }
 
-    /// @inheritdoc ILensLiquidation
+    /// @inheritdoc ILens
     function getApplicationState(
         address
     ) external view override returns (PauseState state) {
@@ -195,7 +190,7 @@ contract Lens is ILens {
         _forward(_PRICE_MODULE);
     }
 
-    /// @inheritdoc ILensLiquidation
+    /// @inheritdoc ILens
     function getPauseReason(
         address
     ) external view override returns (uint8 reason) {
@@ -203,7 +198,7 @@ contract Lens is ILens {
         _forward(_PRICE_MODULE);
     }
 
-    /// @inheritdoc ILensLiquidation
+    /// @inheritdoc ILens
     function previewLiquidation(
         address,
         uint256,
@@ -443,7 +438,7 @@ contract Lens is ILens {
         _forward(_POSITIONS_MODULE);
     }
 
-    /// @inheritdoc ILensSizing
+    /// @inheritdoc ILens
     function previewMaxWithdraw(
         address,
         uint256,
@@ -453,7 +448,7 @@ contract Lens is ILens {
         _forward(_POSITIONS_MODULE);
     }
 
-    /// @inheritdoc ILensSizing
+    /// @inheritdoc ILens
     function previewDeleverageTo(
         address,
         uint256,
@@ -465,7 +460,7 @@ contract Lens is ILens {
         _forward(_PRICE_MODULE);
     }
 
-    /// @inheritdoc ILensSizing
+    /// @inheritdoc ILens
     function previewCloseAccount(
         address,
         uint256,
@@ -502,38 +497,13 @@ contract Lens is ILens {
     }
 
     /// @inheritdoc ILens
-    function MODULES() external view override returns (address[9] memory modules) {
-        modules = [
-            _ACCOUNT_MODULE,
-            _MARKET_MODULE,
-            _PRICE_MODULE,
-            _LIQUIDATION_MODULE,
-            _RISK_MODULE_LENS,
-            _PREVIEW_MODULE,
-            _MARKETS_MODULE,
-            _POSITIONS_MODULE,
-            _SPEED_MODULE
-        ];
-    }
-
-    /// @inheritdoc ILens
     function LENS_MAX_PAGE() external pure override returns (uint256 maxPage) {
         maxPage = LensConstants.LENS_MAX_PAGE;
     }
 
     /// @inheritdoc ILens
-    function LENS_DUST_MARGIN_BPS() external pure override returns (uint256 marginBps) {
-        marginBps = LensConstants.LENS_DUST_MARGIN_BPS;
-    }
-
-    /// @inheritdoc ILens
     function COLLATERALIZATION() external view override returns (address collateralization) {
         collateralization = _COLLATERALIZATION;
-    }
-
-    /// @inheritdoc ILens
-    function PROXY_MANAGER() external view override returns (address proxyManager) {
-        proxyManager = _PROXY_MANAGER;
     }
 
     /// @inheritdoc ILens
@@ -557,18 +527,8 @@ contract Lens is ILens {
     }
 
     /// @inheritdoc ILens
-    function RISK_MODULE() external view override returns (address riskModule) {
-        riskModule = _RISK_MODULE;
-    }
-
-    /// @inheritdoc ILens
     function LP_VAULT_SWAP() external view override returns (address lpVaultSwap) {
         lpVaultSwap = _LP_VAULT_SWAP;
-    }
-
-    /// @inheritdoc ILens
-    function PAYOUT_ESCROW() external view override returns (address payoutEscrow) {
-        payoutEscrow = _PAYOUT_ESCROW;
     }
 
     function _core(

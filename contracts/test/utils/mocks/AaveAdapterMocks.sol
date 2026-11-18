@@ -3,18 +3,18 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {BreakerReasons} from "../../../src/policy/market-registry/types/Breaker.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
-import {SpokeDef} from "../../../src/policy/market-registry/types/SpokeDef.sol";
-import {TokenDef} from "../../../src/policy/market-registry/types/TokenDef.sol";
+import {
+    DebtReserveDef,
+    MarketStatus,
+    SpokeDef,
+    TokenDef
+} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {IPositionProxy} from "../../../src/proxy/position-proxy/IPositionProxy.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
+import {Market, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @notice UUPS stand-in that lets the fixture deploy the Adapter's ERC-1967 proxy first, so the Lock, Collateralization,
@@ -516,7 +516,7 @@ contract AdapterRiskModuleMock {
         if (broken) revert RiskModuleBroken();
         if (vaultToken != address(0)) {
             // The reviewed RiskModule reads the account's rescue units here, under the Adapter's Lock.
-            ICollateralizationViews(COLLATERALIZATION).getAccountRescueUnits(proxy, vaultToken);
+            ICollateralization(COLLATERALIZATION).getAccountRescueUnits(proxy, vaultToken);
         }
         healthFactor = IAaveV4Spoke(SPOKE).getUserAccountData(proxy).healthFactor;
         if (approveAll) return healthFactor;

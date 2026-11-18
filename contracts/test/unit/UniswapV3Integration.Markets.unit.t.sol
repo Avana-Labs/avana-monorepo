@@ -4,14 +4,15 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
-import {ClMarketConfig} from "../../src/amm/types/ClMarketConfig.sol";
-import {IntegrationCapabilities} from "../../src/amm/types/IntegrationCapabilities.sol";
-import {PoolKeying} from "../../src/amm/types/PoolKeying.sol";
-import {RiskMetadata} from "../../src/amm/types/RiskMetadata.sol";
-import {RiskStatus} from "../../src/amm/types/RiskStatus.sol";
+import {
+    ClMarketConfig,
+    IntegrationCapabilities,
+    PoolKeying,
+    RiskMetadata,
+    RiskStatus
+} from "../../src/amm/types/AmmTypes.sol";
 import {UniswapV3Integration} from "../../src/amm/uniswap-v3/UniswapV3Integration.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {UniswapV3IntegrationFixture} from "../utils/fixtures/UniswapV3IntegrationFixture.sol";
 import {UniswapV3IntegrationHarness} from "../utils/harness/UniswapV3IntegrationHarness.sol";
 import {MintableToken, MockNFPM, MockV3Factory, MockV3Pool, NoDecimalsToken} from "../utils/mocks/UniswapV3Mocks.sol";

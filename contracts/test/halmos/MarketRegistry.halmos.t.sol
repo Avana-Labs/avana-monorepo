@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
 import {MarketRegistryActivationLogic} from "../../src/policy/market-registry/MarketRegistryActivationLogic.sol";
 import {MarketRegistryHubsLogic} from "../../src/policy/market-registry/MarketRegistryHubsLogic.sol";
@@ -13,11 +13,12 @@ import {MarketRegistryListingLogic} from "../../src/policy/market-registry/Marke
 import {MarketRegistryRoutesLogic} from "../../src/policy/market-registry/MarketRegistryRoutesLogic.sol";
 import {MarketRegistrySafetyLogic} from "../../src/policy/market-registry/MarketRegistrySafetyLogic.sol";
 import {MarketRegistryWindDownLogic} from "../../src/policy/market-registry/MarketRegistryWindDownLogic.sol";
-import {MarketRegistryImmutables} from "../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
-import {MarketRegistryLogics} from "../../src/policy/market-registry/types/MarketRegistryLogics.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {
+    MarketRegistryImmutables,
+    MarketRegistryLogics,
+    RiskTier
+} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {RegistryAdapterMock, RegistryFlashSourceMock} from "../utils/mocks/MarketRegistryMocks.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Test} from "forge-std/Test.sol";
@@ -168,7 +169,7 @@ contract MarketRegistryHalmosTest is Test {
             assert(registry.flashSource() == before);
             if (caller == TIMELOCK) {
                 assert(swapOf != im.lpVaultSwap || lenderIsHub);
-                assert(keccak256(ret) == keccak256(abi.encodeWithSelector(IMarketRegistryErrors.InvalidRoute.selector)));
+                assert(keccak256(ret) == keccak256(abi.encodeWithSelector(IMarketRegistryBase.InvalidRoute.selector)));
             }
         }
         address inForceLender = RegistryFlashSourceMock(registry.flashSource()).LENDER();
@@ -178,7 +179,7 @@ contract MarketRegistryHalmosTest is Test {
             address(registry).call(abi.encodeCall(registry.recordHub, (newHub, RiskTier.Volatile)));
         if (newHub == inForceLender && newHub != address(0)) {
             assert(!recorded);
-            assert(keccak256(err) == keccak256(abi.encodeWithSelector(IMarketRegistryErrors.InvalidRoute.selector)));
+            assert(keccak256(err) == keccak256(abi.encodeWithSelector(IMarketRegistryBase.InvalidRoute.selector)));
         }
         assert(!registry.isRecordedHub(RegistryFlashSourceMock(registry.flashSource()).LENDER()));
     }
@@ -208,11 +209,11 @@ contract MarketRegistryHalmosTest is Test {
             assert(registry.freezesInWindow(caller) == countBefore + 1);
         } else if (caller != GUARDIAN && caller != FREEZER && caller != TIMELOCK) {
             assert(
-                keccak256(ret) == keccak256(abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, caller))
+                keccak256(ret) == keccak256(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, caller))
             );
         } else if (fixedProtected || wallet != address(0)) {
             assert(
-                keccak256(ret) == keccak256(abi.encodeWithSelector(IMarketRegistryErrors.ProtectedAddress.selector, a))
+                keccak256(ret) == keccak256(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, a))
             );
         }
     }

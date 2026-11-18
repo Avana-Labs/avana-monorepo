@@ -4,9 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryLPOracleMock} from "../utils/mocks/MarketRegistryMocks.sol";
 
@@ -28,7 +28,7 @@ contract MarketRegistryActivationChecksUnitTest is MarketRegistryFixture {
         bytes32 check
     ) internal {
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ActivationCheckFailed.selector, id, check));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ActivationCheckFailed.selector, id, check));
         registry.activateMarket(id);
         _assertUntouched();
     }
@@ -161,9 +161,7 @@ contract MarketRegistryActivationChecksUnitTest is MarketRegistryFixture {
         address[] memory usdcStandby = registry.getToken(address(usdc)).standbyRoute;
         (address[] memory p,, address[] memory s) = _routes("usdt2");
         vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("commonMode"))
-        );
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("commonMode")));
         registry.setPriceSource(address(usdt), p, usdcStandby, s);
         _activate();
     }

@@ -7,11 +7,13 @@ import {IDebtOracle} from "../../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {DebtOracleInitParams} from "../../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
 import {DebtPriceView} from "../../../src/oracle/debt-oracle/types/DebtPriceView.sol";
 import {LPOracleCL} from "../../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
-import {PriceStateView} from "../../../src/types/PriceStateView.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
-import {TokenPriceView} from "../../../src/types/TokenPriceView.sol";
+import {
+    PriceState,
+    PriceStateView,
+    SecondSource,
+    SecondSourceKind,
+    TokenPriceView
+} from "../../../src/types/OracleTypes.sol";
 import {DebtRegistryMock, DebtStoreMock} from "../mocks/DebtOracleConfigMocks.sol";
 import {MockAggregator} from "../mocks/MockAggregator.sol";
 import {LPOracleCLFixture} from "./LPOracleCLFixture.sol";

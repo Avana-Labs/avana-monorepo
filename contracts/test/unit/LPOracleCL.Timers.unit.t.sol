@@ -3,10 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPOracleEvents} from "../../src/oracle/lp-oracle/ILPOracleEvents.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
+import {PriceState, PriceStateView, RouteSlot} from "../../src/types/OracleTypes.sol";
 import {LPOracleCLFixture} from "../utils/fixtures/LPOracleCLFixture.sol";
 import {OracleFeedMock} from "../utils/mocks/LPOracleMocks.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -74,7 +72,7 @@ contract LPOracleCLTimersTest is LPOracleCLFixture {
         uint256[] memory alternate = new uint256[](2);
         (primary[0], primary[1], alternate[0], alternate[1]) = (ONE, ONE, ONE, LOW);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.DisagreementRecorded(uint64(T1), primary, alternate);
+        emit ILPOracleBase.DisagreementRecorded(uint64(T1), primary, alternate);
         oracle.poke();
         assertEq(_state().disagreeSince, T1, "stored at the first observation");
         _next(T1 + 900);
@@ -102,7 +100,7 @@ contract LPOracleCLTimersTest is LPOracleCLFixture {
         _next(T1 + 120);
         a1Feed.push(int256(ONE), T1 + 120);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.DisagreementCleared(uint64(T1), uint64(T1 + 120));
+        emit ILPOracleBase.DisagreementCleared(uint64(T1), uint64(T1 + 120));
         assertEq(uint8(oracle.poke()), uint8(PriceState.Live), "agreement: Live");
         assertEq(_state().disagreeSince, 0, "cleared");
     }
@@ -299,7 +297,7 @@ contract LPOracleCLTimersTest is LPOracleCLFixture {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         bool capped;
         for (uint256 i = 0; i < logs.length; ++i) {
-            if (logs[i].emitter == address(oracle) && logs[i].topics[0] == ILPOracleEvents.QuoteChangeCapped.selector) {
+            if (logs[i].emitter == address(oracle) && logs[i].topics[0] == ILPOracleBase.QuoteChangeCapped.selector) {
                 capped = true;
             }
         }

@@ -5,10 +5,12 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
-import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
-import {RiskTier} from "../../../src/policy/market-registry/types/RiskTier.sol";
+import {
+    DebtReserveDef,
+    MarketRegistryImmutables,
+    RiskTier
+} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {RiskModule} from "../../../src/policy/risk-module/RiskModule.sol";
 import {RiskModuleBorrowLogic} from "../../../src/policy/risk-module/RiskModuleBorrowLogic.sol";
 import {RiskModuleBreakerLogic} from "../../../src/policy/risk-module/RiskModuleBreakerLogic.sol";
@@ -16,14 +18,14 @@ import {RiskModuleDriftLogic} from "../../../src/policy/risk-module/RiskModuleDr
 import {RiskModulePledgeLogic} from "../../../src/policy/risk-module/RiskModulePledgeLogic.sol";
 import {RiskModuleSpeedLogic} from "../../../src/policy/risk-module/RiskModuleSpeedLogic.sol";
 import {RiskModuleStatusLogic} from "../../../src/policy/risk-module/RiskModuleStatusLogic.sol";
-import {PledgeCharge} from "../../../src/policy/risk-module/types/PledgeCharge.sol";
-import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleImmutables.sol";
-import {RiskModuleLogics} from "../../../src/policy/risk-module/types/RiskModuleLogics.sol";
+import {
+    PledgeCharge,
+    RiskModuleImmutables,
+    RiskModuleLogics
+} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PositionProxy} from "../../../src/proxy/position-proxy/PositionProxy.sol";
-import {MarketDef} from "../../../src/types/MarketDef.sol";
-import {PledgeCounters} from "../../../src/types/PledgeCounters.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {MarketDef} from "../../../src/types/MarketTypes.sol";
+import {PledgeCounters, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {RegistryAaveOracleMock, RegistrySpokeImplMock} from "../mocks/MarketRegistryAaveMocks.sol";
 import {

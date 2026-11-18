@@ -4,12 +4,11 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {AccountGateStatus} from "../../src/types/AccountGateStatus.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {AccountGateStatus, DriftReason} from "../../src/types/MarketTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {RiskSequencerFeed} from "../utils/mocks/RiskModuleMocks.sol";
 
@@ -119,7 +118,7 @@ contract RiskModuleOrderUnitTest is RiskModuleFixture {
         if (step == BREAKER) {
             return abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.MANUAL);
         }
-        return abi.encodeWithSelector(IMarketRegistryHubs.CrossHubLinesDisabled.selector);
+        return abi.encodeWithSelector(IMarketRegistry.CrossHubLinesDisabled.selector);
     }
 
     /// @dev Steps `preWithdrawCheck` does not run.

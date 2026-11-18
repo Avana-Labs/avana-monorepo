@@ -6,10 +6,9 @@ pragma solidity 0.8.28;
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PledgeCharge} from "../../src/policy/risk-module/types/PledgeCharge.sol";
-import {AccountGateStatus} from "../../src/types/AccountGateStatus.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
+import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {AccountGateStatus, DriftReason} from "../../src/types/MarketTypes.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @title RiskModuleDriftActionsUnitTest

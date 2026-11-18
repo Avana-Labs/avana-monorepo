@@ -5,13 +5,11 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
-import {DebtReserveView} from "../../src/lens/lens/types/DebtReserveView.sol";
-import {MarketView} from "../../src/lens/lens/types/MarketView.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {DebtReserveView, MarketView} from "../../src/lens/lens/types/LensTypes.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
@@ -87,7 +85,7 @@ contract LensMarketsUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-022
     function test_TEST_247_unknownMarketReverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 9));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 9));
         lens.getMarket(9);
     }
 

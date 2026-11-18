@@ -3,13 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegrationHooks} from "../../src/amm/IAmmIntegrationHooks.sol";
 import {SlipstreamIntegration} from "../../src/amm/slipstream/SlipstreamIntegration.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {ICLPool} from "../../src/interfaces/external/aerodrome/ICLPool.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {ClPoolMover, IClPoolActions} from "../utils/ClPoolMover.sol";
 import {ForkConstants} from "../utils/fixtures/ForkConstants.sol";
@@ -136,7 +135,7 @@ contract SlipstreamIntegrationCustodyForkTest is AvanaTest {
         bytes32 key = vault.positionKeyOf(uint8(GEN), id);
 
         (uint256 other,) = _mint(alice, lower - SPACING, upper);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultErrors.RangeMismatch.selector, lower - SPACING, upper));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultBase.RangeMismatch.selector, lower - SPACING, upper));
         vault.validatePosition(MARKET, alice, vault.positionKeyOf(uint8(GEN), other));
 
         assertEq(vault.validatePosition(MARKET, alice, key), l);
@@ -167,9 +166,9 @@ contract SlipstreamIntegrationCustodyForkTest is AvanaTest {
 
         deal(WETH, address(mover), 1e18);
         deal(USDC, address(mover), 10e6);
-        mover.probeLocked(IClPoolActions(POOL), IAmmIntegrationHooks(address(vault)), MARKET);
+        mover.probeLocked(IClPoolActions(POOL), ILPVault(address(vault)), MARKET);
         assertTrue(mover.probeRan());
-        assertEq(mover.probed(), ILPVaultErrors.PoolLocked.selector, "PoolLocked while the pool is locked");
+        assertEq(mover.probed(), ILPVaultBase.PoolLocked.selector, "PoolLocked while the pool is locked");
         vault.checkReadSafe(MARKET);
 
         _lock();

@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../../src/amm/IAmmIntegration.sol";
 import {IClIntegration} from "../../../src/amm/IClIntegration.sol";
+import {ILPVault} from "../../../src/custody/lp-vault/ILPVault.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -116,8 +116,7 @@ contract ClLPVaultCustodyHandler is CommonBase, StdUtils {
         address owner = depositors[who % 2];
         uint256 marketId = 1 + marketSeed % 2;
         bytes32 key = SOURCE.cMintFor(marketId, owner, uint128(bound(liquidity, 1e12, 1e15)));
-        (bool ok, bytes memory ret) =
-            _asColl(ADAPTER, abi.encodeCall(IAmmIntegration.receivePosition, (marketId, owner, key)));
+        (bool ok, bytes memory ret) = _asColl(ADAPTER, abi.encodeCall(ILPVault.receivePosition, (marketId, owner, key)));
         require(ok, "pledge");
         keys.push(key);
         (depositorOfKey[key], marketOfKey[key], credited[key], isOpen[key]) =
@@ -130,8 +129,7 @@ contract ClLPVaultCustodyHandler is CommonBase, StdUtils {
     ) external {
         (bytes32 key, uint128 units) = _pickUnits(keySeed, unitsSeed);
         if (units == 0) return;
-        (bool ok,) =
-            _asColl(ADAPTER, abi.encodeCall(IAmmIntegration.releaseToDepositor, (key, units, new uint256[](2))));
+        (bool ok,) = _asColl(ADAPTER, abi.encodeCall(ILPVault.releaseToDepositor, (key, units, new uint256[](2))));
         require(ok, "partial removal");
         credited[key] -= units;
     }
@@ -143,7 +141,7 @@ contract ClLPVaultCustodyHandler is CommonBase, StdUtils {
         bytes32 key = _openKey(keySeed);
         if (key == bytes32(0)) return;
         address named = nameAttacker ? ATTACKER : depositorOfKey[key];
-        (bool ok,) = _asColl(ADAPTER, abi.encodeCall(IAmmIntegration.collectFees, (key, named)));
+        (bool ok,) = _asColl(ADAPTER, abi.encodeCall(ILPVault.collectFees, (key, named)));
         if (nameAttacker && ok) ++forbiddenSuccesses;
         if (!nameAttacker) require(ok, "fee collection");
     }
@@ -153,7 +151,7 @@ contract ClLPVaultCustodyHandler is CommonBase, StdUtils {
     ) external {
         bytes32 key = _openKey(keySeed);
         if (key == bytes32(0)) return;
-        (bool ok,) = _asColl(ADAPTER, abi.encodeCall(IAmmIntegration.returnPosition, (key)));
+        (bool ok,) = _asColl(ADAPTER, abi.encodeCall(ILPVault.returnPosition, (key)));
         require(ok, "withdraw");
         (isOpen[key], credited[key]) = (false, 0);
     }
@@ -170,7 +168,7 @@ contract ClLPVaultCustodyHandler is CommonBase, StdUtils {
         uint256 b0 = t[0].balanceOf(SWAP);
         uint256 b1 = t[1].balanceOf(SWAP);
         (bool ok, bytes memory ret) =
-            _asColl(SWAP, abi.encodeCall(IAmmIntegration.unwind, (key, units, new uint256[](2), SWAP)));
+            _asColl(SWAP, abi.encodeCall(ILPVault.unwind, (key, units, new uint256[](2), SWAP)));
         require(ok, "seizure");
         uint256[] memory amounts = abi.decode(ret, (uint256[]));
         swapReported[0] += amounts[0];
@@ -186,7 +184,7 @@ contract ClLPVaultCustodyHandler is CommonBase, StdUtils {
     ) external {
         (bytes32 key, uint128 units) = _pickUnits(keySeed, unitsSeed);
         if (units == 0) return;
-        (bool ok,) = _asColl(ADAPTER, abi.encodeCall(IAmmIntegration.unwind, (key, units, new uint256[](2), COLL)));
+        (bool ok,) = _asColl(ADAPTER, abi.encodeCall(ILPVault.unwind, (key, units, new uint256[](2), COLL)));
         require(ok, "reconcile");
         credited[key] -= units;
     }
@@ -259,11 +257,11 @@ contract ClLPVaultCustodyHandler is CommonBase, StdUtils {
         bytes32 key = keys[keySeed % keys.length];
         address[4] memory callers = [ATTACKER, ADAPTER, SWAP, TIMELOCK];
         bytes[5] memory calls = [
-            abi.encodeCall(IAmmIntegration.returnPosition, (key)),
-            abi.encodeCall(IAmmIntegration.unwind, (key, 1, new uint256[](2), ATTACKER)),
-            abi.encodeCall(IAmmIntegration.releaseToDepositor, (key, 1, new uint256[](2))),
-            abi.encodeCall(IAmmIntegration.collectFees, (key, ATTACKER)),
-            abi.encodeCall(IAmmIntegration.receivePosition, (1, ATTACKER, key))
+            abi.encodeCall(ILPVault.returnPosition, (key)),
+            abi.encodeCall(ILPVault.unwind, (key, 1, new uint256[](2), ATTACKER)),
+            abi.encodeCall(ILPVault.releaseToDepositor, (key, 1, new uint256[](2))),
+            abi.encodeCall(ILPVault.collectFees, (key, ATTACKER)),
+            abi.encodeCall(ILPVault.receivePosition, (1, ATTACKER, key))
         ];
         address holder = swapSession ? SWAP : ADAPTER;
         vm.prank(holder);

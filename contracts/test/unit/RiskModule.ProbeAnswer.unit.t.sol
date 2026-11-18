@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {RiskModuleConstants} from "../../src/policy/risk-module/RiskModuleConstants.sol";
+import {RiskModuleMath} from "../../src/policy/risk-module/RiskModuleMath.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {RiskModuleMathHarness} from "../utils/harness/RiskModuleMathHarness.sol";
 
@@ -141,7 +141,7 @@ abstract contract RiskModuleProbeAnswerBase is RiskModuleFixture {
         assertEq(reasons, BreakerReasons.ISSUER, "1 MB");
         emit log_named_uint("probe call gas, real 32-byte answer", wordGas);
         emit log_named_uint("probe call gas, real 1 MB answer", hugeGas);
-        assertLe(hugeGas, wordGas + _reads().length * RiskModuleConstants.ISSUER_PROBE_GAS);
+        assertLe(hugeGas, wordGas + _reads().length * RiskModuleMath.ISSUER_PROBE_GAS);
         vm.etch(address(tGho), original);
         assertEq(_debtReasons(), 0);
     }

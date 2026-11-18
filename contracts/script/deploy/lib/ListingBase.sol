@@ -5,11 +5,8 @@ pragma solidity 0.8.28;
 
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
-import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
-import {OracleLeg} from "../../../src/types/OracleLeg.sol";
-import {OracleRoute} from "../../../src/types/OracleRoute.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
+import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {OracleLeg, OracleRoute, SecondSource, SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {DeployBase} from "./DeployBase.sol";
 import {TimelockOperations} from "./TimelockOperations.sol";
 

@@ -3,17 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {LiquidationParams, RouteMode} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {PayoutEscrow} from "../../src/liquidation/payout-escrow/PayoutEscrow.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
 import {FlashLiquidator} from "../../src/periphery/flash-liquidator/FlashLiquidator.sol";
-import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
-import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
+import {FlashLiquidationRequest, IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {OperatorFlashLiquidator} from "../../src/periphery/flash-liquidator/OperatorFlashLiquidator.sol";
-import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {Market} from "../../src/types/Market.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
 import {MockAaveV3ACLManager, MockAaveV3AddressesProvider, MockAaveV3Pool} from "../utils/mocks/AaveV3PoolMocks.sol";
 import {LockMember} from "../utils/mocks/LockMember.sol";
 import {MockFlashFeeCap} from "../utils/mocks/MockFlashReceiver.sol";
@@ -149,7 +146,7 @@ contract FlashLiquidatorHalmosTest is Test {
                 )
             );
         assert(!ok);
-        assert(_is(ret, IFlashLiquidatorErrors.InvalidFlashCallback.selector));
+        assert(_is(ret, IFlashLiquidator.InvalidFlashCallback.selector));
     }
 
     /// @notice The Pool reporting any initiator other than the helper makes the whole call revert.
@@ -194,13 +191,13 @@ contract FlashLiquidatorHalmosTest is Test {
         try new FlashLiquidator(address(pool), address(lvs), address(registry), address(capStore)) {
             deployed = true;
         } catch (bytes memory reason) {
-            assert(_is(reason, IFlashLiquidatorErrors.FlashSourceIsHub.selector));
+            assert(_is(reason, IFlashLiquidator.FlashSourceIsHub.selector));
         }
         assert(deployed == !recorded);
         (bool ok, bytes memory ret) = _call(_request(975_000));
         if (recorded) {
             assert(!ok);
-            assert(_is(ret, IFlashLiquidatorErrors.FlashSourceIsHub.selector));
+            assert(_is(ret, IFlashLiquidator.FlashSourceIsHub.selector));
         } else {
             assert(ok);
         }

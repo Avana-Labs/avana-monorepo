@@ -5,14 +5,9 @@ pragma solidity 0.8.28;
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
-import {ILPOracleEvents} from "../../src/oracle/lp-oracle/ILPOracleEvents.sol";
-import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
-import {TokenOracleConfig} from "../../src/types/TokenOracleConfig.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
+import {InitParams, LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
+import {OracleConfig, PriceState, RouteSlot, TokenOracleConfig} from "../../src/types/OracleTypes.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 import {
     LPOracleHarness,
@@ -53,17 +48,17 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         assertTrue(oracle.hasRole(admin, tl));
         assertEq(oracle.TIMELOCK(), tl);
         vm.prank(tl);
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.AdminRoleOnlyTimelock.selector, admin, alice));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.AdminRoleOnlyTimelock.selector, admin, alice));
         oracle.grantRole(admin, alice);
         vm.prank(tl);
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.AdminRoleOnlyTimelock.selector, root, alice));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.AdminRoleOnlyTimelock.selector, root, alice));
         oracle.grantRole(root, alice);
         // initialize with another timelock reverts.
         InitParams memory p = _params();
         p.timelock = alice;
         (bool ok, bytes memory ret) = _deploy(p);
         assertFalse(ok);
-        assertEq(ret, abi.encodeWithSelector(ILPOracleErrors.AdminRoleOnlyTimelock.selector, root, alice));
+        assertEq(ret, abi.encodeWithSelector(ILPOracleBase.AdminRoleOnlyTimelock.selector, root, alice));
     }
 
     // TEST-062 verifies: REQ-ORACLE-038, REQ-ORACLE-078, REQ-ORACLE-062, Q-226, Q-228, REQ-ACCESS-051, REQ-ACCESS-025
@@ -73,14 +68,14 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, alice, admin));
         oracle.setPokeMinGas(POKE_FLOOR + 1);
         vm.prank(tl);
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.PokeMinGasOutOfBounds.selector, POKE_FLOOR - 1));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.PokeMinGasOutOfBounds.selector, POKE_FLOOR - 1));
         oracle.setPokeMinGas(POKE_FLOOR - 1);
         vm.prank(tl);
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.PokeMinGasOutOfBounds.selector, POKE_CEILING + 1));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.PokeMinGasOutOfBounds.selector, POKE_CEILING + 1));
         oracle.setPokeMinGas(POKE_CEILING + 1);
         vm.prank(tl);
         vm.expectEmit(address(oracle));
-        emit ILPOracleEvents.PokeMinGasUpdated(POKE_FLOOR, 1_000_000);
+        emit ILPOracleBase.PokeMinGasUpdated(POKE_FLOOR, 1_000_000);
         oracle.setPokeMinGas(1_000_000);
         assertEq(oracle.pokeMinGas(), 1_000_000);
         LPOracleHarness next = LPOracleHarnessDeployer.deploy(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false);
@@ -112,24 +107,24 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         InitParams memory p = _params();
         p.pokeMinGas = POKE_FLOOR - 1;
         (bool ok, bytes memory ret) = _deploy(p);
-        assertEq(ret, abi.encodeWithSelector(ILPOracleErrors.PokeMinGasOutOfBounds.selector, POKE_FLOOR - 1));
+        assertEq(ret, abi.encodeWithSelector(ILPOracleBase.PokeMinGasOutOfBounds.selector, POKE_FLOOR - 1));
         p = _params();
         p.isUsdStable = new bool[](3);
         (ok, ret) = _deploy(p);
-        assertEq(ret, abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, MARKET));
+        assertEq(ret, abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, MARKET));
         p = _params();
         p.market = abi.encode(new uint256[](3));
         (ok, ret) = _deploy(p);
-        assertEq(ret, abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, MARKET), "module refuses");
+        assertEq(ret, abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, MARKET), "module refuses");
         p = _params();
         p.config.maxQuoteChangeBps = 0;
         (ok, ret) = _deploy(p);
-        assertEq(ret, abi.encodeWithSelector(ILPOracleErrors.ConfigCheckFailed.selector, LPOracleCodes.CHECK_QUOTE_CAP));
+        assertEq(ret, abi.encodeWithSelector(ILPOracleBase.ConfigCheckFailed.selector, LPOracleCodes.CHECK_QUOTE_CAP));
         // A configuration whose evaluation is not Live (token B's routes disagree) cannot seed.
         p = _params();
         aB.push(97_000_000, T0);
         (ok, ret) = _deploy(p);
-        assertEq(bytes4(ret), ILPOracleErrors.NotLive.selector);
+        assertEq(bytes4(ret), ILPOracleBase.NotLive.selector);
         aB.push(int256(ONE), T0);
         (ok,) = _deploy(_params());
         assertTrue(ok);
@@ -154,13 +149,13 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
     /// and a poke floor of 0 or a ceiling below the floor (`PokeMinGasOutOfBounds(ceiling)`); the default constants
     /// (timelock `0x7173`, 12-second blocks, floor 900,000, ceiling 3,000,000) deploy.
     function test_TEST_062_constructorRefusesBadChainConstants() public {
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, 0));
         new LPOracleHarnessPokeLogic(address(0), BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false);
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, 0));
         new LPOracleHarnessPokeLogic(tl, 0, POKE_FLOOR, POKE_CEILING, false);
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.PokeMinGasOutOfBounds.selector, POKE_CEILING));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.PokeMinGasOutOfBounds.selector, POKE_CEILING));
         new LPOracleHarnessPokeLogic(tl, BLOCK_TIME, 0, POKE_CEILING, false);
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.PokeMinGasOutOfBounds.selector, POKE_FLOOR - 1));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.PokeMinGasOutOfBounds.selector, POKE_FLOOR - 1));
         new LPOracleHarnessPokeLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_FLOOR - 1, false);
         LPOracleHarness impl = LPOracleHarnessDeployer.deploy(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false);
         assertEq(impl.TIMELOCK(), tl);
@@ -169,11 +164,11 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
     // TEST-062 verifies: REQ-ORACLE-106, REQ-ORACLE-080, REQ-ORACLE-078, Q-240
     function test_TEST_062_logicContractsRunOnlyInTheProxy() public {
         address pokeLogic = oracle.POKE_LOGIC();
-        vm.expectRevert(ILPOracleErrors.NotDelegated.selector);
+        vm.expectRevert(ILPOracleBase.NotDelegated.selector);
         LPOracleHarnessPokeLogic(pokeLogic).poke();
         address listingLogic = oracle.LISTING_LOGIC();
         InitParams memory p = _params();
-        vm.expectRevert(ILPOracleErrors.NotDelegated.selector);
+        vm.expectRevert(ILPOracleBase.NotDelegated.selector);
         LPOracleHarnessListingLogic(listingLogic).initializeMarket(p);
         // The views reach the view logic by the implementation's own delegatecall; there is no external entry point
         // that runs arbitrary calldata in a logic contract.
@@ -184,7 +179,7 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         address viewLogic = oracle.VIEW_LOGIC();
         LPOracleHarnessPokeLogic other =
             new LPOracleHarnessPokeLogic(tl, BLOCK_TIME, POKE_FLOOR + 1, POKE_CEILING, false);
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, 0));
         new LPOracleHarness(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, address(other), listingLogic, viewLogic);
     }
 
@@ -203,7 +198,7 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         p.pokeMinGas = POKE_CEILING + 1;
         bytes memory ret;
         (ok, ret) = _deploy(p);
-        assertEq(ret, abi.encodeWithSelector(ILPOracleErrors.PokeMinGasOutOfBounds.selector, POKE_CEILING + 1));
+        assertEq(ret, abi.encodeWithSelector(ILPOracleBase.PokeMinGasOutOfBounds.selector, POKE_CEILING + 1));
         vm.prank(tl);
         oracle.setPokeMinGas(POKE_CEILING);
         assertEq(oracle.pokeMinGas(), POKE_CEILING, "setPokeMinGas at the ceiling");
@@ -241,7 +236,7 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         feed.poke();
         Vm.Log[] memory logs = vm.getRecordedLogs();
         for (uint256 i = 0; i < logs.length; ++i) {
-            assertTrue(logs[i].topics[0] != ILPOracleEvents.PriceRouteVersionObserved.selector, "no version change");
+            assertTrue(logs[i].topics[0] != ILPOracleBase.PriceRouteVersionObserved.selector, "no version change");
         }
         assertEq(uint8(feed.getPriceState().state), uint8(PriceState.Live), "Live");
     }
@@ -281,7 +276,7 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         assertTrue(ok, "eight tokens");
         vm.revertToState(snap);
         (ok, ret) = _deploy(_nTokenParams(9));
-        assertEq(ret, abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, MARKET), "nine tokens");
+        assertEq(ret, abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, MARKET), "nine tokens");
     }
 
     // TEST-062 verifies: REQ-ORACLE-058, REQ-ORACLE-059, REQ-ORACLE-018, REQ-ORACLE-099, REQ-ORACLE-090
@@ -297,7 +292,7 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         LPOracleHarness impl = LPOracleHarnessDeployer.deploy(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, true);
         uint256 reasons = LPOracleCodes.ANY_TOKEN_DISAGREE | LPOracleCodes.USD_BAND | LPOracleCodes.DISAGREEMENT_PAUSE
             | LPOracleCodes.IN_GRACE | LPOracleCodes.SEQUENCER_GRACE;
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.NotLive.selector, uint8(PriceState.Drifting), reasons));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.NotLive.selector, uint8(PriceState.Drifting), reasons));
         new ERC1967Proxy(address(impl), abi.encodeCall(ILPOracle.initialize, (p)));
     }
 
@@ -319,7 +314,7 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         feed.setLock(false, true);
         vm.expectRevert(
             abi.encodeWithSelector(
-                ILPOracleErrors.NotLive.selector, uint8(PriceState.Cached), LPOracleCodes.POOL_REENTRANCY_LOCKED
+                ILPOracleBase.NotLive.selector, uint8(PriceState.Cached), LPOracleCodes.POOL_REENTRANCY_LOCKED
             )
         );
         feed.initialize(_params());
@@ -357,7 +352,7 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         uint256[] memory prices = new uint256[](2);
         (prices[0], prices[1]) = (ONE, ONE);
         vm.expectEmit(false, false, false, true);
-        emit ILPOracleEvents.PriceSeeded(int256(SEEDED), uint64(T0), prices);
+        emit ILPOracleBase.PriceSeeded(int256(SEEDED), uint64(T0), prices);
         new ERC1967Proxy(address(impl), abi.encodeCall(ILPOracle.initialize, (_params())));
     }
 
@@ -372,7 +367,7 @@ contract LPOracleAccessUnitTest is LPOracleFixture {
         (bool ok, bytes memory ret) = _deploy(p);
         assertFalse(ok);
         assertEq(
-            ret, abi.encodeWithSelector(ILPOracleErrors.ConfigCheckFailed.selector, LPOracleCodes.CHECK_VAULT_DECIMALS)
+            ret, abi.encodeWithSelector(ILPOracleBase.ConfigCheckFailed.selector, LPOracleCodes.CHECK_VAULT_DECIMALS)
         );
     }
 }

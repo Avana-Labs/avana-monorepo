@@ -3,17 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../custody/collateralization/ICollateralizationAdapter.sol";
-import {ICollateralizationDebtMark} from "../../custody/collateralization/ICollateralizationDebtMark.sol";
-import {ICollateralizationUser} from "../../custody/collateralization/ICollateralizationUser.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {PositionRef} from "../../types/PositionRef.sol";
-import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
+import {PositionRef} from "../../types/PositionTypes.sol";
+import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
-import {AaveAdapterImmutables} from "./types/AaveAdapterImmutables.sol";
-import {AdapterAccount} from "./types/AdapterAccount.sol";
+import {AaveAdapterImmutables, AdapterAccount} from "./types/AaveAdapterTypes.sol";
 
 /// @title AaveAdapterExitLogic
 /// @notice Bodies of `withdraw`, `repayAllAndWithdraw`, `collectFees`, `releaseZeroCredit` and `refreshDebtMark`.
@@ -71,7 +68,7 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
             if (moved) emit Repaid(msg.sender, msg.sender, marketId, debtReserveIds[i], spent, debtAfter, true);
         }
         if (_borrowCount(account.spoke, proxy) != 0) _revertDebtRemaining(proxy, account.spoke);
-        ICollateralizationDebtMark(_COLLATERALIZATION).markDebtFree(proxy);
+        ICollateralization(_COLLATERALIZATION).markDebtFree(proxy);
         _withdrawRecord(proxy, account, position.positionKey, units, true, 0);
         _release();
     }
@@ -104,10 +101,10 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
         uint256 reserveId = _reserveIdOf(account.vaultToken);
         int256 gapBefore = _gap(account.vaultToken);
         _withdrawAndBurn(proxy, account.spoke, account.vaultToken, reserveId, units);
-        ICollateralizationAdapter(_COLLATERALIZATION).release(proxy, account.vaultToken, positionKey, units);
+        ICollateralization(_COLLATERALIZATION).release(proxy, account.vaultToken, positionKey, units);
         uint256 hf = type(uint256).max;
         if (debtFree) _cleanup(proxy, account.spoke, reserveId);
-        else hf = IRiskModuleChecks(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
+        else hf = IRiskModule(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
         _checkGap(account.vaultToken, gapBefore);
         emit CollateralWithdrawn(msg.sender, account.marketId, account.vaultToken, positionKey, units, !debtFree, hf);
     }
@@ -120,7 +117,7 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _onlyDelegated();
         _acquire();
         address vaultToken = _depositorToken(marketId, position, deadline);
-        fees = ICollateralizationUser(_COLLATERALIZATION).collectFees(msg.sender, vaultToken, position.positionKey);
+        fees = ICollateralization(_COLLATERALIZATION).collectFees(msg.sender, vaultToken, position.positionKey);
         _release();
     }
 
@@ -132,7 +129,7 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _onlyDelegated();
         _acquire();
         address vaultToken = _depositorToken(marketId, position, deadline);
-        ICollateralizationUser(_COLLATERALIZATION).releaseZeroCredit(msg.sender, vaultToken, position.positionKey);
+        ICollateralization(_COLLATERALIZATION).releaseZeroCredit(msg.sender, vaultToken, position.positionKey);
         _release();
     }
 
@@ -141,7 +138,7 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
     ) external {
         _onlyDelegated();
         _acquire();
-        ICollateralizationDebtMark(_COLLATERALIZATION).markDebtFree(proxy);
+        ICollateralization(_COLLATERALIZATION).markDebtFree(proxy);
         _release();
     }
 

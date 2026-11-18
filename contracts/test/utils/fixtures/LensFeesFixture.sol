@@ -3,13 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {BackingRecord} from "../../../src/custody/collateralization/types/BackingRecord.sol";
+import {BackingRecord} from "../../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {ILens} from "../../../src/lens/lens/ILens.sol";
 import {Lens} from "../../../src/lens/lens/Lens.sol";
-import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {AaveAdapterLensMock} from "../mocks/AaveAdapterLensMock.sol";
 import {LensRegistryMock} from "../mocks/LensMocks.sol";
 import {SlipstreamIntegrationFixture} from "./SlipstreamIntegrationFixture.sol";
@@ -54,7 +53,13 @@ library LensFeesDeploy {
     function deploy(
         address[9] memory c
     ) internal returns (ILens lens) {
-        address[9] memory m;
+        lens = ILens(address(new Lens(modules(c))));
+    }
+
+    /// @dev The nine modules over the core addresses `c`, in the order the entry point takes them.
+    function modules(
+        address[9] memory c
+    ) internal returns (address[9] memory m) {
         m[0] = _create("LensAccountModule.sol:LensAccountModule", abi.encode(c));
         m[1] = _create("LensMarketModule.sol:LensMarketModule", abi.encode(c));
         m[2] = _create("LensPriceModule.sol:LensPriceModule", abi.encode(c));
@@ -64,7 +69,6 @@ library LensFeesDeploy {
         m[6] = _create("LensMarketsModule.sol:LensMarketsModule", abi.encode(c));
         m[7] = _create("LensPositionsModule.sol:LensPositionsModule", abi.encode(c));
         m[8] = _create("LensSpeedModule.sol:LensSpeedModule", abi.encode(c));
-        lens = ILens(address(new Lens(m)));
     }
 
     function _create(
@@ -114,6 +118,7 @@ library LensFeesDeploy {
 /// the canonical fee update.
 abstract contract LensFeesV3Fixture is UniswapV3IntegrationFixture {
     ILens internal lens;
+    address[9] internal lensModules;
     LensRegistryMock internal reg;
 
     function setUp() public virtual override {
@@ -126,7 +131,7 @@ abstract contract LensFeesV3Fixture is UniswapV3IntegrationFixture {
             )
         );
         LensFeesDeploy.etchStandIns(adapter, coll);
-        lens = LensFeesDeploy.deploy(
+        lensModules = LensFeesDeploy.modules(
             [
                 coll,
                 makeAddr("proxyManager"),
@@ -139,6 +144,7 @@ abstract contract LensFeesV3Fixture is UniswapV3IntegrationFixture {
                 coll
             ]
         );
+        lens = ILens(address(new Lens(lensModules)));
         nfpm.setTrackFees(true);
     }
 }

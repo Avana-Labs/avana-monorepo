@@ -6,11 +6,10 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../src/interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "../../src/policy/parameter-store/types/SpeedLimit.sol";
+import {MarketSpeedLimits, SpeedLimit} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {SpeedView} from "../../src/policy/risk-module/types/SpeedView.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {SpeedView} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
 
 /// @title AaveAdapterSpeedIntegrationTest

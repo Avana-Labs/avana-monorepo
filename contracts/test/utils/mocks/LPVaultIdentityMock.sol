@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IntegrationCapabilities} from "../../../src/amm/types/IntegrationCapabilities.sol";
-import {PoolKeying} from "../../../src/amm/types/PoolKeying.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {IntegrationCapabilities, PoolKeying} from "../../../src/amm/types/AmmTypes.sol";
+import {ShapeKind} from "../../../src/types/PositionTypes.sol";
 
 /// @title LPVaultIdentityMock
 /// @notice Stand-in LPVault for the VaultTokenFactory: answers only the identity getters `registerIntegration` reads

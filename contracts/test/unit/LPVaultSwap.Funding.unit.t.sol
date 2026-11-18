@@ -4,9 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -57,10 +56,10 @@ contract LPVaultSwapFundingUnitTest is LPVaultSwapUnitBase {
     // TEST-048 verifies: REQ-SWAP-011, REQ-SWAP-098, REQ-SWAP-108
     function test_TEST_048_fundingOutsideBoundsRefused() public {
         usdc.setBonus(1);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.FundingMismatch.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.FundingMismatch.selector));
         usdc.setBonus(0);
         usdc.setDrain(1950e6);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.FundingMismatch.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.FundingMismatch.selector));
         usdc.setDrain(0);
         _liquidateAs(keeper, _params(proxy, 1950e6));
     }
@@ -71,7 +70,7 @@ contract LPVaultSwapFundingUnitTest is LPVaultSwapUnitBase {
     function test_TEST_048_balanceFallOnFundingRefused() public {
         usdc.mint(address(lvs), 10e6);
         usdc.setDrain(1950e6 + 1);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.FundingMismatch.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.FundingMismatch.selector));
     }
 
     /// @notice A token that returns `false` on the caller's `transferFrom` reverts the call (SafeERC20), and a caller

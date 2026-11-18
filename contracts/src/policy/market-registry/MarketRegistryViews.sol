@@ -3,99 +3,97 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DriftReason} from "../../types/DriftReason.sol";
-import {Market} from "../../types/Market.sol";
-import {PauseReason} from "../../types/PauseReason.sol";
-import {PauseState} from "../../types/PauseState.sol";
-import {RouteSlot} from "../../types/RouteSlot.sol";
-import {IMarketRegistryApprovals} from "./IMarketRegistryApprovals.sol";
-import {IMarketRegistryBreakers} from "./IMarketRegistryBreakers.sol";
-import {IMarketRegistryCreditLines} from "./IMarketRegistryCreditLines.sol";
-import {IMarketRegistryFreeze} from "./IMarketRegistryFreeze.sol";
-import {IMarketRegistryHubs} from "./IMarketRegistryHubs.sol";
-import {IMarketRegistryPause} from "./IMarketRegistryPause.sol";
-import {IMarketRegistryRouteViews} from "./IMarketRegistryRouteViews.sol";
-import {IMarketRegistryStandby} from "./IMarketRegistryStandby.sol";
-import {IMarketRegistryViews} from "./IMarketRegistryViews.sol";
-import {IMarketRegistryWindDown} from "./IMarketRegistryWindDown.sol";
-import {MarketRegistryDriftView} from "./MarketRegistryDriftView.sol";
-import {DebtReserveDef} from "./types/DebtReserveDef.sol";
-import {RiskTier} from "./types/RiskTier.sol";
-import {SpokeDef} from "./types/SpokeDef.sol";
-import {TokenDef} from "./types/TokenDef.sol";
-import {WindDownState} from "./types/WindDownState.sol";
+import {DriftReason, Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {RouteSlot} from "../../types/OracleTypes.sol";
+import {IMarketRegistry} from "./IMarketRegistry.sol";
+import {IMarketRegistryDriftLogic} from "./IMarketRegistryDriftLogic.sol";
+import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
+import {DebtReserveDef, RiskTier, SpokeDef, TokenDef, WindDownState} from "./types/MarketRegistryTypes.sol";
 
 /// @title MarketRegistryViews
 /// @notice Every view of the MarketRegistry, served from its own storage.
 /// @dev Views never revert; an unknown key returns zeros and `false`.
-abstract contract MarketRegistryViews is
-    MarketRegistryDriftView,
-    IMarketRegistryHubs,
-    IMarketRegistryPause,
-    IMarketRegistryFreeze,
-    IMarketRegistryBreakers,
-    IMarketRegistryStandby,
-    IMarketRegistryCreditLines,
-    IMarketRegistryWindDown,
-    IMarketRegistryApprovals,
-    IMarketRegistryViews,
-    IMarketRegistryRouteViews
-{
-    /// @inheritdoc IMarketRegistryViews
+abstract contract MarketRegistryViews is MarketRegistryStorage, IMarketRegistry {
+    /// @dev First drift of a recorded Spoke (implementation, then each liquidatable market); `(0, None)` if none.
+    function _spokeDrift(
+        address spoke
+    ) internal view returns (uint256 marketId, DriftReason reason) {
+        SpokeDef storage sp = _s().spokes[spoke];
+        if (!sp.approved) return (0, DriftReason.None);
+        (,, bool current) = _spokeImplementation(spoke);
+        if (!current) return (0, DriftReason.SpokeImplementation);
+        uint256[] storage ids = _s().marketsOfSpoke[spoke];
+        for (uint256 i = 0; i < ids.length; ++i) {
+            Market storage m = _s().markets[ids[i]];
+            if (!_liquidatable(m.status)) continue;
+            // Per-market reads run in the activation logic (code size limit).
+            // forge-lint: disable-start(calls-loop)
+            reason = IMarketRegistryDriftLogic(_driftLogic())
+                .marketDrift(spoke, sp.hub, m.vaultToken, m.reserveId, m.hubAssetId);
+            // forge-lint: disable-end(calls-loop)
+            if (reason != DriftReason.None) return (ids[i], reason);
+        }
+        return (0, DriftReason.None);
+    }
+
+    /// @dev The logic contract that serves `marketDrift` (the activation logic).
+    function _driftLogic() internal view virtual returns (address);
+
+    /// @inheritdoc IMarketRegistry
     function getMarket(
         uint256 marketId
     ) external view override returns (Market memory market) {
         market = _s().markets[marketId];
     }
 
-    /// @inheritdoc IMarketRegistryViews
+    /// @inheritdoc IMarketRegistry
     function getToken(
         address token
     ) external view override returns (TokenDef memory def) {
         def = _s().tokens[token];
     }
 
-    /// @inheritdoc IMarketRegistryViews
+    /// @inheritdoc IMarketRegistry
     function getSpoke(
         address spoke
     ) external view override returns (SpokeDef memory def) {
         def = _s().spokes[spoke];
     }
 
-    /// @inheritdoc IMarketRegistryViews
+    /// @inheritdoc IMarketRegistry
     function getSpokes() external view override returns (address[] memory spokes) {
         spokes = _s().spokeList;
     }
 
-    /// @inheritdoc IMarketRegistryViews
+    /// @inheritdoc IMarketRegistry
     function marketsOfSpoke(
         address spoke
     ) external view override returns (uint256[] memory marketIds) {
         marketIds = _s().marketsOfSpoke[spoke];
     }
 
-    /// @inheritdoc IMarketRegistryViews
+    /// @inheritdoc IMarketRegistry
     function marketOfKey(
         bytes32 key
     ) external view override returns (uint256 marketId) {
         marketId = _s().marketOfKey[key];
     }
 
-    /// @inheritdoc IMarketRegistryViews
+    /// @inheritdoc IMarketRegistry
     function marketOfVaultToken(
         address vaultToken
     ) external view override returns (uint256 marketId) {
         marketId = _s().marketOfVaultToken[vaultToken];
     }
 
-    /// @inheritdoc IMarketRegistryViews
+    /// @inheritdoc IMarketRegistry
     function marketOfLpOracle(
         address lpOracle
     ) external view override returns (uint256 marketId) {
         marketId = _s().marketOfLpOracle[lpOracle];
     }
 
-    /// @inheritdoc IMarketRegistryViews
+    /// @inheritdoc IMarketRegistry
     function marketOfReserve(
         address spoke,
         uint256 reserveId
@@ -103,7 +101,7 @@ abstract contract MarketRegistryViews is
         marketId = _s().marketOfReserve[spoke][reserveId];
     }
 
-    /// @inheritdoc IMarketRegistryViews
+    /// @inheritdoc IMarketRegistry
     function marketOfHubAsset(
         address hub,
         uint256 hubAssetId
@@ -111,12 +109,12 @@ abstract contract MarketRegistryViews is
         marketId = _s().marketOfHubAsset[hub][hubAssetId];
     }
 
-    /// @inheritdoc IMarketRegistryViews
+    /// @inheritdoc IMarketRegistry
     function marketCount() external view override returns (uint256 count) {
         count = _s().marketCount;
     }
 
-    /// @inheritdoc IMarketRegistryRouteViews
+    /// @inheritdoc IMarketRegistry
     function getDebtReserve(
         address spoke,
         uint256 reserveId
@@ -124,14 +122,14 @@ abstract contract MarketRegistryViews is
         def = _s().debtReserves[spoke][reserveId];
     }
 
-    /// @inheritdoc IMarketRegistryRouteViews
+    /// @inheritdoc IMarketRegistry
     function getDebtReserveIds(
         address spoke
     ) external view override returns (uint256[] memory reserveIds) {
         reserveIds = _s().debtReserveIds[spoke];
     }
 
-    /// @inheritdoc IMarketRegistryRouteViews
+    /// @inheritdoc IMarketRegistry
     function isApprovedDebtReserve(
         address spoke,
         uint256 reserveId
@@ -139,7 +137,7 @@ abstract contract MarketRegistryViews is
         approved = _s().debtReserves[spoke][reserveId].approved;
     }
 
-    /// @inheritdoc IMarketRegistryRouteViews
+    /// @inheritdoc IMarketRegistry
     function getRoute(
         uint256 marketId,
         address token,
@@ -151,33 +149,33 @@ abstract contract MarketRegistryViews is
         usable = route != address(0) && r.active;
     }
 
-    /// @inheritdoc IMarketRegistryHubs
+    /// @inheritdoc IMarketRegistry
     function hubTier(
         address hub
     ) external view override returns (RiskTier tier) {
         tier = _s().hubTier[hub];
     }
 
-    /// @inheritdoc IMarketRegistryHubs
+    /// @inheritdoc IMarketRegistry
     function isRecordedHub(
         address account
     ) external view override returns (bool recorded) {
         recorded = _s().hubTier[account] != RiskTier.None;
     }
 
-    /// @inheritdoc IMarketRegistryHubs
+    /// @inheritdoc IMarketRegistry
     function getHubs() external view override returns (address[] memory hubs) {
         hubs = _s().hubList;
     }
 
-    /// @inheritdoc IMarketRegistryHubs
+    /// @inheritdoc IMarketRegistry
     function hubOf(
         address spoke
     ) external view override returns (address hub) {
         hub = _s().spokes[spoke].hub;
     }
 
-    /// @inheritdoc IMarketRegistryHubs
+    /// @inheritdoc IMarketRegistry
     function integrationOf(
         uint32 integrationId
     ) external view override returns (address lpVault, address pricing) {
@@ -185,14 +183,14 @@ abstract contract MarketRegistryViews is
         pricing = _s().integrationPricing[integrationId];
     }
 
-    /// @inheritdoc IMarketRegistryHubs
+    /// @inheritdoc IMarketRegistry
     function integrationIdOf(
         address lpVault
     ) external view override returns (uint32 integrationId) {
         integrationId = _s().integrationIdOf[lpVault];
     }
 
-    /// @inheritdoc IMarketRegistryHubs
+    /// @inheritdoc IMarketRegistry
     function firstLossReserveOf(
         address hub,
         address asset
@@ -200,7 +198,7 @@ abstract contract MarketRegistryViews is
         firstLossReserve = _s().firstLossReserveOf[hub][asset];
     }
 
-    /// @inheritdoc IMarketRegistryHubs
+    /// @inheritdoc IMarketRegistry
     function crossHubLineCap(
         address fundingHub,
         address asset,
@@ -209,7 +207,7 @@ abstract contract MarketRegistryViews is
         cap = _s().crossHubLineCap[fundingHub][asset][spoke];
     }
 
-    /// @inheritdoc IMarketRegistryHubs
+    /// @inheritdoc IMarketRegistry
     function crossHubLineTotal(
         address fundingHub,
         address asset
@@ -217,12 +215,12 @@ abstract contract MarketRegistryViews is
         total = _s().crossHubLineTotal[fundingHub][asset];
     }
 
-    /// @inheritdoc IMarketRegistryHubs
+    /// @inheritdoc IMarketRegistry
     function crossHubLinesEnabled() external view override returns (bool enabled) {
         enabled = _s().crossHubLinesEnabled;
     }
 
-    /// @inheritdoc IMarketRegistryCreditLines
+    /// @inheritdoc IMarketRegistry
     function creditLine(
         address fundingHub,
         address asset
@@ -232,7 +230,7 @@ abstract contract MarketRegistryViews is
         drawCapSum = cl.drawCapSum;
     }
 
-    /// @inheritdoc IMarketRegistryCreditLines
+    /// @inheritdoc IMarketRegistry
     function creditLineCoverage(
         address fundingHub,
         address asset
@@ -240,49 +238,49 @@ abstract contract MarketRegistryViews is
         (required, funded) = _coverage(fundingHub, asset, _s().creditLines[fundingHub][asset].line);
     }
 
-    /// @inheritdoc IMarketRegistryApprovals
+    /// @inheritdoc IMarketRegistry
     function isApprovedSpokeCodeHash(
         bytes32 codeHash
     ) external view override returns (bool approved) {
         approved = _spokeHashApproved(codeHash);
     }
 
-    /// @inheritdoc IMarketRegistryApprovals
+    /// @inheritdoc IMarketRegistry
     function spokeImplementationStatus(
         address spoke
     ) external view override returns (address implementation, bytes32 codeHash, bool current) {
         (implementation, codeHash, current) = _spokeImplementation(spoke);
     }
 
-    /// @inheritdoc IMarketRegistryApprovals
+    /// @inheritdoc IMarketRegistry
     function integrationContracts(
         uint32 integrationId
     ) external view override returns (address[] memory contracts) {
         contracts = _s().integrationContracts[integrationId];
     }
 
-    /// @inheritdoc IMarketRegistryPause
+    /// @inheritdoc IMarketRegistry
     function pauseState(
         address hub
     ) external view override returns (PauseState state) {
         state = _s().pauseState[hub];
     }
 
-    /// @inheritdoc IMarketRegistryPause
+    /// @inheritdoc IMarketRegistry
     function pauseReason(
         address hub
     ) external view override returns (PauseReason reason) {
         reason = _s().pauseReason[hub];
     }
 
-    /// @inheritdoc IMarketRegistryFreeze
+    /// @inheritdoc IMarketRegistry
     function isFrozenAddress(
         address account
     ) external view override returns (bool frozen) {
         frozen = _s().frozen[account];
     }
 
-    /// @inheritdoc IMarketRegistryFreeze
+    /// @inheritdoc IMarketRegistry
     function freezesInWindow(
         address caller
     ) external view override returns (uint256 count) {
@@ -291,12 +289,12 @@ abstract contract MarketRegistryViews is
         count = _freezesInWindow(caller, uint64(block.timestamp / 3600));
     }
 
-    /// @inheritdoc IMarketRegistryFreeze
+    /// @inheritdoc IMarketRegistry
     function MAX_ADDRESS_FREEZES_PER_DAY() external pure override returns (uint256 limit) {
         limit = _MAX_FREEZES_PER_DAY;
     }
 
-    /// @inheritdoc IMarketRegistryBreakers
+    /// @inheritdoc IMarketRegistry
     function marketBreaker(
         uint256 marketId
     ) external view override returns (uint32 latchedReasons, uint64 lastBreach) {
@@ -305,7 +303,7 @@ abstract contract MarketRegistryViews is
         lastBreach = _s().lastBreachAt[key];
     }
 
-    /// @inheritdoc IMarketRegistryBreakers
+    /// @inheritdoc IMarketRegistry
     function debtBreaker(
         address spoke,
         uint256 debtReserveId
@@ -315,14 +313,14 @@ abstract contract MarketRegistryViews is
         lastBreach = _s().lastBreachAt[key];
     }
 
-    /// @inheritdoc IMarketRegistryBreakers
+    /// @inheritdoc IMarketRegistry
     function lastBreachAt(
         bytes32 key
     ) external view override returns (uint64 at) {
         at = _s().lastBreachAt[key];
     }
 
-    /// @inheritdoc IMarketRegistryBreakers
+    /// @inheritdoc IMarketRegistry
     function activeMarketCount(
         address spoke
     ) external view override returns (uint256 count) {
@@ -332,7 +330,7 @@ abstract contract MarketRegistryViews is
         }
     }
 
-    /// @inheritdoc IMarketRegistryStandby
+    /// @inheritdoc IMarketRegistry
     function activePriceRoutes(
         address token
     ) external view override returns (address[] memory primary, address[] memory alternate, RouteSlot replaced) {
@@ -342,7 +340,7 @@ abstract contract MarketRegistryViews is
         alternate = replaced == RouteSlot.Alternate ? t.standbyRoute : t.alternateRoute;
     }
 
-    /// @inheritdoc IMarketRegistryStandby
+    /// @inheritdoc IMarketRegistry
     function standbySwitchLockedUntil(
         address token
     ) external view override returns (uint256 until) {
@@ -350,28 +348,28 @@ abstract contract MarketRegistryViews is
         until = at == 0 ? 0 : uint256(at) + _STANDBY_RESWITCH_COOLDOWN;
     }
 
-    /// @inheritdoc IMarketRegistryStandby
+    /// @inheritdoc IMarketRegistry
     function priceRouteVersion(
         address token
     ) external view override returns (uint64 version) {
         version = _s().priceRouteVersion[token];
     }
 
-    /// @inheritdoc IMarketRegistryWindDown
+    /// @inheritdoc IMarketRegistry
     function windDownState(
         uint256 marketId
     ) external view override returns (WindDownState memory state) {
         state = _s().windDown[marketId];
     }
 
-    /// @inheritdoc IMarketRegistryWindDown
+    /// @inheritdoc IMarketRegistry
     function settlementReserve(
         uint256 marketId
     ) external view override returns (uint256 debtReserveId) {
         debtReserveId = _s().settlementReserve[marketId];
     }
 
-    /// @inheritdoc IMarketRegistryHubs
+    /// @inheritdoc IMarketRegistry
     function spokeSettingsDrift(
         address spoke
     ) external view override returns (uint256 marketId, DriftReason reason) {

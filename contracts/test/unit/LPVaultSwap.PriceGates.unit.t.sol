@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapPriceGatesUnitTest
@@ -28,11 +27,11 @@ contract LPVaultSwapPriceGatesUnitTest is LPVaultSwapUnitBase {
     }
 
     function _stale() internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(ILPVaultSwapErrors.StalePrice.selector);
+        return abi.encodeWithSelector(ILPVaultSwapBase.StalePrice.selector);
     }
 
     function _debtStale() internal view returns (bytes memory) {
-        return abi.encodeWithSelector(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveId);
+        return abi.encodeWithSelector(ILPVaultSwapBase.DebtPriceStale.selector, usdcReserveId);
     }
 
     /// @notice (b) Cached and Expired markets refuse seizure; Live and Drifting markets settle.
@@ -155,7 +154,7 @@ contract LPVaultSwapPriceGatesUnitTest is LPVaultSwapUnitBase {
         lpOracle.setFlags(false, false, false, true);
         uint256 hf = _hf(proxy);
         store.setGraceHealthFactor(hf);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.GraceHealthFactor.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.GraceHealthFactor.selector));
         store.setGraceHealthFactor(hf + 1);
         _liquidateAs(keeper, _params(proxy, 1950e6));
         // Outside grace the bound does not apply.
@@ -171,7 +170,7 @@ contract LPVaultSwapPriceGatesUnitTest is LPVaultSwapUnitBase {
         lpOracle.setFlags(false, false, false, true);
         uint256 hf = _hf(proxy);
         store.setGraceHealthFactor(hf - 1);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.GraceHealthFactor.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.GraceHealthFactor.selector));
     }
 
     /// @notice SPEC-LIQ-004: `Pc` is the smaller of the AaveOracle price and the LPOracle's served price, `Pdebt` the
@@ -217,7 +216,7 @@ contract LPVaultSwapPriceGatesUnitTest is LPVaultSwapUnitBase {
         prices[0] = PRICE_UNIT;
         prices[1] = 0;
         lpOracle.setPrices(prices);
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.ZeroCollateralPrice.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.ZeroCollateralPrice.selector));
     }
 
     /// @notice `settlePending` ignores grace but is refused while the market's price fails (no grace bound applies).

@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {DexHops} from "./DexHops.sol";
 import {ISettlementRoute} from "./ISettlementRoute.sol";
-import {DexHop} from "./types/DexHop.sol";
-import {RouteConfig} from "./types/RouteConfig.sol";
+import {DexHop, RouteConfig} from "./types/SettlementRouteTypes.sol";
 
 /// @title DexPathRoute
 /// @notice Swap route type 1 (`DexPath`): a listed token into a debt asset through one to three fixed DEX hops.

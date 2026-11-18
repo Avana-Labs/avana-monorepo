@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {WindDownState} from "../../src/policy/market-registry/types/WindDownState.sol";
+import {MarketStatus, WindDownState} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";
 import {MarketRegistryLifecycleHandler} from "./handlers/MarketRegistryLifecycleHandler.sol";
 import {Test} from "forge-std/Test.sol";

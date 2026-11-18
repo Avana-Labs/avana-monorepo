@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IParameterStoreAdmin} from "../../../src/policy/parameter-store/IParameterStoreAdmin.sol";
+import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {ParameterStoreAdminRiskLogic} from "../../../src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
+import {SecondSource, SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {MockAggregator} from "../../utils/mocks/ParameterStoreMocks.sol";
 import {ParameterStoreHarnessBase} from "./ParameterStoreHarnessBase.sol";
 
@@ -93,7 +92,7 @@ contract ParameterStoreAdminRiskProperties is ParameterStoreHarnessBase {
     ) external {
         SecondSource memory s = _form(src, window);
         SecondSource memory b = _form(standby, window);
-        bool ok = _call(ADMIN_RISK, abi.encodeCall(IParameterStoreAdmin.setSecondSource, (USDC, s, b)));
+        bool ok = _call(ADMIN_RISK, abi.encodeCall(IParameterStore.setSecondSource, (USDC, s, b)));
         if (ok) {
             assert(s.kind != SecondSourceKind.None && !_onPool(s) && !_onPool(b));
             assert(s.twapWindow <= GRACE && b.twapWindow <= GRACE && ORACLE.failed() == 0);
@@ -105,20 +104,20 @@ contract ParameterStoreAdminRiskProperties is ParameterStoreHarnessBase {
 
     function useStandby() external {
         bool before = _s().onStandby[USDC];
-        bool ok = _call(ADMIN_RISK, abi.encodeCall(IParameterStoreAdmin.useStandbySecondSource, (USDC)));
+        bool ok = _call(ADMIN_RISK, abi.encodeCall(IParameterStore.useStandbySecondSource, (USDC)));
         if (ok) assert(!before && _s().onStandby[USDC] && ORACLE.failed() == 0);
         if (ORACLE.failed() != 0) assert(!ok && _s().onStandby[USDC] == before);
     }
 
     function restore() external {
-        bool ok = _call(ADMIN_RISK, abi.encodeCall(IParameterStoreAdmin.restoreSecondSource, (USDC)));
+        bool ok = _call(ADMIN_RISK, abi.encodeCall(IParameterStore.restoreSecondSource, (USDC)));
         if (ok) assert(!_s().onStandby[USDC]);
     }
 
     function setFeeShare(
         uint16 value
     ) external {
-        bool ok = _call(ADMIN_RISK, abi.encodeCall(IParameterStoreAdmin.setAvanaFeeShareBps, (value)));
+        bool ok = _call(ADMIN_RISK, abi.encodeCall(IParameterStore.setAvanaFeeShareBps, (value)));
         assert(ok == (value <= 5000));
     }
 

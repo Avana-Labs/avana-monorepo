@@ -3,16 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryCreditLines} from "../../src/policy/market-registry/IMarketRegistryCreditLines.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {DebtReserveDef, RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {MarketDef} from "../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryAaveOracleMock, RegistryHubMock, RegistrySpokeMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
 import {
@@ -58,7 +54,7 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
         _listTokenWithProbe(address(gho), "gho", IssuerProbe.None);
         assertEq(registry.flashSource(), address(0));
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.InvalidDebtReserve.selector, bytes32("flash")));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidDebtReserve.selector, bytes32("flash")));
         registry.enableDebtReserve(address(spoke), _ghoDef());
         // Once a source lends GHO, the same definition is accepted.
         flash = new RegistryFlashSourceMock(aaveV3Pool, address(lpVaultSwap));
@@ -78,9 +74,7 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
         // ceil(1 x 10^6 x 2,000 / 10^4) = 200,000 base units required, none funded.
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IMarketRegistryCreditLines.CoverageBelowRatio.selector, address(hub), address(usdt), 200_000, 0
-            )
+            abi.encodeWithSelector(IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(usdt), 200_000, 0)
         );
         registry.recordCreditLine(address(hub), address(usdt), 1);
         vm.prank(address(timelock));
@@ -129,9 +123,7 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
         });
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IMarketRegistryCreditLines.FundingHubConsentMissing.selector, address(hub), address(dai)
-            )
+            abi.encodeWithSelector(IMarketRegistry.FundingHubConsentMissing.selector, address(hub), address(dai))
         );
         registry.enableDebtReserve(address(spoke2), d);
         // The closed line is reported before the missing consent.
@@ -140,7 +132,7 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
         vm.prank(address(timelock));
         vm.expectRevert(
             abi.encodeWithSelector(
-                IMarketRegistryHubs.CrossHubLineClosed.selector, address(hub), address(dai), address(spoke2)
+                IMarketRegistry.CrossHubLineClosed.selector, address(hub), address(dai), address(spoke2)
             )
         );
         registry.enableDebtReserve(address(spoke2), d);
@@ -167,7 +159,7 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
         MarketDef memory d = _marketDef(vt, address(o));
         d.shape = sh;
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("rawPrice")));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("rawPrice")));
         registry.listCollateralMarket(d);
         // At 2^95 / 10^8 (still at 1 decimal) the route reads below 2^96 and the bound itself decides.
         big.setAnswer(int256(uint256(2 ** 95) / 1e8));

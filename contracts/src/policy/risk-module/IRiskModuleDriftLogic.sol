@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DriftReason} from "../../types/DriftReason.sol";
+import {DriftReason} from "../../types/MarketTypes.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 
 /// @title IRiskModuleDriftLogic

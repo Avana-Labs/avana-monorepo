@@ -3,18 +3,17 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {PledgeCounters} from "../../types/PledgeCounters.sol";
+import {PledgeCounters} from "../../types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
+import {ILPVault} from "../lp-vault/ILPVault.sol";
 import {CollateralizationLedger} from "./CollateralizationLedger.sol";
-import {ICollateralizationViews} from "./ICollateralizationViews.sol";
-import {BackingRecord} from "./types/BackingRecord.sol";
-import {Pending} from "./types/Pending.sol";
+import {ICollateralization} from "./ICollateralization.sol";
+import {BackingRecord, Pending} from "./types/CollateralizationTypes.sol";
 
 /// @title CollateralizationViews
 /// @notice Read-only views of the backing ledger and the constructor immutables.
-abstract contract CollateralizationViews is CollateralizationLedger, ICollateralizationViews {
-    /// @inheritdoc ICollateralizationViews
+abstract contract CollateralizationViews is CollateralizationLedger, ICollateralization {
+    /// @inheritdoc ICollateralization
     function getRecord(
         uint256 recordId
     ) external view override returns (BackingRecord memory record) {
@@ -22,7 +21,7 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         record = records[recordId];
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function recordIdOf(
         uint32 integrationId,
         bytes32 positionKey
@@ -31,13 +30,13 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         recordId = _recordIdOf[integrationId][positionKey];
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function nextRecordId() external view override returns (uint256 nextId) {
         _checkView();
         nextId = _nextRecordId;
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function getAccountRecords(
         address proxy,
         address vaultToken,
@@ -48,7 +47,7 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         (recordIds, page) = _page(seizureList[proxy][vaultToken], zeroCreditList[proxy][vaultToken], offset, limit);
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function getOpenRecordCount(
         address proxy,
         address vaultToken
@@ -57,7 +56,7 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         count = seizureList[proxy][vaultToken].length + zeroCreditList[proxy][vaultToken].length;
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function getAccountCredited(
         address proxy,
         address vaultToken
@@ -66,7 +65,7 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         credited = accountCredited[proxy][vaultToken];
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function getTotalCredited(
         address vaultToken
     ) external view override returns (uint256 credited) {
@@ -74,7 +73,7 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         credited = totalCredited[vaultToken];
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function poolUnits(
         bytes32 poolKey
     ) external view override returns (uint256 units) {
@@ -82,7 +81,7 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         units = _poolUnits[poolKey];
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function getPending(
         address vaultToken
     ) external view override returns (Pending memory balance) {
@@ -90,7 +89,7 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         balance = pending[vaultToken];
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function getMarketRecords(
         address vaultToken,
         uint256 offset,
@@ -101,7 +100,7 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         (recordIds, page) = _page(marketRecords[vaultToken], marketRecords[address(0)], offset, limit);
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function getMarketRecordCount(
         address vaultToken
     ) external view override returns (uint256 count) {
@@ -109,7 +108,7 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         count = marketRecords[vaultToken].length;
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function getMarketDebtFree(
         address vaultToken
     ) external view override returns (bool debtFree) {
@@ -117,7 +116,7 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         debtFree = indebtedCount[vaultToken] == 0;
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function getCounters(
         address vaultToken,
         address
@@ -126,7 +125,7 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         counters = _counters(_load(vaultToken));
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function previewRelease(
         uint32 integrationId,
         bytes32 positionKey
@@ -136,7 +135,7 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         units = _creditedAfterReconcile(c, id, r);
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function previewRecredit(
         uint32 integrationId,
         bytes32 positionKey
@@ -146,14 +145,14 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         uint256 credited = _creditedAfterReconcile(c, id, r);
         if (credited == 0) return 0;
         // Reconciliation removes exactly the units it debits, so `live - credited` is unchanged by it.
-        uint256 live = IAmmIntegration(c.lpVault).unitsOf(positionKey);
+        uint256 live = ILPVault(c.lpVault).unitsOf(positionKey);
         uint256 before = r.credited;
         // Live units cover credit and are below 2^128.
         // forge-lint: disable-next-line(unsafe-typecast)
         added = live > before ? uint128(live - before) : 0;
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function getAccountRescueUnits(
         address proxy,
         address vaultToken
@@ -162,34 +161,34 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
         rescueUnits = accountRescueUnits[proxy][vaultToken];
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function lpVaultOf(
         uint32 integrationId
     ) external view override returns (address lpVault) {
         lpVault = IVaultTokenFactory(_VAULT_TOKEN_FACTORY).lpVaultOf(integrationId);
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function ADAPTER() external view override returns (address adapter) {
         adapter = _ADAPTER;
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function LP_VAULT_SWAP() external view override returns (address lpVaultSwap) {
         lpVaultSwap = _LP_VAULT_SWAP;
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function RISK_MODULE() external view override returns (address riskModule) {
         riskModule = _RISK_MODULE;
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function LOCK() external view override returns (address lock) {
         lock = _LOCK;
     }
 
-    /// @inheritdoc ICollateralizationViews
+    /// @inheritdoc ICollateralization
     function VAULT_TOKEN_FACTORY() external view override returns (address vaultTokenFactory) {
         vaultTokenFactory = _VAULT_TOKEN_FACTORY;
     }

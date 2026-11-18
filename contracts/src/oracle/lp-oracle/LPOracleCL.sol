@@ -8,8 +8,7 @@ import {LPOracle} from "./LPOracle.sol";
 import {LPOracleCLModule} from "./LPOracleCLModule.sol";
 import {LPOracleCLModuleCaller} from "./LPOracleCLModuleCaller.sol";
 import {LPOracleCLPool} from "./LPOracleCLPool.sol";
-import {ClPriceStateView} from "./types/ClPriceStateView.sol";
-import {LPOracleLogicSet} from "./types/LPOracleLogicSet.sol";
+import {ClPriceStateView, LPOracleLogicSet} from "./LPOracleTypes.sol";
 
 /// @title LPOracleCL
 /// @notice LPOracle implementation for the concentrated-liquidity markets of one AMM protocol on one chain.

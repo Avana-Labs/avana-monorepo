@@ -3,28 +3,179 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
+// External calls go only to known protocol contracts while a Lock member holds the Lock, so nothing can re-enter.
+// Ledger writes happen only inside entry points that emit their own event.
+
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {IRiskModuleChecks} from "../../policy/risk-module/IRiskModuleChecks.sol";
-import {PledgeCharge} from "../../policy/risk-module/types/PledgeCharge.sol";
-import {PledgeCounters} from "../../types/PledgeCounters.sol";
+import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
+import {PledgeCharge} from "../../policy/risk-module/types/RiskModuleTypes.sol";
+import {PledgeCounters} from "../../types/PositionTypes.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
+import {ILPVault} from "../lp-vault/ILPVault.sol";
 import {CollateralizationLedger} from "./CollateralizationLedger.sol";
-import {ICollateralizationAdapter} from "./ICollateralizationAdapter.sol";
-import {BackingRecord} from "./types/BackingRecord.sol";
+import {ICollateralization} from "./ICollateralization.sol";
+import {BackingRecord} from "./types/CollateralizationTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-// External calls go only to known protocol contracts while a Lock member holds the Lock, so nothing can re-enter.
-// forge-lint: disable-start(reentrancy-events)
-// forge-lint: disable-start(reentrancy-no-eth)
-// Ledger writes happen only inside entry points that emit their own event.
-// forge-lint: disable-start(missing-events-access-control)
 /// @title CollateralizationPledge
 /// @notice Adapter path, credit side: `pledge` records a custodied position and `recredit` credits units added to it.
 /// @dev Trusts the Adapter for `depositor`, `proxy` and `requireRescue`, but still enforces the custody limits.
-abstract contract CollateralizationPledge is CollateralizationLedger, ICollateralizationAdapter {
-    /// @inheritdoc ICollateralizationAdapter
+// forge-lint: disable-start(reentrancy-events)
+// forge-lint: disable-start(reentrancy-no-eth)
+// forge-lint: disable-start(missing-events-access-control)
+abstract contract CollateralizationPledge is CollateralizationLedger, ICollateralization {
+    // forge-lint: disable-start(reentrancy-events)
+    // forge-lint: disable-start(reentrancy-no-eth)
+    /// @inheritdoc ICollateralization
+    function release(
+        address proxy,
+        address vaultToken,
+        bytes32 positionKey,
+        uint256 units
+    ) external override {
+        (Ctx memory c, uint256 id, BackingRecord storage r) = _prepareExit(vaultToken, positionKey, proxy, units, 0);
+        if (units == 0 || units != r.credited) revert UnitsMismatch();
+        _creditSpeed(c.marketId, _windowed(r, _debitRecord(c, r, units)));
+        emit CollateralReleased(id, positionKey, r.depositor, proxy, vaultToken, units);
+        _close(c, id, r);
+        _returnPosition(c, positionKey);
+    }
+
+    /// @inheritdoc ICollateralization
+    function releasePartial(
+        address proxy,
+        address vaultToken,
+        bytes32 positionKey,
+        uint128 units,
+        uint256[] calldata minAmounts
+    ) external override returns (uint128 remaining, uint256[] memory amounts) {
+        (Ctx memory c, uint256 id, BackingRecord storage r) =
+            _prepareExit(vaultToken, positionKey, proxy, units, minAmounts.length + 1);
+        uint128 credited = r.credited;
+        if (units == 0) revert UnitsMismatch();
+        if (units >= credited) revert PartialRemovalTooLarge(units, credited);
+        uint256 released = _debitRecord(c, r, units);
+        _creditSpeed(c.marketId, _windowed(r, released));
+        remaining = credited - units;
+        emit RecordReduced(id, units, released);
+        address depositor = r.depositor;
+        uint256[] memory before = _balances(c, depositor);
+        // The amounts returned are the depositor's measured balance deltas, not the LPVault's report.
+        // forge-lint: disable-next-line(unused-return)
+        ILPVault(c.lpVault).releaseToDepositor(positionKey, units, minAmounts);
+        amounts = _received(c, depositor, before);
+    }
+
+    /// @inheritdoc ICollateralization
+    function releaseForDeleverage(
+        address proxy,
+        address vaultToken,
+        bytes32 positionKey,
+        uint128 units,
+        uint256[] calldata minAmounts
+    ) external override returns (uint256[] memory amounts, bool closed) {
+        (Ctx memory c, uint256 id, BackingRecord storage r) =
+            _prepareExit(vaultToken, positionKey, proxy, units, minAmounts.length + 1);
+        if (units == 0 || units > r.credited) revert UnitsMismatch();
+        uint256 released = _debitRecord(c, r, units);
+        _creditSpeed(c.marketId, _windowed(r, released));
+        closed = r.credited == 0;
+        emit RecordReduced(id, units, released);
+        if (closed) {
+            emit CollateralReleased(id, positionKey, r.depositor, proxy, vaultToken, units);
+            _close(c, id, r);
+        }
+        amounts = _unwind(c, positionKey, units, minAmounts, _LP_VAULT_SWAP);
+        if (closed) _returnPosition(c, positionKey);
+    }
+
+    /// @inheritdoc ICollateralization
+    function releaseZeroCredit(
+        address depositor,
+        address vaultToken,
+        bytes32 positionKey
+    ) external override {
+        _onlyAdapter();
+        Ctx memory c = _load(vaultToken);
+        (uint256 id, BackingRecord storage r) = _depositorRecord(c, positionKey, depositor);
+        address proxy = r.proxy;
+        _withReserve(c);
+        _reconcile(c, proxy, _supplied(c, proxy));
+        if (r.credited != 0) revert RecordHasCredit();
+        emit CollateralReleased(id, positionKey, depositor, proxy, vaultToken, 0);
+        _close(c, id, r);
+        _returnPosition(c, positionKey);
+    }
+
+    /// @inheritdoc ICollateralization
+    function collectFees(
+        address depositor,
+        address vaultToken,
+        bytes32 positionKey
+    ) external override returns (uint256[] memory amounts) {
+        _onlyAdapter();
+        Ctx memory c = _load(vaultToken);
+        _depositorRecord(c, positionKey, depositor);
+        amounts = ILPVault(c.lpVault).collectFees(positionKey, depositor);
+    }
+
+    /// @dev `lengthPlusOne` is 0 for `release`; otherwise `minAmounts.length + 1`, and the pool lock is checked.
+    function _prepareExit(
+        address vaultToken,
+        bytes32 positionKey,
+        address proxy,
+        uint256 units,
+        uint256 lengthPlusOne
+    ) private returns (Ctx memory c, uint256 id, BackingRecord storage r) {
+        _onlyAdapter();
+        c = _load(vaultToken);
+        (id, r) = _record(c, positionKey);
+        if (r.proxy != proxy) revert NotRecordProxy();
+        _checkMarket(c, r);
+        if (lengthPlusOne != 0) {
+            _checkLength(c, lengthPlusOne - 1);
+            _checkReadSafe(c);
+        }
+        _withReserve(c);
+        _reconcile(c, proxy, _supplied(c, proxy) + units);
+    }
+
+    /// @dev The part of `released` USD the pledge window was charged, rounded down.
+    function _windowed(
+        BackingRecord storage r,
+        uint256 released
+    ) private view returns (uint256) {
+        return released * r.windowedBps / WINDOW_BPS;
+    }
+
+    /// @notice Gives the booked value a withdrawal released back to the market's pledge-speed window.
+    function _creditSpeed(
+        uint256 marketId,
+        uint256 usd
+    ) private {
+        if (usd == 0) return;
+        uint256 left = gasleft();
+        if (left < SPEED_CREDIT_FLOOR) revert InsufficientGas(left, SPEED_CREDIT_FLOOR);
+        // A failed credit only leaves the window fuller than the net pledges; it must not block the exit.
+        // solhint-disable-next-line no-empty-blocks
+        try IRiskModule(_RISK_MODULE).creditWithdraw{gas: SPEED_CREDIT_GAS}(marketId, usd) {} catch {}
+    }
+
+    function _depositorRecord(
+        Ctx memory c,
+        bytes32 positionKey,
+        address depositor
+    ) private view returns (uint256 id, BackingRecord storage r) {
+        (id, r) = _record(c, positionKey);
+        _checkMarket(c, r);
+        if (r.depositor != depositor) revert NotDepositor();
+    }
+
+    // forge-lint: disable-end(reentrancy-no-eth)
+    // forge-lint: disable-end(reentrancy-events)
+
+    /// @inheritdoc ICollateralization
     function pledge(
         address depositor,
         address proxy,
@@ -45,10 +196,10 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         if (open >= _recordCap(c.lpVault)) revert TooManyRecords(open);
 
         _checkReadSafe(c);
-        credited = IAmmIntegration(c.lpVault).receivePosition(c.marketId, depositor, positionKey);
+        credited = ILPVault(c.lpVault).receivePosition(c.marketId, depositor, positionKey);
         if (credited == 0) revert ZeroUnits();
         if (credited > MAX_CREDITED_UNITS) revert LiquidityAboveBound();
-        if (IAmmIntegration(c.lpVault).marketOfPosition(positionKey) != c.marketId) revert ShapeMismatch();
+        if (ILPVault(c.lpVault).marketOfPosition(positionKey) != c.marketId) revert ShapeMismatch();
         PledgeCharge memory charge = _charge(c, depositor, proxy, positionKey, credited, requireRescue);
         _checkCharge(charge, credited);
 
@@ -95,7 +246,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         );
     }
 
-    /// @inheritdoc ICollateralizationAdapter
+    /// @inheritdoc ICollateralization
     function recredit(
         address depositor,
         address proxy,
@@ -117,7 +268,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         BackingRecord storage r,
         bytes32 positionKey
     ) private view returns (uint128 added) {
-        uint256 live = IAmmIntegration(c.lpVault).unitsOf(positionKey);
+        uint256 live = ILPVault(c.lpVault).unitsOf(positionKey);
         uint256 credited = r.credited;
         if (credited == 0 || live <= credited) revert NothingToRecredit(positionKey);
         if (live > MAX_CREDITED_UNITS) revert LiquidityAboveBound();
@@ -183,7 +334,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         _reconcile(c, proxy, _supplied(c, proxy));
         // The credit is the live units read next, not the LPVault's report of the top-up.
         // forge-lint: disable-next-line(unused-return)
-        if (topUp.length != 0) IAmmIntegration(c.lpVault).topUpPosition(positionKey, depositor, topUp);
+        if (topUp.length != 0) ILPVault(c.lpVault).topUpPosition(positionKey, depositor, topUp);
     }
 
     /// @dev Counters are passed in because the ledger's views revert while the Lock is held.
@@ -200,7 +351,7 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
         ILPOracle(IVaultToken(c.vaultToken).lpOracle()).poke();
         PledgeCounters memory counters = _counters(c);
         counters.accountRecords = seizureList[proxy][c.vaultToken].length + zeroCreditList[proxy][c.vaultToken].length;
-        return IRiskModuleChecks(_RISK_MODULE)
+        return IRiskModule(_RISK_MODULE)
             .checkPledge(depositor, proxy, c.marketId, c.integrationId, positionKey, units, counters, requireRescue);
     }
 

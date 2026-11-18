@@ -8,8 +8,7 @@ import {IDebtOracleErrors} from "../../src/oracle/debt-oracle/IDebtOracleErrors.
 import {IDebtOracleEvents} from "../../src/oracle/debt-oracle/IDebtOracleEvents.sol";
 import {DebtOracleInitParams} from "../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
 import {DebtPriceView} from "../../src/oracle/debt-oracle/types/DebtPriceView.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {PriceState, RouteSlot} from "../../src/types/OracleTypes.sol";
 import {DebtOracleFixture} from "../utils/fixtures/DebtOracleFixture.sol";
 import {HostileConfig} from "../utils/mocks/DebtOracleConfigMocks.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";

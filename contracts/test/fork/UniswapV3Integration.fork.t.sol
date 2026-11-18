@@ -3,12 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClMarketConfig} from "../../src/amm/types/ClMarketConfig.sol";
+import {ClMarketConfig} from "../../src/amm/types/AmmTypes.sol";
 import {UniswapV3Integration} from "../../src/amm/uniswap-v3/UniswapV3Integration.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {ForkConstants} from "../utils/fixtures/ForkConstants.sol";
 
@@ -53,7 +52,7 @@ contract UniswapV3IntegrationForkTest is AvanaTest {
         assertEq(cfg.tickSpacing, 1);
         assertEq(cfg.fee, 100);
         vm.prank(registry);
-        vm.expectRevert(ILPVaultErrors.InvalidShape.selector);
+        vm.expectRevert(ILPVaultBase.InvalidShape.selector);
         vault.bindMarket(
             2, USDC_USDT_100, bytes32(0), PositionShape(ShapeKind.TickRange, -887_273, 887_272), abi.encode(1e8, 1e8)
         );

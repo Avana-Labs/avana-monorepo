@@ -46,7 +46,7 @@ Setup (Base market 3, Carol, from 3.1 `DEP-029`, 3.2 `BOR-022`, 3.3 `REP-024`): 
 
 ## What the UI reads and calls
 
-- Lens: [`predictProxy`](../../lens/lens/ILensAccount.sol#L14) (address and whether deployed), [`getAccount`](../../lens/lens/ILensAccount.sol#L20) (the account's collateral, debt and health factor read from `P` on the Spoke).
+- Lens: [`predictProxy`](../../lens/lens/ILensAccount.sol#L13) (address and whether deployed), [`getAccount`](../../lens/lens/ILensAccount.sol#L19) (the account's collateral, debt and health factor read from `P` on the Spoke).
 - Events to index: none of its own; index ProxyManager `ProxyDeployed`, AaveAdapter `UserProxyCreated` and the Spoke's `Supply`, `Borrow`, `Repay`, `Withdraw` and `LiquidationCall` events for `P`.
 - User calls: none; the wallet calls the AaveAdapter.
 

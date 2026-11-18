@@ -3,12 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IAaveAdapterUser} from "../../src/policy/aave-adapter/IAaveAdapterUser.sol";
-import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "../../src/policy/parameter-store/types/SpeedLimit.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
-import {SpeedView} from "../../src/policy/risk-module/types/SpeedView.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {MarketSpeedLimits, SpeedLimit} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
+import {SpeedView} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
 
 /// @title AaveAdapterNetSpeedIntegrationTest
@@ -86,7 +85,7 @@ contract AaveAdapterNetSpeedIntegrationTest is AaveAdapterRiskFixture {
     // TEST-326 verifies: REQ-RISK-005, REQ-RISK-092
     function test_TEST_326_aFailingCreditNeverStopsARepay() public {
         _borrowAs(alice, MARKET_ID, debtReserveId, 500e18);
-        vm.mockCallRevert(address(rm), abi.encodeWithSelector(IRiskModuleChecks.creditRepay.selector), "boom");
+        vm.mockCallRevert(address(rm), abi.encodeWithSelector(IRiskModule.creditRepay.selector), "boom");
         _repay(500e18);
         vm.clearMockedCalls();
         (, SpeedView memory d) = _views();
@@ -108,13 +107,13 @@ contract AaveAdapterNetSpeedIntegrationTest is AaveAdapterRiskFixture {
             uint256 snap = vm.snapshotState();
             vm.prank(alice);
             (bool ok, bytes memory data) = address(adapterC).call{gas: g}(
-                abi.encodeCall(IAaveAdapterUser.repay, (alice, MARKET_ID, debtReserveId, 500e18, false, deadline))
+                abi.encodeCall(IAaveAdapter.repay, (alice, MARKET_ID, debtReserveId, 500e18, false, deadline))
             );
             if (ok) {
                 sawSuccess = true;
                 (, SpeedView memory d) = _views();
                 assertEq(d.used, 0, "a successful repay credited the window");
-            } else if (data.length == 68 && bytes4(data) == IAaveAdapterErrors.InsufficientGas.selector) {
+            } else if (data.length == 68 && bytes4(data) == IAaveAdapterBase.InsufficientGas.selector) {
                 (, uint256 required) = abi.decode(_args(data), (uint256, uint256));
                 if (required == floor) sawFloor = true;
             }

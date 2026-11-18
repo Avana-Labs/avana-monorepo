@@ -11,20 +11,20 @@ import {AaveAdapterExitLogic} from "../../../src/policy/aave-adapter/AaveAdapter
 import {AaveAdapterSettlementLogic} from "../../../src/policy/aave-adapter/AaveAdapterSettlementLogic.sol";
 import {AaveAdapterUserLogic} from "../../../src/policy/aave-adapter/AaveAdapterUserLogic.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
-import {AaveAdapterLogics} from "../../../src/policy/aave-adapter/types/AaveAdapterLogics.sol";
-import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
-import {RiskTier} from "../../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../../src/policy/market-registry/types/SpokeDef.sol";
+import {
+    AaveAdapterImmutables,
+    AaveAdapterLogics,
+    RepayWithCollateralParams
+} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
+import {
+    DebtReserveDef,
+    MarketStatus,
+    RiskTier,
+    SpokeDef
+} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {Market, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {PositionRef, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {VaultToken} from "../../../src/vault-token/vault-token/VaultToken.sol";
 import {
     AdapterParameterStoreMock,

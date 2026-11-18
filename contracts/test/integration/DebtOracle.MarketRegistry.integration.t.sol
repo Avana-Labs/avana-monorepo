@@ -8,11 +8,8 @@ import {IDebtOracleErrors} from "../../src/oracle/debt-oracle/IDebtOracleErrors.
 import {IDebtOracleEvents} from "../../src/oracle/debt-oracle/IDebtOracleEvents.sol";
 import {DebtOracleInitParams} from "../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
 import {DebtPriceView} from "../../src/oracle/debt-oracle/types/DebtPriceView.sol";
-import {TokenDef} from "../../src/policy/market-registry/types/TokenDef.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
+import {TokenDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {PriceState, RouteSlot, SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {DebtStoreMock} from "../utils/mocks/DebtOracleConfigMocks.sol";
 import {RegistryFeedMock, RegistryTokenMock} from "../utils/mocks/MarketRegistryMocks.sol";

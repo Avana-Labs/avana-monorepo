@@ -6,17 +6,12 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {IAaveAdapterCollateral} from "../../src/policy/aave-adapter/IAaveAdapterCollateral.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IAaveAdapterUser} from "../../src/policy/aave-adapter/IAaveAdapterUser.sol";
-import {IMarketRegistryPause} from "../../src/policy/market-registry/IMarketRegistryPause.sol";
-import {IMarketRegistryRouteViews} from "../../src/policy/market-registry/IMarketRegistryRouteViews.sol";
-import {IMarketRegistryViews} from "../../src/policy/market-registry/IMarketRegistryViews.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {Market} from "../../src/types/Market.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {Market, PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {FullStackMarkets} from "../utils/fixtures/FullStackMarkets.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -70,9 +65,7 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
         uint256 answer
     ) internal {
         address vtA = mkt[mA].vaultToken;
-        vm.mockCall(
-            address(registry), abi.encodeCall(IMarketRegistryViews.marketOfVaultToken, (vtA)), abi.encode(answer)
-        );
+        vm.mockCall(address(registry), abi.encodeCall(IMarketRegistry.marketOfVaultToken, (vtA)), abi.encode(answer));
         bytes32 key = _newKey();
         lpVault.mintPosition(key, bob, mA, UNITS / 4);
         uint256 supplyBefore = ERC20(vtA).totalSupply();
@@ -80,7 +73,7 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
         vm.expectCall(address(mkt[mB].oracle), abi.encodeWithSelector(ILPOracle.poke.selector), 0);
         vm.expectCall(
             address(riskModule),
-            bytes.concat(IRiskModuleChecks.checkPledge.selector, abi.encode(bob, pB, mA, V3, key, UNITS / 4))
+            bytes.concat(IRiskModule.checkPledge.selector, abi.encode(bob, pB, mA, V3, key, UNITS / 4))
         );
         vm.prank(bob);
         (address proxy, uint256 recordId, uint128 credited) = adapterC.pledge(mA, _ref(key), _deadline());
@@ -125,7 +118,7 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
         hostile.spoke = makeAddr("attackerSpoke");
         Market[2] memory lies = [stale, hostile];
         for (uint256 i = 0; i < 2; ++i) {
-            vm.mockCall(address(registry), abi.encodeCall(IMarketRegistryViews.getMarket, (mA)), abi.encode(lies[i]));
+            vm.mockCall(address(registry), abi.encodeCall(IMarketRegistry.getMarket, (mA)), abi.encode(lies[i]));
             bytes32 key = _newKey();
             lpVault.mintPosition(key, bob, mA, UNITS / 4);
             uint256 supply = ERC20(m.vaultToken).totalSupply();
@@ -144,7 +137,7 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
         // The vault-token reserve of market B listed as a debt reserve by the registry: the Spoke does not lend it.
         vm.mockCall(
             address(registry),
-            abi.encodeCall(IMarketRegistryRouteViews.isApprovedDebtReserve, (aave.cdpSpoke, mkt[mB].reserveId)),
+            abi.encodeCall(IMarketRegistry.isApprovedDebtReserve, (aave.cdpSpoke, mkt[mB].reserveId)),
             abi.encode(true)
         );
         uint256 n = adapterC.borrowNonce(pA);
@@ -163,10 +156,10 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
     // TEST-162 verifies: REQ-ADAPTER-044, REQ-ADAPTER-047, REQ-ADAPTER-086, REQ-ACCESS-082
     function test_TEST_162_exitsNeverReadThePauseState() public {
         vm.mockCallRevert(
-            address(registry), abi.encodeWithSelector(IMarketRegistryPause.pauseState.selector), "registry down"
+            address(registry), abi.encodeWithSelector(IMarketRegistry.pauseState.selector), "registry down"
         );
         vm.mockCallRevert(
-            address(registry), abi.encodeWithSelector(IMarketRegistryPause.pauseReason.selector), "registry down"
+            address(registry), abi.encodeWithSelector(IMarketRegistry.pauseReason.selector), "registry down"
         );
         vm.prank(alice);
         adapterC.repay(alice, mA, ghoReserveId, 100e18, false, _deadline());
@@ -176,7 +169,7 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
         vm.prank(bob);
         adapterC.collectFees(mA, _ref(kB), _deadline());
         vm.prank(bob);
-        IAaveAdapterCollateral(adapter).removeLiquidity(mA, _ref(kB), UNITS / 10, _mins(), _deadline(), 0);
+        IAaveAdapter(adapter).removeLiquidity(mA, _ref(kB), UNITS / 10, _mins(), _deadline(), 0);
         uint128 creditedB = _credited(kB);
         vm.prank(bob);
         adapterC.withdraw(mA, _ref(kB), creditedB, _deadline(), 0);
@@ -197,7 +190,7 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
         (, address pC) = _pledgeAs(carol, mA, UNITS);
         _borrowAs(carol, mA, ghoReserveId, 1000e18);
         vm.mockCallRevert(
-            address(registry), abi.encodeWithSelector(IMarketRegistryPause.pauseState.selector), "registry down"
+            address(registry), abi.encodeWithSelector(IMarketRegistry.pauseState.selector), "registry down"
         );
         uint256 nonce = adapterC.borrowNonce(pC);
         vm.prank(carol);
@@ -215,30 +208,30 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
             bytes32 key = _newKey();
             lpVault.mintPosition(key, who, mA, UNITS / 4);
             vm.prank(who);
-            return adapter.call(abi.encodeCall(IAaveAdapterUser.pledge, (mA, _ref(key), d)));
+            return adapter.call(abi.encodeCall(IAaveAdapter.pledge, (mA, _ref(key), d)));
         }
         if (a == 2) {
             uint256 n = adapterC.borrowNonce(pA);
             vm.prank(alice);
-            return adapter.call(abi.encodeCall(IAaveAdapterUser.borrow, (mA, ghoReserveId, 1e18, alice, d, 0, n)));
+            return adapter.call(abi.encodeCall(IAaveAdapter.borrow, (mA, ghoReserveId, 1e18, alice, d, 0, n)));
         }
         if (a == 3) {
             vm.prank(carol);
-            return adapter.call(abi.encodeCall(IAaveAdapterUser.repay, (alice, mA, ghoReserveId, 100e18, false, d)));
+            return adapter.call(abi.encodeCall(IAaveAdapter.repay, (alice, mA, ghoReserveId, 100e18, false, d)));
         }
         if (a == 4) {
             uint128 units = _credited(kB);
             vm.prank(bob);
-            return adapter.call(abi.encodeCall(IAaveAdapterUser.withdraw, (mA, _ref(kB), units, d, 0)));
+            return adapter.call(abi.encodeCall(IAaveAdapter.withdraw, (mA, _ref(kB), units, d, 0)));
         }
         if (a == 5) {
             uint128 units = _credited(kA2);
             vm.prank(alice);
-            return adapter.call(abi.encodeCall(IAaveAdapterUser.withdraw, (mA, _ref(kA2), units, d, 0)));
+            return adapter.call(abi.encodeCall(IAaveAdapter.withdraw, (mA, _ref(kA2), units, d, 0)));
         }
         lpVault.accrueFees(kB, 1000);
         vm.prank(bob);
-        return adapter.call(abi.encodeCall(IAaveAdapterUser.collectFees, (mA, _ref(kB), d)));
+        return adapter.call(abi.encodeCall(IAaveAdapter.collectFees, (mA, _ref(kB), d)));
     }
 
     /// @notice The pause matrix on the real MarketRegistry, each state set by the Emergency Guardian: None allows every
@@ -249,8 +242,8 @@ contract FullStackMarketRegistryIntegrationTest is FullStackMarkets {
     /// Paused(MintPathSuspect) reverts `ApplicationPaused` for every pledge.
     // TEST-192 verifies: REQ-MREG-002, REQ-ADAPTER-080, REQ-ADAPTER-045, REQ-ADAPTER-046, REQ-ADAPTER-082, REQ-ADAPTER-086, Q-356
     function test_TEST_192_pauseMatrixOnTheRealRegistry() public {
-        bytes memory frozen = abi.encodeWithSelector(IAaveAdapterErrors.ApplicationFrozen.selector);
-        bytes memory paused = abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector);
+        bytes memory frozen = abi.encodeWithSelector(IAaveAdapterBase.ApplicationFrozen.selector);
+        bytes memory paused = abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector);
         // Actions: 0 new-account pledge, 1 indebted top-up, 2 borrow, 3 third-party repay, 4 debt-free withdrawal,
         // 5 withdraw with debt, 6 fee collection.
         for (uint8 s = 0; s < 4; ++s) {

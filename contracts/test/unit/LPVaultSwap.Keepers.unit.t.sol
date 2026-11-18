@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LPVaultSwap} from "../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -80,18 +80,18 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
     // TEST-045 verifies: REQ-SWAP-033, REQ-SWAP-107, REQ-SWAP-117, REQ-ACCESS-053
     function test_TEST_045_addKeeperRefusals() public {
         vm.startPrank(timelock);
-        vm.expectRevert(_err(ILPVaultSwapErrors.InvalidKeeper.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.InvalidKeeper.selector));
         lvs.addKeeper(address(0));
-        vm.expectRevert(_err(ILPVaultSwapErrors.InvalidKeeper.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.InvalidKeeper.selector));
         lvs.addKeeper(keeper);
         vm.stopPrank();
         registry.setFrozen(carol, true);
         registry.setFrozen(keeper, true);
         vm.startPrank(timelock);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.AddressIsFrozen.selector, carol));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.AddressIsFrozen.selector, carol));
         lvs.addKeeper(carol);
         // A registered operator that is frozen still reports InvalidKeeper first.
-        vm.expectRevert(_err(ILPVaultSwapErrors.InvalidKeeper.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.InvalidKeeper.selector));
         lvs.addKeeper(keeper);
         vm.stopPrank();
     }
@@ -105,7 +105,7 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
         }
         assertEq(lvs.approvedKeeperCount(), 32, "32 registered");
         vm.prank(timelock);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.TooManyKeepers.selector, 32));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.TooManyKeepers.selector, 32));
         lvs.addKeeper(carol);
         _remove(_keeperN(0));
         _add(carol);
@@ -126,10 +126,10 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
         );
         lvs.removeKeeper(keeper);
         vm.prank(timelock);
-        vm.expectRevert(_err(ILPVaultSwapErrors.InvalidKeeper.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.InvalidKeeper.selector));
         lvs.removeKeeper(carol);
         vm.prank(timelock);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, 0, 1));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 0, 1));
         lvs.removeKeeper(keeper);
         _add(carol);
         vm.expectEmit(true, false, false, false, address(lvs));
@@ -138,7 +138,7 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
         assertFalse(lvs.isApprovedKeeper(keeper), "removed");
         assertEq(lvs.activeKeeperCount(), 1, "one active");
         vm.prank(timelock);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, 0, 1));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 0, 1));
         lvs.removeKeeper(carol);
     }
 
@@ -152,7 +152,7 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
         assertEq(lvs.approvedKeeperCount(), 2, "registered count includes frozen");
         assertEq(lvs.activeKeeperCount(), 1, "active excludes frozen");
         vm.prank(timelock);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, 0, 1));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 0, 1));
         lvs.removeKeeper(keeper);
         _remove(carol);
         assertEq(lvs.activeKeeperCount(), 1, "the frozen one removed");
@@ -160,7 +160,7 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
         assertEq(lvs.activeKeeperCount(), 0, "0 active: new borrowing halts on the chain");
         // With zero active the last frozen operator cannot be removed either (activeAfter 0 < 1).
         vm.prank(timelock);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, 0, 1));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 0, 1));
         lvs.removeKeeper(keeper);
     }
 
@@ -197,24 +197,24 @@ contract LPVaultSwapKeepersUnitTest is LPVaultSwapUnitBase {
     // TEST-242 verifies: REQ-SWAP-040
     function test_TEST_098_initializeChecks() public {
         address[] memory none = new address[](0);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, 0, 1));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 0, 1));
         _deployProxy(timelock, none);
         address[] memory many = new address[](33);
         for (uint256 i = 0; i < 33; ++i) {
             many[i] = _keeperN(i);
         }
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.TooManyKeepers.selector, 32));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.TooManyKeepers.selector, 32));
         _deployProxy(timelock, many);
         address[] memory dup = new address[](2);
         (dup[0], dup[1]) = (carol, carol);
-        vm.expectRevert(_err(ILPVaultSwapErrors.InvalidKeeper.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.InvalidKeeper.selector));
         _deployProxy(timelock, dup);
         address[] memory zero = new address[](1);
-        vm.expectRevert(_err(ILPVaultSwapErrors.InvalidKeeper.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.InvalidKeeper.selector));
         _deployProxy(timelock, zero);
         address[] memory one = new address[](1);
         one[0] = carol;
-        vm.expectRevert(_err(ILPVaultSwapErrors.ZeroAddress.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.ZeroAddress.selector));
         _deployProxy(address(0), one);
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization()"));
         LPVaultSwap(address(lvs)).initialize(timelock, one);

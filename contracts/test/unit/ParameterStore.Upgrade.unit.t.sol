@@ -4,14 +4,14 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {ParameterStore} from "../../src/policy/parameter-store/ParameterStore.sol";
 import {ParameterStoreAdminOracleLogic} from "../../src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol";
 import {ParameterStoreAdminRiskLogic} from "../../src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol";
 import {ParameterStoreListingLogic} from "../../src/policy/parameter-store/ParameterStoreListingLogic.sol";
 import {ParameterStoreLoosenLogic} from "../../src/policy/parameter-store/ParameterStoreLoosenLogic.sol";
 import {ParameterStoreTightenLogic} from "../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
-import {ParameterStoreLogics} from "../../src/policy/parameter-store/types/ParameterStoreLogics.sol";
+import {ParameterStoreLogics} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -82,7 +82,7 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
         assertEq(store.lastLoosenedAt(key), block.timestamp);
         _tl();
         vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.LoosenTooSoon.selector, key, block.timestamp + NORMAL_DELAY)
+            abi.encodeWithSelector(IParameterStoreBase.LoosenTooSoon.selector, key, block.timestamp + NORMAL_DELAY)
         );
         store.loosenMarketUsdCap(M, 8_000_000e8);
     }
@@ -108,7 +108,7 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
         // The old logic contracts are still refused direct calls and hold nothing.
         (bool ok, bytes memory ret) = logics.tighten.call(abi.encodeCall(store.tightenMinPledgeUsd, (M, 30e8)));
         assertFalse(ok);
-        assertEq(ret, abi.encodeWithSelector(IParameterStoreErrors.NotDelegated.selector));
+        assertEq(ret, abi.encodeWithSelector(IParameterStoreBase.NotDelegated.selector));
     }
 
     // TEST-062 verifies: REQ-PSTORE-001, REQ-PSTORE-002, INV-065, REQ-ACCESS-015, REQ-ACCESS-031
@@ -180,7 +180,7 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
         vm.prank(attacker);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IParameterStoreErrors.LoosenStepTooLarge.selector,
+                IParameterStoreBase.LoosenStepTooLarge.selector,
                 keccak256(abi.encode(bytes32("slippageAllowanceBps"), bytes32(M)))
             )
         );

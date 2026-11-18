@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {RiskTier} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";
 import {MarketRegistryGuardianHandler} from "./handlers/MarketRegistryGuardianHandler.sol";

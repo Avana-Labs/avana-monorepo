@@ -4,10 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
+import {SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockAggregator, MockPool} from "../utils/mocks/ParameterStoreMocks.sol";
 
@@ -20,7 +18,7 @@ contract ParameterStoreSecondSourceFormsUnitTest is ParameterStoreFixture {
     MockAggregator internal undefinedFeed;
     address internal twapReader;
     address internal twapReader2;
-    bytes internal oob = abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector);
+    bytes internal oob = abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
 
     function setUp() public {
         _deployStore(false);
@@ -254,13 +252,13 @@ contract ParameterStoreSecondSourceFormsUnitTest is ParameterStoreFixture {
         (bool ok,) = _set(usdt, _twap(bytes32(uint256(1))), _none());
         assertTrue(ok);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.tightenDebtStressRiseBps(usdt, 500);
         // Standby TWAP behind a network source.
         (ok,) = _set(usdt, _net(address(netA)), _twap(bytes32(uint256(1))));
         assertTrue(ok);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.tightenDebtStressRiseBps(usdt, 500);
         // Both oracle networks: the first write marks the asset.
         (ok,) = _set(usdt, _net(address(netA)), _net(address(netB)));
@@ -279,19 +277,19 @@ contract ParameterStoreSecondSourceFormsUnitTest is ParameterStoreFixture {
     // TEST-250 verifies: REQ-PSTORE-029, EMG-103
     function test_TEST_250_switchWithoutStandbyOrTwice() public {
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.NoStandby.selector, usdc));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.NoStandby.selector, usdc));
         store.useStandbySecondSource(usdc);
         (bool ok,) = _set(usdc, _net(address(netA)), _none());
         assertTrue(ok);
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.NoStandby.selector, usdc));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.NoStandby.selector, usdc));
         store.useStandbySecondSource(usdc);
         (ok,) = _set(usdc, _net(address(netA)), _net(address(netB)));
         assertTrue(ok);
         vm.prank(emergencyGuardian);
         store.useStandbySecondSource(usdc);
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.StandbyActive.selector, usdc));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.StandbyActive.selector, usdc));
         store.useStandbySecondSource(usdc);
         assertEq(store.secondSource(usdc).source, address(netB));
     }
@@ -303,7 +301,7 @@ contract ParameterStoreSecondSourceFormsUnitTest is ParameterStoreFixture {
         // The registry later puts the standby's feed into USDC's alternate route.
         registry.setToken(usdc, _one(address(fUsdc)), _one(address(netB)), new address[](0));
         vm.prank(emergencyGuardian);
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.useStandbySecondSource(usdc);
         assertFalse(store.onStandby(usdc));
     }
@@ -320,11 +318,11 @@ contract ParameterStoreSecondSourceFormsUnitTest is ParameterStoreFixture {
         store.setFeed(address(netC), _feedDef(86_400, 1800));
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("secondSource", scope, uint160(address(netA)), uint160(address(netC)));
+        emit IParameterStoreBase.ParameterSet("secondSource", scope, uint160(address(netA)), uint160(address(netC)));
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("standbySecondSource", scope, uint160(address(netB)), 0);
+        emit IParameterStoreBase.ParameterSet("standbySecondSource", scope, uint160(address(netB)), 0);
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.SecondSourceSwitched(usdc, false, address(timelock));
+        emit IParameterStoreBase.SecondSourceSwitched(usdc, false, address(timelock));
         store.setSecondSource(usdc, _net(address(netC)), _none());
         assertFalse(store.onStandby(usdc));
         assertEq(store.secondSource(usdc).source, address(netC));

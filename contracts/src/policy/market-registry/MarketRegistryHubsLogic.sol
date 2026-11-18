@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
 import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IFlashSource} from "../../flash/IFlashSource.sol";
@@ -12,17 +11,12 @@ import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
-import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
-import {IMarketRegistryApprovals} from "./IMarketRegistryApprovals.sol";
-import {IMarketRegistryCreditLines} from "./IMarketRegistryCreditLines.sol";
-import {IMarketRegistryHubs} from "./IMarketRegistryHubs.sol";
+import {IRiskModule} from "../risk-module/IRiskModule.sol";
+import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {MarketRegistryDebtChecks} from "./MarketRegistryDebtChecks.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
-import {DebtReserveDef} from "./types/DebtReserveDef.sol";
-import {MarketRegistryImmutables} from "./types/MarketRegistryImmutables.sol";
-import {RiskTier} from "./types/RiskTier.sol";
-import {SpokeDef} from "./types/SpokeDef.sol";
+import {DebtReserveDef, MarketRegistryImmutables, RiskTier, SpokeDef} from "./types/MarketRegistryTypes.sol";
 
 /// @title MarketRegistryHubsLogic
 /// @notice Bodies of the MarketRegistry's Hub, integration, cross-Hub line, flash source, Spoke and debt-reserve writes.
@@ -48,13 +42,13 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         _onlyDelegated();
         Layout storage l = _s();
         if (hub == address(0) || tier == RiskTier.None || l.hubTier[hub] != RiskTier.None) {
-            revert IMarketRegistryHubs.InvalidHub(hub);
+            revert IMarketRegistry.InvalidHub(hub);
         }
         address fs = l.flashSource;
         if (fs != address(0) && IFlashSource(fs).LENDER() == hub) revert InvalidRoute();
         l.hubTier[hub] = tier;
         l.hubList.push(hub);
-        emit IMarketRegistryHubs.HubRecorded(hub, tier);
+        emit IMarketRegistry.HubRecorded(hub, tier);
     }
 
     function registerIntegration(
@@ -67,17 +61,17 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         if (
             integrationId == 0 || lpVault == address(0) || pricing == address(0)
                 || l.integrationLpVault[integrationId] != address(0) || l.integrationIdOf[lpVault] != 0
-        ) revert IMarketRegistryHubs.InvalidIntegration(integrationId);
+        ) revert IMarketRegistry.InvalidIntegration(integrationId);
         if (
-            IAmmIntegration(lpVault).INTEGRATION_ID() != integrationId
+            ILPVault(lpVault).INTEGRATION_ID() != integrationId
                 || IVaultTokenFactory(_VAULT_TOKEN_FACTORY).lpVaultOf(integrationId) != lpVault
                 || ILPVault(lpVault).MARKET_REGISTRY() != address(this)
-        ) revert IMarketRegistryHubs.InvalidIntegration(integrationId);
+        ) revert IMarketRegistry.InvalidIntegration(integrationId);
         l.integrationLpVault[integrationId] = lpVault;
         l.integrationPricing[integrationId] = pricing;
         l.integrationIdOf[lpVault] = integrationId;
         l.isPricing[pricing] = true;
-        emit IMarketRegistryHubs.IntegrationRegistered(integrationId, lpVault, pricing);
+        emit IMarketRegistry.IntegrationRegistered(integrationId, lpVault, pricing);
     }
 
     function setAvanaFirstLossReserve(
@@ -87,16 +81,16 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
     ) external {
         _onlyDelegated();
         Layout storage l = _s();
-        if (l.hubTier[hub] == RiskTier.None) revert IMarketRegistryHubs.InvalidHub(hub);
+        if (l.hubTier[hub] == RiskTier.None) revert IMarketRegistry.InvalidHub(hub);
         if (
             firstLossReserve == address(0) || asset == address(0) || l.firstLossReserveOf[hub][asset] != address(0)
                 || IAvanaFirstLossReserve(firstLossReserve).HUB() != hub
                 || IAvanaFirstLossReserve(firstLossReserve).ASSET() != asset
                 || IAvanaFirstLossReserve(firstLossReserve).ASSET_ID() != IAaveV4Hub(hub).getAssetId(asset)
-        ) revert IMarketRegistryHubs.InvalidAvanaFirstLossReserve(firstLossReserve);
+        ) revert IMarketRegistry.InvalidAvanaFirstLossReserve(firstLossReserve);
         l.firstLossReserveOf[hub][asset] = firstLossReserve;
         l.knownAvanaFirstLossReserve[firstLossReserve] = true;
-        emit IMarketRegistryHubs.AvanaFirstLossReserveSet(hub, asset, firstLossReserve);
+        emit IMarketRegistry.AvanaFirstLossReserveSet(hub, asset, firstLossReserve);
     }
 
     function setCrossHubLine(
@@ -107,21 +101,21 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
     ) external {
         _onlyDelegated();
         Layout storage l = _s();
-        if (!l.crossHubLinesEnabled && cap > 0) revert IMarketRegistryHubs.CrossHubLinesDisabled();
+        if (!l.crossHubLinesEnabled && cap > 0) revert IMarketRegistry.CrossHubLinesDisabled();
         if (!l.spokes[spoke].approved) revert InvalidSpoke(spoke);
         if (l.hubTier[fundingHub] == RiskTier.None || l.spokes[spoke].hub == fundingHub) {
-            revert IMarketRegistryHubs.InvalidHub(fundingHub);
+            revert IMarketRegistry.InvalidHub(fundingHub);
         }
         uint256 old = l.crossHubLineCap[fundingHub][asset][spoke];
         uint256 total = l.crossHubLineTotal[fundingHub][asset] - old + cap;
         if (cap > old) {
             address cs = l.firstLossReserveOf[fundingHub][asset];
             uint256 coverage = cs == address(0) ? 0 : IAvanaFirstLossReserve(cs).fundedBalance();
-            if (total > coverage) revert IMarketRegistryHubs.CrossHubCapExceeded(total, coverage);
+            if (total > coverage) revert IMarketRegistry.CrossHubCapExceeded(total, coverage);
         }
         l.crossHubLineCap[fundingHub][asset][spoke] = cap;
         l.crossHubLineTotal[fundingHub][asset] = total;
-        emit IMarketRegistryHubs.CrossHubLineSet(fundingHub, asset, spoke, cap, total);
+        emit IMarketRegistry.CrossHubLineSet(fundingHub, asset, spoke, cap, total);
     }
 
     function setCrossHubLinesEnabled(
@@ -129,7 +123,7 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
     ) external {
         _onlyDelegated();
         _s().crossHubLinesEnabled = enabled;
-        emit IMarketRegistryHubs.CrossHubLinesEnabledSet(enabled);
+        emit IMarketRegistry.CrossHubLinesEnabledSet(enabled);
     }
 
     function setFlashSource(
@@ -142,7 +136,7 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         if (_s().hubTier[IFlashSource(newSource).LENDER()] != RiskTier.None) revert InvalidRoute();
         address previous = _s().flashSource;
         _s().flashSource = newSource;
-        emit IMarketRegistryHubs.FlashSourceSet(previous, newSource);
+        emit IMarketRegistry.FlashSourceSet(previous, newSource);
     }
 
     function approveSpokeCodeHash(
@@ -150,10 +144,10 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
     ) external {
         _onlyDelegated();
         if (codeHash == bytes32(0) || codeHash == _EMPTY_CODE_HASH || _spokeHashApproved(codeHash)) {
-            revert IMarketRegistryApprovals.InvalidSpokeCodeHash(codeHash);
+            revert IMarketRegistry.InvalidSpokeCodeHash(codeHash);
         }
         _s().approvedSpokeCodeHash[codeHash] = true;
-        emit IMarketRegistryApprovals.SpokeCodeHashApproved(codeHash);
+        emit IMarketRegistry.SpokeCodeHashApproved(codeHash);
     }
 
     function deployCdpSpoke(
@@ -188,7 +182,7 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
             l.spokeList.push(spoke);
         }
         // The drift check reads the record just written; a failure reverts the whole call.
-        try IRiskModuleChecks(_RISK_MODULE).checkAaveConfig(spoke, new uint256[](0)) {}
+        try IRiskModule(_RISK_MODULE).checkAaveConfig(spoke, new uint256[](0)) {}
         catch {
             revert InvalidSpoke(spoke);
         }
@@ -215,12 +209,12 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         if (def.crossHub) {
             uint256 capBase = cap * 10 ** uint256(def.decimals);
             uint256 lineCap = l.crossHubLineCap[def.fundingHub][def.asset][spoke];
-            if (capBase > lineCap) revert IMarketRegistryHubs.CrossHubCapExceeded(capBase, lineCap);
+            if (capBase > lineCap) revert IMarketRegistry.CrossHubCapExceeded(capBase, lineCap);
         }
         CreditLine storage cl = l.creditLines[def.fundingHub][def.asset];
         uint256 sum = cl.drawCapSum + cap;
         if (sum > cl.line) {
-            revert IMarketRegistryCreditLines.CreditLineExceeded(def.fundingHub, def.asset, sum, cl.line);
+            revert IMarketRegistry.CreditLineExceeded(def.fundingHub, def.asset, sum, cl.line);
         }
         _requireCovered(def.fundingHub, def.asset, cl.line);
         DebtReserveDef storage rec = l.debtReserves[spoke][def.reserveId];
@@ -245,7 +239,7 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         emit DebtReserveApproved(
             spoke, def.reserveId, def.asset, def.fundingHub, def.hubAssetId, def.priceSource, def.firstLossReserve
         );
-        emit IMarketRegistryCreditLines.CreditLineRecorded(def.fundingHub, def.asset, spoke, cap, sum);
+        emit IMarketRegistry.CreditLineRecorded(def.fundingHub, def.asset, spoke, cap, sum);
     }
 
     function removeDebtReserve(

@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapZeroSeizureUnitTest
@@ -31,7 +31,7 @@ contract LPVaultSwapZeroSeizureUnitTest is LPVaultSwapUnitBase {
         vm.prank(keeper);
         (bool ok, bytes memory ret) = address(lvs).call(abi.encodeCall(lvs.liquidate, (_params(proxy, 1))));
         assertFalse(ok, "refused");
-        assertEq(keccak256(ret), keccak256(_err(ILPVaultSwapErrors.NothingSeized.selector)), "NothingSeized()");
+        assertEq(keccak256(ret), keccak256(_err(ILPVaultSwapBase.NothingSeized.selector)), "NothingSeized()");
         assertEq(adapter.burnCalls(), burns, "no burn");
         assertEq(_debtOf(proxy, usdcReserveId), debt, "no repayment without seizure");
     }
@@ -61,6 +61,6 @@ contract LPVaultSwapZeroSeizureUnitTest is LPVaultSwapUnitBase {
             ),
             ""
         );
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.NothingSeized.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.NothingSeized.selector));
     }
 }

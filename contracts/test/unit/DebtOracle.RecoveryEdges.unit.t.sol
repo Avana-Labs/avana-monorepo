@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IAggregatorProxy} from "../../src/interfaces/external/chainlink/IAggregatorProxy.sol";
 import {IDebtOracleEvents} from "../../src/oracle/debt-oracle/IDebtOracleEvents.sol";
 import {DebtPriceView} from "../../src/oracle/debt-oracle/types/DebtPriceView.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {DebtOracleFixture} from "../utils/fixtures/DebtOracleFixture.sol";
 import {HostileConfig} from "../utils/mocks/DebtOracleConfigMocks.sol";
 import {MockAggregator} from "../utils/mocks/MockAggregator.sol";

@@ -4,15 +4,11 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
+import {DebtReserveDef, MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
+import {SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
-import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
-import {MockHub, MockSpoke} from "../utils/mocks/ParameterStoreMocks.sol";
+import {MockAggregator, MockHub, MockSpoke} from "../utils/mocks/ParameterStoreMocks.sol";
 
 /// @notice Structural setters, the liquidation-liveness check and the standby second source.
 contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
@@ -30,7 +26,7 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         _tl();
         store.setMaxFlashFeeBps(100);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setMaxFlashFeeBps(101);
         _tl();
         store.tightenMaxFlashFeeBps(10);
@@ -40,7 +36,7 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         _tl();
         store.setMaxFlashFeeBps(98);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setMaxFlashFeeBps(99);
         // A lowering never re-checks, even when the Spoke's bonus no longer supports the pair.
         spoke.setBonus(10_000, 0);
@@ -48,7 +44,7 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         store.setMaxFlashFeeBps(5);
         assertEq(store.maxFlashFeeBps(), 5);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setMaxFlashFeeBps(6);
     }
 
@@ -67,7 +63,7 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         // the fee share at 0 the bound is 196.
         vm.warp(block.timestamp + 432_000);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenSlippageAllowanceBps(M, 175);
         _tl();
         store.setAvanaFeeShareBps(0);
@@ -75,18 +71,18 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         store.loosenSlippageAllowanceBps(M, 175);
         vm.warp(block.timestamp + 432_000);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenSlippageAllowanceBps(M, 197);
         _tl();
         store.loosenSlippageAllowanceBps(M, 196);
         _tl();
         store.setSlippageAllowanceMinBps(M, 186);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setSlippageAllowanceMinBps(M, 187);
         // The floor never exceeds the allowance.
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setSlippageAllowanceMinBps(M, 197);
         // Lowering the floor needs no check.
         spoke.setBonus(10_000, 0);
@@ -135,15 +131,15 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         _tl();
         store.setGraceHealthFactor(0.9e18);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setGraceHealthFactor(0.89e18);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setGraceHealthFactor(1e18);
         _tl();
         store.setGraceDuration(7200);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setGraceDuration(7201);
         _tl();
         store.setGraceDuration(60); // either direction at the normal delay
@@ -153,28 +149,26 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
     // TEST-064 verifies: REQ-CONFIG-055, REQ-CONFIG-052, REQ-CONFIG-049, REQ-PSTORE-009, REQ-ACCESS-099
     function test_TEST_064_bandAndTimers() public {
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setUsdBand(1e8, 1.02e8);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setUsdBand(0.9e8, 1e8);
         _tl();
         store.setUsdBand(0.95e8, 1.01e8);
         assertEq(store.usdBandLow(), 0.95e8);
         assertEq(store.usdBandHigh(), 1.01e8);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setDisagreementPauseMax(3601);
         _tl();
         store.setDisagreementPauseMax(1800);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setCachedWindow(0);
         lpOracle.setFailed(8);
         _tl();
-        vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(lpOracle), 8)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 8));
         store.setCachedWindow(1200);
         // A Cancelled market's LPOracle is not consulted.
         registry.setStatus(M, MarketStatus.Cancelled);
@@ -188,16 +182,16 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         _tl();
         store.setPoolRiskFactor(M, 1000);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setPoolRiskFactor(M, 9001);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setTokenCollateralFactorBps(usdc, 10_000);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.TokenNotListed.selector, alice));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.TokenNotListed.selector, alice));
         store.setTokenCollateralFactorBps(alice, 1);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setAvanaFeeShareBps(5001);
         _tl();
         store.setAvanaFeeShareBps(0);
@@ -242,15 +236,15 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         store.grantRole(AvanaRoles.APPLICATION_PAUSE_GUARDIAN, emergencyGuardian);
         vm.prank(emergencyGuardian);
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.SecondSourceSwitched(usdc, true, emergencyGuardian);
+        emit IParameterStoreBase.SecondSourceSwitched(usdc, true, emergencyGuardian);
         store.useStandbySecondSource(usdc);
         assertTrue(store.onStandby(usdc));
         assertEq(store.secondSource(usdc).source, twapSource);
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.StandbyActive.selector, usdc));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.StandbyActive.selector, usdc));
         store.useStandbySecondSource(usdc);
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.NoStandby.selector, usdt));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.NoStandby.selector, usdt));
         store.useStandbySecondSource(usdt);
         // Only the timelock restores.
         vm.prank(emergencyGuardian);
@@ -266,21 +260,21 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         address pyth = _networkFeed();
         SecondSource memory empty;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setSecondSource(usdc, _src(SecondSourceKind.OracleNetwork, pyth, 0, 501), empty);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setSecondSource(usdc, _src(SecondSourceKind.OracleNetwork, alice, 0, 50), empty);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setSecondSource(usdc, empty, empty);
         // A standby sharing a feed with the token's routes, or the recorded source, is refused.
         SecondSource memory src = _src(SecondSourceKind.OracleNetwork, pyth, 0, 50);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setSecondSource(usdc, src, _src(SecondSourceKind.OracleNetwork, address(fUsdcAlt), 0, 50));
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setSecondSource(usdc, src, src);
         _tl();
         store.setSecondSource(usdc, src, empty);
@@ -288,7 +282,7 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         lpOracle.setFailed(16);
         _tl();
         vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(lpOracle), 16)
+            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 16)
         );
         store.setSecondSource(usdc, src, empty);
     }
@@ -306,7 +300,7 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         store.useStandbySecondSource(usdc);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.SecondSourceSwitched(usdc, false, address(timelock));
+        emit IParameterStoreBase.SecondSourceSwitched(usdc, false, address(timelock));
         store.setSecondSource(usdc, src, standby);
         assertFalse(store.onStandby(usdc));
     }

@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapShortfallFuzzTest
@@ -64,9 +63,9 @@ contract LPVaultSwapShortfallFuzzTest is LPVaultSwapUnitBase {
         } catch (bytes memory reason) {
             bytes4 s = bytes4(reason);
             if (routed < legMin) {
-                assertEq(s, ILPVaultSwapErrors.NoRouteAvailable.selector, "no route meets the relaxed minimum");
+                assertEq(s, ILPVaultSwapBase.NoRouteAvailable.selector, "no route meets the relaxed minimum");
             } else {
-                assertEq(s, ILPVaultSwapErrors.RecoveryBelowFloor.selector, "the gap exceeds the budget");
+                assertEq(s, ILPVaultSwapBase.RecoveryBelowFloor.selector, "the gap exceeds the budget");
             }
         }
     }
@@ -83,7 +82,7 @@ contract LPVaultSwapShortfallFuzzTest is LPVaultSwapUnitBase {
         (, uint256 a1) = _released(975e6);
         uint256 legMin = _usdtLegMinOut(a1, SLIPPAGE_BPS, 1);
         if (a1 * rateBps / 10_000 < legMin) {
-            _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.NoRouteAvailable.selector));
+            _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.NoRouteAvailable.selector));
         } else {
             LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, 1950e6));
             assertEq(r.shortfall, 0, "no shortfall without a budget");

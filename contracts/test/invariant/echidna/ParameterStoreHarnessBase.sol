@@ -4,10 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ParameterStoreStorage} from "../../../src/policy/parameter-store/ParameterStoreStorage.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
-import {OracleConfig} from "../../../src/types/OracleConfig.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
+import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {OracleConfig, SecondSource, SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {HarnessMarketRegistry} from "../../utils/mocks/HarnessMarketRegistry.sol";
 import {MockIntegration, MockLPOracle, MockPool} from "../../utils/mocks/ParameterStoreMocks.sol";
 

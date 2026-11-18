@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
+import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {FlashLiquidatorFixture} from "../utils/fixtures/FlashLiquidatorFixture.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 
@@ -180,7 +180,7 @@ contract FlashLiquidatorResiduesUnitTest is FlashLiquidatorFixture {
         _run(address(helper));
         usdtToken.setHook(address(0), "");
         assertGt(recorder.attempts(), 0, "the USDT transfers called back");
-        assertEq(recorder.firstSelector(), IFlashLiquidatorErrors.ContextActive.selector, "claim refused in the call");
+        assertEq(recorder.firstSelector(), IFlashLiquidator.ContextActive.selector, "claim refused in the call");
         assertEq(weth.balanceOf(caller), 0.4e18, "the caller received its own residue");
         assertEq(weth.balanceOf(feeRecipient), 0, "nothing moved to feeRecipient during the call");
         assertEq(escrow.claimable(address(weth), address(helper)), 0.4e18, "the standing credit stands");

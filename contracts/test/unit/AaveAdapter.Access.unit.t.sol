@@ -10,15 +10,10 @@ import {AaveAdapterCollateralLogic} from "../../src/policy/aave-adapter/AaveAdap
 import {AaveAdapterExitLogic} from "../../src/policy/aave-adapter/AaveAdapterExitLogic.sol";
 import {AaveAdapterSettlementLogic} from "../../src/policy/aave-adapter/AaveAdapterSettlementLogic.sol";
 import {AaveAdapterUserLogic} from "../../src/policy/aave-adapter/AaveAdapterUserLogic.sol";
-import {IAaveAdapterAdmin} from "../../src/policy/aave-adapter/IAaveAdapterAdmin.sol";
-import {IAaveAdapterCollateral} from "../../src/policy/aave-adapter/IAaveAdapterCollateral.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {IAaveAdapterLogic} from "../../src/policy/aave-adapter/IAaveAdapterLogic.sol";
-import {IAaveAdapterSettlement} from "../../src/policy/aave-adapter/IAaveAdapterSettlement.sol";
-import {IAaveAdapterUser} from "../../src/policy/aave-adapter/IAaveAdapterUser.sol";
-import {IAaveAdapterViews} from "../../src/policy/aave-adapter/IAaveAdapterViews.sol";
-import {AaveAdapterImmutables} from "../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
-import {AaveAdapterLogics} from "../../src/policy/aave-adapter/types/AaveAdapterLogics.sol";
+import {AaveAdapterImmutables, AaveAdapterLogics} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {BytecodeInspector} from "../utils/BytecodeInspector.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -51,11 +46,11 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
         assertFalse(a.hasRole(bytes32(0), address(this)), "deployer has no role");
         address[3] memory others = [alice, address(this), governanceMultisig];
         for (uint256 i = 0; i < others.length; ++i) {
-            vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.AdminRoleOnlyTimelock.selector, ADMIN, others[i]));
+            vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.AdminRoleOnlyTimelock.selector, ADMIN, others[i]));
             vm.prank(timelock);
             a.grantRole(ADMIN, others[i]);
             vm.expectRevert(
-                abi.encodeWithSelector(IAaveAdapterErrors.AdminRoleOnlyTimelock.selector, bytes32(0), others[i])
+                abi.encodeWithSelector(IAaveAdapterBase.AdminRoleOnlyTimelock.selector, bytes32(0), others[i])
             );
             vm.prank(timelock);
             a.grantRole(bytes32(0), others[i]);
@@ -124,13 +119,13 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
     /// immutable one, and the implementation itself cannot be initialized.
     function test_TEST_242_initializeRules() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        IAaveAdapterAdmin(adapter).initialize(timelock);
+        IAaveAdapter(adapter).initialize(timelock);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         implementation.initialize(timelock);
         AaveAdapter impl2 = new AaveAdapter(im, logics);
-        vm.expectRevert(IAaveAdapterErrors.ZeroAddress.selector);
+        vm.expectRevert(IAaveAdapterBase.ZeroAddress.selector);
         new ERC1967Proxy(address(impl2), abi.encodeCall(AaveAdapter.initialize, (address(0))));
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.AdminRoleOnlyTimelock.selector, bytes32(0), attacker));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.AdminRoleOnlyTimelock.selector, bytes32(0), attacker));
         new ERC1967Proxy(address(impl2), abi.encodeCall(AaveAdapter.initialize, (attacker)));
         ERC1967Proxy fresh = new ERC1967Proxy(address(impl2), abi.encodeCall(AaveAdapter.initialize, (timelock)));
         assertTrue(AaveAdapter(address(fresh)).hasRole(ADMIN, timelock), "fresh proxy initialized");
@@ -152,30 +147,30 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
             if (i == 6) bad.lock = address(0);
             if (i == 7) bad.vaultTokenFactory = address(0);
             if (i == 8) bad.timelock = address(0);
-            vm.expectRevert(IAaveAdapterErrors.ZeroAddress.selector);
+            vm.expectRevert(IAaveAdapterBase.ZeroAddress.selector);
             new AaveAdapterUserLogic(bad);
         }
         AaveAdapterLogics memory swapped = logics;
         swapped.user = logics.exit;
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.InvalidLogic.selector, logics.exit));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.InvalidLogic.selector, logics.exit));
         new AaveAdapter(im, swapped);
         AaveAdapterImmutables memory other = im;
         other.parameterStore = makeAddr("otherStore");
         AaveAdapterLogics memory foreign = logics;
         foreign.settlement = address(new AaveAdapterSettlementLogic(other));
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.InvalidLogic.selector, foreign.settlement));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.InvalidLogic.selector, foreign.settlement));
         new AaveAdapter(im, foreign);
         foreign = logics;
         foreign.collateral = address(new AaveAdapterCollateralLogic(other));
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.InvalidLogic.selector, foreign.collateral));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.InvalidLogic.selector, foreign.collateral));
         new AaveAdapter(im, foreign);
         foreign = logics;
         foreign.exit = address(new AaveAdapterExitLogic(other));
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.InvalidLogic.selector, foreign.exit));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.InvalidLogic.selector, foreign.exit));
         new AaveAdapter(im, foreign);
         foreign = logics;
         foreign.user = address(new AaveAdapterUserLogic(other));
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.InvalidLogic.selector, foreign.user));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.InvalidLogic.selector, foreign.user));
         new AaveAdapter(im, foreign);
     }
 
@@ -196,36 +191,36 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
         (kind, hash) = IAaveAdapterLogic(logics.settlement).logicConfig();
         assertEq(kind, keccak256("AaveAdapterSettlementLogic"), "settlement kind");
         assertEq(hash, h, "settlement hash");
-        bytes4 nd = IAaveAdapterErrors.NotDelegated.selector;
+        bytes4 nd = IAaveAdapterBase.NotDelegated.selector;
         vm.expectRevert(nd);
-        IAaveAdapterUser(logics.user).pledge(MARKET_ID, _ref(bytes32(0)), 0);
+        IAaveAdapter(logics.user).pledge(MARKET_ID, _ref(bytes32(0)), 0);
         vm.expectRevert(nd);
-        IAaveAdapterUser(logics.user).borrow(MARKET_ID, 0, 1, alice, 0, 0, 0);
+        IAaveAdapter(logics.user).borrow(MARKET_ID, 0, 1, alice, 0, 0, 0);
         vm.expectRevert(nd);
-        IAaveAdapterUser(logics.user).repay(alice, MARKET_ID, 0, 1, false, 0);
+        IAaveAdapter(logics.user).repay(alice, MARKET_ID, 0, 1, false, 0);
         vm.expectRevert(nd);
-        IAaveAdapterUser(logics.exit).withdraw(MARKET_ID, _ref(bytes32(0)), 1, 0, 0);
+        IAaveAdapter(logics.exit).withdraw(MARKET_ID, _ref(bytes32(0)), 1, 0, 0);
         vm.expectRevert(nd);
-        IAaveAdapterUser(logics.exit)
+        IAaveAdapter(logics.exit)
             .repayAllAndWithdraw(MARKET_ID, _ref(bytes32(0)), 1, new uint256[](0), new uint256[](0), 0);
         vm.expectRevert(nd);
-        IAaveAdapterUser(logics.exit).collectFees(MARKET_ID, _ref(bytes32(0)), 0);
+        IAaveAdapter(logics.exit).collectFees(MARKET_ID, _ref(bytes32(0)), 0);
         vm.expectRevert(nd);
-        IAaveAdapterUser(logics.exit).releaseZeroCredit(MARKET_ID, _ref(bytes32(0)), 0);
+        IAaveAdapter(logics.exit).releaseZeroCredit(MARKET_ID, _ref(bytes32(0)), 0);
         vm.expectRevert(nd);
-        IAaveAdapterUser(logics.exit).refreshDebtMark(alice);
+        IAaveAdapter(logics.exit).refreshDebtMark(alice);
         vm.expectRevert(nd);
-        IAaveAdapterCollateral(logics.collateral).removeLiquidity(MARKET_ID, _ref(bytes32(0)), 1, _mins(), 0, 0);
+        IAaveAdapter(logics.collateral).removeLiquidity(MARKET_ID, _ref(bytes32(0)), 1, _mins(), 0, 0);
         vm.expectRevert(nd);
-        IAaveAdapterCollateral(logics.collateral).recredit(MARKET_ID, _ref(bytes32(0)), "", 0);
+        IAaveAdapter(logics.collateral).recredit(MARKET_ID, _ref(bytes32(0)), "", 0);
         vm.expectRevert(nd);
-        IAaveAdapterCollateral(logics.collateral).repayWithCollateral(_rwc(MARKET_ID, bytes32(0), 1, debtReserveId));
+        IAaveAdapter(logics.collateral).repayWithCollateral(_rwc(MARKET_ID, bytes32(0), 1, debtReserveId));
         vm.expectRevert(nd);
-        IAaveAdapterSettlement(logics.settlement).burnSeized(MARKET_ID, vt, 1);
+        IAaveAdapter(logics.settlement).burnSeized(MARKET_ID, vt, 1);
         vm.expectRevert(nd);
-        IAaveAdapterSettlement(logics.settlement).deleverageRepay(alice, 0, 1);
+        IAaveAdapter(logics.settlement).deleverageRepay(alice, 0, 1);
         vm.expectRevert(nd);
-        IAaveAdapterSettlement(logics.settlement).deleverageRelease(alice, _ref(bytes32(0)), 1, _mins());
+        IAaveAdapter(logics.settlement).deleverageRelease(alice, _ref(bytes32(0)), 1, _mins());
     }
 
     // ─── Views ───
@@ -233,7 +228,7 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
     // TEST-247 verifies: REQ-PROXY-049, REQ-ADAPTER-074, REQ-ADAPTER-084
     /// @notice The implementation immutables and the role identifier read back as built.
     function test_TEST_247_views() public view {
-        IAaveAdapterViews v = IAaveAdapterViews(adapter);
+        IAaveAdapter v = IAaveAdapter(adapter);
         assertEq(v.APPLICATION_ADMIN(), AvanaRoles.APPLICATION_ADMIN, "role");
         assertEq(v.PROXY_MANAGER(), address(proxyManager), "pm");
         assertEq(v.COLLATERALIZATION(), address(coll), "coll");
@@ -459,36 +454,36 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
 
     function _expectedSelectors() internal pure returns (bytes4[] memory s) {
         s = new bytes4[](40);
-        s[0] = IAaveAdapterUser.pledge.selector;
-        s[1] = IAaveAdapterUser.borrow.selector;
-        s[2] = IAaveAdapterUser.repay.selector;
-        s[3] = IAaveAdapterUser.withdraw.selector;
-        s[4] = IAaveAdapterUser.repayAllAndWithdraw.selector;
-        s[5] = IAaveAdapterUser.releaseZeroCredit.selector;
-        s[6] = IAaveAdapterUser.collectFees.selector;
-        s[7] = IAaveAdapterUser.refreshDebtMark.selector;
-        s[8] = IAaveAdapterCollateral.removeLiquidity.selector;
-        s[9] = IAaveAdapterCollateral.recredit.selector;
-        s[10] = IAaveAdapterCollateral.repayWithCollateral.selector;
-        s[11] = IAaveAdapterSettlement.burnSeized.selector;
-        s[12] = IAaveAdapterSettlement.deleverageRepay.selector;
-        s[13] = IAaveAdapterSettlement.deleverageRelease.selector;
-        s[14] = IAaveAdapterAdmin.initialize.selector;
-        s[15] = IAaveAdapterViews.proxyOf.selector;
-        s[16] = IAaveAdapterViews.walletOf.selector;
-        s[17] = IAaveAdapterViews.accountOf.selector;
-        s[18] = IAaveAdapterViews.predictProxy.selector;
-        s[19] = IAaveAdapterViews.borrowNonce.selector;
-        s[20] = IAaveAdapterViews.APPLICATION_ADMIN.selector;
-        s[21] = IAaveAdapterViews.PROXY_MANAGER.selector;
-        s[22] = IAaveAdapterViews.COLLATERALIZATION.selector;
-        s[23] = IAaveAdapterViews.RISK_MODULE.selector;
-        s[24] = IAaveAdapterViews.MARKET_REGISTRY.selector;
-        s[25] = IAaveAdapterViews.PARAMETER_STORE.selector;
-        s[26] = IAaveAdapterViews.LP_VAULT_SWAP.selector;
-        s[27] = IAaveAdapterViews.LOCK.selector;
-        s[28] = IAaveAdapterViews.VAULT_TOKEN_FACTORY.selector;
-        s[29] = IAaveAdapterViews.TIMELOCK.selector;
+        s[0] = IAaveAdapter.pledge.selector;
+        s[1] = IAaveAdapter.borrow.selector;
+        s[2] = IAaveAdapter.repay.selector;
+        s[3] = IAaveAdapter.withdraw.selector;
+        s[4] = IAaveAdapter.repayAllAndWithdraw.selector;
+        s[5] = IAaveAdapter.releaseZeroCredit.selector;
+        s[6] = IAaveAdapter.collectFees.selector;
+        s[7] = IAaveAdapter.refreshDebtMark.selector;
+        s[8] = IAaveAdapter.removeLiquidity.selector;
+        s[9] = IAaveAdapter.recredit.selector;
+        s[10] = IAaveAdapter.repayWithCollateral.selector;
+        s[11] = IAaveAdapter.burnSeized.selector;
+        s[12] = IAaveAdapter.deleverageRepay.selector;
+        s[13] = IAaveAdapter.deleverageRelease.selector;
+        s[14] = IAaveAdapter.initialize.selector;
+        s[15] = IAaveAdapter.proxyOf.selector;
+        s[16] = IAaveAdapter.walletOf.selector;
+        s[17] = IAaveAdapter.accountOf.selector;
+        s[18] = IAaveAdapter.predictProxy.selector;
+        s[19] = IAaveAdapter.borrowNonce.selector;
+        s[20] = IAaveAdapter.APPLICATION_ADMIN.selector;
+        s[21] = IAaveAdapter.PROXY_MANAGER.selector;
+        s[22] = IAaveAdapter.COLLATERALIZATION.selector;
+        s[23] = IAaveAdapter.RISK_MODULE.selector;
+        s[24] = IAaveAdapter.MARKET_REGISTRY.selector;
+        s[25] = IAaveAdapter.PARAMETER_STORE.selector;
+        s[26] = IAaveAdapter.LP_VAULT_SWAP.selector;
+        s[27] = IAaveAdapter.LOCK.selector;
+        s[28] = IAaveAdapter.VAULT_TOKEN_FACTORY.selector;
+        s[29] = IAaveAdapter.TIMELOCK.selector;
         s[30] = IAccessControl.hasRole.selector;
         s[31] = IAccessControl.getRoleAdmin.selector;
         s[32] = IAccessControl.grantRole.selector;
@@ -517,7 +512,7 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
     function test_TEST_026_entryPointsResolveFromCaller() public {
         (bytes32 k, address p) = _pledgeAs(alice, MARKET_ID, UNITS);
         uint256 d = _deadline();
-        bytes memory noProxy = abi.encodeWithSelector(IAaveAdapterErrors.NoProxy.selector, attacker, MARKET_ID);
+        bytes memory noProxy = abi.encodeWithSelector(IAaveAdapterBase.NoProxy.selector, attacker, MARKET_ID);
         vm.startPrank(attacker);
         vm.expectRevert(noProxy);
         adapterC.withdraw(MARKET_ID, _ref(k), UNITS, d, 0);
@@ -534,7 +529,7 @@ contract AaveAdapterAccessUnitTest is AaveAdapterFixture {
         vm.expectRevert(noProxy);
         adapterC.releaseZeroCredit(MARKET_ID, _ref(k), d);
         vm.stopPrank();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.NoProxy.selector, p, MARKET_ID));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.NoProxy.selector, p, MARKET_ID));
         vm.prank(p);
         adapterC.withdraw(MARKET_ID, _ref(k), UNITS, d, 0);
         assertEq(_sharesOf(p, vtReserveId), UNITS, "alice untouched");

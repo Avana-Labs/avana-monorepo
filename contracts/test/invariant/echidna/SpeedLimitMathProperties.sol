@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {SpeedLimitMath} from "../../../src/policy/risk-module/SpeedLimitMath.sol";
-import {SpeedWindow} from "../../../src/policy/risk-module/types/SpeedWindow.sol";
+import {SpeedWindow} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 
 /// @title SpeedLimitMathProperties
 /// @notice Echidna and Medusa harness of the net-flow speed-window arithmetic (2.7 SPEC-CAP-011 to SPEC-CAP-013, Q-411):

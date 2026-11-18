@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {MarketSpeedLimits} from "./types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "./types/SpeedLimit.sol";
+import {MarketSpeedLimits, SpeedLimit} from "./types/ParameterStoreTypes.sol";
 
 /// @title ParameterStoreSpeedRules
 /// @notice Bounds and change directions of the speed limits.

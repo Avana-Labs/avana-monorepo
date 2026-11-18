@@ -1,5 +1,5 @@
 /*
- * RiskModule drift check (interface src/policy/risk-module/IRiskModuleChecks.sol, `checkAaveConfig`).
+ * RiskModule drift check (interface src/policy/risk-module/IRiskModule.sol, `checkAaveConfig`).
  *
  * Every Avana collateral reserve sits on a standard, unmodified Aave V4 Spoke. Liquidation exclusivity rests on three
  * Aave settings the listing AIP sets and the drift check enforces: `receiveSharesEnabled = false` (a liquidator taking

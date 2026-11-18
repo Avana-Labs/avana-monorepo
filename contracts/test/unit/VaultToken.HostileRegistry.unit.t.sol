@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
-import {Market} from "../../src/types/Market.sol";
+import {BackingRecord} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 
 /// @title VaultTokenHostileRegistryUnitTest

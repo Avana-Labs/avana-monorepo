@@ -6,20 +6,21 @@ pragma solidity 0.8.28;
 import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {IUniswapV3Pool} from "../../src/interfaces/external/uniswap/IUniswapV3Pool.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {LPOracleCLModuleLogic} from "../../src/oracle/lp-oracle/LPOracleCLModuleLogic.sol";
 import {LPOracleCLPool} from "../../src/oracle/lp-oracle/LPOracleCLPool.sol";
 import {LPOracleStorage} from "../../src/oracle/lp-oracle/LPOracleStorage.sol";
-import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
+import {
+    ClPriceStateView,
+    InitParams,
+    LPOracleCodes,
+    LPOracleLogicSet
+} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {LPOracleV4} from "../../src/oracle/lp-oracle/LPOracleV4.sol";
 import {LPOracleV4Module} from "../../src/oracle/lp-oracle/LPOracleV4Module.sol";
 import {LPOracleV4ModuleLogic} from "../../src/oracle/lp-oracle/LPOracleV4ModuleLogic.sol";
 import {LPPriceMath} from "../../src/oracle/lp-oracle/LPPriceMath.sol";
-import {ClPriceStateView} from "../../src/oracle/lp-oracle/types/ClPriceStateView.sol";
-import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
-import {LPOracleLogicSet} from "../../src/oracle/lp-oracle/types/LPOracleLogicSet.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
 import {LPOracleV4Fixture} from "../utils/fixtures/LPOracleV4Fixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
@@ -84,15 +85,15 @@ contract LPOracleV4GuardsUnitTest is LPOracleV4Fixture {
 
     // TEST-331 verifies: REQ-ORACLE-080
     function test_TEST_331_deploymentRefusesAMismatchedModule() public {
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, uint256(0)));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, uint256(0)));
         new LPOracleV4ModuleLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, address(0));
         address v4m = address(new LPOracleV4ModuleLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, address(weth)));
         LPOracleLogicSet memory logics = _logics(v4m);
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, uint256(0)));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, uint256(0)));
         new LPOracleV4(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, v4m, logics, address(usdc));
         address clm = address(new LPOracleCLModuleLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7));
         LPOracleLogicSet memory clLogics = _logics(clm);
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, uint256(0)));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, uint256(0)));
         new LPOracleV4(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, clm, clLogics, address(weth));
     }
 
@@ -109,7 +110,7 @@ contract LPOracleV4GuardsUnitTest is LPOracleV4Fixture {
     ) internal {
         InitParams memory p = _params();
         p.market = market;
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, MARKET));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, MARKET));
         new ERC1967Proxy(address(implementation), abi.encodeCall(ILPOracle.initialize, (p)));
     }
 

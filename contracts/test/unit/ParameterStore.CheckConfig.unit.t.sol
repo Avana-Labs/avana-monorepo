@@ -4,14 +4,11 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
-import {Market} from "../../src/types/Market.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
+import {FeedDef, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
+import {OracleConfig, SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockAggregator, MockLPOracle} from "../utils/mocks/ParameterStoreMocks.sol";
 
@@ -109,7 +106,7 @@ contract ParameterStoreCheckConfigUnitTest is ParameterStoreFixture {
         address oracle,
         uint256 bits
     ) internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, oracle, bits);
+        return abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, oracle, bits);
     }
 
     function _refuses(
@@ -496,7 +493,7 @@ contract ParameterStoreCheckConfigUnitTest is ParameterStoreFixture {
         lpOracle.setFailed(ALL);
         vm.prank(emergencyGuardian);
         vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(lpOracle), ALL)
+            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), ALL)
         );
         store.useStandbySecondSource(usdc);
         assertFalse(store.onStandby(usdc));
@@ -515,7 +512,7 @@ contract ParameterStoreCheckConfigUnitTest is ParameterStoreFixture {
         oracle2.setFailed(1);
         _refuses(
             abi.encodeCall(store.setFeed, (address(fDai), _withDeviation(80))),
-            abi.encodeWithSelector(IParameterStoreErrors.LivenessBound.selector)
+            abi.encodeWithSelector(IParameterStoreBase.LivenessBound.selector)
         );
         // At 75 bps the bound is 150 and holds: the LPOracle's failure is then the error.
         _refuses(abi.encodeCall(store.setFeed, (address(fDai), _withDeviation(75))), _rejected(address(oracle2), 1));

@@ -4,10 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
+import {ClPriceStateView} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {LPPriceMath} from "../../src/oracle/lp-oracle/LPPriceMath.sol";
-import {ClPriceStateView} from "../../src/oracle/lp-oracle/types/ClPriceStateView.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
 import {LPOracleCLFixture} from "../utils/fixtures/LPOracleCLFixture.sol";
 
 /// @title LPOracleCLPricingTest

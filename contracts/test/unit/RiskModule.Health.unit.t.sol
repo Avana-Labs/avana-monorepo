@@ -5,11 +5,9 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {AccountGateStatus} from "../../src/types/AccountGateStatus.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
-import {PledgePreview} from "../../src/types/PledgePreview.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {AccountGateStatus, PauseState} from "../../src/types/MarketTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
+import {PledgeCounters, PledgePreview} from "../../src/types/PositionTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @title RiskModuleHealthUnitTest

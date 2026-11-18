@@ -6,8 +6,8 @@ pragma solidity 0.8.28;
 import {IGsm} from "../../interfaces/external/gho/IGsm.sol";
 import {IPegModuleRoute} from "../../liquidation/settlement-routes/IPegModuleRoute.sol";
 import {ISettlementRoute} from "../../liquidation/settlement-routes/ISettlementRoute.sol";
-import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
-import {PegModuleKind} from "../../liquidation/settlement-routes/types/PegModuleStep.sol";
+import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
+import {PegModuleKind} from "../../liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
 import {IERC1820Registry} from "@openzeppelin/contracts/interfaces/IERC1820Registry.sol";
 
@@ -36,7 +36,7 @@ abstract contract MarketRegistryRouteChecks is MarketRegistryStorage {
         if (!okType || routeType > _MAX_ROUTE_TYPE) return false;
         if (routeType != _PEG_MODULE_ROUTE) return true;
         (bool okPeg, bytes memory ret) =
-            RouteReads._staticRead(route, gasleft(), abi.encodeCall(IPegModuleRoute.pegModule, ()), 65);
+            RouteMath._staticRead(route, gasleft(), abi.encodeCall(IPegModuleRoute.pegModule, ()), 65);
         if (!okPeg || ret.length != 64) return false;
         (uint256 pegKind, uint256 moduleWord) = abi.decode(ret, (uint256, uint256));
         if (pegKind > uint256(PegModuleKind.LitePsm) || moduleWord >> 160 != 0) return false;
@@ -93,7 +93,7 @@ abstract contract MarketRegistryRouteChecks is MarketRegistryStorage {
         bytes memory data
     ) private view returns (bool ok, uint256 word) {
         bytes memory ret;
-        (ok, ret) = RouteReads._staticRead(target, gasleft(), data, 33);
+        (ok, ret) = RouteMath._staticRead(target, gasleft(), data, 33);
         if (!ok || ret.length != 32) return (false, 0);
         word = abi.decode(ret, (uint256));
     }

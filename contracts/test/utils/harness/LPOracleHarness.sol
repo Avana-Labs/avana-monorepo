@@ -8,10 +8,9 @@ import {LPOracleListingLogic} from "../../../src/oracle/lp-oracle/LPOracleListin
 import {LPOracleLogicBase} from "../../../src/oracle/lp-oracle/LPOracleLogicBase.sol";
 import {LPOraclePokeLogic} from "../../../src/oracle/lp-oracle/LPOraclePokeLogic.sol";
 import {LPOracleStorage} from "../../../src/oracle/lp-oracle/LPOracleStorage.sol";
+import {LPOracleLogicSet} from "../../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {LPOracleViewLogic} from "../../../src/oracle/lp-oracle/LPOracleViewLogic.sol";
-import {LPOracleLogicSet} from "../../../src/oracle/lp-oracle/types/LPOracleLogicSet.sol";
-import {OracleConfig} from "../../../src/types/OracleConfig.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
+import {OracleConfig, SecondSource} from "../../../src/types/OracleTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LPOracleHarnessModule

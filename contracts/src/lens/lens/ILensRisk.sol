@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {HubAssetExposureView} from "./types/HubAssetExposureView.sol";
-import {TailCoverageView} from "./types/TailCoverageView.sol";
+import {HubAssetExposureView, TailCoverageView} from "./types/LensTypes.sol";
 
 /// @title ILensRisk
 /// @notice Risk views of the Lens: breaker status, address freezes, tail coverage and Hub asset exposure.

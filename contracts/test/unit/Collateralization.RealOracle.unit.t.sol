@@ -3,15 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../src/custody/collateralization/ICollateralizationAdapter.sol";
-import {ICollateralizationUser} from "../../src/custody/collateralization/ICollateralizationUser.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {VaultToken} from "../../src/vault-token/vault-token/VaultToken.sol";
 import {AccessTrace} from "../utils/AccessTrace.sol";
 import {
@@ -136,7 +134,7 @@ contract CollateralizationRealOracleUnitTest is CollateralizationFixture {
         Vm.AccountAccess[] memory acc = vm.stopAndReturnStateDiff();
         (bool poked, uint256 iPoke) = acc.firstCall(address(clOracle), ILPOracle.poke.selector, address(coll), 0);
         (bool checked, uint256 iCheck) =
-            acc.firstCall(address(riskModule), IRiskModuleChecks.checkPledge.selector, address(coll), 0);
+            acc.firstCall(address(riskModule), IRiskModule.checkPledge.selector, address(coll), 0);
         assertTrue(poked, "Collateralization poked the market's LPOracle");
         assertTrue(checked, "checkPledge ran");
         assertLt(iPoke, iCheck, "poke before checkPledge");
@@ -155,7 +153,7 @@ contract CollateralizationRealOracleUnitTest is CollateralizationFixture {
         vm.startStateDiffRecording();
         vm.startPrank(adapter);
         lock.acquire();
-        uint256[] memory fees = ICollateralizationUser(address(coll)).collectFees(alice, address(tokenB), key);
+        uint256[] memory fees = ICollateralization(address(coll)).collectFees(alice, address(tokenB), key);
         lock.release();
         vm.stopPrank();
         vm.prank(adapter);
@@ -164,7 +162,7 @@ contract CollateralizationRealOracleUnitTest is CollateralizationFixture {
         IAaveV4Spoke(aave.cdpSpoke).withdraw(reserveB, 5_000_000_000, proxyB);
         vm.startPrank(adapter);
         tokenB.burn(proxyB, 5_000_000_000);
-        ICollateralizationAdapter(address(coll)).release(proxyB, address(tokenB), key, 5_000_000_000);
+        ICollateralization(address(coll)).release(proxyB, address(tokenB), key, 5_000_000_000);
         lock.release();
         vm.stopPrank();
         Vm.AccountAccess[] memory acc = vm.stopAndReturnStateDiff();

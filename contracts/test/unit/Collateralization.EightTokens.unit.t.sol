@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {Pending} from "../../src/custody/collateralization/types/Pending.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {Pending} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -50,7 +50,7 @@ contract CollateralizationEightTokensUnitTest is CollateralizationFixture {
         vm.prank(adapter);
         token.burn(lpVaultSwap, seized);
         vm.prank(lpVaultSwap);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.LengthMismatch.selector, N, 2));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.LengthMismatch.selector, N, 2));
         coll.settleSeizure(aliceProxy, vt, seized, new uint256[](2));
         uint256[] memory before = _swapBalances();
         vm.prank(lpVaultSwap);

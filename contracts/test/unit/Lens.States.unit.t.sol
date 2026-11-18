@@ -3,15 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ILens} from "../../src/lens/lens/ILens.sol";
 import {ILensAccount} from "../../src/lens/lens/ILensAccount.sol";
-import {ILensLiquidation} from "../../src/lens/lens/ILensLiquidation.sol";
 import {ILensMarket} from "../../src/lens/lens/ILensMarket.sol";
 import {ILensPreview} from "../../src/lens/lens/ILensPreview.sol";
 import {ILensRisk} from "../../src/lens/lens/ILensRisk.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensStatesUnitTest
@@ -142,11 +141,11 @@ contract LensStatesUnitTest is LensFixture {
         c[5] = abi.encodeCall(ILensMarket.checkRecordBacking, (vt, 0, 200));
         c[6] = abi.encodeCall(ILensMarket.getPendingSettlement, (vt));
         c[7] = abi.encodeCall(ILensMarket.getCapHeadroom, (vt, wallet));
-        c[8] = abi.encodeCall(ILensLiquidation.getPriceState, (vt));
-        c[9] = abi.encodeCall(ILensLiquidation.getDebtPriceState, (aave.cdpSpoke, debtReserveId));
-        c[10] = abi.encodeCall(ILensLiquidation.getDebtPriceState, (aave.cdpSpoke, usdcReserveId));
-        c[11] = abi.encodeCall(ILensLiquidation.getApplicationState, (aave.hub));
-        c[12] = abi.encodeCall(ILensLiquidation.getPauseReason, (aave.hub));
+        c[8] = abi.encodeCall(ILens.getPriceState, (vt));
+        c[9] = abi.encodeCall(ILens.getDebtPriceState, (aave.cdpSpoke, debtReserveId));
+        c[10] = abi.encodeCall(ILens.getDebtPriceState, (aave.cdpSpoke, usdcReserveId));
+        c[11] = abi.encodeCall(ILens.getApplicationState, (aave.hub));
+        c[12] = abi.encodeCall(ILens.getPauseReason, (aave.hub));
         c[13] = abi.encodeCall(ILensRisk.getBreakerStatus, (MARKET_ID));
         c[14] = abi.encodeCall(ILensRisk.getDebtBreakerStatus, (aave.cdpSpoke, debtReserveId));
         c[15] = abi.encodeCall(ILensRisk.isFrozenAddress, (wallet));
@@ -159,8 +158,8 @@ contract LensStatesUnitTest is LensFixture {
             abi.encodeCall(ILensPreview.previewRepayWithCollateral, (wallet, MARKET_ID, _key(1), 1e6, debtReserveId));
         if (proxy != address(0)) {
             c[22] = abi.encodeCall(ILensAccount.getRecords, (proxy, 0, 16));
-            c[23] = abi.encodeCall(ILensLiquidation.previewLiquidation, (proxy, debtReserveId, t));
-            c[24] = abi.encodeCall(ILensLiquidation.previewLiquidation, (proxy, usdcReserveId, t));
+            c[23] = abi.encodeCall(ILens.previewLiquidation, (proxy, debtReserveId, t));
+            c[24] = abi.encodeCall(ILens.previewLiquidation, (proxy, usdcReserveId, t));
             c[25] = abi.encodeCall(ILensPreview.previewRecredit, (MARKET_ID, _key(1)));
         }
         for (uint256 i = 0; i < c.length; ++i) {

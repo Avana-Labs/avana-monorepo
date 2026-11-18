@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {AvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
-import {TailCoverageView} from "../../src/lens/lens/types/TailCoverageView.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
+import {TailCoverageView} from "../../src/lens/lens/types/LensTypes.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {CollHubSpokeConfig, ICollHubConfigurator} from "../utils/fixtures/CollateralizationFixture.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 

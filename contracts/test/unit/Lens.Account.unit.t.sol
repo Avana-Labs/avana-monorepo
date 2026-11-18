@@ -5,10 +5,9 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
-import {AccountView} from "../../src/lens/lens/types/AccountView.sol";
-import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {AccountView, RecordView} from "../../src/lens/lens/types/LensTypes.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
 
@@ -53,7 +52,7 @@ contract LensAccountUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-022
     function test_TEST_247_predictProxyUnknownMarketReverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 99));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 99));
         lens.predictProxy(alice, 99);
     }
 
@@ -239,7 +238,7 @@ contract LensAccountUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-022
     function test_TEST_247_getAccountUnknownMarketReverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 7));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 7));
         lens.getAccount(alice, 7);
     }
 
@@ -267,7 +266,7 @@ contract LensAccountUnitTest is LensFixture {
     function test_TEST_247_getAccountsUnknownMarketReverts() public {
         uint256[] memory ids = new uint256[](2);
         (ids[0], ids[1]) = (MARKET_ID, 5);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 5));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 5));
         lens.getAccounts(alice, ids);
     }
 

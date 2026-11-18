@@ -3,14 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../../src/amm/IAmmIntegration.sol";
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
-import {BackingRecord} from "../../../src/custody/collateralization/types/BackingRecord.sol";
+import {BackingRecord} from "../../../src/custody/collateralization/types/CollateralizationTypes.sol";
+import {ILPVault} from "../../../src/custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
-import {PledgeCounters} from "../../../src/types/PledgeCounters.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
+import {PledgeCounters, PositionShape} from "../../../src/types/PositionTypes.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {VaultToken} from "../../../src/vault-token/vault-token/VaultToken.sol";
 import {CollOracleMock, CollRiskModuleMock} from "../mocks/CollateralizationMocks.sol";
@@ -106,7 +105,7 @@ abstract contract LPVaultLedgerFixture is AaveV4Fixture {
         ledger = ICollateralization(core.collateralization);
         vm.prank(core.timelock);
         ledgerFactory.registerIntegration(integrationId, lpVault);
-        (address pool, bytes32 poolId, PositionShape memory shape,) = IAmmIntegration(lpVault).marketOf(marketId);
+        (address pool, bytes32 poolId, PositionShape memory shape,) = ILPVault(lpVault).marketOf(marketId);
         vm.prank(core.timelock);
         address vt = ledgerFactory.deployVaultToken(
             integrationId,

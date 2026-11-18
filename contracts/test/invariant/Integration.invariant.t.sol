@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
 import {IPayoutEscrow} from "../../src/liquidation/payout-escrow/IPayoutEscrow.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";

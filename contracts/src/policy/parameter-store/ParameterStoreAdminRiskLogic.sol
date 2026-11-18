@@ -3,21 +3,18 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
+import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
-import {Market} from "../../types/Market.sol";
-import {SecondSource} from "../../types/SecondSource.sol";
-import {SecondSourceKind} from "../../types/SecondSourceKind.sol";
+import {Market} from "../../types/MarketTypes.sol";
+import {SecondSource, SecondSourceKind} from "../../types/OracleTypes.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
-import {DebtReserveDef} from "../market-registry/types/DebtReserveDef.sol";
-import {TokenDef} from "../market-registry/types/TokenDef.sol";
-import {IParameterStoreChain} from "./IParameterStoreChain.sol";
+import {DebtReserveDef, TokenDef} from "../market-registry/types/MarketRegistryTypes.sol";
+import {IParameterStore} from "./IParameterStore.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
 import {ParameterStoreRisk} from "./ParameterStoreRisk.sol";
 import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";
-import {GlobalParams} from "./types/GlobalParams.sol";
-import {MarketParams} from "./types/MarketParams.sol";
+import {GlobalParams, MarketParams} from "./types/ParameterStoreTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title ParameterStoreAdminRiskLogic
@@ -49,7 +46,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         return (keccak256("ParameterStoreAdminRiskLogic"), _TIMELOCK, address(_REGISTRY), _BLOCK_TIME, _HAS_SEQUENCER);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.initialize`: checks and writes the global values.
+    /// @notice Body of `IParameterStore.initialize`: checks and writes the global values.
     /// @dev The sequencer check starts empty; on an L2 the first batch calls `setSequencer`.
     function initialize(
         address,
@@ -71,10 +68,10 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         _requireFeeRecipient(params.feeRecipient);
         _s().g = params;
         _s().poolShareMaxBps = initialPoolShareMaxBps;
-        emit IParameterStoreChain.SequencerSet(address(0), 0);
+        emit IParameterStore.SequencerSet(address(0), 0);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setPoolRiskFactor`.
+    /// @notice Body of `IParameterStore.setPoolRiskFactor`.
     function setPoolRiskFactor(
         uint256 marketId,
         uint16 value
@@ -89,7 +86,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         emit ParameterSet("poolRiskFactor", bytes32(marketId), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setAvanaFeeShareBps`.
+    /// @notice Body of `IParameterStore.setAvanaFeeShareBps`.
     function setAvanaFeeShareBps(
         uint16 value
     ) external {
@@ -101,7 +98,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         emit ParameterSet("avanaFeeShareBps", bytes32(0), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setFeeRecipient`.
+    /// @notice Body of `IParameterStore.setFeeRecipient`.
     function setFeeRecipient(
         address recipient
     ) external {
@@ -112,7 +109,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         emit ParameterSet("feeRecipient", bytes32(0), uint160(old), uint160(recipient));
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setSecondSource`.
+    /// @notice Body of `IParameterStore.setSecondSource`.
     function setSecondSource(
         address token,
         SecondSource calldata src,
@@ -145,7 +142,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         if (wasOnStandby) emit SecondSourceSwitched(token, false, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.useStandbySecondSource`.
+    /// @notice Body of `IParameterStore.useStandbySecondSource`.
     /// @dev Re-checks independence and every affected market, since routes may have changed since `setSecondSource`.
     function useStandbySecondSource(
         address token
@@ -161,7 +158,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         emit SecondSourceSwitched(token, true, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.restoreSecondSource`.
+    /// @notice Body of `IParameterStore.restoreSecondSource`.
     function restoreSecondSource(
         address token
     ) external {
@@ -172,7 +169,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         emit SecondSourceSwitched(token, false, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setTokenCollateralFactorBps`.
+    /// @notice Body of `IParameterStore.setTokenCollateralFactorBps`.
     function setTokenCollateralFactorBps(
         address token,
         uint16 value
@@ -187,7 +184,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         emit ParameterSet("tokenCollateralFactorBps", _a(token), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setStressFloorUsd`.
+    /// @notice Body of `IParameterStore.setStressFloorUsd`.
     function setStressFloorUsd(
         uint256 marketId,
         uint256 value
@@ -260,7 +257,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         if (r.code.length == 0) return false;
         // Only the probe's success and the length of its first word are read.
         (bool logic, bytes memory ret) =
-            RouteReads._staticRead(r, PROBE_GAS, abi.encodeWithSignature("logicConfig()"), 32);
+            RouteMath._staticRead(r, PROBE_GAS, abi.encodeWithSignature("logicConfig()"), 32);
         return (logic && ret.length == 32) || _word(r, abi.encodeWithSignature("TIMELOCK()")) == uint160(_TIMELOCK)
             || _word(r, abi.encodeWithSignature("MARKET_REGISTRY()")) == uint160(address(_REGISTRY));
     }
@@ -290,7 +287,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         address target,
         bytes memory data
     ) private view returns (uint256 value) {
-        (bool ok, bytes memory ret) = RouteReads._staticRead(target, PROBE_GAS, data, 64);
+        (bool ok, bytes memory ret) = RouteMath._staticRead(target, PROBE_GAS, data, 64);
         if (ok && ret.length == 32) value = abi.decode(ret, (uint256));
     }
 

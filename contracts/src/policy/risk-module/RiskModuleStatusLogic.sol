@@ -5,23 +5,19 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapViews} from "../../liquidation/lp-vault-swap/ILPVaultSwapViews.sol";
+import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
-import {MarketGateStatus} from "../../types/MarketGateStatus.sol";
-import {PauseReason} from "../../types/PauseReason.sol";
-import {PauseState} from "../../types/PauseState.sol";
-import {PriceStateView} from "../../types/PriceStateView.sol";
-import {DebtReserveDef} from "../market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
+import {AccountGateStatus, MarketGateStatus, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {PriceStateView} from "../../types/OracleTypes.sol";
+import {DebtReserveDef, MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleBorrowLogic} from "./IRiskModuleBorrowLogic.sol";
 import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
 import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 import {IRiskModuleStatusLogic} from "./IRiskModuleStatusLogic.sol";
 import {RiskModuleBorrowScope} from "./RiskModuleBorrowScope.sol";
-import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
+import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleStatusLogic
 /// @notice Body of `getAccountGateStatus`: every borrow-side gate outcome of an account, without poking.
@@ -67,7 +63,7 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
         s.m = _market(marketId);
         s.borrowed = NO_RESERVE;
         _accountReserves(st, s);
-        st.noApprovedKeeper = ILPVaultSwapViews(_LP_VAULT_SWAP).activeKeeperCount() == 0;
+        st.noApprovedKeeper = ILPVaultSwap(_LP_VAULT_SWAP).activeKeeperCount() == 0;
         st.hardHealthFloor = _store().hardHealthFloor(marketId);
         (st.healthFactor, st.healthFactorExcludingRescue) = IRiskModuleBorrowLogic(_BORROW).healthFactors(proxy);
         uint256[] memory one = new uint256[](1);

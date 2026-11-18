@@ -3,11 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAvanaTimelockViews} from "../../../src/governance/timelock/IAvanaTimelockViews.sol";
+import {IAvanaTimelock} from "../../../src/governance/timelock/IAvanaTimelock.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
+import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {SecondSource, SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 
@@ -79,7 +78,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
         bytes32 key
     ) internal {
         uint256 last = lastLoosening[key];
-        if (last != 0 && block.timestamp < last + IAvanaTimelockViews(TIMELOCK).normalDelay()) ++spacingEscaped;
+        if (last != 0 && block.timestamp < last + IAvanaTimelock(TIMELOCK).normalDelay()) ++spacingEscaped;
         lastLoosening[key] = block.timestamp;
     }
 

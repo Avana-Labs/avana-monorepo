@@ -5,25 +5,22 @@ pragma solidity 0.8.28;
 
 import {IClIntegration} from "../../../src/amm/IClIntegration.sol";
 import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.sol";
-import {ClUnitMath} from "../../../src/amm/concentrated-liquidity/ClUnitMath.sol";
 import {AvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {INonfungiblePositionManager} from "../../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
-import {LiquidationParams} from "../../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {LiquidationParams, LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {InitParams} from "../../../src/oracle/lp-oracle/types/InitParams.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {RiskTier} from "../../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../../src/policy/market-registry/types/SpokeDef.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
-import {MarketSpeedLimits} from "../../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "../../../src/policy/parameter-store/types/SpeedLimit.sol";
-import {MarketDef} from "../../../src/types/MarketDef.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {InitParams} from "../../../src/oracle/lp-oracle/LPOracleTypes.sol";
+import {DebtReserveDef, RiskTier, SpokeDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {
+    MarketParams,
+    MarketSpeedLimits,
+    SpeedLimit
+} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {MarketDef} from "../../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {OracleFeedMock} from "../mocks/LPOracleMocks.sol";
 import {IAvanaAaveV4Roles, IHubInstanceBatch, ISpokeInstanceBatch} from "./AaveV4Fixture.sol";
 import {ClTestToken, IClPool} from "./ClPoolFixture.sol";
@@ -52,7 +49,7 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 /// new Hub and enabled as debt reserves of the new Spoke. Volatile tokens are listed with feeds (`_listPricedToken`, not
 /// USD-stable) and token collateral factors; markets (`_addVolatileMarket`) are the full range of real Uniswap v3 pools
 /// created at the feed prices, priced by real `LPOracleCL`s with the pool's unit exponent, their vault-token decimals
-/// those the real LPVault's `bindMarket` computes (`ClUnitMath`), with real routes from each pool token into USDC and
+/// those the real LPVault's `bindMarket` computes (`ClPriceMath`), with real routes from each pool token into USDC and
 /// GHO at the feed rate.
 /// @dev `_repriceMarkets` swaps every market pool to its tokens' published prices and waits the TWAP window, as
 /// `_depegUsdt` does for USDT. Spoke-aware reads (`_hfOn`, `_debtOn`, `_sharesOn`) and a liquidation helper that funds
@@ -360,19 +357,19 @@ abstract contract RealStackVolatile is RealStackFlows {
         vm.label(address(m.oracle), string.concat("LPOracle ", vm.toString(id)));
     }
 
-    /// @dev The full range's vault-token decimals and the pool's unit exponent at the listing prices (`ClUnitMath`, as
+    /// @dev The full range's vault-token decimals and the pool's unit exponent at the listing prices (`ClPriceMath`, as
     /// the LPVault's first binding of the pool computes them).
     function _unitOf(
         IClPool p
     ) internal view returns (uint8 d, uint8 k) {
         (address t0, address t1) = (p.token0(), p.token1());
-        ClUnitMath.Valuation memory v =
-            ClUnitMath.valuation(_usdPrice(t0), _usdPrice(t1), ClTestToken(t0).decimals(), ClTestToken(t1).decimals());
+        ClPriceMath.Valuation memory v =
+            ClPriceMath.valuation(_usdPrice(t0), _usdPrice(t1), ClTestToken(t0).decimals(), ClTestToken(t1).decimals());
         bool found;
-        (found, k) = ClUnitMath.firstBindingExponent(v, p.tickSpacing());
+        (found, k) = ClPriceMath.firstBindingExponent(v, p.tickSpacing());
         require(found, "unit exponent");
         (int24 lower, int24 upper) = _fullRange(p);
-        (found, d) = ClUnitMath.unitDecimals(v, lower, upper, k);
+        (found, d) = ClPriceMath.unitDecimals(v, lower, upper, k);
         require(found, "unit decimals");
     }
 

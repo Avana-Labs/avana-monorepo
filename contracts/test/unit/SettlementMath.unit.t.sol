@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {SettlementMath} from "../../src/liquidation/lp-vault-swap/SettlementMath.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {SettlementMathHarness} from "../utils/harness/SettlementMathHarness.sol";
@@ -122,7 +122,7 @@ contract SettlementMathUnitTest is AvanaTest {
         uint256 minRec = m.recoveryFloor(v, 100, 2, USDC);
         assertEq(minRec, 12_297_373_998, "minRec at V 12,422.6");
         assertEq(m.shortfallTopUp(minRec, 12_174 * USDC, 0, 200 * USDC), 123_373_998, "pulled 123.373998 USDC");
-        vm.expectRevert(ILPVaultSwapErrors.RecoveryBelowFloor.selector);
+        vm.expectRevert(ILPVaultSwapBase.RecoveryBelowFloor.selector);
         m.shortfallTopUp(minRec, 12_174 * USDC, 0, 123_373_997);
         // Dust: Kf = D = 3 USDC, R = 2.95 above the floor: g = max(0, 3 + 0 + 0 - 3 - 2.95) = 0, no top-up.
         uint256 gap = m.roundingGap(3 * USDC, 0, 0, 3 * USDC, 2_950_000);
@@ -132,10 +132,10 @@ contract SettlementMathUnitTest is AvanaTest {
         gap = m.roundingGap(3 * USDC, 0, 0, 0, 2_950_000);
         assertEq(gap, 50_000, "g = D - R with Kf = 0");
         assertEq(m.shortfallTopUp(2_118_498, 2_950_000, gap, 50_000), 50_000, "shortfall = g");
-        vm.expectRevert(ILPVaultSwapErrors.InsufficientProceeds.selector);
+        vm.expectRevert(ILPVaultSwapBase.InsufficientProceeds.selector);
         m.shortfallTopUp(2_118_498, 2_950_000, gap, 0);
         // Both fail: the floor error comes first.
-        vm.expectRevert(ILPVaultSwapErrors.RecoveryBelowFloor.selector);
+        vm.expectRevert(ILPVaultSwapBase.RecoveryBelowFloor.selector);
         m.shortfallTopUp(10, 0, 20, 5);
         assertEq(m.shortfallTopUp(10, 0, 20, 20), 20, "max of the floor gap and g");
         assertEq(m.shortfallTopUp(0, 5, 0, 0), 0, "nothing to pull");
@@ -263,11 +263,11 @@ contract SettlementMathUnitTest is AvanaTest {
         assertEq(m.deleverageAssetOut(2_096_200_000, x, 1_037_962), 19_237_965, "assetOut");
         assertEq(m.deleverageCap(1, 100, 2, USDC, MAX_FLASH_FEE_BPS), 0, "Vnet saturates at 0");
         assertEq(m.deleverageCap(1_000_002, 0, 2, USDC, 0), 0, "Vnet = U + eps saturates at 0");
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageTooSmall.selector, 0, 0));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DeleverageTooSmall.selector, 0, 0));
         m.deleverageRepayment(6600 * USDC, 0, 0);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageTooSmall.selector, x, x + 1));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DeleverageTooSmall.selector, x, x + 1));
         m.deleverageRepayment(6600 * USDC, cap, x + 1);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageShortfall.selector, x, x + 1_037_962));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DeleverageShortfall.selector, x, x + 1_037_962));
         m.deleverageAssetOut(x, x, 1_037_962);
     }
 
@@ -287,23 +287,23 @@ contract SettlementMathUnitTest is AvanaTest {
     // TEST-198 verifies: SPEC-LIQ-004, SPEC-LIQ-005, SPEC-LIQ-014, SPEC-LIQ-018
     // Sources: SettlementMath review A1, A2 (zero prices and decimals above 36 fail closed)
     function test_TEST_198_valuationRejectsZeroPricesAndDecimals() public {
-        vm.expectRevert(ILPVaultSwapErrors.ZeroDebtPrice.selector);
+        vm.expectRevert(ILPVaultSwapBase.ZeroDebtPrice.selector);
         m.seizedValue(1, 1, 18, 6, 0);
-        vm.expectRevert(ILPVaultSwapErrors.ZeroCollateralPrice.selector);
+        vm.expectRevert(ILPVaultSwapBase.ZeroCollateralPrice.selector);
         m.seizedValue(1, 0, 18, 6, PRICE_UNIT);
-        vm.expectRevert(ILPVaultSwapErrors.ZeroCollateralPrice.selector);
+        vm.expectRevert(ILPVaultSwapBase.ZeroCollateralPrice.selector);
         m.seizedValue(1, 0, 18, 6, 0); // the valued price is checked before the quote price
-        vm.expectRevert(ILPVaultSwapErrors.ZeroCollateralPrice.selector);
+        vm.expectRevert(ILPVaultSwapBase.ZeroCollateralPrice.selector);
         m.legValue(1, 0, 18, 6, PRICE_UNIT);
-        vm.expectRevert(ILPVaultSwapErrors.ZeroDebtPrice.selector);
+        vm.expectRevert(ILPVaultSwapBase.ZeroDebtPrice.selector);
         m.pendingLegValue(1, 1, 6, 18, 0);
-        vm.expectRevert(ILPVaultSwapErrors.ZeroCollateralPrice.selector);
+        vm.expectRevert(ILPVaultSwapBase.ZeroCollateralPrice.selector);
         m.unitValue(0, 6, 6, PRICE_UNIT);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.InvalidDecimals.selector, uint8(37)));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.InvalidDecimals.selector, uint8(37)));
         m.seizedValue(1, 1, 37, 6, PRICE_UNIT);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.InvalidDecimals.selector, uint8(60)));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.InvalidDecimals.selector, uint8(60)));
         m.legValue(1, 1, 6, 60, PRICE_UNIT);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.InvalidDecimals.selector, uint8(255)));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.InvalidDecimals.selector, uint8(255)));
         m.unitValue(0, 255, 6, 0); // decimals are checked before prices
     }
 
@@ -326,7 +326,7 @@ contract SettlementMathUnitTest is AvanaTest {
     // TEST-198 verifies: SPEC-LIQ-009, SPEC-LIQ-022
     // Sources: SettlementMath review A3 (a fee share above 1e4 reverts instead of clamping kr)
     function test_TEST_198_feeShareAboveBpsReverts() public {
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.InvalidFeeShare.selector, BPS + 1));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.InvalidFeeShare.selector, BPS + 1));
         m.payouts(2_047_500_000, 1950 * USDC, 2_052_000_000, BPS + 1);
         SettlementMath.Payouts memory p = m.payouts(2_047_500_000, 1950 * USDC, 2_052_000_000, BPS);
         assertEq(p.avanaFee, p.oracleGain, "share 1e4 takes the whole oracle gain");

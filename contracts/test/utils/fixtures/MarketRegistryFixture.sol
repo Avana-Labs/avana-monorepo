@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../../src/amm/IAmmIntegration.sol";
+import {ILPVault} from "../../../src/custody/lp-vault/ILPVault.sol";
 import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
@@ -13,17 +13,18 @@ import {MarketRegistryListingLogic} from "../../../src/policy/market-registry/Ma
 import {MarketRegistryRoutesLogic} from "../../../src/policy/market-registry/MarketRegistryRoutesLogic.sol";
 import {MarketRegistrySafetyLogic} from "../../../src/policy/market-registry/MarketRegistrySafetyLogic.sol";
 import {MarketRegistryWindDownLogic} from "../../../src/policy/market-registry/MarketRegistryWindDownLogic.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
 import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
-import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
-import {MarketRegistryLogics} from "../../../src/policy/market-registry/types/MarketRegistryLogics.sol";
-import {RiskTier} from "../../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../../src/policy/market-registry/types/SpokeDef.sol";
-import {TokenDef} from "../../../src/policy/market-registry/types/TokenDef.sol";
-import {MarketDef} from "../../../src/types/MarketDef.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {RouteSlot} from "../../../src/types/RouteSlot.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {
+    DebtReserveDef,
+    MarketRegistryImmutables,
+    MarketRegistryLogics,
+    RiskTier,
+    SpokeDef,
+    TokenDef
+} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {MarketDef} from "../../../src/types/MarketTypes.sol";
+import {RouteSlot} from "../../../src/types/OracleTypes.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {
     RegistryAaveOracleMock,
@@ -242,7 +243,7 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         uint32 id
     ) internal view returns (bytes32) {
         (address v,) = registry.integrationOf(id);
-        IAmmIntegration a = IAmmIntegration(v);
+        ILPVault a = ILPVault(v);
         return keccak256(abi.encode(block.chainid, v, v.codehash, a.AMM_PROTOCOL(), a.capabilities().poolKeying));
     }
 

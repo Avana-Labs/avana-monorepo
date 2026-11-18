@@ -3,15 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IntegrationCapabilities} from "../../../src/amm/types/IntegrationCapabilities.sol";
-import {PoolKeying} from "../../../src/amm/types/PoolKeying.sol";
-import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
-import {OracleConfig} from "../../../src/types/OracleConfig.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
-import {PriceStateView} from "../../../src/types/PriceStateView.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {IntegrationCapabilities, PoolKeying} from "../../../src/amm/types/AmmTypes.sol";
+import {FeedDef, MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {OracleConfig, PriceState, PriceStateView} from "../../../src/types/OracleTypes.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 
 /// @title RegistryParameterStoreMock
 /// @notice The ParameterStore views the MarketRegistry reads, backed by settable storage.

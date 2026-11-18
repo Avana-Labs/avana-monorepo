@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {ILPVaultSwapLiquidation} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
-import {LiquidationParams} from "../../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {ILPVaultSwapBase} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IPayoutEscrow} from "../../../src/liquidation/payout-escrow/IPayoutEscrow.sol";
 import {ILock} from "../../../src/lock/lock/ILock.sol";
 import {PayoutToken} from "./PayoutToken.sol";
@@ -15,7 +14,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 /// @title MockLiquidationSwap
 /// @notice LPVaultSwap's `liquidate` as the flash liquidation helper sees it (a stand-in for LPVaultSwap in these
-/// tests), following `ILPVaultSwapLiquidation` and the 2.11 settlement rules that bind a caller: `DeadlineExpired` first,
+/// tests), following `ILPVaultSwap` and the 2.11 settlement rules that bind a caller: `DeadlineExpired` first,
 /// then `AddressIsFrozen(msg.sender)`; acquires the real Lock; pulls `X = debtToCover` from `msg.sender` with
 /// `transferFrom` and measures `Kf` (`FundingMismatch` unless `0 < Kf ≤ X`); lets the Spoke take `D ≤ Kf`; mints the
 /// recovery `R` of the debt asset (the unwind and the swap routes); applies the `SPEC-LIQ-019` floor top-up: with the
@@ -27,7 +26,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /// plain transfer, so a refused `keeperOut` reverts the call (`REQ-SWAP-026`); applies `PayoutTooLow(keeperOut,
 /// minPayout)`. Records every call. A hook can call any target while the Lock is held (a reentrant token or route).
 /// @dev The outcome `(D, R, A)` and the residues are set by the test before the call.
-contract MockLiquidationSwap is ILPVaultSwapLiquidation {
+contract MockLiquidationSwap {
     using SafeERC20 for IERC20;
 
     /// @notice Gas forwarded to each escrowable payout transfer (`PAYOUT_TRANSFER_GAS`).
@@ -78,7 +77,7 @@ contract MockLiquidationSwap is ILPVaultSwapLiquidation {
         debtAsset = debtAsset_;
     }
 
-    /// @notice LPVaultSwap's view of its escrow (`ILPVaultSwapViews.PAYOUT_ESCROW`).
+    /// @notice LPVaultSwap's view of its escrow (`ILPVaultSwap.PAYOUT_ESCROW`).
     function PAYOUT_ESCROW() external view returns (address) {
         return address(escrow);
     }
@@ -125,9 +124,9 @@ contract MockLiquidationSwap is ILPVaultSwapLiquidation {
 
     function liquidate(
         LiquidationParams calldata params
-    ) external override returns (LiquidationResult memory result) {
-        if (block.timestamp > params.deadline) revert ILPVaultSwapErrors.DeadlineExpired(params.deadline);
-        if (frozen[msg.sender]) revert ILPVaultSwapErrors.AddressIsFrozen(msg.sender);
+    ) external returns (LiquidationResult memory result) {
+        if (block.timestamp > params.deadline) revert ILPVaultSwapBase.DeadlineExpired(params.deadline);
+        if (frozen[msg.sender]) revert ILPVaultSwapBase.AddressIsFrozen(msg.sender);
         lock.acquire();
         ++calls;
         lastCaller = msg.sender;
@@ -138,16 +137,16 @@ contract MockLiquidationSwap is ILPVaultSwapLiquidation {
         uint256 before = asset.balanceOf(address(this));
         asset.safeTransferFrom(msg.sender, address(this), params.debtToCover);
         uint256 kf = asset.balanceOf(address(this)) - before;
-        if (kf == 0 || kf > params.debtToCover) revert ILPVaultSwapErrors.FundingMismatch();
+        if (kf == 0 || kf > params.debtToCover) revert ILPVaultSwapBase.FundingMismatch();
         uint256 d = debtRepaid < kf ? debtRepaid : kf;
         if (d != 0) asset.safeTransfer(SPOKE, d);
         if (recovered != 0) debtAsset.mint(address(this), recovered);
         // SPEC-LIQ-019: the floor gap is the caller's, pulled from msg.sender after the routes, within maxShortfall.
         uint256 shortfall = minRecovery > recovered ? minRecovery - recovered : 0;
-        if (shortfall > params.maxShortfall) revert ILPVaultSwapErrors.RecoveryBelowFloor();
+        if (shortfall > params.maxShortfall) revert ILPVaultSwapBase.RecoveryBelowFloor();
         if (shortfall != 0) asset.safeTransferFrom(msg.sender, address(this), shortfall);
         uint256 keeperOut = kf + recovered + shortfall - d - avanaFee;
-        if (keeperOut < params.minPayout) revert ILPVaultSwapErrors.PayoutTooLow(keeperOut, params.minPayout);
+        if (keeperOut < params.minPayout) revert ILPVaultSwapBase.PayoutTooLow(keeperOut, params.minPayout);
 
         if (avanaFee != 0) _deliver(asset, feeRecipient, avanaFee);
         if (keeperOut != 0) asset.safeTransfer(msg.sender, keeperOut);
@@ -173,7 +172,7 @@ contract MockLiquidationSwap is ILPVaultSwapLiquidation {
     function settlePending(
         uint256,
         uint256
-    ) external pure override returns (uint256, uint256[] memory, uint256) {
+    ) external pure returns (uint256, uint256[] memory, uint256) {
         revert("not modelled");
     }
 

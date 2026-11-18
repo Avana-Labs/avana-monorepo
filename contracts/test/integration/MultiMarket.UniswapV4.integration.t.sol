@@ -3,19 +3,15 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
-import {IAmmIntegrationHooks} from "../../src/amm/IAmmIntegrationHooks.sol";
 import {UniswapV4State} from "../../src/amm/uniswap-v4/UniswapV4State.sol";
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {IUniswapV4PoolManager} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
-import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
-import {PositionFeesView} from "../../src/lens/lens/types/PositionFeesView.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {LiquidationPreview, PositionFeesView} from "../../src/lens/lens/types/LensTypes.sol";
+import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PledgePreview} from "../../src/types/PledgePreview.sol";
-import {PositionRef} from "../../src/types/PositionRef.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
+import {PledgePreview, PositionRef} from "../../src/types/PositionTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackUniswapV4} from "../utils/fixtures/RealStackUniswapV4.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
@@ -145,7 +141,7 @@ contract MultiMarketUniswapV4IntegrationTest is RealStackUniswapV4 {
     function test_TEST_331_hookedPoolIsRefused() public {
         PoolKey memory pk = v4KeyOf[v4EthUsdc];
         pk.hooks = IHooks(address(uint160(0x0080)));
-        assertFalse(IAmmIntegrationHooks(v4Vault).isAllowedPoolHook(address(pk.hooks)));
+        assertFalse(ILPVault(v4Vault).isAllowedPoolHook(address(pk.hooks)));
         vm.expectRevert();
         this.addMarketExternal(pk, mkt[v4EthUsdc].pool);
     }
@@ -186,8 +182,8 @@ contract MultiMarketUniswapV4IntegrationTest is RealStackUniswapV4 {
     /// pledge preview names `TooManyRecords` and a 9th pledge reverts, while a re-credit of an existing record is
     /// not limited.
     function test_TEST_344_v4RecordCapIsEight() public {
-        assertEq(IAmmIntegration(v4Vault).maxRecordsPerAccountMarket(), 8, "v4 cap");
-        assertEq(IAmmIntegration(registry.getMarket(mA).integration).maxRecordsPerAccountMarket(), 16, "v3 cap");
+        assertEq(ILPVault(v4Vault).maxRecordsPerAccountMarket(), 8, "v4 cap");
+        assertEq(ILPVault(registry.getMarket(mA).integration).maxRecordsPerAccountMarket(), 16, "v3 cap");
         Case memory c = cases[1];
         address proxy;
         for (uint256 i = 0; i < 8; ++i) {
@@ -199,7 +195,7 @@ contract MultiMarketUniswapV4IntegrationTest is RealStackUniswapV4 {
         assertFalse(p.eligible, "a 9th record is not eligible");
         assertEq(p.reason, IRiskModuleErrors.TooManyRecords.selector, "preview names the record cap");
         vm.prank(c.wallet);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.TooManyRecords.selector, uint256(8)));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.TooManyRecords.selector, uint256(8)));
         adapterC.pledge(c.marketId, PositionRef(V4, key), _deadline());
     }
 }

@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
 import {ClTestToken} from "../utils/fixtures/ClPoolFixture.sol";
@@ -98,7 +98,7 @@ contract LiquidationWholeAccountGasTest is RealStackVolatile, GasCalibration {
         usdc.mint(keeper, debt);
         vm.prank(keeper);
         usdc.approve(lpVaultSwap, debt);
-        used = _coldGas(keeper, lpVaultSwap, abi.encodeCall(ILPVaultSwapLiquidation.liquidate, (p)));
+        used = _coldGas(keeper, lpVaultSwap, abi.encodeCall(ILPVaultSwap.liquidate, (p)));
         assertEq(_sharesOn(spokeV, proxy, mkt[mV].reserveId), 0, "the whole collateral reserve was seized");
         assertEq(coll.getAccountCredited(proxy, mkt[mV].vaultToken), 0, "every record debited");
         assertEq(IERC20(mkt[mV].vaultToken).balanceOf(lpVaultSwap), 0, "LPVaultSwap keeps no vault token");

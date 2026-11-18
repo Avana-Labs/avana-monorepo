@@ -3,20 +3,19 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
 import {MarketRegistryHubsLogic} from "../../src/policy/market-registry/MarketRegistryHubsLogic.sol";
-import {MarketRegistryImmutables} from "../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
-import {MarketRegistryLogics} from "../../src/policy/market-registry/types/MarketRegistryLogics.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {IParameterStoreBreakers} from "../../src/policy/parameter-store/IParameterStoreBreakers.sol";
-import {IParameterStoreCoverage} from "../../src/policy/parameter-store/IParameterStoreCoverage.sol";
-import {IParameterStoreLiquidation} from "../../src/policy/parameter-store/IParameterStoreLiquidation.sol";
+import {
+    MarketRegistryImmutables,
+    MarketRegistryLogics,
+    RiskTier
+} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
-import {IParameterStoreRiskViews} from "../../src/policy/parameter-store/IParameterStoreRiskViews.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {PauseReason} from "../../src/types/MarketTypes.sol";
+import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -33,11 +32,9 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
     function test_TEST_242_adminRolesOnlyForTimelock() public {
         bytes32 defaultAdmin = registry.DEFAULT_ADMIN_ROLE();
         vm.startPrank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.AdminRoleOnlyTimelock.selector, APP_ADMIN, alice));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.AdminRoleOnlyTimelock.selector, APP_ADMIN, alice));
         registry.grantRole(APP_ADMIN, alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.AdminRoleOnlyTimelock.selector, defaultAdmin, alice)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.AdminRoleOnlyTimelock.selector, defaultAdmin, alice));
         registry.grantRole(defaultAdmin, alice);
         registry.grantRole(FREEZE_GUARDIAN, alice);
         vm.stopPrank();
@@ -52,7 +49,7 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
     // TEST-242 verifies: REQ-MREG-005, REQ-CONFIG-002, REQ-ACCESS-150
     function test_TEST_242_initializeOnlyWithTimelockAndOnce() public {
         MarketRegistry impl = new MarketRegistry(im, logics);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.AdminRoleOnlyTimelock.selector, bytes32(0), alice));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.AdminRoleOnlyTimelock.selector, bytes32(0), alice));
         new ERC1967Proxy(address(impl), abi.encodeCall(MarketRegistry.initialize, (alice)));
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         registry.initialize(address(timelock));
@@ -84,7 +81,7 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         registry.pause(address(hub), PauseReason.General);
         registry.freezeAddress(attacker);
         registry.useStandbyRoute(address(usdc), RouteSlot.Primary);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, emergencyGuardian));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, emergencyGuardian));
         registry.cancelStandbySwitch(address(usdc));
         vm.stopPrank();
         vm.prank(aaveGovernanceExecutor);
@@ -98,13 +95,13 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         registry.grantRole(FREEZE_GUARDIAN, freezer);
         vm.startPrank(freezer);
         registry.freeze(address(hub));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, freezer));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, freezer));
         registry.unfreeze(address(hub));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, freezer));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, freezer));
         registry.pause(address(hub), PauseReason.General);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, freezer));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, freezer));
         registry.resetMarketBreaker(1);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, freezer));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, freezer));
         registry.useStandbyRoute(address(usdc), RouteSlot.Primary);
         vm.stopPrank();
     }
@@ -127,10 +124,10 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
             vm.prank(attacker);
             (bool ok, bytes memory ret) = address(registry).call(guarded[i]);
             assertFalse(ok);
-            assertEq(ret, abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, attacker));
+            assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, attacker));
         }
         vm.prank(attacker);
-        vm.expectRevert(IMarketRegistryErrors.NotRiskModule.selector);
+        vm.expectRevert(IMarketRegistryBase.NotRiskModule.selector);
         registry.recordBreach(bytes32(uint256(1)), 1);
         vm.prank(attacker);
         vm.expectRevert(
@@ -159,29 +156,25 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
 
     // TEST-168 verifies: REQ-CONFIG-001, REQ-CONFIG-005
     function test_TEST_168_logicContractsRefuseDirectCallsAndMismatches() public {
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, address(this)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, address(this)));
         MarketRegistryHubsLogic(logics.hubs).recordHub(alice, RiskTier.Stable);
         MarketRegistryLogics memory swapped = logics;
         (swapped.hubs, swapped.listing) = (logics.listing, logics.hubs);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("logic")));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("logic")));
         new MarketRegistry(im, swapped);
         MarketRegistryImmutables memory other = im;
         other.lock = makeAddr("otherLock");
         MarketRegistryLogics memory foreign = logics;
         foreign.safety = _deployLogics(other).safety;
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("logic")));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("logic")));
         new MarketRegistry(im, foreign);
         other = im;
         other.riskModule = address(0);
-        vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("immutables"))
-        );
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("immutables")));
         new MarketRegistryHubsLogic(other);
         other = im;
         other.flashLiquidator = address(0);
-        vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("immutables"))
-        );
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("immutables")));
         new MarketRegistryHubsLogic(other);
     }
 
@@ -245,15 +238,15 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
     // TEST-032 verifies: REQ-CONFIG-014
     function test_TEST_032_noRiskParameterModeAllowlistOrWalletCapSelectors() public {
         bytes4[46] memory params = [
-            IParameterStoreRiskViews.marketUsdCap.selector,
-            IParameterStoreRiskViews.topUpSliceUsd.selector,
-            IParameterStoreRiskViews.stressFloorUsd.selector,
-            IParameterStoreRiskViews.tokenUsdCap.selector,
-            IParameterStoreRiskViews.poolShareMaxBps.selector,
-            IParameterStoreRiskViews.minPledgeUsd.selector,
-            IParameterStoreRiskViews.debtAssetParams.selector,
-            IParameterStoreRiskViews.routeDepthThreshold.selector,
-            IParameterStoreRiskViews.poolShareMaxBpsOf.selector,
+            IParameterStore.marketUsdCap.selector,
+            IParameterStore.topUpSliceUsd.selector,
+            IParameterStore.stressFloorUsd.selector,
+            IParameterStore.tokenUsdCap.selector,
+            IParameterStore.poolShareMaxBps.selector,
+            IParameterStore.minPledgeUsd.selector,
+            IParameterStore.debtAssetParams.selector,
+            IParameterStore.routeDepthThreshold.selector,
+            IParameterStore.poolShareMaxBpsOf.selector,
             IParameterStoreTighten.tightenHardHealthFloor.selector,
             IParameterStoreTighten.tightenSlippageAllowanceBps.selector,
             IParameterStoreTighten.tightenFloorRoundingAllowance.selector,
@@ -278,19 +271,19 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
             IParameterStoreLoosen.loosenPoolShareMaxBps.selector,
             IParameterStoreLoosen.loosenMinPledgeUsd.selector,
             IParameterStoreLoosen.loosenPoolShareMaxBpsOf.selector,
-            IParameterStoreLiquidation.maxShortfallBps.selector,
-            IParameterStoreLiquidation.tightenMaxShortfallBps.selector,
-            IParameterStoreLiquidation.loosenMaxShortfallBps.selector,
-            IParameterStoreLiquidation.debtStressRiseBps.selector,
-            IParameterStoreLiquidation.setLiquidationExpectations.selector,
-            IParameterStoreBreakers.breakerDeficitMax.selector,
-            IParameterStoreBreakers.gateRecoverySeconds.selector,
-            IParameterStoreBreakers.tightenGateRecoverySeconds.selector,
-            IParameterStoreBreakers.loosenGateRecoverySeconds.selector,
-            IParameterStoreBreakers.tightenBreakerDeficitMax.selector,
-            IParameterStoreBreakers.loosenBreakerDeficitMax.selector,
-            IParameterStoreCoverage.coverageRatioBps.selector,
-            IParameterStoreCoverage.setCoverageRatioBps.selector
+            IParameterStore.maxShortfallBps.selector,
+            IParameterStore.tightenMaxShortfallBps.selector,
+            IParameterStore.loosenMaxShortfallBps.selector,
+            IParameterStore.debtStressRiseBps.selector,
+            IParameterStore.setLiquidationExpectations.selector,
+            IParameterStore.breakerDeficitMax.selector,
+            IParameterStore.gateRecoverySeconds.selector,
+            IParameterStore.tightenGateRecoverySeconds.selector,
+            IParameterStore.loosenGateRecoverySeconds.selector,
+            IParameterStore.tightenBreakerDeficitMax.selector,
+            IParameterStore.loosenBreakerDeficitMax.selector,
+            IParameterStore.coverageRatioBps.selector,
+            IParameterStore.setCoverageRatioBps.selector
         ];
         for (uint256 i = 0; i < params.length; ++i) {
             _assertNoFunction(params[i]);

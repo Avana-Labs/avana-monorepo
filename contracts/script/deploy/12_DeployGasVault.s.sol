@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAvanaGasVault} from "../../src/periphery/gas-vault/IAvanaGasVault.sol";
-import {IParameterStoreViews} from "../../src/policy/parameter-store/IParameterStoreViews.sol";
+import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {DeployBase} from "./lib/DeployBase.sol";
 import {ITimelockOps, TimelockOperations} from "./lib/TimelockOperations.sol";
 import {console2} from "forge-std/console2.sol";
@@ -55,7 +55,7 @@ contract DeployGasVault is TimelockOperations, DeployBase {
         timelock = vm.parseJsonAddress(avana, ".timelock");
         guardian = _addr(cfg, ".governance.emergencyGuardian");
         address store = vm.parseJsonAddress(avana, ".parameterStore.proxy");
-        address onChain = IParameterStoreViews(store).feeRecipient();
+        address onChain = IParameterStore(store).feeRecipient();
         require(
             treasury == onChain,
             string.concat(

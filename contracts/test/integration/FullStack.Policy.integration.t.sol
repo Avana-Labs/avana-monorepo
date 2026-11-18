@@ -3,18 +3,18 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {BackingRecord} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {IAaveAdapterCollateral} from "../../src/policy/aave-adapter/IAaveAdapterCollateral.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {FullStackMarkets} from "../utils/fixtures/FullStackMarkets.sol";
 import {RegistryRouteMock} from "../utils/mocks/MarketRegistryMocks.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -182,7 +182,7 @@ contract FullStackPolicyIntegrationTest is FullStackMarkets {
         (, usable) = registry.getRoute(mA, address(usdt), address(gho), 0);
         assertFalse(usable, "disabled");
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.NotPreviouslyApproved.selector);
+        vm.expectRevert(IMarketRegistryBase.NotPreviouslyApproved.selector);
         registry.restoreRoute(mA, address(usdt), address(gho), 0, fresh);
         d = _govern(
             address(registry),
@@ -259,26 +259,26 @@ contract FullStackPolicyIntegrationTest is FullStackMarkets {
         lpVault.addUnits(kB, added);
         vm.prank(carol);
         vm.expectRevert();
-        IAaveAdapterCollateral(adapter).recredit(mA, _ref(kB), "", _deadline());
+        IAaveAdapter(adapter).recredit(mA, _ref(kB), "", _deadline());
         uint256 supply = ERC20(vtA).totalSupply();
         uint256 shares = _sharesOf(pB, mkt[mA].reserveId);
         uint256 usedBefore = coll.getCounters(vtA, bob).regularUsed;
         vm.prank(bob);
-        uint128 got = IAaveAdapterCollateral(adapter).recredit(mA, _ref(kB), "", _deadline());
+        uint128 got = IAaveAdapter(adapter).recredit(mA, _ref(kB), "", _deadline());
         assertEq(got, added, "the added liquidity is credited");
         assertEq(ERC20(vtA).totalSupply(), supply + added, "and minted");
         assertGt(_sharesOf(pB, mkt[mA].reserveId), shares, "and supplied for Bob's proxy");
         assertEq(coll.getCounters(vtA, bob).regularUsed - usedBefore, _charge(added), "charged at the LPOracle price");
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.NothingToRecredit.selector, kB));
-        IAaveAdapterCollateral(adapter).recredit(mA, _ref(kB), "", _deadline());
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.NothingToRecredit.selector, kB));
+        IAaveAdapter(adapter).recredit(mA, _ref(kB), "", _deadline());
         uint256 used = coll.getCounters(vtA, bob).regularUsed;
         _govern(address(store), _sliceTo(1e8));
         _govern(address(store), abi.encodeCall(IParameterStoreTighten.tightenMarketUsdCap, (mA, used)));
         lpVault.addUnits(kB, added);
         vm.prank(bob);
         vm.expectRevert(_capError("MARKET"));
-        IAaveAdapterCollateral(adapter).recredit(mA, _ref(kB), "", _deadline());
+        IAaveAdapter(adapter).recredit(mA, _ref(kB), "", _deadline());
     }
 
     // ─── TEST-163: the borrow checks poke the real oracles ───

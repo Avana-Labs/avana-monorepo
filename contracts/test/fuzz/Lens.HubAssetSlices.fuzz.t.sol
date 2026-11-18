@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {HubAssetView} from "../../src/lens/lens/types/HubAssetView.sol";
-import {SpokeKind} from "../../src/lens/lens/types/SpokeKind.sol";
+import {HubAssetView, SpokeKind} from "../../src/lens/lens/types/LensTypes.sol";
 import {CollHubSpokeConfig, ICollHubConfigurator} from "../utils/fixtures/CollateralizationFixture.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 

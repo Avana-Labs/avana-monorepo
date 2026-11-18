@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveAdapterCollateral} from "../../src/policy/aave-adapter/IAaveAdapterCollateral.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {FullStackMarkets} from "../utils/fixtures/FullStackMarkets.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -95,7 +95,7 @@ contract FullStackLiquidationIntegrationTest is FullStackMarkets {
         mkt[mA].oracle.poke();
         mkt[mB].oracle.poke();
         vm.prank(carol);
-        IAaveAdapterCollateral(adapter).removeLiquidity(mA, _ref(freeKey), units / 2, _mins(), _deadline(), 0);
+        IAaveAdapter(adapter).removeLiquidity(mA, _ref(freeKey), units / 2, _mins(), _deadline(), 0);
         uint256 liquidated = 0;
         for (uint256 j = 0; j < n; ++j) {
             uint256 i = (orderSeed % n + j * 5) % n;

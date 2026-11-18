@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {SpeedView} from "../../policy/risk-module/types/SpeedView.sol";
-import {BorrowSpeedView} from "./types/BorrowSpeedView.sol";
+import {SpeedView} from "../../policy/risk-module/types/RiskModuleTypes.sol";
+import {BorrowSpeedView} from "./types/LensTypes.sol";
 
 /// @title ILensSpeed
 /// @notice Speed-limit views: how much can be borrowed or pledged now and when more frees up.

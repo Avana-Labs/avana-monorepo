@@ -7,23 +7,18 @@ import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.s
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {INonfungiblePositionManager} from "../../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
-import {DexHop, HopKind} from "../../../src/liquidation/settlement-routes/types/DexHop.sol";
-import {RouteConfig} from "../../../src/liquidation/settlement-routes/types/RouteConfig.sol";
+import {DexHop, HopKind, RouteConfig} from "../../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {ILPOracle} from "../../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {InitParams} from "../../../src/oracle/lp-oracle/types/InitParams.sol";
-import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
-import {MarketSpeedLimits} from "../../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
-import {MarketDef} from "../../../src/types/MarketDef.sol";
-import {OracleConfig} from "../../../src/types/OracleConfig.sol";
-import {OracleRoute} from "../../../src/types/OracleRoute.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
-import {TokenOracleConfig} from "../../../src/types/TokenOracleConfig.sol";
+import {InitParams} from "../../../src/oracle/lp-oracle/LPOracleTypes.sol";
+import {
+    FeedDef,
+    MarketParams,
+    MarketSpeedLimits
+} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {MarketDef, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {OracleConfig, OracleRoute, TokenOracleConfig} from "../../../src/types/OracleTypes.sol";
+import {PositionRef, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {RegistryRouteMock} from "../mocks/MarketRegistryMocks.sol";
 import {ClTestToken, IClFactory, IClPool} from "./ClPoolFixture.sol";
 import {
@@ -235,7 +230,7 @@ abstract contract FullStackMarkets is FullStackFixture {
         vm.startPrank(address(timelock));
         store.setInitialMarketParams(id, p);
         store.setInitialMarketCaps(id, 1_000_000e8, 100_000e8, 1e8);
-        // Default speed limits (IParameterStoreSpeed example): 6-hour window, 25 % per window.
+        // Default speed limits (IParameterStore example): 6-hour window, 25 % per window.
         store.loosenMarketSpeedLimits(
             id, MarketSpeedLimits(21_600, 2500, 2500, 250_000e8, 2_500_000e8, 1_000_000e8, 10_000_000e8)
         );

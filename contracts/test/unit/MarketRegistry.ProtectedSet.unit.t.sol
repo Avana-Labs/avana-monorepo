@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryFlashSourceMock, RegistryLPOracleMock, RegistryTokenMock} from "../utils/mocks/MarketRegistryMocks.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -31,7 +31,7 @@ contract MarketRegistryProtectedSetUnitTest is MarketRegistryFixture {
         (bool ok, bytes memory ret) = address(registry).call(abi.encodeCall(registry.freezeAddress, (a)));
         vm.revertToState(snap);
         if (ok) return false;
-        assertEq(ret, abi.encodeWithSelector(IMarketRegistryErrors.ProtectedAddress.selector, a), "other refusal");
+        assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, a), "other refusal");
         return true;
     }
 
@@ -120,17 +120,17 @@ contract MarketRegistryProtectedSetUnitTest is MarketRegistryFixture {
         RegistryFlashSourceMock f1 = new RegistryFlashSourceMock(makeAddr("pool1"), address(lpVaultSwap));
         RegistryFlashSourceMock f2 = new RegistryFlashSourceMock(makeAddr("pool2"), address(lpVaultSwap));
         vm.expectEmit(address(registry));
-        emit IMarketRegistryHubs.FlashSourceSet(address(0), address(f1));
+        emit IMarketRegistry.FlashSourceSet(address(0), address(f1));
         vm.prank(address(timelock));
         registry.setFlashSource(address(f1));
         vm.expectEmit(address(registry));
-        emit IMarketRegistryHubs.FlashSourceSet(address(f1), address(f2));
+        emit IMarketRegistry.FlashSourceSet(address(f1), address(f2));
         vm.prank(address(timelock));
         registry.setFlashSource(address(f2));
         RegistryFlashSourceMock wrong = new RegistryFlashSourceMock(makeAddr("pool3"), alice);
         vm.recordLogs();
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setFlashSource(address(wrong));
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertEq(logs.length, 0, "a refused source emitted");

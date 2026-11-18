@@ -3,17 +3,16 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../custody/collateralization/ICollateralizationAdapter.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILock} from "../../lock/lock/ILock.sol";
-import {PositionRef} from "../../types/PositionRef.sol";
+import {PositionRef} from "../../types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
-import {AaveAdapterImmutables} from "./types/AaveAdapterImmutables.sol";
-import {AdapterAccount} from "./types/AdapterAccount.sol";
+import {AaveAdapterImmutables, AdapterAccount} from "./types/AaveAdapterTypes.sol";
 
 /// @title AaveAdapterSettlementLogic
 /// @notice Bodies of the LPVaultSwap steps `burnSeized`, `deleverageRepay` and `deleverageRelease`.
@@ -82,7 +81,7 @@ contract AaveAdapterSettlementLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _checkReleaseSession(proxy, account.vaultToken, position, units, minAmounts);
         _markStep(STEP_RELEASED);
         _withdrawAndBurn(proxy, account.spoke, account.vaultToken, _reserveIdOf(account.vaultToken), units);
-        (amounts, closed) = ICollateralizationAdapter(_COLLATERALIZATION)
+        (amounts, closed) = ICollateralization(_COLLATERALIZATION)
             .releaseForDeleverage(proxy, account.vaultToken, position.positionKey, units, minAmounts);
     }
 

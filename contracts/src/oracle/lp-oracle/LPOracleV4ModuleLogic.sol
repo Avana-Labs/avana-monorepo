@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {LPOracleCLModule} from "./LPOracleCLModule.sol";
 import {LPOracleCLModuleLogic} from "./LPOracleCLModuleLogic.sol";
+import {ClPriceStateView} from "./LPOracleTypes.sol";
 import {LPOracleV4Module} from "./LPOracleV4Module.sol";
-import {ClPriceStateView} from "./types/ClPriceStateView.sol";
 
 /// @title LPOracleV4ModuleLogic
 /// @notice The Uniswap v4 pricing module as one immutable logic contract, with the concentrated-liquidity entry points.

@@ -3,11 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveAdapterCollateral} from "../../src/policy/aave-adapter/IAaveAdapterCollateral.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IAaveAdapterUser} from "../../src/policy/aave-adapter/IAaveAdapterUser.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {CollRiskModuleMock} from "../utils/mocks/CollateralizationMocks.sol";
 import {LPVaultSwapMock} from "../utils/mocks/LPVaultSwapMock.sol";
@@ -110,42 +108,37 @@ contract AaveAdapterPauseMatrixUnitTest is AaveAdapterFixture {
             address who = a == Action.NewAccountPledge ? carol : a == Action.IndebtedTopUp ? alice : bob;
             bytes32 key = _newKey();
             lpVault.mintPosition(key, who, MARKET_ID, UNITS);
-            return _as(who, abi.encodeCall(IAaveAdapterUser.pledge, (MARKET_ID, _ref(key), d)));
+            return _as(who, abi.encodeCall(IAaveAdapter.pledge, (MARKET_ID, _ref(key), d)));
         }
         if (a == Action.RecreditDebtFree) {
-            return _as(bob, abi.encodeCall(IAaveAdapterCollateral.recredit, (MARKET_ID, _ref(kB1), "", d)));
+            return _as(bob, abi.encodeCall(IAaveAdapter.recredit, (MARKET_ID, _ref(kB1), "", d)));
         }
         if (a == Action.RecreditIndebted) {
-            return _as(alice, abi.encodeCall(IAaveAdapterCollateral.recredit, (MARKET_ID, _ref(kA1), "", d)));
+            return _as(alice, abi.encodeCall(IAaveAdapter.recredit, (MARKET_ID, _ref(kA1), "", d)));
         }
         if (a == Action.Borrow) {
             uint256 n = adapterC.borrowNonce(pA);
-            return _as(alice, abi.encodeCall(IAaveAdapterUser.borrow, (MARKET_ID, debtReserveId, 1e18, alice, d, 0, n)));
+            return _as(alice, abi.encodeCall(IAaveAdapter.borrow, (MARKET_ID, debtReserveId, 1e18, alice, d, 0, n)));
         }
         if (a == Action.RepayPartial) {
-            return
-                _as(alice, abi.encodeCall(IAaveAdapterUser.repay, (alice, MARKET_ID, debtReserveId, 100e18, false, d)));
+            return _as(alice, abi.encodeCall(IAaveAdapter.repay, (alice, MARKET_ID, debtReserveId, 100e18, false, d)));
         }
         if (a == Action.RepayAll) {
-            return _as(alice, abi.encodeCall(IAaveAdapterUser.repay, (alice, MARKET_ID, usdcReserveId, 1e12, true, d)));
+            return _as(alice, abi.encodeCall(IAaveAdapter.repay, (alice, MARKET_ID, usdcReserveId, 1e12, true, d)));
         }
         if (a == Action.ThirdPartyRepay) {
-            return
-                _as(carol, abi.encodeCall(IAaveAdapterUser.repay, (alice, MARKET_ID, debtReserveId, 100e18, false, d)));
+            return _as(carol, abi.encodeCall(IAaveAdapter.repay, (alice, MARKET_ID, debtReserveId, 100e18, false, d)));
         }
         if (a == Action.WithdrawDebtFree) {
-            return _as(bob, abi.encodeCall(IAaveAdapterUser.withdraw, (MARKET_ID, _ref(kB2), UNITS / 2, d, 0)));
+            return _as(bob, abi.encodeCall(IAaveAdapter.withdraw, (MARKET_ID, _ref(kB2), UNITS / 2, d, 0)));
         }
         if (a == Action.WithdrawWithDebt) {
-            return _as(alice, abi.encodeCall(IAaveAdapterUser.withdraw, (MARKET_ID, _ref(kA2), UNITS / 2, d, 0)));
+            return _as(alice, abi.encodeCall(IAaveAdapter.withdraw, (MARKET_ID, _ref(kA2), UNITS / 2, d, 0)));
         }
         if (a == Action.RemoveDebtFree || a == Action.RemoveWithDebt) {
             (address who, bytes32 key) = a == Action.RemoveDebtFree ? (bob, kB2) : (alice, kA2);
             return _as(
-                who,
-                abi.encodeCall(
-                    IAaveAdapterCollateral.removeLiquidity, (MARKET_ID, _ref(key), 1_000_000_000, _mins(), d, 0)
-                )
+                who, abi.encodeCall(IAaveAdapter.removeLiquidity, (MARKET_ID, _ref(key), 1_000_000_000, _mins(), d, 0))
             );
         }
         if (a == Action.RepayAllAndWithdraw) {
@@ -154,26 +147,23 @@ contract AaveAdapterPauseMatrixUnitTest is AaveAdapterFixture {
             uint256[] memory caps = new uint256[](2);
             (caps[0], caps[1]) = (1e27, 1e12);
             return _as(
-                alice,
-                abi.encodeCall(IAaveAdapterUser.repayAllAndWithdraw, (MARKET_ID, _ref(kA2), UNITS / 2, ids, caps, d))
+                alice, abi.encodeCall(IAaveAdapter.repayAllAndWithdraw, (MARKET_ID, _ref(kA2), UNITS / 2, ids, caps, d))
             );
         }
         if (a == Action.RepayWithCollateral) {
             return _as(
                 alice,
-                abi.encodeCall(
-                    IAaveAdapterCollateral.repayWithCollateral, (_rwc(MARKET_ID, kA1, 500_000_000, debtReserveId))
-                )
+                abi.encodeCall(IAaveAdapter.repayWithCollateral, (_rwc(MARKET_ID, kA1, 500_000_000, debtReserveId)))
             );
         }
         if (a == Action.CollectFees) {
-            return _as(alice, abi.encodeCall(IAaveAdapterUser.collectFees, (MARKET_ID, _ref(kA1), d)));
+            return _as(alice, abi.encodeCall(IAaveAdapter.collectFees, (MARKET_ID, _ref(kA1), d)));
         }
         if (a == Action.ReleaseZeroCredit) {
-            return _as(dave, abi.encodeCall(IAaveAdapterUser.releaseZeroCredit, (MARKET_B, _ref(kZero), d)));
+            return _as(dave, abi.encodeCall(IAaveAdapter.releaseZeroCredit, (MARKET_B, _ref(kZero), d)));
         }
         if (a == Action.RefreshDebtMark) {
-            return _as(attacker, abi.encodeCall(IAaveAdapterUser.refreshDebtMark, (pDave)));
+            return _as(attacker, abi.encodeCall(IAaveAdapter.refreshDebtMark, (pDave)));
         }
         vtPrice.set(1.5e8);
         (ok, ret) = address(swap)
@@ -203,8 +193,8 @@ contract AaveAdapterPauseMatrixUnitTest is AaveAdapterFixture {
         Action a,
         uint256 s
     ) internal pure returns (bytes memory) {
-        bytes memory frozen = abi.encodeWithSelector(IAaveAdapterErrors.ApplicationFrozen.selector);
-        bytes memory paused = abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector);
+        bytes memory frozen = abi.encodeWithSelector(IAaveAdapterBase.ApplicationFrozen.selector);
+        bytes memory paused = abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector);
         bytes memory rescue = abi.encodeWithSelector(CollRiskModuleMock.RescueRequired.selector);
         if (a == Action.NewAccountPledge || a == Action.DebtFreeTopUp || a == Action.RecreditDebtFree) {
             return s == 0 ? OK : s == 1 ? frozen : s == 2 ? rescue : paused;
@@ -294,7 +284,7 @@ contract AaveAdapterPauseMatrixUnitTest is AaveAdapterFixture {
         _setState(aave.hub, 3);
         (bool ok2, bytes memory ret) = _run(Action.IndebtedTopUp);
         assertFalse(ok2, "refused under MintPathSuspect");
-        assertEq(ret, abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector), "ApplicationPaused");
+        assertEq(ret, abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector), "ApplicationPaused");
     }
 
     /// @dev The exits of REQ-ACCESS-068: repay (own, all, third party), debt-free withdrawal and removal,
@@ -376,7 +366,7 @@ contract AaveAdapterPauseMatrixUnitTest is AaveAdapterFixture {
     function test_TEST_229_frozenWalletRow() public {
         registry.setFrozen(alice, true);
         registry.setFrozen(bob, true);
-        bytes memory frozenAlice = abi.encodeWithSelector(IAaveAdapterErrors.AddressIsFrozen.selector, alice);
+        bytes memory frozenAlice = abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, alice);
         bytes memory rescue = abi.encodeWithSelector(CollRiskModuleMock.RescueRequired.selector);
         Action[8] memory acts = [
             Action.Borrow,

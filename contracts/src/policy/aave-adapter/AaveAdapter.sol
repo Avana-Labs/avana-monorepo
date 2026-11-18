@@ -5,20 +5,17 @@ pragma solidity 0.8.28;
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
-import {PositionRef} from "../../types/PositionRef.sol";
-import {IMarketRegistryViews} from "../market-registry/IMarketRegistryViews.sol";
+import {PositionRef} from "../../types/PositionTypes.sol";
+import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapter} from "./IAaveAdapter.sol";
-import {IAaveAdapterAdmin} from "./IAaveAdapterAdmin.sol";
-import {IAaveAdapterCollateral} from "./IAaveAdapterCollateral.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
-import {IAaveAdapterSettlement} from "./IAaveAdapterSettlement.sol";
-import {IAaveAdapterUser} from "./IAaveAdapterUser.sol";
-import {IAaveAdapterViews} from "./IAaveAdapterViews.sol";
-import {AaveAdapterImmutables} from "./types/AaveAdapterImmutables.sol";
-import {AaveAdapterLogics} from "./types/AaveAdapterLogics.sol";
-import {AdapterAccount} from "./types/AdapterAccount.sol";
-import {RepayWithCollateralParams} from "./types/RepayWithCollateralParams.sol";
+import {
+    AaveAdapterImmutables,
+    AaveAdapterLogics,
+    AdapterAccount,
+    RepayWithCollateralParams
+} from "./types/AaveAdapterTypes.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
@@ -47,7 +44,7 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         _disableInitializers();
     }
 
-    /// @inheritdoc IAaveAdapterAdmin
+    /// @inheritdoc IAaveAdapter
     function initialize(
         address timelock
     ) external override initializer {
@@ -59,7 +56,7 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         _grantRole(AvanaRoles.APPLICATION_ADMIN, timelock);
     }
 
-    /// @inheritdoc IAaveAdapterUser
+    /// @inheritdoc IAaveAdapter
     function pledge(
         uint256,
         PositionRef calldata,
@@ -68,7 +65,7 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         (proxy, recordId, credited) = abi.decode(_forward(_USER_LOGIC), (address, uint256, uint128));
     }
 
-    /// @inheritdoc IAaveAdapterUser
+    /// @inheritdoc IAaveAdapter
     function borrow(
         uint256,
         uint256,
@@ -81,7 +78,7 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         drawn = abi.decode(_forward(_USER_LOGIC), (uint256));
     }
 
-    /// @inheritdoc IAaveAdapterUser
+    /// @inheritdoc IAaveAdapter
     function repay(
         address,
         uint256,
@@ -93,7 +90,7 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         spent = abi.decode(_forward(_USER_LOGIC), (uint256));
     }
 
-    /// @inheritdoc IAaveAdapterUser
+    /// @inheritdoc IAaveAdapter
     function withdraw(
         uint256,
         PositionRef calldata,
@@ -104,7 +101,7 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         _forward(_EXIT_LOGIC);
     }
 
-    /// @inheritdoc IAaveAdapterUser
+    /// @inheritdoc IAaveAdapter
     function repayAllAndWithdraw(
         uint256,
         PositionRef calldata,
@@ -116,7 +113,7 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         _forward(_EXIT_LOGIC);
     }
 
-    /// @inheritdoc IAaveAdapterUser
+    /// @inheritdoc IAaveAdapter
     function releaseZeroCredit(
         uint256,
         PositionRef calldata,
@@ -125,7 +122,7 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         _forward(_EXIT_LOGIC);
     }
 
-    /// @inheritdoc IAaveAdapterUser
+    /// @inheritdoc IAaveAdapter
     function collectFees(
         uint256,
         PositionRef calldata,
@@ -134,14 +131,14 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         fees = abi.decode(_forward(_EXIT_LOGIC), (uint256[]));
     }
 
-    /// @inheritdoc IAaveAdapterUser
+    /// @inheritdoc IAaveAdapter
     function refreshDebtMark(
         address
     ) external override {
         _forward(_EXIT_LOGIC);
     }
 
-    /// @inheritdoc IAaveAdapterCollateral
+    /// @inheritdoc IAaveAdapter
     function removeLiquidity(
         uint256,
         PositionRef calldata,
@@ -153,7 +150,7 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         amounts = abi.decode(_forward(_COLLATERAL_LOGIC), (uint256[]));
     }
 
-    /// @inheritdoc IAaveAdapterCollateral
+    /// @inheritdoc IAaveAdapter
     function recredit(
         uint256,
         PositionRef calldata,
@@ -163,14 +160,14 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         added = abi.decode(_forward(_COLLATERAL_LOGIC), (uint128));
     }
 
-    /// @inheritdoc IAaveAdapterCollateral
+    /// @inheritdoc IAaveAdapter
     function repayWithCollateral(
         RepayWithCollateralParams calldata
     ) external override returns (uint256 debtRepaid, uint256 debtAssetToWallet) {
         (debtRepaid, debtAssetToWallet) = abi.decode(_forward(_COLLATERAL_LOGIC), (uint256, uint256));
     }
 
-    /// @inheritdoc IAaveAdapterSettlement
+    /// @inheritdoc IAaveAdapter
     function burnSeized(
         uint256,
         address,
@@ -179,7 +176,7 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         _forward(_SETTLEMENT_LOGIC);
     }
 
-    /// @inheritdoc IAaveAdapterSettlement
+    /// @inheritdoc IAaveAdapter
     function deleverageRepay(
         address,
         uint256,
@@ -188,7 +185,7 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         repaid = abi.decode(_forward(_SETTLEMENT_LOGIC), (uint256));
     }
 
-    /// @inheritdoc IAaveAdapterSettlement
+    /// @inheritdoc IAaveAdapter
     function deleverageRelease(
         address,
         PositionRef calldata,
@@ -198,7 +195,7 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         (amounts, closed) = abi.decode(_forward(_SETTLEMENT_LOGIC), (uint256[], bool));
     }
 
-    /// @inheritdoc IAaveAdapterViews
+    /// @inheritdoc IAaveAdapter
     function proxyOf(
         address wallet,
         uint256 marketId
@@ -206,14 +203,14 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         proxy = _s().proxyOf[wallet][marketId];
     }
 
-    /// @inheritdoc IAaveAdapterViews
+    /// @inheritdoc IAaveAdapter
     function walletOf(
         address proxy
     ) external view override returns (address wallet) {
         wallet = _s().walletOf[proxy];
     }
 
-    /// @inheritdoc IAaveAdapterViews
+    /// @inheritdoc IAaveAdapter
     function accountOf(
         address proxy
     ) external view override returns (address spoke, uint256 marketId, address vaultToken, uint256 reserveId) {
@@ -221,70 +218,70 @@ contract AaveAdapter is IAaveAdapter, UUPSUpgradeable, AccessControlUpgradeable,
         (spoke, marketId, vaultToken, reserveId) = (a.spoke, a.marketId, a.vaultToken, a.reserveId);
     }
 
-    /// @inheritdoc IAaveAdapterViews
+    /// @inheritdoc IAaveAdapter
     function predictProxy(
         address wallet,
         uint256 marketId
     ) external view override returns (address proxy) {
         proxy = _s().proxyOf[wallet][marketId];
         if (proxy != address(0)) return proxy;
-        address spoke = IMarketRegistryViews(_MARKET_REGISTRY).getMarket(marketId).spoke;
+        address spoke = IMarketRegistry(_MARKET_REGISTRY).getMarket(marketId).spoke;
         proxy = IProxyManager(_PROXY_MANAGER).predictProxy(wallet, spoke, marketId);
     }
 
-    /// @inheritdoc IAaveAdapterViews
+    /// @inheritdoc IAaveAdapter
     function borrowNonce(
         address proxy
     ) external view override returns (uint256 nonce) {
         nonce = _s().borrowNonce[proxy];
     }
 
-    /// @inheritdoc IAaveAdapterViews
+    /// @inheritdoc IAaveAdapter
     function APPLICATION_ADMIN() external pure override returns (bytes32 role) {
         role = AvanaRoles.APPLICATION_ADMIN;
     }
 
-    /// @inheritdoc IAaveAdapterViews
+    /// @inheritdoc IAaveAdapter
     function PROXY_MANAGER() external view override returns (address proxyManager) {
         proxyManager = _PROXY_MANAGER;
     }
 
-    /// @inheritdoc IAaveAdapterViews
+    /// @inheritdoc IAaveAdapter
     function COLLATERALIZATION() external view override returns (address collateralization) {
         collateralization = _COLLATERALIZATION;
     }
 
-    /// @inheritdoc IAaveAdapterViews
+    /// @inheritdoc IAaveAdapter
     function RISK_MODULE() external view override returns (address riskModule) {
         riskModule = _RISK_MODULE;
     }
 
-    /// @inheritdoc IAaveAdapterViews
+    /// @inheritdoc IAaveAdapter
     function MARKET_REGISTRY() external view override returns (address marketRegistry) {
         marketRegistry = _MARKET_REGISTRY;
     }
 
-    /// @inheritdoc IAaveAdapterViews
+    /// @inheritdoc IAaveAdapter
     function PARAMETER_STORE() external view override returns (address parameterStore) {
         parameterStore = _PARAMETER_STORE;
     }
 
-    /// @inheritdoc IAaveAdapterViews
+    /// @inheritdoc IAaveAdapter
     function LP_VAULT_SWAP() external view override returns (address lpVaultSwap) {
         lpVaultSwap = _LP_VAULT_SWAP;
     }
 
-    /// @inheritdoc IAaveAdapterViews
+    /// @inheritdoc IAaveAdapter
     function LOCK() external view override returns (address lock) {
         lock = _LOCK;
     }
 
-    /// @inheritdoc IAaveAdapterViews
+    /// @inheritdoc IAaveAdapter
     function VAULT_TOKEN_FACTORY() external view override returns (address vaultTokenFactory) {
         vaultTokenFactory = _VAULT_TOKEN_FACTORY;
     }
 
-    /// @inheritdoc IAaveAdapterViews
+    /// @inheritdoc IAaveAdapter
     function TIMELOCK() external view override returns (address timelock) {
         timelock = _TIMELOCK;
     }

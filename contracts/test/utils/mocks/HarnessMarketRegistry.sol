@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
-import {TokenDef} from "../../../src/policy/market-registry/types/TokenDef.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {MarketStatus, TokenDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
+import {ShapeKind} from "../../../src/types/PositionTypes.sol";
 
 /// @title HarnessMarketRegistry
 /// @notice The MarketRegistry views the ParameterStore logic reads in the property harnesses, for one Registered

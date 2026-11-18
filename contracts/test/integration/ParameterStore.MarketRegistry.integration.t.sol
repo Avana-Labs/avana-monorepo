@@ -3,21 +3,18 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RiskStatus} from "../../src/amm/types/RiskStatus.sol";
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {RiskStatus} from "../../src/amm/types/AmmTypes.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {IPoolObservations} from "../../src/policy/parameter-store/IPoolObservations.sol";
-import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
 import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {FeedDef, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {MarketDef} from "../../src/types/MarketTypes.sol";
+import {RouteSlot} from "../../src/types/OracleTypes.sol";
+import {PledgeCounters, PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {ParameterStoreRegistryFixture} from "../utils/fixtures/ParameterStoreRegistryFixture.sol";
 import {RegistryLPOracleMock, RegistryRouteMock} from "../utils/mocks/MarketRegistryMocks.sol";
 import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
@@ -28,7 +25,7 @@ import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
 contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFixture {
     uint256 internal constant VT_ASSET = 1;
     uint256 internal constant VT_RESERVE = 1;
-    bytes internal oob = abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector);
+    bytes internal oob = abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
 
     function setUp() public {
         _setUpWorld();
@@ -78,13 +75,13 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         for (uint256 i = 0; i < bad.length; ++i) {
             _refuses(
                 abi.encodeCall(store.setFeeRecipient, (bad[i])),
-                abi.encodeWithSelector(IParameterStoreErrors.InvalidFeeRecipient.selector, bad[i])
+                abi.encodeWithSelector(IParameterStoreBase.InvalidFeeRecipient.selector, bad[i])
             );
         }
         // The integration's LPVault is recorded by the registry as integration 1.
         _refuses(
             abi.encodeCall(store.setFeeRecipient, (address(lpVault))),
-            abi.encodeWithSelector(IParameterStoreErrors.InvalidFeeRecipient.selector, address(lpVault))
+            abi.encodeWithSelector(IParameterStoreBase.InvalidFeeRecipient.selector, address(lpVault))
         );
         vm.prank(address(timelock));
         store.setFeeRecipient(daoTreasury);
@@ -98,14 +95,14 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         address other = makeAddr("otherHub");
         _refuses(
             abi.encodeCall(store.setInitialTokenCap, (other, address(usdc), 1e8)),
-            abi.encodeWithSelector(IParameterStoreErrors.UnknownHub.selector, other)
+            abi.encodeWithSelector(IParameterStoreBase.UnknownHub.selector, other)
         );
         vm.prank(address(timelock));
         store.setInitialTokenCap(address(hub), address(usdc), 20_000_000e8);
         assertEq(store.tokenUsdCap(address(hub), address(usdc)), 20_000_000e8);
         _refuses(
             abi.encodeCall(store.setLiquidationExpectations, (other, 1.1e18, 200)),
-            abi.encodeWithSelector(IParameterStoreErrors.UnknownSpoke.selector, other)
+            abi.encodeWithSelector(IParameterStoreBase.UnknownSpoke.selector, other)
         );
         vm.prank(address(timelock));
         store.setLiquidationExpectations(address(spoke), 1.1e18, 200);
@@ -114,7 +111,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         address dai = makeAddr("DAI");
         _refuses(
             abi.encodeCall(store.setTokenCollateralFactorBps, (dai, 5000)),
-            abi.encodeWithSelector(IParameterStoreErrors.TokenNotListed.selector, dai)
+            abi.encodeWithSelector(IParameterStoreBase.TokenNotListed.selector, dai)
         );
     }
 
@@ -126,7 +123,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         assertEq(store.feedAgreementToleranceMinBps(address(usdc)), 125);
         _refuses(
             abi.encodeCall(store.setFeedAgreementToleranceBps, (address(usdc), 124)),
-            abi.encodeWithSelector(IParameterStoreErrors.LivenessBound.selector)
+            abi.encodeWithSelector(IParameterStoreBase.LivenessBound.selector)
         );
         vm.prank(address(timelock));
         store.setFeedAgreementToleranceBps(address(usdc), 125);
@@ -147,7 +144,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         (a[0], a[1]) = (routeFeeds[address(usdc)][1], routeFeeds[address(usdc)][2]);
         s[0] = wide;
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("tolerance")));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("tolerance")));
         registry.setPriceSource(address(usdc), p, a, s);
         // Raising the store's tolerance first lets the same route change through.
         vm.prank(address(timelock));
@@ -180,7 +177,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         // A listed token no approved reserve lends.
         _refuses(
             abi.encodeCall(store.loosenFloorRoundingAllowance, (address(usdc), 1)),
-            abi.encodeWithSelector(IParameterStoreErrors.TokenNotListed.selector, address(usdc))
+            abi.encodeWithSelector(IParameterStoreBase.TokenNotListed.selector, address(usdc))
         );
     }
 
@@ -198,7 +195,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         // USDT has no reserve funded by the Hub.
         _refuses(
             abi.encodeCall(store.loosenBreakerDeficitMax, (address(hub), address(usdt), 1)),
-            abi.encodeWithSelector(IParameterStoreErrors.UnknownDebtReserve.selector, address(0), 0)
+            abi.encodeWithSelector(IParameterStoreBase.UnknownDebtReserve.selector, address(0), 0)
         );
     }
 
@@ -308,16 +305,16 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         MarketParams memory p = store.getMarketParams(id);
         _refuses(
             abi.encodeCall(store.setInitialMarketParams, (id, p)),
-            abi.encodeWithSelector(IParameterStoreErrors.NotInListing.selector)
+            abi.encodeWithSelector(IParameterStoreBase.NotInListing.selector)
         );
         _refuses(
             abi.encodeCall(store.setInitialMarketCaps, (id, 1e8, 0, 1e8)),
-            abi.encodeWithSelector(IParameterStoreErrors.NotInListing.selector)
+            abi.encodeWithSelector(IParameterStoreBase.NotInListing.selector)
         );
         // An identifier the registry never assigned.
         _refuses(
             abi.encodeCall(store.tightenMinPledgeUsd, (id + 1, 20e8)),
-            abi.encodeWithSelector(IParameterStoreErrors.UnknownMarket.selector, id + 1)
+            abi.encodeWithSelector(IParameterStoreBase.UnknownMarket.selector, id + 1)
         );
     }
 
@@ -334,12 +331,12 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         store.setMaxFlashFeeBps(55);
         _refuses(
             abi.encodeCall(store.setMaxFlashFeeBps, (56)),
-            abi.encodeWithSelector(IParameterStoreErrors.LivenessBound.selector)
+            abi.encodeWithSelector(IParameterStoreBase.LivenessBound.selector)
         );
         // At 55, raising the floor one more bp breaks the pair (10,250 × 9,809 < 10⁴ × 10,055).
         _refuses(
             abi.encodeCall(store.setSlippageAllowanceMinBps, (id, 191)),
-            abi.encodeWithSelector(IParameterStoreErrors.LivenessBound.selector)
+            abi.encodeWithSelector(IParameterStoreBase.LivenessBound.selector)
         );
         // An Aave bonus cut after activation is drift: the view turns false, and only lowerings still pass.
         IAaveV4Spoke.Reserve memory r = spoke.getReserve(VT_RESERVE);
@@ -360,7 +357,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         c.regularUsed = 1_200_000e8;
         vm.mockCall(
             registry.COLLATERALIZATION(),
-            abi.encodeCall(ICollateralizationViews.getCounters, (vaultToken, address(0))),
+            abi.encodeCall(ICollateralization.getCounters, (vaultToken, address(0))),
             abi.encode(c)
         );
         // (max(1,500,000, 1,200,000) + 100,000) / $1 = 1,600,000 ≤ addCap 2,000,000.
@@ -371,7 +368,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         // The step allows 2,250,000 (1.5 × 1,500,000); with the slice that needs 2,350,000 whole tokens of addCap.
         _refuses(
             abi.encodeCall(store.loosenMarketUsdCap, (id, 2_250_000e8)),
-            abi.encodeWithSelector(IParameterStoreErrors.AddCapTooSmall.selector)
+            abi.encodeWithSelector(IParameterStoreBase.AddCapTooSmall.selector)
         );
         hub.setSpokeConfig(VT_ASSET, address(spoke), 2_350_000, 0);
         vm.prank(address(timelock));
@@ -409,11 +406,11 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         lpOracle.setFailed(4);
         _refuses(
             abi.encodeCall(store.setCachedWindow, (1800)),
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(lpOracle), 4)
+            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 4)
         );
         _refuses(
             abi.encodeCall(store.setConsistencyToleranceBps, (id, 60)),
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(lpOracle), 4)
+            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 4)
         );
         // The tightening runs: check 4 failed before it.
         vm.prank(address(timelock));
@@ -429,7 +426,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
     /// the listed values, and the listing writes close.
     function test_TEST_138_activationOnlyAfterTheStoreListing() public {
         (uint256 id, address vaultToken,) = _listMarket();
-        vm.expectPartialRevert(IMarketRegistryErrors.ActivationCheckFailed.selector);
+        vm.expectPartialRevert(IMarketRegistryBase.ActivationCheckFailed.selector);
         vm.prank(address(timelock));
         registry.activateMarket(id);
         assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Registered), "still Registered");
@@ -441,7 +438,7 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         assertEq(store.getMarketParams(id).poolRiskFactor, 4000, "the listed pool risk factor");
         _refuses(
             abi.encodeCall(store.setInitialMarketCaps, (id, 1e8, 0, 1e8)),
-            abi.encodeWithSelector(IParameterStoreErrors.NotInListing.selector)
+            abi.encodeWithSelector(IParameterStoreBase.NotInListing.selector)
         );
     }
 }

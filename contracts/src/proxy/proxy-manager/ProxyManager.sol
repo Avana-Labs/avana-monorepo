@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryFreeze} from "../../policy/market-registry/IMarketRegistryFreeze.sol";
+import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {PositionProxy} from "../position-proxy/PositionProxy.sol";
 import {IProxyManager} from "./IProxyManager.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
@@ -47,7 +47,7 @@ contract ProxyManager is IProxyManager {
         bytes memory initCode = _initCode(wallet, spoke, marketId);
         address predicted = Create2.computeAddress(salt, keccak256(initCode));
         if (predicted.code.length != 0) revert ProxyExists(wallet, spoke, marketId);
-        if (IMarketRegistryFreeze(_MARKET_REGISTRY).isFrozenAddress(wallet)) revert AddressIsFrozen(wallet);
+        if (IMarketRegistry(_MARKET_REGISTRY).isFrozenAddress(wallet)) revert AddressIsFrozen(wallet);
         proxy = Create2.deploy(0, salt, initCode);
         if (proxy != predicted) revert ProxyAddressMismatch(proxy, predicted);
         // Safe: the new proxy's constructor calls nothing, and the registry read is a STATICCALL.

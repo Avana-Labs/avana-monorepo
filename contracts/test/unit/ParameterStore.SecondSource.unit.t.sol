@@ -4,14 +4,11 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
+import {SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
-import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
-import {MockLPOracle} from "../utils/mocks/ParameterStoreMocks.sol";
+import {MockAggregator, MockLPOracle} from "../utils/mocks/ParameterStoreMocks.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 /// @notice Second-source configuration: every setter that writes it refuses a word the oracles would read as out of
@@ -53,7 +50,7 @@ contract ParameterStoreSecondSourceUnitTest is ParameterStoreFixture {
         SecondSource memory standby
     ) internal {
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setSecondSource(usdc, src, standby);
     }
 
@@ -182,7 +179,7 @@ contract ParameterStoreSecondSourceUnitTest is ParameterStoreFixture {
         _tl();
         store.setSecondSource(usdc, _oracleNetwork(network), _poolTwap(bytes32(uint256(7))));
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.tightenDebtStressRiseBps(usdc, 500);
         _tl();
         store.setSecondSource(usdc, _oracleNetwork(network), _oracleNetwork(standbyNetwork));
@@ -198,7 +195,7 @@ contract ParameterStoreSecondSourceUnitTest is ParameterStoreFixture {
         // A later route change makes the standby a feed of USDC's alternate route: the switch is refused.
         registry.setToken(usdc, _one(address(fUsdc)), _one(standbyNetwork), new address[](0));
         vm.prank(emergencyGuardian);
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.useStandbySecondSource(usdc);
         assertFalse(store.onStandby(usdc));
         registry.setToken(usdc, _one(address(fUsdc)), _one(address(fUsdcAlt)), new address[](0));
@@ -225,14 +222,14 @@ contract ParameterStoreSecondSourceUnitTest is ParameterStoreFixture {
         lpOracle.setFailed(32);
         _tl();
         vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(lpOracle), 32)
+            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 32)
         );
         store.restoreSecondSource(usdc);
         assertTrue(store.onStandby(usdc));
         lpOracle.setFailed(0);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.SecondSourceSwitched(usdc, false, address(timelock));
+        emit IParameterStoreBase.SecondSourceSwitched(usdc, false, address(timelock));
         store.restoreSecondSource(usdc);
         assertFalse(store.onStandby(usdc));
     }
@@ -246,7 +243,7 @@ contract ParameterStoreSecondSourceUnitTest is ParameterStoreFixture {
         lpOracle.setFailed(64);
         _tl();
         vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(lpOracle), 64)
+            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 64)
         );
         store.setFeed(standbyNetwork, _feedDef(86_400, 1800));
     }
@@ -273,7 +270,7 @@ contract ParameterStoreSecondSourceUnitTest is ParameterStoreFixture {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         for (uint256 i; i < logs.length; ++i) {
             assertTrue(
-                logs[i].topics.length == 0 || logs[i].topics[0] != IParameterStoreEvents.SecondSourceSwitched.selector,
+                logs[i].topics.length == 0 || logs[i].topics[0] != IParameterStoreBase.SecondSourceSwitched.selector,
                 "no switch event"
             );
         }

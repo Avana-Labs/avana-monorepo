@@ -3,21 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClMarketConfig} from "../../../src/amm/types/ClMarketConfig.sol";
-import {RiskStatus} from "../../../src/amm/types/RiskStatus.sol";
+import {ClMarketConfig, RiskStatus} from "../../../src/amm/types/AmmTypes.sol";
 import {DebtPriceView as OracleDebtView} from "../../../src/oracle/debt-oracle/types/DebtPriceView.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
-import {SpeedView} from "../../../src/policy/risk-module/types/SpeedView.sol";
-import {AccountGateStatus} from "../../../src/types/AccountGateStatus.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
-import {PledgePreview} from "../../../src/types/PledgePreview.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
-import {PriceStateView} from "../../../src/types/PriceStateView.sol";
-import {TokenPriceView} from "../../../src/types/TokenPriceView.sol";
+import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {SpeedView} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {AccountGateStatus, Market, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {PriceState, PriceStateView, TokenPriceView} from "../../../src/types/OracleTypes.sol";
+import {PledgePreview} from "../../../src/types/PositionTypes.sol";
 import {CollLPVaultMock} from "./CollateralizationMocks.sol";
 
 /// @notice The MarketRegistry views the Lens reads, settable (the Lens suites' stand-in for the registry's listing

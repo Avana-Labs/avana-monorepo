@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 import {CollSpokeDynamicReserveConfig} from "../utils/fixtures/CollateralizationFixture.sol";
 import {console2} from "forge-std/console2.sol";

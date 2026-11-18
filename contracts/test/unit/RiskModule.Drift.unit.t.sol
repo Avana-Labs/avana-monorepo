@@ -5,10 +5,9 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
-import {Market} from "../../src/types/Market.sol";
+import {DriftReason, Market} from "../../src/types/MarketTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @title RiskModuleDriftUnitTest
@@ -123,7 +122,7 @@ contract RiskModuleDriftUnitTest is RiskModuleFixture {
         assertFalse(current);
         _expectDrift(0, DriftReason.SpokeImplementation);
         vm.expectEmit(address(riskModule));
-        emit IRiskModuleChecks.ConfigDriftDetected(address(spoke), DriftReason.SpokeImplementation);
+        emit IRiskModule.ConfigDriftDetected(address(spoke), DriftReason.SpokeImplementation);
         riskModule.pokeConfig(address(spoke));
     }
 
@@ -212,7 +211,7 @@ contract RiskModuleDriftUnitTest is RiskModuleFixture {
         assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(DriftReason.None));
         _vtConfig(true, false, false);
         vm.expectEmit(address(riskModule));
-        emit IRiskModuleChecks.ConfigDriftDetected(address(spoke), DriftReason.ReceiveSharesOn);
+        emit IRiskModule.ConfigDriftDetected(address(spoke), DriftReason.ReceiveSharesOn);
         assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(DriftReason.ReceiveSharesOn));
         (uint32 latched,) = registry.marketBreaker(mid);
         assertEq(latched, BreakerReasons.CONFIG_DRIFT);
@@ -316,7 +315,7 @@ contract RiskModuleDriftUnitTest is RiskModuleFixture {
     function test_TEST_268_pokeConfigSpokeWideDrift() public {
         rSpoke.setImplSlot(bytes32(uint256(uint160(makeAddr("upgraded")))));
         vm.expectEmit(address(riskModule));
-        emit IRiskModuleChecks.ConfigDriftDetected(address(spoke), DriftReason.SpokeImplementation);
+        emit IRiskModule.ConfigDriftDetected(address(spoke), DriftReason.SpokeImplementation);
         assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(DriftReason.SpokeImplementation));
         (uint32 latched,) = registry.marketBreaker(mid);
         assertEq(latched, BreakerReasons.CONFIG_DRIFT);

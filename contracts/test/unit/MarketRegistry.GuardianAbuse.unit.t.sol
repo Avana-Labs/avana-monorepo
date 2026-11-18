@@ -3,11 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
@@ -42,18 +41,18 @@ contract MarketRegistryGuardianAbuseUnitTest is MarketRegistryFixture {
         address[5] memory protectedSet = [address(registry), address(hub), address(spoke), vt, address(gho)];
         for (uint256 i = 0; i < protectedSet.length; ++i) {
             vm.prank(g);
-            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ProtectedAddress.selector, protectedSet[i]));
+            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, protectedSet[i]));
             registry.freezeAddress(protectedSet[i]);
         }
         vm.prank(g);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.AddressAlreadyFrozen.selector, _wallet(0)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.AddressAlreadyFrozen.selector, _wallet(0)));
         registry.freezeAddress(_wallet(0));
         assertEq(registry.freezesInWindow(g), 19);
         vm.prank(g);
         registry.freezeAddress(_wallet(19));
         assertEq(registry.freezesInWindow(g), 20);
         vm.prank(g);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.FreezeLimitReached.selector, g));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.FreezeLimitReached.selector, g));
         registry.freezeAddress(_wallet(20));
         assertFalse(registry.isFrozenAddress(_wallet(20)));
     }
@@ -68,11 +67,11 @@ contract MarketRegistryGuardianAbuseUnitTest is MarketRegistryFixture {
             registry.freezeAddress(_wallet(i));
         }
         vm.startPrank(aaveGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.AddressAlreadyFrozen.selector, _wallet(3)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.AddressAlreadyFrozen.selector, _wallet(3)));
         registry.freezeAddress(_wallet(3));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ProtectedAddress.selector, address(timelock)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, address(timelock)));
         registry.freezeAddress(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.FreezeLimitReached.selector, aaveGuardian));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.FreezeLimitReached.selector, aaveGuardian));
         registry.freezeAddress(_wallet(99));
         vm.stopPrank();
     }
@@ -89,7 +88,7 @@ contract MarketRegistryGuardianAbuseUnitTest is MarketRegistryFixture {
                 registry.freezeAddress(_wallet(c * 100 + i));
             }
             vm.prank(callers[c]);
-            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.FreezeLimitReached.selector, callers[c]));
+            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.FreezeLimitReached.selector, callers[c]));
             registry.freezeAddress(_wallet(c * 100 + 50));
             assertEq(registry.freezesInWindow(callers[c]), 20);
         }
@@ -149,7 +148,7 @@ contract MarketRegistryGuardianAbuseUnitTest is MarketRegistryFixture {
         registry.revokeRole(FREEZE_GUARDIAN, aaveGuardian);
         registry.unpause(h);
         vm.stopPrank();
-        bytes memory unauthorized = abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, aaveGuardian);
+        bytes memory unauthorized = abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, aaveGuardian);
         vm.startPrank(aaveGuardian);
         vm.expectRevert(unauthorized);
         registry.pause(h, PauseReason.General);
@@ -205,7 +204,7 @@ contract MarketRegistryGuardianAbuseUnitTest is MarketRegistryFixture {
         registry.setRoute(marketId, address(usdc), address(gho), 0, route);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IMarketRegistryErrors.ConditionStillHolds.selector, bytes32(marketId), BreakerReasons.ISSUER
+                IMarketRegistryBase.ConditionStillHolds.selector, bytes32(marketId), BreakerReasons.ISSUER
             )
         );
         registry.resetMarketBreaker(marketId);

@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {Evaluation, LegEval, TokenEval} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LPOracleHarnessPokeLogicBase} from "../utils/harness/LPOracleHarness.sol";
 import {Test} from "forge-std/Test.sol";
 

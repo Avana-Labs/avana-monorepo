@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {BackingRecord} from "../../src/custody/collateralization/types/BackingRecord.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {BackingRecord} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 
@@ -48,7 +48,7 @@ contract CollateralizationViewsUnitTest is CollateralizationFixture {
             for (uint256 i = 0; i < views.length; ++i) {
                 (bool ok, bytes memory ret) = address(coll).staticcall(views[i]);
                 assertFalse(ok, "readable by an outsider under the Lock");
-                assertEq(ret, abi.encodeWithSelector(ICollateralizationErrors.Locked.selector));
+                assertEq(ret, abi.encodeWithSelector(ICollateralizationBase.Locked.selector));
                 vm.prank(members[m]);
                 (ok,) = address(coll).staticcall(views[i]);
                 assertTrue(ok, "holder reads");
@@ -85,12 +85,12 @@ contract CollateralizationViewsUnitTest is CollateralizationFixture {
         lock.release();
         vm.prank(lpVaultSwap);
         lock.acquire();
-        vm.expectRevert(ICollateralizationErrors.Locked.selector);
+        vm.expectRevert(ICollateralizationBase.Locked.selector);
         coll.getAccountRescueUnits(aliceProxy, vt);
-        vm.expectRevert(ICollateralizationErrors.Locked.selector);
+        vm.expectRevert(ICollateralizationBase.Locked.selector);
         coll.poolUnits(key);
         vm.prank(lpVaultSwap);
-        vm.expectRevert(ICollateralizationErrors.Locked.selector);
+        vm.expectRevert(ICollateralizationBase.Locked.selector);
         coll.poolUnits(key);
         vm.prank(lpVaultSwap);
         lock.release();
@@ -165,9 +165,9 @@ contract CollateralizationViewsUnitTest is CollateralizationFixture {
     // TEST-150 verifies: REQ-VAULT-119, REQ-COLL-018
     /// @notice The previews revert `RecordNotFound` without an open record.
     function test_TEST_150_previewsNeedARecord() public {
-        vm.expectRevert(ICollateralizationErrors.RecordNotFound.selector);
+        vm.expectRevert(ICollateralizationBase.RecordNotFound.selector);
         coll.previewRelease(INTEGRATION, KEY42);
-        vm.expectRevert(ICollateralizationErrors.RecordNotFound.selector);
+        vm.expectRevert(ICollateralizationBase.RecordNotFound.selector);
         coll.previewRecredit(INTEGRATION, KEY42);
     }
 
@@ -180,7 +180,7 @@ contract CollateralizationViewsUnitTest is CollateralizationFixture {
         assertTrue(coll.getMarketDebtFree(vt));
         vm.startPrank(adapter);
         lock.acquire();
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.UnknownProxy.selector, bobProxy));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.UnknownProxy.selector, bobProxy));
         coll.markIndebted(bobProxy);
         coll.markIndebted(aliceProxy);
         coll.markIndebted(aliceProxy);
@@ -197,10 +197,10 @@ contract CollateralizationViewsUnitTest is CollateralizationFixture {
         IAaveV4Spoke(aave.cdpSpoke).repay(debtReserveId, type(uint256).max, aliceProxy);
         vm.stopPrank();
         vm.prank(alice);
-        vm.expectRevert(ICollateralizationErrors.NotAdapter.selector);
+        vm.expectRevert(ICollateralizationBase.NotAdapter.selector);
         coll.markDebtFree(aliceProxy);
         vm.prank(lpVaultSwap);
-        vm.expectRevert(ICollateralizationErrors.LockNotHeld.selector);
+        vm.expectRevert(ICollateralizationBase.LockNotHeld.selector);
         coll.markDebtFree(aliceProxy);
         vm.startPrank(lpVaultSwap);
         lock.acquire();

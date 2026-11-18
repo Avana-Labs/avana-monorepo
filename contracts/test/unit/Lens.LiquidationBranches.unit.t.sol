@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
 import {LensLiquidationModule} from "../../src/lens/lens/LensLiquidationModule.sol";
-import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
+import {LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensLiquidationBranchesUnitTest
@@ -45,9 +45,7 @@ contract LensLiquidationBranchesUnitTest is LensFixture {
         assertEq(p.expectedCallerLoss, 0, "real composition: the unwound value covers D");
         uint256[] memory dust = new uint256[](2);
         (dust[0], dust[1]) = (1, 0);
-        vm.mockCall(
-            address(vault), abi.encodeWithSelector(IAmmIntegration.composition.selector), abi.encode(dust, true)
-        );
+        vm.mockCall(address(vault), abi.encodeWithSelector(ILPVault.composition.selector), abi.encode(dust, true));
         p = lens.previewLiquidation(aliceProxy, debtReserveId, DEADLINE);
         assertGt(p.expectedDebtRepaid, 0, "a repayment is still sized");
         assertEq(p.expectedCallerLoss, p.expectedDebtRepaid, "Rv = 0: the whole repayment is at risk");

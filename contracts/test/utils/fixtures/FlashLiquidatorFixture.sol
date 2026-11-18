@@ -3,15 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LiquidationParams} from "../../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {RouteMode} from "../../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {LiquidationParams, RouteMode} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {PayoutEscrow} from "../../../src/liquidation/payout-escrow/PayoutEscrow.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
 import {FlashLiquidator} from "../../../src/periphery/flash-liquidator/FlashLiquidator.sol";
+import {FlashLiquidationRequest} from "../../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {OperatorFlashLiquidator} from "../../../src/periphery/flash-liquidator/OperatorFlashLiquidator.sol";
-import {FlashLiquidationRequest} from "../../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {Market} from "../../../src/types/Market.sol";
+import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
 import {MockAaveV3ACLManager, MockAaveV3AddressesProvider, MockAaveV3Pool} from "../mocks/AaveV3PoolMocks.sol";
 import {LockMember} from "../mocks/LockMember.sol";
 import {MockLiquidationSwap} from "../mocks/MockLiquidationSwap.sol";

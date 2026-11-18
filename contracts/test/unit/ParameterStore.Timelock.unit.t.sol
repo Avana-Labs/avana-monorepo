@@ -3,10 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterStoreAdmin.sol";
-import {IParameterStoreBreakers} from "../../src/policy/parameter-store/IParameterStoreBreakers.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {IParameterStoreLiquidation} from "../../src/policy/parameter-store/IParameterStoreLiquidation.sol";
+import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
@@ -26,9 +24,9 @@ contract ParameterStoreTimelockUnitTest is ParameterStoreFixture {
             abi.encodeCall(IParameterStoreTighten.tightenHardHealthFloor, (M, 1.1e18)),
             abi.encodeCall(IParameterStoreTighten.tightenSlippageAllowanceBps, (M, 40)),
             abi.encodeCall(IParameterStoreTighten.tightenMinPledgeUsd, (M, 20e8)),
-            abi.encodeCall(IParameterStoreBreakers.tightenGateRecoverySeconds, (3600)),
-            abi.encodeCall(IParameterStoreLiquidation.tightenMaxShortfallBps, (50)),
-            abi.encodeCall(IParameterStoreAdmin.tightenMaxFlashFeeBps, (0)),
+            abi.encodeCall(IParameterStore.tightenGateRecoverySeconds, (3600)),
+            abi.encodeCall(IParameterStore.tightenMaxShortfallBps, (50)),
+            abi.encodeCall(IParameterStore.tightenMaxFlashFeeBps, (0)),
             abi.encodeCall(IParameterStoreTighten.tightenPoolShareMaxBpsOf, (M, 1000))
         ];
         for (uint256 i = 0; i < data.length; ++i) {
@@ -47,8 +45,8 @@ contract ParameterStoreTimelockUnitTest is ParameterStoreFixture {
         bytes[5] memory data = [
             abi.encodeCall(IParameterStoreLoosen.loosenMarketUsdCap, (M, 6_000_000e8)),
             abi.encodeCall(IParameterStoreLoosen.loosenPoolShareMaxBpsOf, (M, 10_000)),
-            abi.encodeCall(IParameterStoreAdmin.setGraceDuration, (3600)),
-            abi.encodeCall(IParameterStoreAdmin.setMaxFlashFeeBps, (20)),
+            abi.encodeCall(IParameterStore.setGraceDuration, (3600)),
+            abi.encodeCall(IParameterStore.setMaxFlashFeeBps, (20)),
             abi.encodeCall(IParameterStoreLoosen.loosenSlippageAllowanceBps, (M, 125))
         ];
         for (uint256 i = 0; i < data.length; ++i) {
@@ -86,7 +84,7 @@ contract ParameterStoreTimelockUnitTest is ParameterStoreFixture {
         (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(second);
         vm.prank(attacker);
         vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.LoosenTooSoon.selector, key, executedAt + NORMAL_DELAY)
+            abi.encodeWithSelector(IParameterStoreBase.LoosenTooSoon.selector, key, executedAt + NORMAL_DELAY)
         );
         timelock.executeBatch(t, v, p, bytes32(0), bytes32("b"));
         vm.warp(executedAt + NORMAL_DELAY);
@@ -105,7 +103,7 @@ contract ParameterStoreTimelockUnitTest is ParameterStoreFixture {
         vm.warp(block.timestamp + SHORT_DELAY);
         (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(to60);
         vm.prank(attacker);
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         timelock.executeBatch(t, v, p, bytes32(0), bytes32("60"));
     }
 }

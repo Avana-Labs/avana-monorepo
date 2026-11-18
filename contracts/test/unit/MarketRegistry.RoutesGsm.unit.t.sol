@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IGsm} from "../../src/interfaces/external/gho/IGsm.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketRegistryEvents.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryRouteMock} from "../utils/mocks/MarketRegistryMocks.sol";
 import {RegistryErc1820Mock, RegistryGsmMock} from "../utils/mocks/MarketRegistryRouteMocks.sol";
@@ -64,7 +63,7 @@ contract MarketRegistryRoutesGsmUnitTest is MarketRegistryFixture {
         address route
     ) internal {
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setRoute(id, usdcIn, address(gho), kind, route);
     }
 
@@ -89,7 +88,7 @@ contract MarketRegistryRoutesGsmUnitTest is MarketRegistryFixture {
         RegistryRouteMock r = _gsmRoute();
         _refused(PRIMARY, address(r));
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.RouteSet(id, usdcIn, address(gho), BACKUP, address(r));
+        emit IMarketRegistryBase.RouteSet(id, usdcIn, address(gho), BACKUP, address(r));
         _set(BACKUP, address(r));
         _usable(BACKUP, address(r));
     }
@@ -210,24 +209,24 @@ contract MarketRegistryRoutesGsmUnitTest is MarketRegistryFixture {
         registry.disableRoute(id, usdcIn, address(gho), BACKUP);
         gsm.setFrozen(1);
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.restoreRoute(id, usdcIn, address(gho), BACKUP, address(r));
         gsm.setFrozen(0);
         gsm.setSeized(1);
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.restoreRoute(id, usdcIn, address(gho), BACKUP, address(r));
         gsm.setSeized(0);
         gsm.setCap(0);
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.restoreRoute(id, usdcIn, address(gho), BACKUP, address(r));
         (, bool usable) = registry.getRoute(id, usdcIn, address(gho), BACKUP);
         assertFalse(usable);
         gsm.setCap(1e24);
         vm.prank(address(timelock));
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.RouteRestored(id, usdcIn, address(gho), BACKUP, address(r));
+        emit IMarketRegistryBase.RouteRestored(id, usdcIn, address(gho), BACKUP, address(r));
         registry.restoreRoute(id, usdcIn, address(gho), BACKUP, address(r));
         _usable(BACKUP, address(r));
     }
@@ -292,7 +291,7 @@ contract MarketRegistryRoutesGsmUnitTest is MarketRegistryFixture {
         RegistryErc1820Mock reg = _etchErc1820();
         reg.setImplementer(mids[0], ERC777_TOKEN, uint256(uint160(makeAddr("hook"))));
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.restoreRoute(id, usdcIn, address(gho), PRIMARY, address(r));
         reg.setImplementer(mids[0], ERC777_TOKEN, 0);
         vm.prank(address(timelock));

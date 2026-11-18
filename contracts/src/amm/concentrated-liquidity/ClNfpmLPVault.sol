@@ -3,19 +3,19 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
-import {PositionShape} from "../../types/PositionShape.sol";
-import {ShapeKind} from "../../types/ShapeKind.sol";
-import {IAmmIntegration} from "../IAmmIntegration.sol";
-import {IAmmIntegrationHooks} from "../IAmmIntegrationHooks.sol";
-import {ClMarketConfig} from "../types/ClMarketConfig.sol";
-import {FeeMode} from "../types/FeeMode.sol";
-import {IntegrationCapabilities} from "../types/IntegrationCapabilities.sol";
-import {PoolKeying} from "../types/PoolKeying.sol";
-import {PricingMode} from "../types/PricingMode.sol";
-import {RiskMetadata} from "../types/RiskMetadata.sol";
-import {RiskStatus} from "../types/RiskStatus.sol";
+import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
+import {
+    ClMarketConfig,
+    FeeMode,
+    IntegrationCapabilities,
+    PoolKeying,
+    PricingMode,
+    RiskMetadata,
+    RiskStatus
+} from "../types/AmmTypes.sol";
 import {ClLPVaultCustody} from "./ClLPVaultCustody.sol";
 import {ClLPVaultMarkets} from "./ClLPVaultMarkets.sol";
 import {ClPriceMath} from "./ClPriceMath.sol";
@@ -112,7 +112,7 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
             );
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     /// @dev Refuses `marketId == 0`, which means "not in custody" in `marketOfPosition`.
     function bindMarket(
         uint256 marketId,
@@ -138,7 +138,7 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
         emit MarketBound(marketId, pool, bytes32(0), shape.tickLower, shape.tickUpper);
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function marketOf(
         uint256 marketId
     )
@@ -154,7 +154,7 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
         return (cfg.pool, bytes32(0), shape, tokens);
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function capabilities() external pure override returns (IntegrationCapabilities memory) {
         return IntegrationCapabilities({
             poolKeying: PoolKeying.Address,
@@ -168,12 +168,12 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
         });
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function maxRecordsPerAccountMarket() external pure override returns (uint256) {
         return AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET;
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function riskMetadata(
         uint256 marketId,
         bytes32 positionKey
@@ -192,7 +192,7 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
         }
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function riskStatus(
         uint256 marketId,
         uint32 window
@@ -205,14 +205,14 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
         status.depthUnits = _toUnits(m, status.depthUnits);
     }
 
-    /// @inheritdoc IAmmIntegrationHooks
+    /// @inheritdoc ILPVault
     function checkReadSafe(
         uint256 marketId
     ) external view override {
         _requireReadSafe(_market(marketId));
     }
 
-    /// @inheritdoc IAmmIntegrationHooks
+    /// @inheritdoc ILPVault
     /// @dev Measured against the unclamped oracle tick.
     function consistencyDeviation(
         uint256 marketId,
@@ -234,12 +234,12 @@ abstract contract ClNfpmLPVault is ClLPVaultCustody, ClLPVaultMarkets {
         available = true;
     }
 
-    /// @inheritdoc IAmmIntegrationHooks
+    /// @inheritdoc ILPVault
     function wrappedNative() external pure override returns (address) {
         return address(0);
     }
 
-    /// @inheritdoc IAmmIntegrationHooks
+    /// @inheritdoc ILPVault
     function isAllowedPoolHook(
         address hooks
     ) external pure override returns (bool) {

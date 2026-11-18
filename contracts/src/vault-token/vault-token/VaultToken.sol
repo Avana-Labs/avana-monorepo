@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {VaultTokenBindings} from "../../types/VaultTokenBindings.sol";
+import {VaultTokenBindings} from "../../types/MarketTypes.sol";
 import {IVaultToken} from "./IVaultToken.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

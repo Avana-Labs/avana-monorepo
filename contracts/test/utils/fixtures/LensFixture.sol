@@ -17,14 +17,11 @@ import {LensPriceModule} from "../../../src/lens/lens/LensPriceModule.sol";
 import {LensRiskModule} from "../../../src/lens/lens/LensRiskModule.sol";
 import {LensSpeedModule} from "../../../src/lens/lens/LensSpeedModule.sol";
 import {PayoutEscrow} from "../../../src/liquidation/payout-escrow/PayoutEscrow.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
+import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {Market, PauseState} from "../../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {AaveAdapterLensMock} from "../mocks/AaveAdapterLensMock.sol";
 import {LPVaultSwapLensMock} from "../mocks/LPVaultSwapLensMock.sol";
 import {

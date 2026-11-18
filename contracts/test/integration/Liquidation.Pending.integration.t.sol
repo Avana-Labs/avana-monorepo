@@ -5,15 +5,12 @@ pragma solidity 0.8.28;
 
 import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {BackingView} from "../../src/lens/lens/types/BackingView.sol";
-import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
-import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {PendingView} from "../../src/types/PendingView.sol";
+import {BackingView, LiquidationPreview, RecordView} from "../../src/lens/lens/types/LensTypes.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {PendingView} from "../../src/types/PositionTypes.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -115,7 +112,7 @@ contract LiquidationPendingIntegrationTest is RealStackFlows {
         uint256 supplyBefore = IERC20(vt).totalSupply();
         uint256 fundedBefore = IAvanaFirstLossReserve(reserve).fundedBalance();
         vm.expectEmit(true, true, false, true, adapter);
-        emit IAaveAdapterEvents.SeizedUnitsBurned(mA, vt, kept);
+        emit IAaveAdapterBase.SeizedUnitsBurned(mA, vt, kept);
         vm.prank(makeAddr("anyone"));
         (uint256 units,, uint256 added) = lvs.settlePending(mA, settleReserve);
         assertEq(units, kept, "every pending unit settled");
@@ -156,7 +153,7 @@ contract LiquidationPendingIntegrationTest is RealStackFlows {
     // TEST-170 verifies: REQ-SWAP-044, SPEC-LIQ-014
     function test_TEST_170_nothingPendingRefused() public {
         uint256 settleReserve = registry.settlementReserve(mA);
-        vm.expectRevert(ILPVaultSwapErrors.NothingPending.selector);
+        vm.expectRevert(ILPVaultSwapBase.NothingPending.selector);
         lvs.settlePending(mA, settleReserve);
     }
 }

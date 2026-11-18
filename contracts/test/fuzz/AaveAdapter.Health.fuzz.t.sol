@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
 
 /// @title AaveAdapterHealthFuzzTest
@@ -304,7 +304,7 @@ contract AaveAdapterHealthFuzzTest is AaveAdapterRiskFixture {
         vm.prank(alice);
         (bool ok, bytes memory err) = adapter.call(abi.encodeCall(adapterC.repayWithCollateral, (params)));
         assertFalse(ok, "refused");
-        if (bytes4(err) == IAaveAdapterErrors.HealthFactorNotImproved.selector) {
+        if (bytes4(err) == IAaveAdapterBase.HealthFactorNotImproved.selector) {
             (uint256 before,) = abi.decode(_tail(err), (uint256, uint256));
             assertEq(before, hfBefore, "reports the health factor before");
         }

@@ -3,13 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PositionShape} from "../../../src/types/PositionShape.sol";
+import {PositionShape} from "../../../src/types/PositionTypes.sol";
 import {IntegLPVaultMock} from "./IntegLPVaultMock.sol";
 import {RegistryAvanaFirstLossReserveMock} from "./MarketRegistryMocks.sol";
 
 /// @title FullStackLPVaultMock
 /// @notice `IntegLPVaultMock` (custody rules, unwind rates, depth) with the binding surface the real MarketRegistry
-/// and the real concentrated-liquidity LPOracle read: `bindMarket` as `IAmmIntegration` declares it, called only by
+/// and the real concentrated-liquidity LPOracle read: `bindMarket` as `ILPVault` declares it, called only by
 /// the registry inside `listCollateralMarket`, and `rateProviders`, two zero addresses as the Uniswap v3 integration
 /// returns them. The fixture prepares each market's tokens (pool order), unwind rates and unit decimals first.
 contract FullStackLPVaultMock is IntegLPVaultMock {
@@ -36,7 +36,7 @@ contract FullStackLPVaultMock is IntegLPVaultMock {
         unitDecimalsOf[marketId] = unitDecimals;
     }
 
-    /// @notice `IAmmIntegration.bindMarket`: records the pool, range, tokens and rates of `marketId`.
+    /// @notice `ILPVault.bindMarket`: records the pool, range, tokens and rates of `marketId`.
     function bindMarket(
         uint256 marketId,
         address pool,

@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapMultiReserveIntegrationTest
@@ -61,7 +60,7 @@ contract LPVaultSwapMultiReserveIntegrationTest is LPVaultSwapUnitBase {
         _expectLiquidateRevert(
             keeper,
             _params(proxy, 1000e6),
-            abi.encodeWithSelector(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveId)
+            abi.encodeWithSelector(ILPVaultSwapBase.DebtPriceStale.selector, usdcReserveId)
         );
         LiquidationResult memory r = _liquidateAs(keeper, _gho(1000e18));
         assertGt(r.unitsSeized, 0, "GHO reserve settles");

@@ -4,16 +4,12 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketRegistryEvents.sol";
-import {IMarketRegistryWindDown} from "../../src/policy/market-registry/IMarketRegistryWindDown.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {WindDownState} from "../../src/policy/market-registry/types/WindDownState.sol";
-import {Market} from "../../src/types/Market.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {MarketStatus, WindDownState} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {Market, MarketDef} from "../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryLPOracleMock} from "../utils/mocks/MarketRegistryMocks.sol";
 
@@ -113,7 +109,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         assertEq(id2, 2);
         _prepareSecond(id2, vt2);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.MarketActivated(id2, block.chainid, address(spoke), RESERVE_2, address(hub), ASSET_2);
+        emit IMarketRegistryBase.MarketActivated(id2, block.chainid, address(spoke), RESERVE_2, address(hub), ASSET_2);
         _activate(id2);
         Market memory m = registry.getMarket(id2);
         assertEq(m.hubAssetId, ASSET_2);
@@ -142,7 +138,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         rm.setDriftMarket(id2);
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.ActivationCheckFailed.selector, id2, bytes32("aaveConfig"))
+            abi.encodeWithSelector(IMarketRegistryBase.ActivationCheckFailed.selector, id2, bytes32("aaveConfig"))
         );
         registry.activateMarket(id2);
         rm.setDriftMarket(0);
@@ -164,7 +160,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         (d.collateralFactor, d.maxLiquidationBonus) = (7000, 10_500);
         spoke.setReserve(VT_RESERVE, r, c, d);
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.DuplicateMarketKey.selector);
+        vm.expectRevert(IMarketRegistryBase.DuplicateMarketKey.selector);
         registry.activateMarket(id2);
         assertEq(registry.getMarket(id2).reserveId, 0);
         assertEq(registry.marketOfHubAsset(address(hub), ASSET_2), 0);
@@ -268,12 +264,12 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         uint256 m
     ) internal pure returns (bytes memory) {
         if (keccak256(bytes(kind)) == keccak256("reg")) {
-            return abi.encodeWithSelector(IMarketRegistryErrors.MarketNotRegistered.selector, m);
+            return abi.encodeWithSelector(IMarketRegistryBase.MarketNotRegistered.selector, m);
         }
         if (keccak256(bytes(kind)) == keccak256("active")) {
-            return abi.encodeWithSelector(IMarketRegistryErrors.MarketNotActive.selector, m);
+            return abi.encodeWithSelector(IMarketRegistryBase.MarketNotActive.selector, m);
         }
-        return abi.encodeWithSelector(IMarketRegistryWindDown.MarketNotOffboarding.selector, m);
+        return abi.encodeWithSelector(IMarketRegistry.MarketNotOffboarding.selector, m);
     }
 
     /// @dev Runs `data` as the timelock from a snapshot: it succeeds when `ok`, else reverts with exactly `err`.
@@ -310,7 +306,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         assertEq(registry.marketOfVaultToken(vt), id);
         assertEq(registry.marketOfLpOracle(address(lpo)), id);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.MarketRegistrationCancelled(id);
+        emit IMarketRegistryBase.MarketRegistrationCancelled(id);
         vm.prank(address(timelock));
         registry.cancelRegistration(id);
         assertEq(registry.marketOfKey(key), 0, "key freed");
@@ -377,7 +373,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         vm.warp(t0 + 5 days);
         registry.closeMarket(id);
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.VaultTokenMismatch.selector);
+        vm.expectRevert(IMarketRegistryBase.VaultTokenMismatch.selector);
         registry.listCollateralMarket(_marketDef(vt, address(lpo)));
     }
 
@@ -386,15 +382,15 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
     // a duplicate.
     function test_TEST_252_liveRegistrationKeepsItsKey() public {
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.DuplicateMarketKey.selector);
+        vm.expectRevert(IMarketRegistryBase.DuplicateMarketKey.selector);
         registry.listCollateralMarket(_marketDef(vt, address(lpo)));
         _activate(id);
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.DuplicateMarketKey.selector);
+        vm.expectRevert(IMarketRegistryBase.DuplicateMarketKey.selector);
         registry.listCollateralMarket(_marketDef(vt, address(lpo)));
         _offboard(id);
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.DuplicateMarketKey.selector);
+        vm.expectRevert(IMarketRegistryBase.DuplicateMarketKey.selector);
         registry.listCollateralMarket(_marketDef(vt, address(lpo)));
     }
 
@@ -488,7 +484,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         uint256 t0 = _offboard(id);
         vm.warp(t0 + 5 days);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryWindDown.MarketClosed(id);
+        emit IMarketRegistry.MarketClosed(id);
         vm.prank(makeAddr("anyone"));
         registry.closeMarket(id);
         assertEq(registry.windDownState(id).unusedLastStepAt, 0, "close needs no step");
@@ -502,7 +498,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         collat.setHasDebt(vt, true);
         for (uint256 d = 5; d <= 365; d += 120) {
             vm.warp(t0 + d * 1 days);
-            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.MarketHasDebt.selector, id));
+            vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.MarketHasDebt.selector, id));
             registry.closeMarket(id);
         }
         collat.setHasDebt(vt, false);
@@ -516,7 +512,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         _activate(id);
         uint256 t0 = _offboard(id);
         collat.setHasDebt(vt, true);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.OffboardNoticeRunning.selector, t0 + 5 days));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.OffboardNoticeRunning.selector, t0 + 5 days));
         registry.closeMarket(id);
     }
 }

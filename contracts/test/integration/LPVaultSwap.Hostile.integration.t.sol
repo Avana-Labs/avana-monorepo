@@ -5,17 +5,15 @@ pragma solidity 0.8.28;
 
 import {AvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {ICollateralizationSeizure} from "../../src/custody/collateralization/ICollateralizationSeizure.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
+import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
-import {IAaveAdapterSettlement} from "../../src/policy/aave-adapter/IAaveAdapterSettlement.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackVolatile} from "../utils/fixtures/RealStackVolatile.sol";
@@ -168,18 +166,16 @@ contract LPVaultSwapHostileIntegrationTest is RealStackVolatile {
         _run(vt, abi.encodeWithSignature("mint(address,uint256)", lpVaultSwap, 1));
 
         _run(address(lock), abi.encodeCall(ILock.acquire, ()));
-        _run(address(coll), abi.encodeCall(ICollateralizationSeizure.beginSeizure, (healthy, vt)));
+        _run(address(coll), abi.encodeCall(ICollateralization.beginSeizure, (healthy, vt)));
         uint256 c = _hostileSeizeAndKeep(bobProxy, 500e6);
         assertGt(c, 0, "bob seized");
         vm.expectRevert();
-        _run(adapter, abi.encodeCall(IAaveAdapterSettlement.burnSeized, (mA, vt, c + 1)));
-        _run(adapter, abi.encodeCall(IAaveAdapterSettlement.burnSeized, (mA, vt, c)));
-        vm.expectRevert(ICollateralizationErrors.SeizureMismatch.selector);
-        _run(
-            address(coll), abi.encodeCall(ICollateralizationSeizure.settleSeizure, (bobProxy, vt, c, new uint256[](0)))
-        );
-        vm.expectRevert(ICollateralizationErrors.DebitMismatch.selector);
-        _run(address(coll), abi.encodeCall(ICollateralizationSeizure.settleSeizure, (healthy, vt, c, new uint256[](0))));
+        _run(adapter, abi.encodeCall(IAaveAdapter.burnSeized, (mA, vt, c + 1)));
+        _run(adapter, abi.encodeCall(IAaveAdapter.burnSeized, (mA, vt, c)));
+        vm.expectRevert(ICollateralizationBase.SeizureMismatch.selector);
+        _run(address(coll), abi.encodeCall(ICollateralization.settleSeizure, (bobProxy, vt, c, new uint256[](0))));
+        vm.expectRevert(ICollateralizationBase.DebitMismatch.selector);
+        _run(address(coll), abi.encodeCall(ICollateralization.settleSeizure, (healthy, vt, c, new uint256[](0))));
         _run(address(lock), abi.encodeCall(ILock.release, ()));
         assertEq(coll.getAccountCredited(healthy, vt), aliceCredited, "alice's records untouched");
     }
@@ -233,11 +229,11 @@ contract LPVaultSwapHostileIntegrationTest is RealStackVolatile {
     // TEST-208 verifies: REQ-ADAPTER-070, REQ-SWAP-020, REQ-SWAP-092
     function test_TEST_208_burnSeizedOnlyLPVaultSwapUnderTheLock() public {
         vm.prank(attacker);
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
-        IAaveAdapterSettlement(adapter).burnSeized(mA, vt, 1);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
+        IAaveAdapter(adapter).burnSeized(mA, vt, 1);
         vm.prank(lpVaultSwap);
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
-        IAaveAdapterSettlement(adapter).burnSeized(mA, vt, 1);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
+        IAaveAdapter(adapter).burnSeized(mA, vt, 1);
         PauseState[3] memory states = [PauseState.None, PauseState.Frozen, PauseState.Paused];
         (address proxy,) = _account(bob, UNITS, 5880e6);
         _depegUsdt(93_000_000);
@@ -250,7 +246,7 @@ contract LPVaultSwapHostileIntegrationTest is RealStackVolatile {
             Vm.Log[] memory logs = vm.getRecordedLogs();
             uint256 burns;
             for (uint256 k = 0; k < logs.length; ++k) {
-                if (logs[k].emitter != adapter || logs[k].topics[0] != IAaveAdapterEvents.SeizedUnitsBurned.selector) {
+                if (logs[k].emitter != adapter || logs[k].topics[0] != IAaveAdapterBase.SeizedUnitsBurned.selector) {
                     continue;
                 }
                 ++burns;

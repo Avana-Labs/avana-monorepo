@@ -5,10 +5,9 @@ pragma solidity 0.8.28;
 
 import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
-import {RemovalSizing} from "../../src/lens/lens/types/RemovalSizing.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {PendingView} from "../../src/types/PendingView.sol";
+import {LiquidationPreview, RemovalSizing} from "../../src/lens/lens/types/LensTypes.sol";
+import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {PendingView} from "../../src/types/PositionTypes.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 

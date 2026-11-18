@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPVault} from "../custody/lp-vault/ILPVault.sol";
-import {ClMarketConfig} from "./types/ClMarketConfig.sol";
+import {ClMarketConfig} from "./types/AmmTypes.sol";
 
 /// @title IClIntegration
 /// @notice Shared extension of the concentrated-liquidity LPVaults: NFT positions, exact tick ranges and the v3

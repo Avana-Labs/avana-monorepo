@@ -3,18 +3,15 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {Pending} from "../../../src/custody/collateralization/types/Pending.sol";
+import {Pending} from "../../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
 import {AaveAdapterStorage} from "../../../src/policy/aave-adapter/AaveAdapterStorage.sol";
-import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {SpokeDef} from "../../../src/policy/market-registry/types/SpokeDef.sol";
+import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
+import {DebtReserveDef, SpokeDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {RiskModuleMath} from "../../../src/policy/risk-module/RiskModuleMath.sol";
 import {PositionProxy} from "../../../src/proxy/position-proxy/PositionProxy.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
+import {Market, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
 
 // Stand-ins and the shared base of the AaveAdapter path harnesses (`AaveAdapterBorrowProperties` and
 // `AaveAdapterWithdrawProperties`). This file declares no `*Properties` contract, so the runners never fuzz it alone.

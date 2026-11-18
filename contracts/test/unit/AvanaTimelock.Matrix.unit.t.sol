@@ -5,29 +5,18 @@ pragma solidity 0.8.28;
 
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {IAvanaTimelockErrors} from "../../src/governance/timelock/IAvanaTimelockErrors.sol";
+import {IAvanaTimelock} from "../../src/governance/timelock/IAvanaTimelock.sol";
 import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {ILPVaultSwapAdmin} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LPVaultSwap} from "../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
-import {LPVaultSwapImmutables} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
-import {LPVaultSwapLogics} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapLogics.sol";
+import {LPVaultSwapImmutables, LPVaultSwapLogics} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {IMarketRegistryApprovals} from "../../src/policy/market-registry/IMarketRegistryApprovals.sol";
-import {IMarketRegistryBreakers} from "../../src/policy/market-registry/IMarketRegistryBreakers.sol";
-import {IMarketRegistryFreeze} from "../../src/policy/market-registry/IMarketRegistryFreeze.sol";
-import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
-import {IMarketRegistryListing} from "../../src/policy/market-registry/IMarketRegistryListing.sol";
-import {IMarketRegistryPause} from "../../src/policy/market-registry/IMarketRegistryPause.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
-import {IMarketRegistryStandby} from "../../src/policy/market-registry/IMarketRegistryStandby.sol";
-import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterStoreAdmin.sol";
-import {IParameterStoreBreakers} from "../../src/policy/parameter-store/IParameterStoreBreakers.sol";
-import {IParameterStoreLiquidation} from "../../src/policy/parameter-store/IParameterStoreLiquidation.sol";
+import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreListing} from "../../src/policy/parameter-store/IParameterStoreListing.sol";
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
-import {IParameterStoreSpeed} from "../../src/policy/parameter-store/IParameterStoreSpeed.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {TimelockFixture} from "../utils/fixtures/TimelockFixture.sol";
@@ -64,8 +53,8 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         _otherRows(address(other));
         // LPVaultSwap keeper registry: the delay and cancel classes here; the same selectors executed through the
         // timelock on the real LPVaultSwap in test_TEST_063_lpVaultSwapKeeperRegistryThroughTimelock.
-        rows.push(Row(address(lpVaultSwap), ILPVaultSwapAdmin.addKeeper.selector, false, true));
-        rows.push(Row(address(lpVaultSwap), ILPVaultSwapAdmin.removeKeeper.selector, true, false));
+        rows.push(Row(address(lpVaultSwap), ILPVaultSwap.addKeeper.selector, false, true));
+        rows.push(Row(address(lpVaultSwap), ILPVaultSwap.removeKeeper.selector, true, false));
     }
 
     // ─── Matrix rows ───
@@ -75,41 +64,41 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     ) internal {
         // Short delay, any canceller.
         rows.push(Row(mr, IMarketRegistryRoutes.disableRoute.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryListing.setMarketOffboarding.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryListing.activateMarket.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryListing.cancelRegistration.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryPause.freeze.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryPause.pause.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryFreeze.freezeAddress.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryBreakers.tripMarketBreaker.selector, true, false));
-        rows.push(Row(mr, IMarketRegistryBreakers.tripDebtBreaker.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.setMarketOffboarding.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.activateMarket.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.cancelRegistration.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.freeze.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.pause.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.freezeAddress.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.tripMarketBreaker.selector, true, false));
+        rows.push(Row(mr, IMarketRegistry.tripDebtBreaker.selector, true, false));
         // Short delay, DAO-only cancel (restoring).
         rows.push(Row(mr, IMarketRegistryRoutes.restoreRoute.selector, true, true));
-        rows.push(Row(mr, IMarketRegistryStandby.useStandbyRoute.selector, true, true));
+        rows.push(Row(mr, IMarketRegistry.useStandbyRoute.selector, true, true));
         // Normal delay, DAO-only cancel (restoring).
-        rows.push(Row(mr, IMarketRegistryFreeze.unfreezeAddress.selector, false, true));
+        rows.push(Row(mr, IMarketRegistry.unfreezeAddress.selector, false, true));
         // Normal delay, any canceller.
-        rows.push(Row(mr, IMarketRegistryListing.listCollateralMarket.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryListing.setPriceSource.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.listCollateralMarket.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.setPriceSource.selector, false, false));
         rows.push(Row(mr, IMarketRegistryRoutes.setRoute.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryApprovals.recordIntegrationContracts.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryApprovals.finalizeIntegrationContracts.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryApprovals.approveSpokeCodeHash.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryListing.deployCdpSpoke.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryListing.listToken.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryListing.enableDebtReserve.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryListing.removeDebtReserve.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryHubs.setCrossHubLinesEnabled.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryHubs.setCrossHubLine.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryHubs.setFlashSource.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryPause.unpause.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryPause.unfreeze.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.recordIntegrationContracts.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.finalizeIntegrationContracts.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.approveSpokeCodeHash.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.deployCdpSpoke.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.listToken.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.enableDebtReserve.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.removeDebtReserve.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.setCrossHubLinesEnabled.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.setCrossHubLine.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.setFlashSource.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.unpause.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.unfreeze.selector, false, false));
         // The chain-wide stops wait the normal delay from the admin: the guardians already stop every Hub at once.
-        rows.push(Row(mr, IMarketRegistryPause.freezeAll.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryPause.pauseAll.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryBreakers.resetMarketBreaker.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryBreakers.resetDebtBreaker.selector, false, false));
-        rows.push(Row(mr, IMarketRegistryStandby.restorePriceRoute.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.freezeAll.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.pauseAll.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.resetMarketBreaker.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.resetDebtBreaker.selector, false, false));
+        rows.push(Row(mr, IMarketRegistry.restorePriceRoute.selector, false, false));
         rows.push(Row(mr, UUPSUpgradeable.upgradeToAndCall.selector, false, false));
     }
 
@@ -131,13 +120,13 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStoreTighten.tightenPoolShareMaxBps.selector,
             IParameterStoreTighten.tightenPoolShareMaxBpsOf.selector,
             IParameterStoreTighten.tightenMinPledgeUsd.selector,
-            IParameterStoreBreakers.tightenBreakerDeficitMax.selector,
-            IParameterStoreBreakers.tightenGateRecoverySeconds.selector,
-            IParameterStoreLiquidation.tightenMaxShortfallBps.selector,
-            IParameterStoreLiquidation.tightenDebtStressRiseBps.selector,
-            IParameterStoreAdmin.tightenMaxFlashFeeBps.selector,
-            IParameterStoreSpeed.tightenMarketSpeedLimits.selector,
-            IParameterStoreSpeed.tightenDebtSpeedLimit.selector
+            IParameterStore.tightenBreakerDeficitMax.selector,
+            IParameterStore.tightenGateRecoverySeconds.selector,
+            IParameterStore.tightenMaxShortfallBps.selector,
+            IParameterStore.tightenDebtStressRiseBps.selector,
+            IParameterStore.tightenMaxFlashFeeBps.selector,
+            IParameterStore.tightenMarketSpeedLimits.selector,
+            IParameterStore.tightenDebtSpeedLimit.selector
         ];
         for (uint256 i; i < tighten.length; ++i) {
             rows.push(Row(ps, tighten[i], true, false));
@@ -153,38 +142,38 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStoreLoosen.loosenPoolShareMaxBps.selector,
             IParameterStoreLoosen.loosenMinPledgeUsd.selector,
             IParameterStoreLoosen.loosenPoolShareMaxBpsOf.selector,
-            IParameterStoreBreakers.loosenBreakerDeficitMax.selector,
-            IParameterStoreBreakers.loosenGateRecoverySeconds.selector,
-            IParameterStoreLiquidation.loosenMaxShortfallBps.selector,
-            IParameterStoreLiquidation.loosenDebtStressRiseBps.selector,
-            IParameterStoreSpeed.loosenMarketSpeedLimits.selector,
-            IParameterStoreSpeed.loosenDebtSpeedLimit.selector,
-            IParameterStoreAdmin.setBorrowPriceMaxAge.selector,
-            IParameterStoreAdmin.setConsistencyToleranceBps.selector,
-            IParameterStoreAdmin.setFeedAgreementToleranceBps.selector,
-            IParameterStoreAdmin.setPoolRiskFactor.selector,
-            IParameterStoreAdmin.setAvanaFeeShareBps.selector,
-            IParameterStoreAdmin.setFeeRecipient.selector,
-            IParameterStoreAdmin.setMaxFlashFeeBps.selector,
-            IParameterStoreAdmin.setCachedWindow.selector,
-            IParameterStoreAdmin.setDisagreementPauseMax.selector,
-            IParameterStoreAdmin.setTwapWindow.selector,
-            IParameterStoreAdmin.setUsdBand.selector,
-            IParameterStoreAdmin.setLiquidationPriceMaxAge.selector,
-            IParameterStoreAdmin.setFeedMaxAge.selector,
-            IParameterStoreAdmin.setGraceDuration.selector,
-            IParameterStoreAdmin.setGraceHealthFactor.selector,
-            IParameterStoreAdmin.setFeedAgreementMarginBps.selector,
-            IParameterStoreAdmin.setSlippageAllowanceMinBps.selector,
-            IParameterStoreAdmin.setTokenCollateralFactorBps.selector,
-            IParameterStoreAdmin.setStressFloorUsd.selector,
-            IParameterStoreAdmin.setSecondSource.selector,
-            IParameterStoreAdmin.restoreSecondSource.selector,
+            IParameterStore.loosenBreakerDeficitMax.selector,
+            IParameterStore.loosenGateRecoverySeconds.selector,
+            IParameterStore.loosenMaxShortfallBps.selector,
+            IParameterStore.loosenDebtStressRiseBps.selector,
+            IParameterStore.loosenMarketSpeedLimits.selector,
+            IParameterStore.loosenDebtSpeedLimit.selector,
+            IParameterStore.setBorrowPriceMaxAge.selector,
+            IParameterStore.setConsistencyToleranceBps.selector,
+            IParameterStore.setFeedAgreementToleranceBps.selector,
+            IParameterStore.setPoolRiskFactor.selector,
+            IParameterStore.setAvanaFeeShareBps.selector,
+            IParameterStore.setFeeRecipient.selector,
+            IParameterStore.setMaxFlashFeeBps.selector,
+            IParameterStore.setCachedWindow.selector,
+            IParameterStore.setDisagreementPauseMax.selector,
+            IParameterStore.setTwapWindow.selector,
+            IParameterStore.setUsdBand.selector,
+            IParameterStore.setLiquidationPriceMaxAge.selector,
+            IParameterStore.setFeedMaxAge.selector,
+            IParameterStore.setGraceDuration.selector,
+            IParameterStore.setGraceHealthFactor.selector,
+            IParameterStore.setFeedAgreementMarginBps.selector,
+            IParameterStore.setSlippageAllowanceMinBps.selector,
+            IParameterStore.setTokenCollateralFactorBps.selector,
+            IParameterStore.setStressFloorUsd.selector,
+            IParameterStore.setSecondSource.selector,
+            IParameterStore.restoreSecondSource.selector,
             IParameterStoreListing.setInitialMarketParams.selector,
             IParameterStoreListing.setInitialMarketCaps.selector,
             IParameterStoreListing.setInitialTokenCap.selector,
             IParameterStoreListing.setFeed.selector,
-            IParameterStoreLiquidation.setLiquidationExpectations.selector,
+            IParameterStore.setLiquidationExpectations.selector,
             UUPSUpgradeable.upgradeToAndCall.selector,
             IAccessControl.grantRole.selector,
             IAccessControl.revokeRole.selector,
@@ -234,7 +223,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
                 abi.encodeWithSelector(
                     r.short
                         ? TimelockController.TimelockInsufficientDelay.selector
-                        : IAvanaTimelockErrors.DelayBelowRequired.selector,
+                        : IAvanaTimelock.DelayBelowRequired.selector,
                     expected - 1,
                     expected
                 )
@@ -287,11 +276,11 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             assertEq(timelock.isRoleChangeOperation(id), roleChange, "role-change mark");
             assertEq(timelock.isRestoringOperation(id), r.daoOnly, "restoring mark");
             if (roleChange) {
-                vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.RoleChangeCancelRestricted.selector, id));
+                vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.RoleChangeCancelRestricted.selector, id));
                 vm.prank(emergencyGuardian);
                 timelock.cancel(id);
             } else if (r.daoOnly) {
-                vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.RestoringCancelRestricted.selector, id));
+                vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.RestoringCancelRestricted.selector, id));
                 vm.prank(emergencyGuardian);
                 timelock.cancel(id);
             }
@@ -319,7 +308,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     function test_TEST_067_everyOperationTypeByEveryCanceller() public {
         address[4] memory cancellers = [governanceMultisig, emergencyGuardian, aaveGuardian, aaveGovernanceExecutor];
         Call[][7] memory ops;
-        ops[0] = _one(address(marketRegistry), abi.encodeCall(IMarketRegistryPause.freeze, (address(1))));
+        ops[0] = _one(address(marketRegistry), abi.encodeCall(IMarketRegistry.freeze, (address(1))));
         ops[1] = _one(
             address(marketRegistry),
             abi.encodeCall(IMarketRegistryRoutes.setRoute, (1, address(2), address(3), 0, address(4)))
@@ -363,8 +352,8 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
                     vm.expectRevert(
                         abi.encodeWithSelector(
                             o == 4
-                                ? IAvanaTimelockErrors.RoleChangeCancelRestricted.selector
-                                : IAvanaTimelockErrors.RestoringCancelRestricted.selector,
+                                ? IAvanaTimelock.RoleChangeCancelRestricted.selector
+                                : IAvanaTimelock.RestoringCancelRestricted.selector,
                             id
                         )
                     );
@@ -403,16 +392,14 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             abi.encodeCall(IAccessControl.revokeRole, (AvanaRoles.APPLICATION_PAUSE_GUARDIAN, emergencyGuardian))
         );
         assertEq(_required(calls), NORMAL_DELAY);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAvanaTimelockErrors.DelayBelowRequired.selector, SHORT_DELAY, NORMAL_DELAY)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.DelayBelowRequired.selector, SHORT_DELAY, NORMAL_DELAY));
         this.scheduleAs(governanceMultisig, calls, SHORT_DELAY, bytes32(0));
         uint256 ts = block.timestamp;
         bytes32 id = _schedule(governanceMultisig, calls, NORMAL_DELAY, bytes32(0));
         assertTrue(timelock.isRoleChangeOperation(id));
         address[2] memory guardians = [emergencyGuardian, aaveGuardian];
         for (uint256 g; g < guardians.length; ++g) {
-            vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.RoleChangeCancelRestricted.selector, id));
+            vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.RoleChangeCancelRestricted.selector, id));
             vm.prank(guardians[g]);
             timelock.cancel(id);
         }
@@ -446,7 +433,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         assertEq(_required(calls), NORMAL_DELAY, "never short");
         bytes32 id = _schedule(governanceMultisig, calls, NORMAL_DELAY, bytes32(0));
         assertTrue(timelock.isRoleChangeOperation(id));
-        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.RoleChangeCancelRestricted.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.RoleChangeCancelRestricted.selector, id));
         vm.prank(emergencyGuardian);
         timelock.cancel(id);
         vm.warp(block.timestamp + NORMAL_DELAY);
@@ -518,19 +505,19 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
     function test_TEST_063_lpVaultSwapKeeperRegistryThroughTimelock() public {
         ILPVaultSwap lvs = _realLPVaultSwap();
         address second = makeAddr("secondKeeper");
-        assertEq(_required(_one(address(lvs), abi.encodeCall(ILPVaultSwapAdmin.addKeeper, (second)))), NORMAL_DELAY);
-        assertEq(_required(_one(address(lvs), abi.encodeCall(ILPVaultSwapAdmin.removeKeeper, (keeper)))), SHORT_DELAY);
-        _run(_one(address(lvs), abi.encodeCall(ILPVaultSwapAdmin.addKeeper, (second))), bytes32("add"));
+        assertEq(_required(_one(address(lvs), abi.encodeCall(ILPVaultSwap.addKeeper, (second)))), NORMAL_DELAY);
+        assertEq(_required(_one(address(lvs), abi.encodeCall(ILPVaultSwap.removeKeeper, (keeper)))), SHORT_DELAY);
+        _run(_one(address(lvs), abi.encodeCall(ILPVaultSwap.addKeeper, (second))), bytes32("add"));
         assertTrue(lvs.isApprovedKeeper(second), "added after the normal delay");
         assertEq(lvs.activeKeeperCount(), 2);
-        _run(_one(address(lvs), abi.encodeCall(ILPVaultSwapAdmin.removeKeeper, (keeper))), bytes32("remove"));
+        _run(_one(address(lvs), abi.encodeCall(ILPVaultSwap.removeKeeper, (keeper))), bytes32("remove"));
         assertFalse(lvs.isApprovedKeeper(keeper), "removed after the short delay");
-        Call[] memory last = _one(address(lvs), abi.encodeCall(ILPVaultSwapAdmin.removeKeeper, (second)));
+        Call[] memory last = _one(address(lvs), abi.encodeCall(ILPVaultSwap.removeKeeper, (second)));
         _schedule(governanceMultisig, last, SHORT_DELAY, bytes32("floor"));
         vm.warp(block.timestamp + SHORT_DELAY);
         (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(last);
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, 0, 1));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 0, 1));
         timelock.executeBatch(t, v, p, bytes32(0), bytes32("floor"));
         assertTrue(lvs.isApprovedKeeper(second), "the floor keeps the last committed operator");
         vm.prank(governanceMultisig);
@@ -541,7 +528,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
                 AvanaRoles.APPLICATION_ADMIN
             )
         );
-        ILPVaultSwapAdmin(address(lvs)).addKeeper(makeAddr("direct"));
+        ILPVaultSwap(address(lvs)).addKeeper(makeAddr("direct"));
     }
 
     /// @dev Deploys the real LPVaultSwap (three logic contracts, the implementation, the proxy initialised with this

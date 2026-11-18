@@ -3,31 +3,24 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../custody/collateralization/ICollateralizationAdapter.sol";
-import {ICollateralizationDebtMark} from "../../custody/collateralization/ICollateralizationDebtMark.sol";
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequencerUptimeFeed.sol";
-import {ILPVaultSwapDeleverage} from "../../liquidation/lp-vault-swap/ILPVaultSwapDeleverage.sol";
-import {DeleverageRequest} from "../../liquidation/lp-vault-swap/types/DeleverageRequest.sol";
+import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {DeleverageRequest} from "../../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
-import {Market} from "../../types/Market.sol";
-import {PauseReason} from "../../types/PauseReason.sol";
-import {PauseState} from "../../types/PauseState.sol";
-import {PositionRef} from "../../types/PositionRef.sol";
+import {Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {PositionRef} from "../../types/PositionTypes.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
-import {IMarketRegistryRouteViews} from "../market-registry/IMarketRegistryRouteViews.sol";
-import {IMarketRegistryViews} from "../market-registry/IMarketRegistryViews.sol";
-import {IParameterStoreChain} from "../parameter-store/IParameterStoreChain.sol";
-import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
+import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
+import {IParameterStore} from "../parameter-store/IParameterStore.sol";
+import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../risk-module/IRiskModuleErrors.sol";
-import {RiskModuleCalls} from "../risk-module/RiskModuleCalls.sol";
+import {RiskModuleMath} from "../risk-module/RiskModuleMath.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
-import {AaveAdapterImmutables} from "./types/AaveAdapterImmutables.sol";
-import {AdapterAccount} from "./types/AdapterAccount.sol";
-import {RepayWithCollateralParams} from "./types/RepayWithCollateralParams.sol";
+import {AaveAdapterImmutables, AdapterAccount, RepayWithCollateralParams} from "./types/AaveAdapterTypes.sol";
 
 /// @title AaveAdapterCollateralLogic
 /// @notice Bodies of `removeLiquidity`, `recredit` and `repayWithCollateral`.
@@ -87,14 +80,14 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         int256 gapBefore = _gap(account.vaultToken);
         _withdrawAndBurn(proxy, account.spoke, account.vaultToken, reserveId, units);
         uint128 remaining;
-        (remaining, amounts) = ICollateralizationAdapter(_COLLATERALIZATION)
+        (remaining, amounts) = ICollateralization(_COLLATERALIZATION)
             .releasePartial(proxy, account.vaultToken, positionKey, units, minAmounts);
         hf = type(uint256).max;
         if (debtFree) {
             _cleanup(proxy, account.spoke, reserveId);
         } else {
-            IRiskModuleChecks(_RISK_MODULE).checkRemainingRecord(account.marketId, remaining);
-            hf = IRiskModuleChecks(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
+            IRiskModule(_RISK_MODULE).checkRemainingRecord(account.marketId, remaining);
+            hf = IRiskModule(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
         }
         _checkGap(account.vaultToken, gapBefore);
     }
@@ -109,13 +102,13 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _acquire();
         if (block.timestamp > deadline) revert DeadlineExpired(deadline);
         (address proxy, AdapterAccount memory account) = _accountOf(msg.sender, marketId);
-        Market memory m = IMarketRegistryViews(_MARKET_REGISTRY).getMarket(marketId);
+        Market memory m = IMarketRegistry(_MARKET_REGISTRY).getMarket(marketId);
         if (position.integrationId != m.integrationId) revert IntegrationMismatch(marketId, position.integrationId);
         bool requireRescue = _mintGate(m.hub, account.spoke, proxy);
         uint128 rescueUnits;
         (added, rescueUnits) = _credit(proxy, account, position.positionKey, topUp, requireRescue);
         uint256 recordId =
-            ICollateralizationViews(_COLLATERALIZATION).recordIdOf(position.integrationId, position.positionKey);
+            ICollateralization(_COLLATERALIZATION).recordIdOf(position.integrationId, position.positionKey);
         emit CollateralRecredited(
             msg.sender, marketId, account.vaultToken, recordId, position.positionKey, added, rescueUnits
         );
@@ -131,7 +124,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
     ) private returns (uint128 added, uint128 rescueUnits) {
         uint256 reserveId = _reserveIdOf(account.vaultToken);
         int256 gapBefore = _gap(account.vaultToken);
-        (added, rescueUnits) = ICollateralizationAdapter(_COLLATERALIZATION)
+        (added, rescueUnits) = ICollateralization(_COLLATERALIZATION)
             .recredit(msg.sender, proxy, account.vaultToken, positionKey, topUp, requireRescue);
         if (added == 0) revert ZeroAmount();
         IVaultToken(account.vaultToken).mint(proxy, added);
@@ -169,7 +162,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _acquire();
         Before memory b = _repayWithCollateralGates(p);
         _openSession(b.proxy, p.marketId, p.position.positionKey, p.units, p.debtReserveId, _minsHash(p));
-        (debtRepaid, debtAssetToWallet) = ILPVaultSwapDeleverage(_LP_VAULT_SWAP)
+        (debtRepaid, debtAssetToWallet) = ILPVaultSwap(_LP_VAULT_SWAP)
             .deleverage(
                 DeleverageRequest({
                     proxy: b.proxy,
@@ -188,7 +181,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         // Each swap leg may fill anywhere above its oracle minimum, so this bounds a sandwich on the leftover.
         if (debtAssetToWallet < p.minAssetOut) revert AssetOutBelowMinimum(debtAssetToWallet, p.minAssetOut);
         if (hfAfter == type(uint256).max) {
-            ICollateralizationDebtMark(_COLLATERALIZATION).markDebtFree(b.proxy);
+            ICollateralization(_COLLATERALIZATION).markDebtFree(b.proxy);
             _cleanup(b.proxy, b.spoke, b.reserveId);
         }
         _clearSession();
@@ -212,7 +205,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         RepayWithCollateralParams calldata p
     ) private view returns (bytes32) {
         if (p.minAmounts.length != 0) return keccak256(abi.encode(p.minAmounts));
-        uint256 n = IMarketRegistryViews(_MARKET_REGISTRY).getMarket(p.marketId).tokens.length;
+        uint256 n = IMarketRegistry(_MARKET_REGISTRY).getMarket(p.marketId).tokens.length;
         return keccak256(abi.encode(new uint256[](n)));
     }
 
@@ -229,7 +222,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (state == PauseState.Paused && reason == PauseReason.MintPathSuspect) revert ApplicationPaused();
         _requireSequencerNotDown();
         _checkIntegration(p.marketId, b.vaultToken, p.position.integrationId);
-        if (!IMarketRegistryRouteViews(_MARKET_REGISTRY).isApprovedDebtReserve(b.spoke, p.debtReserveId)) {
+        if (!IMarketRegistry(_MARKET_REGISTRY).isApprovedDebtReserve(b.spoke, p.debtReserveId)) {
             revert UnknownDebtReserve(b.spoke, p.debtReserveId);
         }
         IAaveV4Spoke sp = IAaveV4Spoke(b.spoke);
@@ -266,14 +259,14 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
     function _requireSequencerNotDown() private view {
         // The grace period does not stop a repay with collateral, so only the feed is read.
         // forge-lint: disable-next-line(unused-return)
-        (address feed,) = IParameterStoreChain(_PARAMETER_STORE).sequencer();
+        (address feed,) = IParameterStore(_PARAMETER_STORE).sequencer();
         if (feed == address(0)) return;
-        (bool ok, bytes memory ret) = RiskModuleCalls.staticRead(
+        (bool ok, bytes memory ret) = RiskModuleMath.staticRead(
             feed, SEQUENCER_CALL_GAS, abi.encodeCall(ISequencerUptimeFeed.latestRoundData, ()), ROUND_LENGTH + 1
         );
         ok = ok && ret.length == ROUND_LENGTH;
-        (, uint256 answerWord) = RiskModuleCalls.wordAt(ret, 32);
-        (, uint256 startedAt) = RiskModuleCalls.wordAt(ret, 64);
+        (, uint256 answerWord) = RiskModuleMath.wordAt(ret, 32);
+        (, uint256 startedAt) = RiskModuleMath.wordAt(ret, 64);
         // Two's-complement word read as int256: 0 is up, 1 is down, anything else is unknown.
         // forge-lint: disable-next-line(unsafe-typecast)
         int256 answer = int256(answerWord);

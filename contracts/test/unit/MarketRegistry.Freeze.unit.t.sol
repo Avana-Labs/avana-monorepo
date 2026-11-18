@@ -3,13 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryApprovals} from "../../src/policy/market-registry/IMarketRegistryApprovals.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
-import {IMarketRegistrySafetyEvents} from "../../src/policy/market-registry/IMarketRegistrySafetyEvents.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {MarketDef} from "../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryFlashSourceMock, RegistryLPOracleMock, RegistryTokenMock} from "../utils/mocks/MarketRegistryMocks.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -29,7 +26,7 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         address a
     ) internal {
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ProtectedAddress.selector, a));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, a));
         registry.freezeAddress(a);
     }
 
@@ -78,7 +75,7 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         assertEq(registry.FLASH_LIQUIDATOR(), flashLiquidator);
         _expectProtected(flashLiquidator);
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ProtectedAddress.selector, flashLiquidator));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, flashLiquidator));
         registry.freezeAddress(flashLiquidator);
         assertFalse(registry.isFrozenAddress(flashLiquidator));
         assertEq(registry.freezesInWindow(emergencyGuardian), 0);
@@ -144,7 +141,7 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         (dup[0], dup[1]) = (nfpm, nfpm);
         _expectBadIntegration(V3, dup);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryApprovals.IntegrationContractsRecorded(V3, _recordKeyOf(V3), list);
+        emit IMarketRegistry.IntegrationContractsRecorded(V3, _recordKeyOf(V3), list);
         vm.prank(address(timelock));
         registry.recordIntegrationContracts(V3, list);
         address[] memory got = registry.integrationContracts(V3);
@@ -173,7 +170,7 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         vm.warp((h + 23) * 3600 + 3599);
         assertEq(registry.freezesInWindow(emergencyGuardian), 20);
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.FreezeLimitReached.selector, emergencyGuardian));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.FreezeLimitReached.selector, emergencyGuardian));
         registry.freezeAddress(address(0xB100));
         vm.warp((h + 24) * 3600);
         assertEq(registry.freezesInWindow(emergencyGuardian), 0);
@@ -189,7 +186,7 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         address[] memory list
     ) internal {
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidIntegration.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, id));
         registry.recordIntegrationContracts(id, list);
     }
 
@@ -199,7 +196,7 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         address helper = registry.FLASH_LIQUIDATOR();
         assertEq(helper, flashLiquidator);
         vm.prank(aaveGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ProtectedAddress.selector, helper));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, helper));
         registry.freezeAddress(helper);
     }
 
@@ -242,12 +239,12 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
     // TEST-229 verifies: REQ-MREG-019, REQ-MREG-021, REQ-MREG-022, INV-085, Q-242, Q-263, Q-400, REQ-ACCESS-169, REQ-ACCESS-078, REQ-ACCESS-091, REQ-ACCESS-088
     function test_TEST_229_freezeUnfreezeAndKeeperFloorNotChecked() public {
         vm.expectEmit(address(registry));
-        emit IMarketRegistrySafetyEvents.AddressFrozen(keeper, emergencyGuardian);
+        emit IMarketRegistryBase.AddressFrozen(keeper, emergencyGuardian);
         vm.prank(emergencyGuardian);
         registry.freezeAddress(keeper);
         assertTrue(registry.isFrozenAddress(keeper));
         vm.prank(aaveGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.AddressAlreadyFrozen.selector, keeper));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.AddressAlreadyFrozen.selector, keeper));
         registry.freezeAddress(keeper);
         vm.prank(emergencyGuardian);
         vm.expectRevert(
@@ -257,12 +254,12 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         );
         registry.unfreezeAddress(keeper);
         vm.expectEmit(address(registry));
-        emit IMarketRegistrySafetyEvents.AddressUnfrozen(keeper);
+        emit IMarketRegistryBase.AddressUnfrozen(keeper);
         vm.prank(address(timelock));
         registry.unfreezeAddress(keeper);
         assertFalse(registry.isFrozenAddress(keeper));
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.AddressNotFrozen.selector, keeper));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.AddressNotFrozen.selector, keeper));
         registry.unfreezeAddress(keeper);
     }
 
@@ -279,7 +276,7 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
         assertEq(registry.freezesInWindow(emergencyGuardian), 20);
         vm.warp((h0 + 3) * 3600 + 600);
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.FreezeLimitReached.selector, emergencyGuardian));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.FreezeLimitReached.selector, emergencyGuardian));
         registry.freezeAddress(address(0x2000));
         // The other guardian keeps its full allowance.
         vm.prank(aaveGuardian);
@@ -292,7 +289,7 @@ contract MarketRegistryFreezeUnitTest is MarketRegistryFixture {
             registry.freezeAddress(address(uint160(0x3000 + i)));
         }
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.FreezeLimitReached.selector, emergencyGuardian));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.FreezeLimitReached.selector, emergencyGuardian));
         registry.freezeAddress(address(0x4000));
     }
 

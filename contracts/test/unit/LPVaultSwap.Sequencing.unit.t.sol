@@ -3,13 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationSeizure} from "../../src/custody/collateralization/ICollateralizationSeizure.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {ILPVaultSwapEvents} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapEvents.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LVSRevertingRoute} from "../utils/mocks/LPVaultSwapMocks.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
@@ -67,11 +65,9 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
     /// Aave's transfer of the shares.
     // TEST-055 verifies: REQ-SWAP-015, REQ-SWAP-045
     function test_TEST_055_beginSeizureBeforeLiquidationCall() public {
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.beginSeizure, (proxy, address(vt))), uint64(1));
         vm.expectCall(
-            address(coll), abi.encodeCall(ICollateralizationSeizure.beginSeizure, (proxy, address(vt))), uint64(1)
-        );
-        vm.expectCall(
-            address(coll), abi.encodeCall(ICollateralizationSeizure.beginSeizure, (aliceProxy, address(vt))), uint64(0)
+            address(coll), abi.encodeCall(ICollateralization.beginSeizure, (aliceProxy, address(vt))), uint64(0)
         );
         vm.expectCall(
             aave.cdpSpoke,
@@ -89,7 +85,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
     function test_TEST_055_settleWithoutSnapshotRefused() public {
         vm.prank(address(lvs));
         (bool ok,) = address(coll)
-            .call(abi.encodeCall(ICollateralizationSeizure.settleSeizure, (proxy, address(vt), 1, new uint256[](0))));
+            .call(abi.encodeCall(ICollateralization.settleSeizure, (proxy, address(vt), 1, new uint256[](0))));
         assertFalse(ok, "settleSeizure without beginSeizure");
     }
 
@@ -100,13 +96,11 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
         vm.expectCall(address(adapter), abi.encodeWithSelector(adapter.burnSeized.selector, MARKET_ID, address(vt)), 1);
         vm.expectCall(
             address(coll),
-            abi.encodeWithSelector(ICollateralizationSeizure.settleSeizure.selector, proxy, address(vt)),
+            abi.encodeWithSelector(ICollateralization.settleSeizure.selector, proxy, address(vt)),
             uint64(1)
         );
         vm.expectCall(
-            address(coll),
-            abi.encodeWithSelector(ICollateralizationSeizure.settleSeizure.selector, aliceProxy),
-            uint64(0)
+            address(coll), abi.encodeWithSelector(ICollateralization.settleSeizure.selector, aliceProxy), uint64(0)
         );
         LiquidationResult memory r = _liquidateAs(keeper, _params(proxy, 1950e6));
         assertEq(adapter.lastBurnUnits(), r.unitsSeized, "burned exactly c");
@@ -166,7 +160,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
         usdtUsdcPool2.setRate(9880, 10_000);
         _fund(usdc, keeper, 1950e6);
         vm.prank(keeper);
-        vm.expectRevert(ILPVaultSwapErrors.NoRouteAvailable.selector);
+        vm.expectRevert(ILPVaultSwapBase.NoRouteAvailable.selector);
         lvs.liquidate(_params(proxy, 1950e6));
         uint256[] memory prices = new uint256[](2);
         (prices[0], prices[1]) = (PRICE_UNIT, 98_500_000);
@@ -260,7 +254,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
         LiquidationParams memory p = _params(ghoProxy, 1950e18);
         p.debtReserveId = ghoReserveId;
         vm.expectCall(
-            address(coll), abi.encodeCall(ICollateralizationSeizure.beginSeizure, (ghoProxy, address(vt))), uint64(1)
+            address(coll), abi.encodeCall(ICollateralization.beginSeizure, (ghoProxy, address(vt))), uint64(1)
         );
         vm.expectCall(
             aave.cdpSpoke,
@@ -299,9 +293,7 @@ contract LPVaultSwapSequencingUnitTest is LPVaultSwapUnitBase {
         p.debtReserveId = ghoReserveId;
         _fund(gho, keeper, 1950e18);
         vm.expectEmit(address(lvs));
-        emit ILPVaultSwapEvents.RouteFailed(
-            MARKET_ID, address(usdc), address(gsm), LVSRevertingRoute.RouteDown.selector
-        );
+        emit ILPVaultSwapBase.RouteFailed(MARKET_ID, address(usdc), address(gsm), LVSRevertingRoute.RouteDown.selector);
         vm.prank(keeper);
         LiquidationResult memory r = lvs.liquidate(p);
         assertEq(r.debtAsset, address(gho), "GHO debt settled through the backup");

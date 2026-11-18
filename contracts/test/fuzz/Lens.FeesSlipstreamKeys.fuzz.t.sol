@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
-import {PositionFeesView} from "../../src/lens/lens/types/PositionFeesView.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
+import {PositionFeesView} from "../../src/lens/lens/types/LensTypes.sol";
 import {LensFeesSlipstreamFixture} from "../utils/fixtures/LensFeesFixture.sol";
 
 /// @title LensFeesSlipstreamKeysFuzzTest
@@ -43,7 +43,7 @@ contract LensFeesSlipstreamKeysFuzzTest is LensFeesSlipstreamFixture {
         uint248 id
     ) public {
         gen = uint8(bound(gen, 4, 255));
-        vm.expectRevert(ILPVaultErrors.InvalidPool.selector);
+        vm.expectRevert(ILPVaultBase.InvalidPool.selector);
         lens.getPositionFees(M1, _key(gen, id));
     }
 }

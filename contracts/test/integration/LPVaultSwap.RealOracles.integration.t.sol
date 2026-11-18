@@ -4,15 +4,14 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {Market} from "../../src/types/Market.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
+import {PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 import {AccessTrace} from "../utils/AccessTrace.sol";
 import {RealClMarketBuilder, RealDebtOracleBuilder} from "../utils/fixtures/RealOracleBuilders.sol";
@@ -172,7 +171,7 @@ contract LPVaultSwapRealOraclesIntegrationTest is LPVaultSwapUnitBase {
         PriceStateView memory v = clOracle.getPriceState();
         assertGt(v.disagreeSince, 0, "first observation stored");
         assertTrue(v.disagreementPauseActive, "pause active");
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.StalePrice.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.StalePrice.selector));
         _step(3601);
         _refresh();
         cl.setAlternate1(97_000_000);
@@ -180,7 +179,7 @@ contract LPVaultSwapRealOraclesIntegrationTest is LPVaultSwapUnitBase {
         v = clOracle.getPriceState();
         assertTrue(v.disagreementExpired, "disagreement outlasted disagreementPauseMax");
         assertTrue(v.liquidationPaused, "seizure of this market stays stopped");
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.StalePrice.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.StalePrice.selector));
         _step(60);
         _refresh();
         _settleQuote();
@@ -197,13 +196,13 @@ contract LPVaultSwapRealOraclesIntegrationTest is LPVaultSwapUnitBase {
         debtBuilder.refresh();
         clOracle.poke{gas: 5_000_000}();
         assertEq(uint8(clOracle.getPriceState().state), uint8(PriceState.Cached), "Cached after the failure");
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.StalePrice.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.StalePrice.selector));
         _step(3601);
         debtBuilder.refresh();
         clOracle.poke{gas: 5_000_000}();
         assertEq(uint8(clOracle.getPriceState().state), uint8(PriceState.Expired), "Expired");
         assertEq(clOracle.latestAnswer(), 1, "an Expired market is served at 1");
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.StalePrice.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.StalePrice.selector));
     }
 
     /// @notice Stress valuation, debt side: with every USDC feed stale the real DebtOracle goes Cached, then Expired,
@@ -221,7 +220,7 @@ contract LPVaultSwapRealOraclesIntegrationTest is LPVaultSwapUnitBase {
         assertEq(uint8(debtOracle.getPriceState().state), uint8(PriceState.Expired), "DebtOracle Expired");
         assertEq(uint256(debtOracle.latestAnswer()), (accepted * 10_500 + 9999) / 10_000, "stress price served");
         _expectLiquidateRevert(
-            keeper, _params(proxy, 1950e6), _lvsError(ILPVaultSwapErrors.DebtPriceStale.selector, usdcReserveId)
+            keeper, _params(proxy, 1950e6), _lvsError(ILPVaultSwapBase.DebtPriceStale.selector, usdcReserveId)
         );
     }
 }

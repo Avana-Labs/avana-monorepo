@@ -4,12 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
 import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {OracleLeg} from "../../src/types/OracleLeg.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
+import {FeedDef} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {OracleConfig, OracleLeg, SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
 

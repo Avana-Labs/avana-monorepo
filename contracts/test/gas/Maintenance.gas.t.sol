@@ -4,13 +4,12 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {FlashLiquidationRequest, IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {OperatorFlashLiquidator} from "../../src/periphery/flash-liquidator/OperatorFlashLiquidator.sol";
-import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
-import {IAaveAdapterUser} from "../../src/policy/aave-adapter/IAaveAdapterUser.sol";
-import {IMarketRegistryCreditLines} from "../../src/policy/market-registry/IMarketRegistryCreditLines.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -80,7 +79,7 @@ contract MaintenanceGasTest is RealStackFlows, GasCalibration {
         assertEq(coll.getPending(vt).units, kept, "the kept units moved to pending");
         _nextBlock();
         uint256 reserve = registry.settlementReserve(mA);
-        uint256 used = _txGas(anyone, lpVaultSwap, abi.encodeCall(ILPVaultSwapLiquidation.settlePending, (mA, reserve)));
+        uint256 used = _txGas(anyone, lpVaultSwap, abi.encodeCall(ILPVaultSwap.settlePending, (mA, reserve)));
         assertEq(coll.getPending(vt).units, 0, "pending cleared");
         vm.snapshotValue("Maintenance", "settlePending_1market", used);
         emit log_named_uint("settlePending (one market, two-token unwind and one swap)", used);
@@ -100,7 +99,7 @@ contract MaintenanceGasTest is RealStackFlows, GasCalibration {
         assertEq(_debtOf(proxy, ghoReserveId), 0, "debt repaid");
         assertFalse(coll.getMarketDebtFree(vt), "the mark was kept");
         _nextBlock();
-        uint256 used = _txGas(anyone, adapter, abi.encodeCall(IAaveAdapterUser.refreshDebtMark, (proxy)));
+        uint256 used = _txGas(anyone, adapter, abi.encodeCall(IAaveAdapter.refreshDebtMark, (proxy)));
         assertTrue(coll.getMarketDebtFree(vt), "the refresh cleared it");
         vm.snapshotValue("Maintenance", "refreshDebtMark_clears", used);
         emit log_named_uint("refreshDebtMark (clears the mark)", used);
@@ -123,9 +122,7 @@ contract MaintenanceGasTest is RealStackFlows, GasCalibration {
         assertTrue(ok, "the Aave DAO raised the draw cap");
         _nextBlock();
         uint256 used = _txGas(
-            anyone,
-            address(registry),
-            abi.encodeCall(IMarketRegistryCreditLines.syncDrawCap, (aave.cdpSpoke, ghoReserveId))
+            anyone, address(registry), abi.encodeCall(IMarketRegistry.syncDrawCap, (aave.cdpSpoke, ghoReserveId))
         );
         vm.snapshotValue("Maintenance", "syncDrawCap_raise", used);
         emit log_named_uint("syncDrawCap (raised cap)", used);
@@ -145,7 +142,7 @@ contract MaintenanceGasTest is RealStackFlows, GasCalibration {
         LiquidationParams memory p = lens.previewLiquidation(proxy, ghoReserveId, block.timestamp + 120).params;
         uint256 snap = vm.snapshotState();
         _fundCaller(keeper, p);
-        uint256 direct = _txGas(keeper, lpVaultSwap, abi.encodeCall(ILPVaultSwapLiquidation.liquidate, (p)));
+        uint256 direct = _txGas(keeper, lpVaultSwap, abi.encodeCall(ILPVaultSwap.liquidate, (p)));
         uint256 debtAfter = _debtOf(proxy, ghoReserveId);
         vm.revertToStateAndDelete(snap);
         FlashLiquidationRequest memory q;

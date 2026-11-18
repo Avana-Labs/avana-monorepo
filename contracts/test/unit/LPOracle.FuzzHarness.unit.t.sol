@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {LPOracleEchidnaTarget, LPOracleProperties} from "../invariant/echidna/LPOracleProperties.sol";
 import {Test} from "forge-std/Test.sol";
 

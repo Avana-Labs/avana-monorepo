@@ -3,13 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
+import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {RiskModuleDriftLogic} from "../../src/policy/risk-module/RiskModuleDriftLogic.sol";
-import {RiskModuleImmutables} from "../../src/policy/risk-module/types/RiskModuleImmutables.sol";
+import {RiskModuleImmutables} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
+import {DriftReason} from "../../src/types/MarketTypes.sol";
 import {AaveV4Fixture} from "../utils/fixtures/AaveV4Fixture.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryLPVaultMock} from "../utils/mocks/MarketRegistryMocks.sol";

@@ -3,11 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {CloseAccountView} from "../../src/lens/lens/types/CloseAccountView.sol";
-import {DeleverageSizing} from "../../src/lens/lens/types/DeleverageSizing.sol";
-import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {CloseAccountView, DeleverageSizing, RecordView} from "../../src/lens/lens/types/LensTypes.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensSizingGatesUnitTest

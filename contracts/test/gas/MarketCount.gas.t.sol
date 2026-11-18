@@ -5,11 +5,10 @@ pragma solidity 0.8.28;
 
 import {ILensMarkets} from "../../src/lens/lens/ILensMarkets.sol";
 import {ILensRisk} from "../../src/lens/lens/ILensRisk.sol";
-import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
-import {IMarketRegistryListing} from "../../src/policy/market-registry/IMarketRegistryListing.sol";
-import {TokenDef} from "../../src/policy/market-registry/types/TokenDef.sol";
-import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterStoreAdmin.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {TokenDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
@@ -87,20 +86,18 @@ contract MarketCountGasTest is RealStackFlows, GasCalibration {
         // Alternate the margin so every re-check writes.
         margin = margin == 0 ? 1 : margin - 1;
         r.recheck = _txGas(
-            address(timelock), address(store), abi.encodeCall(IParameterStoreAdmin.setFeedAgreementMarginBps, (margin))
+            address(timelock), address(store), abi.encodeCall(IParameterStore.setFeedAgreementMarginBps, (margin))
         );
         TokenDef memory t = registry.getToken(address(usdc));
         r.priceSource = _txGas(
             address(timelock),
             address(registry),
             abi.encodeCall(
-                IMarketRegistryListing.setPriceSource, (address(usdc), t.primaryRoute, t.alternateRoute, t.standbyRoute)
+                IMarketRegistry.setPriceSource, (address(usdc), t.primaryRoute, t.alternateRoute, t.standbyRoute)
             )
         );
-        r.pokeConfig =
-            _txGas(keeper, address(riskModule), abi.encodeCall(IRiskModuleChecks.pokeConfig, (aave.cdpSpoke)));
-        r.drift =
-            _txGas(keeper, address(registry), abi.encodeCall(IMarketRegistryHubs.spokeSettingsDrift, (aave.cdpSpoke)));
+        r.pokeConfig = _txGas(keeper, address(riskModule), abi.encodeCall(IRiskModule.pokeConfig, (aave.cdpSpoke)));
+        r.drift = _txGas(keeper, address(registry), abi.encodeCall(IMarketRegistry.spokeSettingsDrift, (aave.cdpSpoke)));
         r.tailCoverage =
             _txGas(keeper, address(lens), abi.encodeCall(ILensRisk.getTailCoverage, (aave.hub, address(gho))));
         // One page of at most `PAGE` markets: an app pages the view, and a 200-market page is far past any RPC gas cap.

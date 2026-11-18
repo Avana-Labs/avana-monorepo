@@ -7,10 +7,13 @@ import {DexPathRoute} from "../../../src/liquidation/settlement-routes/DexPathRo
 import {ISettlementRoute} from "../../../src/liquidation/settlement-routes/ISettlementRoute.sol";
 import {PegModuleRoute} from "../../../src/liquidation/settlement-routes/PegModuleRoute.sol";
 import {WrapperThenDexRoute} from "../../../src/liquidation/settlement-routes/WrapperThenDexRoute.sol";
-import {DexHop, HopKind} from "../../../src/liquidation/settlement-routes/types/DexHop.sol";
-import {PegModuleStep} from "../../../src/liquidation/settlement-routes/types/PegModuleStep.sol";
-import {RouteConfig} from "../../../src/liquidation/settlement-routes/types/RouteConfig.sol";
-import {WrapperStep} from "../../../src/liquidation/settlement-routes/types/WrapperStep.sol";
+import {
+    DexHop,
+    HopKind,
+    PegModuleStep,
+    RouteConfig,
+    WrapperStep
+} from "../../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
 import {AvanaTest} from "../AvanaTest.sol";
 import {LockMember} from "../mocks/LockMember.sol";

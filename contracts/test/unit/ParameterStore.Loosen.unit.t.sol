@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
-import {DebtReserveParams} from "../../src/policy/parameter-store/types/DebtReserveParams.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
+import {DebtReserveParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 
 /// @notice Loosen setters: strictly looser, within bounds, one step, at most once per `normalDelay` per key.
@@ -28,7 +27,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         store.tightenHardHealthFloor(M, 1.1e18);
         bytes32 key = _key("hardHealthFloor", bytes32(M));
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.LoosenStepTooLarge.selector, key));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.LoosenStepTooLarge.selector, key));
         store.loosenHardHealthFloor(M, 1.0699e18);
         uint256 t = block.timestamp;
         _tl();
@@ -36,7 +35,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         assertEq(store.lastLoosenedAt(key), t);
         vm.warp(t + 3 days);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.LoosenTooSoon.selector, key, t + 432_000));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.LoosenTooSoon.selector, key, t + 432_000));
         store.loosenHardHealthFloor(M, 1.04e18);
         vm.warp(t + 432_000);
         _tl();
@@ -44,18 +43,18 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         vm.warp(block.timestamp + 432_000);
         // From 1.04 a value below 1.00 counts as 1.00 in the step: 0.04 > 0.03.
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.LoosenStepTooLarge.selector, key));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.LoosenStepTooLarge.selector, key));
         store.loosenHardHealthFloor(M, 0);
         _tl();
         store.loosenHardHealthFloor(M, 1.03e18);
         vm.warp(block.timestamp + 432_000);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterLoosened("hardHealthFloor", bytes32(M), 1.03e18, 0, address(timelock));
+        emit IParameterStoreBase.ParameterLoosened("hardHealthFloor", bytes32(M), 1.03e18, 0, address(timelock));
         store.loosenHardHealthFloor(M, 0.5e18);
         assertEq(store.hardHealthFloor(M), 0);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotLooser.selector);
+        vm.expectRevert(IParameterStoreBase.NotLooser.selector);
         store.loosenHardHealthFloor(M, 0);
     }
 
@@ -63,12 +62,12 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
     function test_TEST_225_slippageStep() public {
         bytes32 key = _key("slippageAllowanceBps", bytes32(M));
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.LoosenStepTooLarge.selector, key));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.LoosenStepTooLarge.selector, key));
         store.loosenSlippageAllowanceBps(M, 126);
         _tl();
         store.loosenSlippageAllowanceBps(M, 125);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotLooser.selector);
+        vm.expectRevert(IParameterStoreBase.NotLooser.selector);
         store.loosenSlippageAllowanceBps(M, 125);
         vm.warp(block.timestamp + 432_000);
         _tl();
@@ -80,7 +79,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
     function test_TEST_225_marketCapStepAndAddCap() public {
         bytes32 key = _key("marketUsdCap", bytes32(M));
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.LoosenStepTooLarge.selector, key));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.LoosenStepTooLarge.selector, key));
         store.loosenMarketUsdCap(M, 7_500_000e8 + 1);
         // Registered: activation checks the Hub addCap, so a small addCap does not block the write.
         hub.setAddCap(1);
@@ -92,7 +91,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         // Active: (7.6M + 0.5M) / $1.00 = 8.1M whole tokens needed.
         hub.setAddCap(8_099_999);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.AddCapTooSmall.selector);
+        vm.expectRevert(IParameterStoreBase.AddCapTooSmall.selector);
         store.loosenMarketUsdCap(M, 7_600_000e8);
         hub.setAddCap(8_100_000);
         _tl();
@@ -106,7 +105,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         collateralization.setUsed(9_000_000e8, 0);
         hub.setAddCap(9_400_000);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.AddCapTooSmall.selector);
+        vm.expectRevert(IParameterStoreBase.AddCapTooSmall.selector);
         store.loosenMarketUsdCap(M, 6_000_000e8);
         hub.setAddCap(9_500_000);
         _tl();
@@ -124,13 +123,13 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         // base = max(0, ⌊5,000,000 / 10⌋) = 500,000; 1.5 × base = 750,000.
         bytes32 key = _key("topUpSliceUsd", bytes32(M));
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.LoosenStepTooLarge.selector, key));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.LoosenStepTooLarge.selector, key));
         store.loosenTopUpSliceUsd(M, 750_000e8 + 1);
         _tl();
         store.loosenTopUpSliceUsd(M, 750_000e8);
         vm.warp(block.timestamp + 432_000);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenTopUpSliceUsd(M, 5_000_000e8 + 1);
     }
 
@@ -145,7 +144,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         _tl();
         vm.expectRevert(
             abi.encodeWithSelector(
-                IParameterStoreErrors.LoosenTooSoon.selector,
+                IParameterStoreBase.LoosenTooSoon.selector,
                 _key("tokenUsdCap", keccak256(abi.encode(h, usdc))),
                 block.timestamp + 432_000
             )
@@ -153,7 +152,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         store.loosenTokenUsdCap(h, usdc, 31_000_000e8);
         // A pair with no cap cannot be loosened into existence, not even to the $1,000 reopen base (REQ-PSTORE-026).
         bytes memory noCap = abi.encodeWithSelector(
-            IParameterStoreErrors.LoosenStepTooLarge.selector, _key("tokenUsdCap", keccak256(abi.encode(h, usdt)))
+            IParameterStoreBase.LoosenStepTooLarge.selector, _key("tokenUsdCap", keccak256(abi.encode(h, usdt)))
         );
         _tl();
         vm.expectRevert(noCap);
@@ -166,10 +165,10 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         store.setInitialTokenCap(h, usdt, 12_000_000e8);
         assertEq(store.tokenUsdCap(h, usdt), 12_000_000e8, "the listing's cap");
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotInListing.selector);
+        vm.expectRevert(IParameterStoreBase.NotInListing.selector);
         store.setInitialTokenCap(h, usdt, 20_000_000e8);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenTokenUsdCap(h, usdc, uint256(type(uint128).max) + 1);
     }
 
@@ -181,7 +180,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         _tl();
         store.tightenPoolShareMaxBps(5000);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenPoolShareMaxBpsOf(M, 5001);
         _tl();
         store.loosenPoolShareMaxBpsOf(M, 5000);
@@ -189,7 +188,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         _tl();
         store.loosenPoolShareMaxBps(10_000);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenPoolShareMaxBps(10_001);
     }
 
@@ -197,30 +196,30 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
     function test_TEST_225_breakerShortfallStressPledge() public {
         address h = address(hub);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenBreakerDeficitMax(h, gho, 100_000e18 + 1);
         _tl();
         store.loosenBreakerDeficitMax(h, gho, 100_000e18);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownDebtReserve.selector, address(0), 0));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownDebtReserve.selector, address(0), 0));
         store.loosenBreakerDeficitMax(h, usdc, 1);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownHub.selector, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownHub.selector, address(0)));
         store.loosenBreakerDeficitMax(address(0), gho, 1);
         _tl();
         store.loosenGateRecoverySeconds(600);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenGateRecoverySeconds(300);
         _tl();
         store.loosenMaxShortfallBps(5000);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenMaxShortfallBps(5001);
         _tl();
         store.tightenDebtStressRiseBps(usdc, 500);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenDebtStressRiseBps(usdc, 99);
         _tl();
         store.loosenDebtStressRiseBps(usdc, 100);
@@ -228,7 +227,7 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         store.loosenMinPledgeUsd(M, 0);
         assertEq(store.minPledgeUsd(M), 0);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotLooser.selector);
+        vm.expectRevert(IParameterStoreBase.NotLooser.selector);
         store.loosenMinPledgeUsd(M, 0);
     }
 
@@ -237,21 +236,21 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         _tl();
         store.setDebtAssetParams(gho, DebtReserveParams(5e17));
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenFloorRoundingAllowance(gho, 1e18 + 1);
         _tl();
         store.loosenFloorRoundingAllowance(gho, 1e18);
         // A price source above $1 lowers the bound; a failed read refuses any raise.
         ghoPrice.setAnswer(2e8);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setDebtAssetParams(gho, DebtReserveParams(5e17 + 1));
         ghoPrice.setAnswer(0);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setDebtAssetParams(gho, DebtReserveParams(1));
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.TokenNotListed.selector, usdc));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.TokenNotListed.selector, usdc));
         store.setDebtAssetParams(usdc, DebtReserveParams(1));
     }
 

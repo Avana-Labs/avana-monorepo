@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PositionFeesView} from "../../src/lens/lens/types/PositionFeesView.sol";
+import {PositionFeesView} from "../../src/lens/lens/types/LensTypes.sol";
 import {LensFeesV3Fixture} from "../utils/fixtures/LensFeesFixture.sol";
 
 /// @title LensFeesEdgesUnitTest

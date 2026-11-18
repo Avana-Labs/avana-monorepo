@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {MarketRegistrySafetyLogic} from "../../src/policy/market-registry/MarketRegistrySafetyLogic.sol";
-import {MarketRegistryImmutables} from "../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
+import {MarketRegistryImmutables} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 
 /// @title MarketRegistrySafetyLogicHarness
 /// @notice Verification harness for MarketRegistry.conf: the unchanged MarketRegistrySafetyLogic plus one view that

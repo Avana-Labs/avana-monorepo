@@ -4,11 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILock} from "../../src/lock/lock/ILock.sol";
-import {IAaveAdapterCollateral} from "../../src/policy/aave-adapter/IAaveAdapterCollateral.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IAaveAdapterSettlement} from "../../src/policy/aave-adapter/IAaveAdapterSettlement.sol";
-import {IAaveAdapterUser} from "../../src/policy/aave-adapter/IAaveAdapterUser.sol";
-import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {RepayWithCollateralParams} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {LPVaultSwapMock} from "../utils/mocks/LPVaultSwapMock.sol";
 
@@ -54,7 +52,7 @@ contract AaveAdapterCallbacksFuzzTest is AaveAdapterFixture {
         swap.setMode(LPVaultSwapMock.Mode.CustomRelease);
         swap.setCustomRelease(proxy, integrationId, key, units, mins);
         RepayWithCollateralParams memory params = _rwc(MARKET_ID, k1, RELEASE, debtReserveId);
-        if (which != 0) vm.expectRevert(IAaveAdapterErrors.NoDeleverageSession.selector);
+        if (which != 0) vm.expectRevert(IAaveAdapterBase.NoDeleverageSession.selector);
         vm.prank(alice);
         adapterC.repayWithCollateral(params);
         assertEq(_sharesOf(p, vtReserveId), which == 0 ? UNITS - RELEASE : UNITS, "units released only on a match");
@@ -85,10 +83,10 @@ contract AaveAdapterCallbacksFuzzTest is AaveAdapterFixture {
         uint256 units
     ) public {
         vm.assume(caller != address(swap));
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         vm.prank(caller);
-        IAaveAdapterSettlement(adapter).burnSeized(marketId, vt, units);
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        IAaveAdapter(adapter).burnSeized(marketId, vt, units);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         swap.burnWithoutLock(marketId, vt, units);
     }
 
@@ -104,9 +102,9 @@ contract AaveAdapterCallbacksFuzzTest is AaveAdapterFixture {
         uint256 seized = swap.seizeAndKeep(aave.cdpSpoke, vt, vtReserveId, debtReserveId, p, 1000e18);
         units = bound(units, 0, seized);
         if (marketId != MARKET_ID) {
-            vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnknownMarket.selector, marketId));
+            vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnknownMarket.selector, marketId));
         } else if (units == 0) {
-            vm.expectRevert(IAaveAdapterErrors.ZeroAmount.selector);
+            vm.expectRevert(IAaveAdapterBase.ZeroAmount.selector);
         }
         swap.burnUnderLock(marketId, vt, units);
         bool burned = marketId == MARKET_ID && units != 0;
@@ -124,16 +122,16 @@ contract AaveAdapterCallbacksFuzzTest is AaveAdapterFixture {
     ) public {
         vm.assume(caller != address(swap));
         vm.mockCall(address(lock), abi.encodeCall(ILock.holder, ()), abi.encode(adapter));
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         vm.prank(caller);
-        IAaveAdapterSettlement(adapter).deleverageRepay(proxy, reserveId, amount);
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        IAaveAdapter(adapter).deleverageRepay(proxy, reserveId, amount);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         vm.prank(caller);
-        IAaveAdapterSettlement(adapter).deleverageRelease(proxy, _ref(k1), RELEASE, _mins());
+        IAaveAdapter(adapter).deleverageRelease(proxy, _ref(k1), RELEASE, _mins());
         // LPVaultSwap itself, with no session open, is refused by the session check.
-        vm.expectRevert(IAaveAdapterErrors.NoDeleverageSession.selector);
+        vm.expectRevert(IAaveAdapterBase.NoDeleverageSession.selector);
         vm.prank(address(swap));
-        IAaveAdapterSettlement(adapter).deleverageRepay(proxy, reserveId, amount);
+        IAaveAdapter(adapter).deleverageRepay(proxy, reserveId, amount);
     }
 
     // TEST-031 verifies: REQ-ADAPTER-002, REQ-PROXY-025
@@ -141,51 +139,49 @@ contract AaveAdapterCallbacksFuzzTest is AaveAdapterFixture {
     /// @notice The selectors the app and LPVaultSwap call are those of their written signatures: a change of any
     /// signature changes the selector this test pins.
     function test_TEST_031_entryPointSelectorsPinned() public pure {
+        assertEq(IAaveAdapter.pledge.selector, bytes4(keccak256("pledge(uint256,(uint32,bytes32),uint256)")), "pledge");
         assertEq(
-            IAaveAdapterUser.pledge.selector, bytes4(keccak256("pledge(uint256,(uint32,bytes32),uint256)")), "pledge"
-        );
-        assertEq(
-            IAaveAdapterUser.borrow.selector,
+            IAaveAdapter.borrow.selector,
             bytes4(keccak256("borrow(uint256,uint256,uint256,address,uint256,uint256,uint256)")),
             "borrow"
         );
         assertEq(
-            IAaveAdapterUser.repay.selector,
+            IAaveAdapter.repay.selector,
             bytes4(keccak256("repay(address,uint256,uint256,uint256,bool,uint256)")),
             "repay"
         );
         assertEq(
-            IAaveAdapterUser.withdraw.selector,
+            IAaveAdapter.withdraw.selector,
             bytes4(keccak256("withdraw(uint256,(uint32,bytes32),uint256,uint256,uint256)")),
             "withdraw"
         );
         assertEq(
-            IAaveAdapterUser.repayAllAndWithdraw.selector,
+            IAaveAdapter.repayAllAndWithdraw.selector,
             bytes4(keccak256("repayAllAndWithdraw(uint256,(uint32,bytes32),uint256,uint256[],uint256[],uint256)")),
             "repayAllAndWithdraw"
         );
         assertEq(
-            IAaveAdapterUser.collectFees.selector,
+            IAaveAdapter.collectFees.selector,
             bytes4(keccak256("collectFees(uint256,(uint32,bytes32),uint256)")),
             "collectFees"
         );
         assertEq(
-            IAaveAdapterUser.releaseZeroCredit.selector,
+            IAaveAdapter.releaseZeroCredit.selector,
             bytes4(keccak256("releaseZeroCredit(uint256,(uint32,bytes32),uint256)")),
             "releaseZeroCredit"
         );
         assertEq(
-            IAaveAdapterCollateral.removeLiquidity.selector,
+            IAaveAdapter.removeLiquidity.selector,
             bytes4(keccak256("removeLiquidity(uint256,(uint32,bytes32),uint128,uint256[],uint256,uint256)")),
             "removeLiquidity"
         );
         assertEq(
-            IAaveAdapterCollateral.recredit.selector,
+            IAaveAdapter.recredit.selector,
             bytes4(keccak256("recredit(uint256,(uint32,bytes32),bytes,uint256)")),
             "recredit"
         );
         assertEq(
-            IAaveAdapterCollateral.repayWithCollateral.selector,
+            IAaveAdapter.repayWithCollateral.selector,
             bytes4(
                 keccak256(
                     "repayWithCollateral((uint256,(uint32,bytes32),uint128,uint256,uint256[],uint256,uint256,uint256,uint256))"
@@ -194,17 +190,15 @@ contract AaveAdapterCallbacksFuzzTest is AaveAdapterFixture {
             "repayWithCollateral"
         );
         assertEq(
-            IAaveAdapterSettlement.burnSeized.selector,
-            bytes4(keccak256("burnSeized(uint256,address,uint256)")),
-            "burnSeized"
+            IAaveAdapter.burnSeized.selector, bytes4(keccak256("burnSeized(uint256,address,uint256)")), "burnSeized"
         );
         assertEq(
-            IAaveAdapterSettlement.deleverageRepay.selector,
+            IAaveAdapter.deleverageRepay.selector,
             bytes4(keccak256("deleverageRepay(address,uint256,uint256)")),
             "deleverageRepay"
         );
         assertEq(
-            IAaveAdapterSettlement.deleverageRelease.selector,
+            IAaveAdapter.deleverageRelease.selector,
             bytes4(keccak256("deleverageRelease(address,(uint32,bytes32),uint128,uint256[])")),
             "deleverageRelease"
         );

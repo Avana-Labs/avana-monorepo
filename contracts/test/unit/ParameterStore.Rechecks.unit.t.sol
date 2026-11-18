@@ -3,11 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
-import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
-import {Market} from "../../src/types/Market.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
+import {FeedDef} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -44,7 +43,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         // A standby feed of 120 bps would need max(50, 145, 145) + 50 = 195 once a guardian puts it in either slot:
         // the change is refused although the standby is not in force, so no switch can leave USDC below its bound.
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setFeed(address(fStandby), _withDeviation(120, 25));
         _tl();
         store.setFeedAgreementToleranceBps(usdc, 195);
@@ -54,7 +53,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         // With the standby in place of the primary, the short-delay setters still run.
         registry.setActiveRoutes(usdc, _one(address(fStandby)), _one(address(fUsdcAlt)));
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.tightenFeedAgreementToleranceBps(usdc, 194);
         _tl();
         store.tightenBorrowPriceMaxAge(address(fStandby), 80_000);
@@ -79,11 +78,11 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         store.tightenConsistencyToleranceBps(M, 40);
         // A tolerance tightening below the bound is refused: the lower value is its own doing.
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.tightenFeedAgreementToleranceBps(usdc, 140);
         // A structural feed change keeps the full check.
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setFeed(address(fUsdc), _feedDef(86_400, 1800));
     }
 
@@ -92,15 +91,13 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         // checkConfig fails check 8 below a tolerance of 145: lowering 150 to 140 breaks it.
         lpOracle.setFloors(0, 145, 0);
         _tl();
-        vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(lpOracle), 8)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 8));
         store.tightenFeedAgreementToleranceBps(usdc, 140);
         // checkConfig fails check 16 below a borrow age of 80,000 s: lowering 88,200 to 70,000 breaks it.
         lpOracle.setFloors(0, 0, 80_000);
         _tl();
         vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(lpOracle), 16)
+            abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 16)
         );
         store.tightenBorrowPriceMaxAge(address(fUsdc), 70_000);
         // Check 4 failing before and after is not the tightenings' doing.
@@ -114,9 +111,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         assertEq(store.borrowPriceMaxAge(address(fUsdc)), 70_000);
         // The structural setters keep the full check.
         _tl();
-        vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(lpOracle), 4)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 4));
         store.setFeedAgreementToleranceBps(usdc, 150);
     }
 
@@ -127,7 +122,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         store.setFeed(address(fUsdcAlt), _withDeviation(25, 6875));
         // USDT at 7,800: CF_LP = ⌊7,800 × 4,000 / 10⁴⌋ = 3,120, margin 6,880 ≤ 6,900: refused.
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setTokenCollateralFactorBps(usdt, 7800);
         // 7,600: CF_LP 3,040, margin 6,960 > 6,900: accepted.
         _tl();
@@ -146,7 +141,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         _tl();
         store.setFeedAgreementToleranceBps(usdc, 150);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setFeed(address(fStandby), _withDeviation(25, 6975));
         _tl();
         store.setFeed(address(fStandby), _withDeviation(25, 6974));
@@ -187,7 +182,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         d.maxAnswerCap = 1e12;
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.FeedConfigured(
+        emit IParameterStoreBase.FeedConfigured(
             address(sentinel), 8, 1e6, 1e12, 86_400, 1800, 88_200, 25, 25, 88_200, 88_200
         );
         store.setFeed(address(sentinel), d);
@@ -202,7 +197,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         d.maxAnswerCap = 1e6;
         _tl();
         vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.InvalidFeed.selector, address(sentinel), bytes32("maxAnswer"))
+            abi.encodeWithSelector(IParameterStoreBase.InvalidFeed.selector, address(sentinel), bytes32("maxAnswer"))
         );
         store.setFeed(address(sentinel), d);
     }
@@ -211,7 +206,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
     function test_TEST_064_breakerTighteningNeedsARecordedHub() public {
         address stranger = makeAddr("strangerHub");
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownHub.selector, stranger));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownHub.selector, stranger));
         store.tightenBreakerDeficitMax(stranger, gho, 1);
     }
 
@@ -224,16 +219,14 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         uint256 tightened = 0;
         for (uint256 i = 0; i < logs.length; ++i) {
-            assertTrue(
-                logs[i].topics[0] != IParameterStoreEvents.CapLoosened.selector, "a lowering emitted CapLoosened"
-            );
-            if (logs[i].topics[0] == IParameterStoreEvents.CapTightened.selector) ++tightened;
+            assertTrue(logs[i].topics[0] != IParameterStoreBase.CapLoosened.selector, "a lowering emitted CapLoosened");
+            if (logs[i].topics[0] == IParameterStoreBase.CapTightened.selector) ++tightened;
         }
         // Only the cap moved (the slice is unchanged).
         assertEq(tightened, 1);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.CapLoosened("marketUsdCap", bytes32(M), 4_000_000e8, 6_000_000e8, address(timelock));
+        emit IParameterStoreBase.CapLoosened("marketUsdCap", bytes32(M), 4_000_000e8, 6_000_000e8, address(timelock));
         store.setInitialMarketCaps(M, 6_000_000e8, 500_000e8, 1e8);
     }
 
@@ -283,7 +276,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         store.setTokenCollateralFactorBps(usdt, 7800);
         // Back to 4,000: CF_LP 3,120, margin 6,880 ≤ 6,900.
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setPoolRiskFactor(M, 4000);
         _tl();
         store.setPoolRiskFactor(M, 3900); // CF_LP 3,042, margin 6,958 > 6,900
@@ -310,7 +303,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         m.lpOracle = makeAddr("lpOracle2");
         registry.setMarket(2, m);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setInitialMarketParams(2, _defaultMarketParams());
     }
 
@@ -318,9 +311,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
     function test_TEST_250_structuralSetterKeepsTheFullCheck() public {
         lpOracle.setFailed(4);
         _tl();
-        vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(lpOracle), 4)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 4));
         store.setConsistencyToleranceBps(M, 60);
     }
 
@@ -331,7 +322,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         collateralization.setUsed(0, 900_000e8);
         hub.setAddCap(5_899_999);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.AddCapTooSmall.selector);
+        vm.expectRevert(IParameterStoreBase.AddCapTooSmall.selector);
         store.loosenTopUpSliceUsd(M, 600_000e8);
         hub.setAddCap(5_900_000);
         _tl();

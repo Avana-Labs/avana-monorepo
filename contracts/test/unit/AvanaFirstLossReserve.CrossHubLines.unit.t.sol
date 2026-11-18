@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {AvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
-import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {RiskTier} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {AaveV4Fixture} from "../utils/fixtures/AaveV4Fixture.sol";
 import {
     CollHubSpokeConfig,
@@ -77,15 +77,13 @@ contract AvanaFirstLossReserveCrossHubLinesUnitTest is MarketRegistryFixture, Aa
     function test_TEST_273_crossHubLinesBoundedByTheRealReserve() public {
         assertEq(reserve.fundedBalance(), 250_000e6, "the funding Hub's USDC reserve");
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.CrossHubCapExceeded.selector, 300_000e6, 250_000e6));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.CrossHubCapExceeded.selector, 300_000e6, 250_000e6));
         registry.setCrossHubLine(aave.hub, address(usdx), address(spoke), 300_000e6);
 
         _line(250_000e6);
         assertEq(registry.crossHubLineTotal(aave.hub, address(usdx)), 250_000e6, "accepted at the funded balance");
         vm.prank(address(timelock));
-        vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryHubs.CrossHubCapExceeded.selector, 250_000e6 + 1, 250_000e6)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.CrossHubCapExceeded.selector, 250_000e6 + 1, 250_000e6));
         registry.setCrossHubLine(aave.hub, address(usdx), address(spoke), 250_000e6 + 1);
 
         _fund(50_000e6);

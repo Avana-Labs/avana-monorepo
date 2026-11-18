@@ -6,8 +6,10 @@ pragma solidity 0.8.28;
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {ILPVaultSwapLogic} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapLogic.sol";
 import {LPVaultSwap} from "../../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
-import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
-import {LPVaultSwapLogics} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapLogics.sol";
+import {
+    LPVaultSwapImmutables,
+    LPVaultSwapLogics
+} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {
     LPVaultSwapSettlementHarness,
     LVSHarnessRegistry,

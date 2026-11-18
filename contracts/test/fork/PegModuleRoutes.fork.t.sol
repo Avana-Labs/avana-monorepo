@@ -8,8 +8,11 @@ import {ILitePsm} from "../../src/interfaces/external/sky/ILitePsm.sol";
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
 import {PegModuleRoute} from "../../src/liquidation/settlement-routes/PegModuleRoute.sol";
 import {RouteMath} from "../../src/liquidation/settlement-routes/RouteMath.sol";
-import {PegModuleKind, PegModuleStep} from "../../src/liquidation/settlement-routes/types/PegModuleStep.sol";
-import {RouteConfig} from "../../src/liquidation/settlement-routes/types/RouteConfig.sol";
+import {
+    PegModuleKind,
+    PegModuleStep,
+    RouteConfig
+} from "../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {ForkConstants} from "../utils/fixtures/ForkConstants.sol";

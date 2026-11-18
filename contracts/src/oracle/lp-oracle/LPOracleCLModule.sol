@@ -3,19 +3,16 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegrationHooks} from "../../amm/IAmmIntegrationHooks.sol";
 import {IClIntegration} from "../../amm/IClIntegration.sol";
 import {ClPriceMath} from "../../amm/concentrated-liquidity/ClPriceMath.sol";
-import {ClUnitMath} from "../../amm/concentrated-liquidity/ClUnitMath.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.sol";
-import {IMarketRegistryViews} from "../../policy/market-registry/IMarketRegistryViews.sol";
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {SecondSource} from "../../types/SecondSource.sol";
-import {SecondSourceKind} from "../../types/SecondSourceKind.sol";
+import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
+import {OracleConfig, SecondSource, SecondSourceKind} from "../../types/OracleTypes.sol";
 import {LPOracleCLPool} from "./LPOracleCLPool.sol";
 import {LPOracleCalls} from "./LPOracleCalls.sol";
+import {ClPriceStateView} from "./LPOracleTypes.sol";
 import {LPPriceMath} from "./LPPriceMath.sol";
-import {ClPriceStateView} from "./types/ClPriceStateView.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LPOracleCLModule
@@ -50,7 +47,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
         if (market.length != 128 || tokens.length != 2) return false;
         (address pool, int24 lower, int24 upper, bool shaped) = _decodeMarket(market);
         uint256 unitExp = uint256(bytes32(market[96:128]));
-        if (!shaped || unitExp > ClUnitMath.MAX_UNIT_EXP || pool.code.length == 0) return false;
+        if (!shaped || unitExp > ClPriceMath.MAX_UNIT_EXP || pool.code.length == 0) return false;
         uint8[] storage decs = _s().tokenDecimals;
         if (decs[0] > CL_MAX_TOKEN_DECIMALS || decs[1] > CL_MAX_TOKEN_DECIMALS) return false;
         (bool ok0, address t0) = _poolAddress(pool, abi.encodeCall(IUniswapV3Pool.token0, ()), CONFIG_CALL_GAS);
@@ -204,7 +201,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
     function _noRateTokens() internal view returns (bool) {
         Layout storage $ = _s();
         (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
-            $.integration, CONFIG_CALL_GAS, abi.encodeCall(IAmmIntegrationHooks.rateProviders, ($.marketId)), 4 * 32 + 1
+            $.integration, CONFIG_CALL_GAS, abi.encodeCall(ILPVault.rateProviders, ($.marketId)), 4 * 32 + 1
         );
         if (!ok) return !_bound();
         return ret.length == 4 * 32 && _wordIs(ret, 0, 32) && _wordIs(ret, 32, 2) && _wordIs(ret, 64, 0)
@@ -223,10 +220,7 @@ abstract contract LPOracleCLModule is LPOracleCLPool {
     /// @dev Whether the MarketRegistry has registered this feed, or the read fails.
     function _bound() internal view returns (bool) {
         (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
-            _s().marketRegistry,
-            CONFIG_CALL_GAS,
-            abi.encodeCall(IMarketRegistryViews.marketOfLpOracle, (address(this))),
-            32
+            _s().marketRegistry, CONFIG_CALL_GAS, abi.encodeCall(IMarketRegistry.marketOfLpOracle, (address(this))), 32
         );
         (bool okW, uint256 id) = LPOracleCalls.wordAt(ret, 0);
         return !ok || !okW || id != 0;

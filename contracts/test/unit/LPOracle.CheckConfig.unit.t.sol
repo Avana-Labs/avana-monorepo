@@ -4,10 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {Market} from "../../src/types/Market.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
+import {OracleConfig, SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 
 /// @notice `checkConfig`: the on-chain listing and configuration checks (2.10 `REQ-ORACLE-046` to `REQ-ORACLE-056`).

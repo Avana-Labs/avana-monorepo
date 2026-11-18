@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.sol";
-import {PriceState} from "../../types/PriceState.sol";
+import {PriceState} from "../../types/OracleTypes.sol";
 import {IDebtOracleErrors} from "./IDebtOracleErrors.sol";
 import {IDebtOracleEvents} from "./IDebtOracleEvents.sol";
 import {DebtOracleInitParams} from "./types/DebtOracleInitParams.sol";

@@ -4,13 +4,12 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {Market} from "../../src/types/Market.sol";
-import {SettlementReport} from "../../src/types/SettlementReport.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
+import {SettlementReport} from "../../src/types/PositionTypes.sol";
 import {AccessTrace} from "../utils/AccessTrace.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 import {Vm, VmSafe} from "forge-std/Vm.sol";
@@ -124,7 +123,7 @@ contract LPVaultSwapLivenessUnitTest is LPVaultSwapUnitBase {
             .updateMaxLiquidationBonus(aave.cdpSpoke, vtReserveId, 0, 10_000);
         uint256 bonus = IAaveV4Spoke(aave.cdpSpoke).getLiquidationBonus(vtReserveId, proxy, _hf(proxy));
         assertEq(bonus, BPS, "no bonus");
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.RecoveryBelowFloor.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.RecoveryBelowFloor.selector));
         LiquidationParams memory p = _params(proxy, 1950e6);
         p.maxShortfall = 50e6;
         vm.recordLogs();

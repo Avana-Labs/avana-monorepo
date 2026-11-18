@@ -6,10 +6,9 @@ pragma solidity 0.8.28;
 import {LPOracleCL} from "./LPOracleCL.sol";
 import {LPOracleCLModule} from "./LPOracleCLModule.sol";
 import {LPOracleStorage} from "./LPOracleStorage.sol";
+import {ClPriceStateView, LPOracleLogicSet} from "./LPOracleTypes.sol";
 import {LPOracleV4Module} from "./LPOracleV4Module.sol";
 import {LPOracleV4ModuleLogic} from "./LPOracleV4ModuleLogic.sol";
-import {ClPriceStateView} from "./types/ClPriceStateView.sol";
-import {LPOracleLogicSet} from "./types/LPOracleLogicSet.sol";
 
 /// @title LPOracleV4
 /// @notice LPOracle implementation for the Uniswap v4 markets on one chain.

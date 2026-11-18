@@ -9,20 +9,18 @@ import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {DebtPriceView} from "../../oracle/debt-oracle/types/DebtPriceView.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {PriceAge} from "../../oracle/lp-oracle/PriceAge.sol";
+import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
-import {DebtReserveDef} from "../../policy/market-registry/types/DebtReserveDef.sol";
+import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
-import {Market} from "../../types/Market.sol";
-import {PriceState} from "../../types/PriceState.sol";
-import {PriceStateView} from "../../types/PriceStateView.sol";
-import {TokenPriceView} from "../../types/TokenPriceView.sol";
+import {Market} from "../../types/MarketTypes.sol";
+import {PriceState, PriceStateView, TokenPriceView} from "../../types/OracleTypes.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IPayoutEscrow} from "../payout-escrow/IPayoutEscrow.sol";
 import {ISettlementRoute} from "../settlement-routes/ISettlementRoute.sol";
 import {LPVaultSwapStorage} from "./LPVaultSwapStorage.sol";
 import {SettlementMath} from "./SettlementMath.sol";
-import {RouteMode} from "./types/RouteMode.sol";
+import {RouteMode} from "./types/LPVaultSwapTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -132,7 +130,7 @@ abstract contract LPVaultSwapSettlement is LPVaultSwapStorage {
         uint64 updatedAt
     ) private view returns (bool) {
         if (feed == address(0)) return false;
-        return !PriceAge.liquidationFresh(updatedAt, IParameterStore(_PARAMETER_STORE).liquidationPriceMaxAge(feed));
+        return !LPPriceMath.liquidationFresh(updatedAt, IParameterStore(_PARAMETER_STORE).liquidationPriceMaxAge(feed));
     }
 
     /// @dev The smaller of the AaveOracle price of the collateral reserve and the LPOracle's served price.

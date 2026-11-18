@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
-import {PledgeCharge} from "../../src/policy/risk-module/types/PledgeCharge.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
+import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 import {CollOracleMock, CollRiskModuleMock} from "../utils/mocks/CollateralizationMocks.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -81,7 +81,7 @@ contract CollateralizationPledgeChargeUnitTest is CollateralizationFixture {
         lock.acquire();
         vm.stopPrank();
         vm.prank(address(riskModule));
-        vm.expectRevert(ICollateralizationErrors.Locked.selector);
+        vm.expectRevert(ICollateralizationBase.Locked.selector);
         coll.getCounters(vt, alice);
 
         vm.expectCall(
@@ -111,7 +111,7 @@ contract CollateralizationPledgeChargeUnitTest is CollateralizationFixture {
             riskModule.setOverride(bad[i]);
             vm.startPrank(adapter);
             lock.acquire();
-            vm.expectRevert(ICollateralizationErrors.InvalidCharge.selector);
+            vm.expectRevert(ICollateralizationBase.InvalidCharge.selector);
             coll.pledge(alice, aliceProxy, vt, key, false);
             lock.release();
             vm.stopPrank();
@@ -150,7 +150,7 @@ contract CollateralizationPledgeChargeUnitTest is CollateralizationFixture {
         coll.pledge(alice, aliceProxy, vt, KEY42, false);
         assertEq(coll.recordIdOf(INTEGRATION, KEY42), 0, "liquidity 0 refused");
         lpVault.mintPosition(KEY42, alice, MARKET_ID, uint128(type(uint120).max) + 1);
-        vm.expectRevert(ICollateralizationErrors.LiquidityAboveBound.selector);
+        vm.expectRevert(ICollateralizationBase.LiquidityAboveBound.selector);
         coll.pledge(alice, aliceProxy, vt, KEY42, false);
         riskModule.setOverride(PledgeCharge({usdCharge: type(uint64).max, sliceUsd: 0, rescue: false, rescueUnits: 0}));
         lpVault.mintPosition(KEY42, alice, MARKET_ID, type(uint120).max);
@@ -169,12 +169,12 @@ contract CollateralizationPledgeChargeUnitTest is CollateralizationFixture {
         lpVault.setPoolLocked(true);
         vm.startPrank(adapter);
         lock.acquire();
-        vm.expectRevert(ILPVaultErrors.PoolLocked.selector);
+        vm.expectRevert(ILPVaultBase.PoolLocked.selector);
         coll.pledge(alice, aliceProxy, vt, KEY42, false);
         vm.stopPrank();
         _withdrawAndBurn(aliceProxy, 1_000_000_000);
         vm.prank(adapter);
-        vm.expectRevert(ILPVaultErrors.PoolLocked.selector);
+        vm.expectRevert(ILPVaultBase.PoolLocked.selector);
         coll.releasePartial(aliceProxy, vt, KEY7, 1_000_000_000, new uint256[](2));
         lpVault.setPoolLocked(false);
         vm.prank(adapter);

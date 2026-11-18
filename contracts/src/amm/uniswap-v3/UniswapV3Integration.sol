@@ -3,13 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {INonfungiblePositionManager} from "../../interfaces/external/uniswap/INonfungiblePositionManager.sol";
 import {IUniswapV3Factory} from "../../interfaces/external/uniswap/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.sol";
-import {IAmmIntegration} from "../IAmmIntegration.sol";
 import {ClLPVaultBase} from "../concentrated-liquidity/ClLPVaultBase.sol";
 import {ClNfpmLPVault} from "../concentrated-liquidity/ClNfpmLPVault.sol";
-import {ClMarketConfig} from "../types/ClMarketConfig.sol";
+import {ClMarketConfig} from "../types/AmmTypes.sol";
 import {IUniswapV3Integration} from "./IUniswapV3Integration.sol";
 
 /// @title UniswapV3Integration
@@ -69,7 +69,7 @@ contract UniswapV3Integration is ClNfpmLPVault, IUniswapV3Integration {
         return _FACTORY;
     }
 
-    /// @inheritdoc IAmmIntegration
+    /// @inheritdoc ILPVault
     function AMM_PROTOCOL() external pure override returns (bytes32) {
         return UNISWAP_V3;
     }

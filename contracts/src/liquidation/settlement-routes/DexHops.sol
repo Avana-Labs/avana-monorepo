@@ -11,10 +11,9 @@ import {ICurveStableSwapNGFactory} from "../../interfaces/external/curve/ICurveS
 import {IUniswapV3Factory} from "../../interfaces/external/uniswap/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.sol";
 import {ISettlementRoute} from "./ISettlementRoute.sol";
-import {RouteReads} from "./RouteReads.sol";
+import {RouteMath} from "./RouteMath.sol";
 import {SwapRouteBase} from "./SwapRouteBase.sol";
-import {DexHop, HopKind} from "./types/DexHop.sol";
-import {RouteConfig} from "./types/RouteConfig.sol";
+import {DexHop, HopKind, RouteConfig} from "./types/SettlementRouteTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
@@ -227,9 +226,9 @@ abstract contract DexHops is SwapRouteBase {
         if (hop.kind == HopKind.ConcentratedLiquidity) {
             if (hop.i != 0 || hop.j != 0) return (false, false);
             // The pool checks its balance after the callback, so a fee on the input would revert every hop.
-            if (RouteReads.hasFeeSwitch(input)) return (false, false);
-            (bool ok0, address token0) = RouteReads.addressOf(hop.pool, abi.encodeCall(IUniswapV3Pool.token0, ()));
-            (bool ok1, address token1) = RouteReads.addressOf(hop.pool, abi.encodeCall(IUniswapV3Pool.token1, ()));
+            if (RouteMath.hasFeeSwitch(input)) return (false, false);
+            (bool ok0, address token0) = RouteMath.addressOf(hop.pool, abi.encodeCall(IUniswapV3Pool.token0, ()));
+            (bool ok1, address token1) = RouteMath.addressOf(hop.pool, abi.encodeCall(IUniswapV3Pool.token1, ()));
             if (!ok0 || !ok1) return (false, false);
             zeroForOne = token0 == input;
             ok = (zeroForOne ? token1 == hop.tokenOut : (token1 == input && token0 == hop.tokenOut))
@@ -253,11 +252,11 @@ abstract contract DexHops is SwapRouteBase {
         uint256 i = SafeCast.toUint256(hop.i);
         uint256 j = SafeCast.toUint256(hop.j);
         // `coins(uint256)` has the same selector on StableSwap-NG and legacy pools.
-        (bool okIn, address coinIn) = RouteReads.addressOf(hop.pool, abi.encodeCall(ICurveStableSwapNG.coins, (i)));
-        (bool okOut, address coinOut) = RouteReads.addressOf(hop.pool, abi.encodeCall(ICurveStableSwapNG.coins, (j)));
+        (bool okIn, address coinIn) = RouteMath.addressOf(hop.pool, abi.encodeCall(ICurveStableSwapNG.coins, (i)));
+        (bool okOut, address coinOut) = RouteMath.addressOf(hop.pool, abi.encodeCall(ICurveStableSwapNG.coins, (j)));
         if (!okIn || !okOut || coinIn != input || coinOut != hop.tokenOut) return false;
         if (legacy) return true;
-        (bool okIdx, uint256[3] memory w) = RouteReads.words(
+        (bool okIdx, uint256[3] memory w) = RouteMath.words(
             config.curveFactory,
             abi.encodeCall(ICurveStableSwapNGFactory.get_coin_indices, (hop.pool, input, hop.tokenOut)),
             true
@@ -282,9 +281,9 @@ abstract contract DexHops is SwapRouteBase {
         address token1
     ) private view returns (bool) {
         if (config.uniswapV3Factory != address(0)) {
-            (bool okFee, uint256[3] memory fee) = RouteReads.words(pool, abi.encodeCall(IUniswapV3Pool.fee, ()), false);
+            (bool okFee, uint256[3] memory fee) = RouteMath.words(pool, abi.encodeCall(IUniswapV3Pool.fee, ()), false);
             if (okFee && fee[0] <= type(uint24).max) {
-                (bool okPool, address listed) = RouteReads.addressOf(
+                (bool okPool, address listed) = RouteMath.addressOf(
                     config.uniswapV3Factory,
                     abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, SafeCast.toUint24(fee[0])))
                 );
@@ -293,12 +292,12 @@ abstract contract DexHops is SwapRouteBase {
         }
         if (config.slipstreamFactory != address(0)) {
             (bool okSpacing, uint256[3] memory spacing) =
-                RouteReads.words(pool, abi.encodeCall(ICLPool.tickSpacing, ()), false);
+                RouteMath.words(pool, abi.encodeCall(ICLPool.tickSpacing, ()), false);
             // The word of an int24 return is sign-extended; reading it as int256 restores the value.
             // forge-lint: disable-next-line(unsafe-typecast)
             int256 s = int256(spacing[0]);
             if (okSpacing && s >= type(int24).min && s <= type(int24).max) {
-                (bool okPool, address listed) = RouteReads.addressOf(
+                (bool okPool, address listed) = RouteMath.addressOf(
                     config.slipstreamFactory, abi.encodeCall(ICLFactory.getPool, (token0, token1, SafeCast.toInt24(s)))
                 );
                 if (okPool && listed == pool) return true;

@@ -3,16 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
 import {IClIntegration} from "../../src/amm/IClIntegration.sol";
 import {IClPositionManager} from "../../src/amm/concentrated-liquidity/IClPositionManager.sol";
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
-import {GovernedTargets} from "../../src/governance/timelock/types/GovernedTargets.sol";
-import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {GovernedTargets, SelectorPair} from "../../src/governance/timelock/IAvanaTimelock.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {VaultTokenFactory} from "../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
@@ -93,7 +90,7 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         v.receivePosition(MKT_A, alice, other);
         assertEq(v.depositorOf(key), address(0), "still no entry for the pushed NFT");
         // The entry of a returned position is gone with it.
-        _cAs(c.adapter, abi.encodeCall(IAmmIntegration.returnPosition, (backed)));
+        _cAs(c.adapter, abi.encodeCall(ILPVault.returnPosition, (backed)));
         assertEq(v.depositorOf(backed), address(0), "no entry once the position left");
         assertEq(manager.ownerOf(_cTokenId(backed)), bob);
         // Only the canonical position manager may call the receiver hook.
@@ -175,16 +172,16 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         IClIntegration v = _cVault();
         (bytes32 key, uint128 units) = _cPledge(MKT_A, alice, 1e9);
         // Seized to zero units: still in custody, never a stray.
-        _cAs(c.lpVaultSwap, abi.encodeCall(IAmmIntegration.unwind, (key, units, _cZeros(), c.lpVaultSwap)));
+        _cAs(c.lpVaultSwap, abi.encodeCall(ILPVault.unwind, (key, units, _cZeros(), c.lpVaultSwap)));
         assertEq(v.unitsOf(key), 0);
         assertEq(v.depositorOf(key), alice);
         vm.prank(c.timelock);
         vm.expectRevert(NotStray.selector);
         v.returnStray(key, bob);
         // Returned, then sent back: a stray again, and returnable.
-        _cAs(c.adapter, abi.encodeCall(IAmmIntegration.returnPosition, (key)));
+        _cAs(c.adapter, abi.encodeCall(ILPVault.returnPosition, (key)));
         (bytes32 again,) = _cPledge(MKT_A, alice, 1e9);
-        _cAs(c.adapter, abi.encodeCall(IAmmIntegration.returnPosition, (again)));
+        _cAs(c.adapter, abi.encodeCall(ILPVault.returnPosition, (again)));
         vm.prank(alice);
         _cManager(again).transferFrom(alice, address(v), _cTokenId(again));
         vm.prank(c.timelock);
@@ -192,7 +189,7 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         // Pledged again before a second return executes: refused at execution.
         vm.prank(alice);
         _cManager(again).approve(address(v), _cTokenId(again));
-        _cAs(c.adapter, abi.encodeCall(IAmmIntegration.receivePosition, (MKT_A, alice, again)));
+        _cAs(c.adapter, abi.encodeCall(ILPVault.receivePosition, (MKT_A, alice, again)));
         vm.prank(c.timelock);
         vm.expectRevert(NotStray.selector);
         v.returnStray(again, bob);
@@ -305,7 +302,7 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         vm.expectCall(manager, abi.encodeWithSignature("burn(uint256)"), 0);
         vm.expectCall(manager, abi.encodeWithSignature("safeTransferFrom(address,address,uint256)"), 0);
         vm.expectCall(manager, abi.encodeWithSignature("safeTransferFrom(address,address,uint256,bytes)"), 0);
-        _cAs(c.adapter, abi.encodeCall(IAmmIntegration.receivePosition, (MKT_A, alice, key)));
+        _cAs(c.adapter, abi.encodeCall(ILPVault.receivePosition, (MKT_A, alice, key)));
         assertEq(IERC721(manager).getApproved(id), address(0), "the pre-pledge approval is cleared");
         _cManager(key).accrue(id, 3, 4);
         // Neither the previous owner nor its operator can move the NFT, its liquidity or its fees.
@@ -323,10 +320,10 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
             IClPositionManager(manager).collect(IClPositionManager.CollectParams(id, others[i], 1, 1));
         }
         uint128 units = v.unitsOf(key);
-        _cAs(c.adapter, abi.encodeCall(IAmmIntegration.collectFees, (key, alice)));
-        _cAs(c.adapter, abi.encodeCall(IAmmIntegration.releaseToDepositor, (key, units / 4, _cZeros())));
-        _cAs(c.lpVaultSwap, abi.encodeCall(IAmmIntegration.unwind, (key, units / 4, _cZeros(), c.lpVaultSwap)));
-        _cAs(c.adapter, abi.encodeCall(IAmmIntegration.returnPosition, (key)));
+        _cAs(c.adapter, abi.encodeCall(ILPVault.collectFees, (key, alice)));
+        _cAs(c.adapter, abi.encodeCall(ILPVault.releaseToDepositor, (key, units / 4, _cZeros())));
+        _cAs(c.lpVaultSwap, abi.encodeCall(ILPVault.unwind, (key, units / 4, _cZeros(), c.lpVaultSwap)));
+        _cAs(c.adapter, abi.encodeCall(ILPVault.returnPosition, (key)));
         assertEq(IERC721(manager).ownerOf(id), alice);
         (bool ok,) = address(v).call(abi.encodeWithSignature("isValidSignature(bytes32,bytes)", bytes32(0), ""));
         assertFalse(ok, "no ERC-1271");
@@ -378,11 +375,11 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         Core memory c = _cCore();
         (bytes32 key, uint128 units) = _cPledge(MKT_A, alice, 1e12);
         _cManager(key).accrue(_cTokenId(key), 5, 6);
-        _cAs(c.adapter, abi.encodeCall(IAmmIntegration.collectFees, (key, alice)));
-        _cAs(c.adapter, abi.encodeCall(IAmmIntegration.releaseToDepositor, (key, units / 4, _cZeros())));
-        _cAs(c.lpVaultSwap, abi.encodeCall(IAmmIntegration.unwind, (key, units / 4, _cZeros(), c.lpVaultSwap)));
-        _cAs(c.adapter, abi.encodeCall(IAmmIntegration.unwind, (key, units / 8, _cZeros(), c.coll)));
-        _cAs(c.adapter, abi.encodeCall(IAmmIntegration.returnPosition, (key)));
+        _cAs(c.adapter, abi.encodeCall(ILPVault.collectFees, (key, alice)));
+        _cAs(c.adapter, abi.encodeCall(ILPVault.releaseToDepositor, (key, units / 4, _cZeros())));
+        _cAs(c.lpVaultSwap, abi.encodeCall(ILPVault.unwind, (key, units / 4, _cZeros(), c.lpVaultSwap)));
+        _cAs(c.adapter, abi.encodeCall(ILPVault.unwind, (key, units / 8, _cZeros(), c.coll)));
+        _cAs(c.adapter, abi.encodeCall(ILPVault.returnPosition, (key)));
     }
 
     /// @dev The LPVault touched none of the denied accounts, and every call into it came from Collateralization.
@@ -429,11 +426,11 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         bytes32 fresh = _cMint(MKT_A, carol, 1e9);
         address[5] memory callers = [c.adapter, c.lpVaultSwap, c.registry, c.timelock, attacker];
         bytes[5] memory calls = [
-            abi.encodeCall(IAmmIntegration.returnPosition, (other)),
-            abi.encodeCall(IAmmIntegration.unwind, (other, 1, _cZeros(), c.lpVaultSwap)),
-            abi.encodeCall(IAmmIntegration.releaseToDepositor, (other, 1, _cZeros())),
-            abi.encodeCall(IAmmIntegration.collectFees, (other, bob)),
-            abi.encodeCall(IAmmIntegration.receivePosition, (MKT_A, carol, fresh))
+            abi.encodeCall(ILPVault.returnPosition, (other)),
+            abi.encodeCall(ILPVault.unwind, (other, 1, _cZeros(), c.lpVaultSwap)),
+            abi.encodeCall(ILPVault.releaseToDepositor, (other, 1, _cZeros())),
+            abi.encodeCall(ILPVault.collectFees, (other, bob)),
+            abi.encodeCall(ILPVault.receivePosition, (MKT_A, carol, fresh))
         ];
         address[2] memory holders = [c.adapter, c.lpVaultSwap];
         for (uint256 h = 0; h < 2; ++h) {
@@ -579,8 +576,7 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         uint256 before0 = t0.balanceOf(c.lpVaultSwap);
         uint256 before1 = t1.balanceOf(c.lpVaultSwap);
         got = abi.decode(
-            _cAs(c.lpVaultSwap, abi.encodeCall(IAmmIntegration.unwind, (key, units, _cZeros(), c.lpVaultSwap))),
-            (uint256[])
+            _cAs(c.lpVaultSwap, abi.encodeCall(ILPVault.unwind, (key, units, _cZeros(), c.lpVaultSwap))), (uint256[])
         );
         assertGt(got[0], 0);
         assertEq(t0.balanceOf(c.lpVaultSwap) - before0, got[0] - got[0] / 100, "the recipient bears the fee");
@@ -597,7 +593,7 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         CollPoolToken t0 = CollPoolToken(_cPool(MKT_C).token0());
         uint256 a0 = t0.balanceOf(alice);
         uint256[] memory part = abi.decode(
-            _cAs(_cCore().adapter, abi.encodeCall(IAmmIntegration.releaseToDepositor, (key, units, mins))), (uint256[])
+            _cAs(_cCore().adapter, abi.encodeCall(ILPVault.releaseToDepositor, (key, units, mins))), (uint256[])
         );
         assertEq(part[0], mins[0], "reported: the manager's amount");
         assertEq(t0.balanceOf(alice) - a0, part[0] - part[0] / 100);
@@ -611,7 +607,7 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
         _cManager(key).accrue(_cTokenId(key), 1000, 1000);
         uint256 a0 = t0.balanceOf(alice);
         uint256[] memory fees =
-            abi.decode(_cAs(_cCore().adapter, abi.encodeCall(IAmmIntegration.collectFees, (key, alice))), (uint256[]));
+            abi.decode(_cAs(_cCore().adapter, abi.encodeCall(ILPVault.collectFees, (key, alice))), (uint256[]));
         assertEq(fees[0], 1000, "reported: what the manager collected");
         assertEq(t0.balanceOf(alice) - a0, 990, "the depositor receives the amount net of the fee");
     }
@@ -623,12 +619,10 @@ abstract contract ClLPVaultIsolationTests is ClLPVaultBase {
     function _cFactory() internal returns (VaultTokenFactory factory) {
         Core memory c = _cCore();
         factory = new VaultTokenFactory(c.adapter, c.lpVaultSwap, c.coll, c.timelock, c.registry);
-        vm.mockCall(
-            c.coll, abi.encodeCall(ICollateralizationViews.VAULT_TOKEN_FACTORY, ()), abi.encode(address(factory))
-        );
-        vm.mockCall(c.coll, abi.encodeCall(ICollateralizationViews.ADAPTER, ()), abi.encode(c.adapter));
-        vm.mockCall(c.coll, abi.encodeCall(ICollateralizationViews.LP_VAULT_SWAP, ()), abi.encode(c.lpVaultSwap));
-        vm.mockCall(c.coll, abi.encodeCall(ICollateralizationViews.LOCK, ()), abi.encode(address(c.lock)));
+        vm.mockCall(c.coll, abi.encodeCall(ICollateralization.VAULT_TOKEN_FACTORY, ()), abi.encode(address(factory)));
+        vm.mockCall(c.coll, abi.encodeCall(ICollateralization.ADAPTER, ()), abi.encode(c.adapter));
+        vm.mockCall(c.coll, abi.encodeCall(ICollateralization.LP_VAULT_SWAP, ()), abi.encode(c.lpVaultSwap));
+        vm.mockCall(c.coll, abi.encodeCall(ICollateralization.LOCK, ()), abi.encode(address(c.lock)));
     }
 
     /// @notice The LPVault registered in the real factory and the vault token of market 1 deployed by it.

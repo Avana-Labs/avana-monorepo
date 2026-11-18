@@ -3,18 +3,16 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
-import {PauseReason} from "../../types/PauseReason.sol";
-import {PauseState} from "../../types/PauseState.sol";
+import {PauseReason, PauseState} from "../../types/MarketTypes.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
-import {IMarketRegistryFreeze} from "../market-registry/IMarketRegistryFreeze.sol";
-import {IMarketRegistryPause} from "../market-registry/IMarketRegistryPause.sol";
-import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
+import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
+import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
-import {AdapterAccount} from "./types/AdapterAccount.sol";
+import {AdapterAccount} from "./types/AaveAdapterTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -66,14 +64,14 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
     function _pauseOf(
         address hub
     ) internal view returns (PauseState state, PauseReason reason) {
-        state = IMarketRegistryPause(_MARKET_REGISTRY).pauseState(hub);
-        if (state == PauseState.Paused) reason = IMarketRegistryPause(_MARKET_REGISTRY).pauseReason(hub);
+        state = IMarketRegistry(_MARKET_REGISTRY).pauseState(hub);
+        if (state == PauseState.Paused) reason = IMarketRegistry(_MARKET_REGISTRY).pauseReason(hub);
     }
 
     function _isFrozen(
         address account
     ) internal view returns (bool frozen) {
-        frozen = IMarketRegistryFreeze(_MARKET_REGISTRY).isFrozenAddress(account);
+        frozen = IMarketRegistry(_MARKET_REGISTRY).isFrozenAddress(account);
     }
 
     function _withDebtGates(
@@ -83,13 +81,13 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         (PauseState state,) = _pauseOf(IVaultToken(vaultToken).hub());
         if (state == PauseState.Paused) revert ApplicationPaused();
         if (_isFrozen(msg.sender)) revert AddressIsFrozen(msg.sender);
-        IRiskModuleChecks(_RISK_MODULE).preWithdrawCheck(proxy);
+        IRiskModule(_RISK_MODULE).preWithdrawCheck(proxy);
     }
 
     function _backing(
         address vaultToken
     ) internal view returns (uint256 supply, uint256 credited, uint256 pending) {
-        ICollateralizationViews coll = ICollateralizationViews(_COLLATERALIZATION);
+        ICollateralization coll = ICollateralization(_COLLATERALIZATION);
         supply = IVaultToken(vaultToken).totalSupply();
         credited = coll.getTotalCredited(vaultToken);
         pending = coll.getPending(vaultToken).units;
@@ -259,7 +257,7 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         if (left < SPEED_CREDIT_FLOOR) revert InsufficientGas(left, SPEED_CREDIT_FLOOR);
         // A failed credit only leaves the window fuller than the net debt; it must not block the repay.
         // solhint-disable-next-line no-empty-blocks
-        try IRiskModuleChecks(_RISK_MODULE).creditRepay{gas: SPEED_CREDIT_GAS}(proxy, debtReserveId, spent) {} catch {}
+        try IRiskModule(_RISK_MODULE).creditRepay{gas: SPEED_CREDIT_GAS}(proxy, debtReserveId, spent) {} catch {}
     }
 
     /// @dev Moves nothing at zero debt; a repay-all above its cap reverts before any transfer.

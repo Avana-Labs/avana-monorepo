@@ -31,19 +31,6 @@ export const lensAbi = [
   },
   {
     "type": "function",
-    "name": "LENS_DUST_MARGIN_BPS",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "marginBps",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "LENS_MAX_PAGE",
     "inputs": [],
     "outputs": [
@@ -96,63 +83,11 @@ export const lensAbi = [
   },
   {
     "type": "function",
-    "name": "MODULES",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "modules",
-        "type": "address[9]",
-        "internalType": "address[9]"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "PARAMETER_STORE",
     "inputs": [],
     "outputs": [
       {
         "name": "parameterStore",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "PAYOUT_ESCROW",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "payoutEscrow",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "PROXY_MANAGER",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "proxyManager",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "RISK_MODULE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "riskModule",
         "type": "address",
         "internalType": "address"
       }

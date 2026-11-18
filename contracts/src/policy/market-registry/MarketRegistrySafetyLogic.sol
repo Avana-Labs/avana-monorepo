@@ -4,17 +4,14 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IFlashSource} from "../../flash/IFlashSource.sol";
-import {PauseReason} from "../../types/PauseReason.sol";
-import {PauseState} from "../../types/PauseState.sol";
-import {IAaveAdapterViews} from "../aave-adapter/IAaveAdapterViews.sol";
-import {IRiskModuleViews} from "../risk-module/IRiskModuleViews.sol";
-import {IMarketRegistryHubs} from "./IMarketRegistryHubs.sol";
+import {PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {IAaveAdapter} from "../aave-adapter/IAaveAdapter.sol";
+import {IRiskModule} from "../risk-module/IRiskModule.sol";
+import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
 import {BreakerReasons, BreakerScope} from "./types/Breaker.sol";
-import {MarketRegistryImmutables} from "./types/MarketRegistryImmutables.sol";
-import {MarketStatus} from "./types/MarketStatus.sol";
-import {RiskTier} from "./types/RiskTier.sol";
+import {MarketRegistryImmutables, MarketStatus, RiskTier} from "./types/MarketRegistryTypes.sol";
 
 /// @title MarketRegistrySafetyLogic
 /// @notice Bodies of the per-Hub pause state and reason, the address freeze and the breaker writes.
@@ -187,7 +184,7 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         bytes32 key = bytes32(marketId);
         uint32 latched = _s().latched[key];
         if (latched == 0) revert NothingToReset();
-        uint32 still = IRiskModuleViews(_RISK_MODULE).liveBreakerReasons(marketId) & latched & BreakerReasons.SECURITY;
+        uint32 still = IRiskModule(_RISK_MODULE).liveBreakerReasons(marketId) & latched & BreakerReasons.SECURITY;
         _reset(BreakerScope.Market, key, still);
     }
 
@@ -199,15 +196,15 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
         bytes32 key = _debtKey(spoke, debtReserveId);
         uint32 latched = _s().latched[key];
         if (latched == 0) revert NothingToReset();
-        uint32 still = IRiskModuleViews(_RISK_MODULE).liveDebtBreakerReasons(spoke, debtReserveId) & latched
-            & BreakerReasons.SECURITY;
+        uint32 still =
+            IRiskModule(_RISK_MODULE).liveDebtBreakerReasons(spoke, debtReserveId) & latched & BreakerReasons.SECURITY;
         _reset(BreakerScope.DebtReserve, key, still);
     }
 
     function _stateOf(
         address hub
     ) private view returns (PauseState) {
-        if (_s().hubTier[hub] == RiskTier.None) revert IMarketRegistryHubs.InvalidHub(hub);
+        if (_s().hubTier[hub] == RiskTier.None) revert IMarketRegistry.InvalidHub(hub);
         return _s().pauseState[hub];
     }
 
@@ -293,6 +290,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
                 || l.knownPriceSource[a] || l.isDebtAsset[a] || l.integrationIdOf[a] != 0 || l.isPricing[a]
                 || l.knownRoute[a]
         ) return true;
-        return IAaveAdapterViews(_AAVE_ADAPTER).walletOf(a) != address(0);
+        return IAaveAdapter(_AAVE_ADAPTER).walletOf(a) != address(0);
     }
 }

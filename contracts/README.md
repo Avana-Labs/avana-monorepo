@@ -68,7 +68,7 @@ contracts/
 ├── slither.config.json, aderyn.toml, .solhint.json, .solhintignore, echidna.yaml, medusa.json
 ├── security/             triage files of Slither, slither-check-upgradeability, Aderyn and Mythril; mythril.conf; size-margins.json
 ├── src/
-│   ├── amm/                        IAmmIntegration, IAmmIntegrationHooks, IClIntegration; uniswap-v3/, slipstream/; shared AMM types
+│   ├── amm/                        ILPVault, ILPVault, IClIntegration; uniswap-v3/, slipstream/; shared AMM types
 │   ├── custody/
 │   │   ├── lp-vault/               ILPVault: NFT custody, liquidity removal, fee collection, stray NFTs (one LPVault per AMM protocol per chain)
 │   │   └── collateralization/      ICollateralization: records, pledge and release, seizure, pending settlement, counters
@@ -81,7 +81,7 @@ contracts/
 │   ├── flash/                      IFlashSource, IFlashReceiver
 │   ├── policy/
 │   │   ├── aave-adapter/           IAaveAdapter: borrower entry points, burnSeized, proxy lookups
-│   │   ├── risk-module/            IRiskModule: pledge and borrow-side checks, previews, RiskModuleConstants
+│   │   ├── risk-module/            IRiskModule: pledge and borrow-side checks, previews, RiskModuleMath
 │   │   ├── market-registry/        IMarketRegistry: Spokes, debt reserves, tokens, markets, routes, in-kind, pause state
 │   │   └── parameter-store/        IParameterStore: risk parameters with tighten, loosen and listing setters
 │   ├── oracle/
@@ -146,34 +146,34 @@ The First-Loss Reserve ([2.14](../docs/spec/02-contracts/14-first-loss-reserve.m
 
 ### File layout and size limits
 
-Every contract has one folder, `src/<domain>/<contract>/`, named after the contract in kebab case; the implementation `<Contract>.sol` sits in the same folder as its interfaces. Inside a folder, files are split by kind and, for a large surface, by audience:
+Every contract has one folder, `src/<domain>/<contract>/`, named after the contract in kebab case; the implementation `<Contract>.sol` sits in the same folder as its interfaces. As in Aave V4, each contract has one interface that holds its whole external surface:
 
 | File | Holds |
 |---|---|
-| `I<Name>.sol` | The external functions of a small contract, or the aggregate that inherits every piece of a large one. The implementation declares only `I<Name>`. |
-| `I<Name>Events.sol`, `I<Name>Errors.sol` | Every event and every custom error of the contract. |
-| `I<Name><Audience>.sol` | The functions one class of caller uses, for example `ILPVaultSwapKeeper`, `ILPVaultSwapPermissionless`, `ILPVaultSwapAdmin` and `ILPVaultSwapViews`. |
-| `types/<Type>.sol` | One struct or enum of the contract per file, declared at file level. |
-| `<Name>Constants.sol` and other libraries | Constant-only libraries of the contract. |
+| `I<Name>.sol` | Every external function of the contract, and its events and errors when nothing else needs them. The implementation declares `I<Name>`. |
+| `I<Name>Base.sol` | The events and errors, when the contract's storage base, logic contracts or tests need them without the full interface. |
+| `I<Name><Slice>.sol` | The functions one logic contract serves through `delegatecall`, kept apart because that logic contract implements only them (for example `IParameterStoreTighten`), and `I<Name>Logic`, the handshake every logic contract implements. |
+| `types/<Name>Types.sol` | The contract's structs and enums, declared at file level. |
+| Libraries | Math and constant libraries of the contract, one per file. |
 
-Callers import only the piece they call, for example `IRiskModuleChecks` for `checkPledge`, `ILPVaultSwapKeeper` for a keeper bot, or `I<Name>Errors` for a revert selector in a test. Structs and enums used by several contracts live in `src/types/`.
+Callers import `I<Name>` for calls and selectors, and `I<Name>Base` for events and errors. Structs and enums used by several contracts live in `src/types/` (`OracleTypes`, `MarketTypes`, `PositionTypes`).
 
-| Contract | Pieces besides events and errors |
+| Contract | Interfaces |
 |---|---|
-| MarketRegistry | `IMarketRegistryListing`, `IMarketRegistryHubs`, `IMarketRegistryCreditLines`, `IMarketRegistryRoutes`, `IMarketRegistryRouteViews`, `IMarketRegistryStandby`, `IMarketRegistryPause`, `IMarketRegistryFreeze`, `IMarketRegistryBreakers`, `IMarketRegistryWindDown`, `IMarketRegistryViews`, `IMarketRegistrySafetyEvents` |
-| ParameterStore | `IParameterStoreTighten`, `IParameterStoreLoosen`, `IParameterStoreListing`, `IParameterStoreLiquidation`, `IParameterStoreBreakers`, `IParameterStoreChain`, `IParameterStoreAdmin`, `IParameterStoreViews`, `IParameterStoreRiskViews` |
-| AaveAdapter | `IAaveAdapterUser`, `IAaveAdapterCollateral`, `IAaveAdapterSettlement`, `IAaveAdapterAdmin`, `IAaveAdapterViews` |
-| LPVault | `ILPVault`, which implements `IAmmIntegration` and `IAmmIntegrationHooks` (`src/amm/`) |
-| Collateralization | `ICollateralizationAdapter`, `ICollateralizationSeizure`, `ICollateralizationUser`, `ICollateralizationDebtMark`, `ICollateralizationViews` |
-| LPVaultSwap | `ILPVaultSwapKeeper`, `ILPVaultSwapPermissionless`, `ILPVaultSwapDeleverage`, `ILPVaultSwapAdmin`, `ILPVaultSwapViews` |
-| RiskModule | `IRiskModuleChecks`, `IRiskModuleAdmin`, `IRiskModuleViews` |
+| MarketRegistry | `IMarketRegistry`, `IMarketRegistryBase`; logic slices `IMarketRegistryRoutes`, `IMarketRegistryLogic`, `IMarketRegistryDriftLogic` |
+| ParameterStore | `IParameterStore`, `IParameterStoreBase`; logic slices `IParameterStoreTighten`, `IParameterStoreLoosen`, `IParameterStoreListing`, `IParameterStoreLogic` |
+| AaveAdapter | `IAaveAdapter`, `IAaveAdapterBase`, `IAaveAdapterLogic` |
+| LPVault | `ILPVault` and `ILPVaultBase` (`src/custody/lp-vault/`), extended by `IClIntegration` and one interface per integration (`src/amm/`) |
+| Collateralization | `ICollateralization`, `ICollateralizationBase` |
+| LPVaultSwap | `ILPVaultSwap`, `ILPVaultSwapBase`, `ILPVaultSwapLogic` |
+| RiskModule | `IRiskModule`, `IRiskModuleErrors`; one logic interface per logic contract |
 | PositionProxy | `IPositionProxy` |
-| AvanaTimelock | `IAvanaTimelockGovernance` (self-call setters, expired-operation clean-up), `IAvanaTimelockViews` |
-| Lens | `ILensAccount`, `ILensMarket`, `ILensLiquidation`, `ILensPreview`, `ILensRisk`; the dependency getters are declared on `ILens` |
-| LPOracle | `ILPOracle`, `ILPOracleCL` |
+| AvanaTimelock | `IAvanaTimelock` |
+| Lens | `ILensAccount`, `ILensMarket`, `ILens`, `ILensPreview`, `ILensRisk`; the dependency getters are declared on `ILens` |
+| LPOracle | `ILPOracle`, `ILPOracleBase`, `ILPOracleLogic`; `ILPOracleCL` for the concentrated-liquidity implementation |
 | DebtOracle | `IDebtOracle` |
 
-Size limits (`Q-240`): an implementation file holds at most 500 lines of code (lines that are neither blank nor comment-only), and an interface file at most 300 lines including NatSpec and blank lines. [`script/check-file-size.sh`](script/check-file-size.sh) treats a file as an implementation when it declares a contract or a library with functions, and every other `.sol` file under `src/` (interfaces, events, errors, types, constant-only libraries, external mirrors) as an interface file. It prints each file over its limit and the largest file of each class, and exits 1 when any file is over; the CI build job runs it.
+Size limits (`Q-240`): an implementation file holds at most 500 lines of code (lines that are neither blank nor comment-only), and an interface file at most 900 lines including NatSpec and blank lines (one interface per contract, as Aave V4 does). [`script/check-file-size.sh`](script/check-file-size.sh) treats a file as an implementation when it declares a contract or a library with functions, and every other `.sol` file under `src/` (interfaces, events, errors, types, constant-only libraries, external mirrors) as an interface file. It prints each file over its limit and the largest file of each class, and exits 1 when any file is over; the CI build job runs it.
 
 ### Implementation rules carried by the interfaces
 
@@ -308,7 +308,7 @@ Rules that do not run, and why:
 | Slither | `unindexed-event-address` | Indexed event fields are fixed by the spec's event definitions and the indexer's topic layout. |
 | Slither, Aderyn, solhint, `forge lint` | `src/interfaces/external/` | Minimal mirrors of third-party ABIs; names and layout follow the deployed contracts. |
 | solhint | `not-rely-on-time` | Time-based logic is part of the design; Slither's `timestamp` detector gates each comparison. |
-| solhint | `no-empty-blocks` | Aggregate interfaces (`interface IRiskModule is IRiskModuleChecks, …{}`) have empty bodies by design; Aderyn's `empty-block` checks implementations. |
+| solhint | `no-empty-blocks` | Aggregate interfaces (`interface IRiskModule is IRiskModule, …{}`) have empty bodies by design; Aderyn's `empty-block` checks implementations. |
 | solhint | `import-path-check` | solhint does not read `remappings.txt`; `forge build` fails on any unresolved import. |
 | solhint | `use-natspec`, naming, ordering and `gas-*` rules other than `gas-custom-errors` | Documentation is checked by `trace.py`, naming and ordering are style, and gas is measured by `forge snapshot`. |
 | Mythril | `IntegerArithmetics` (SWC-101) | solc 0.8 reverts on overflow, and its optimizer compiles `x == c` to `SUB` + `ISZERO`, which Mythril reports as an underflow on bytecode; unchecked blocks are covered by Slither, Halmos and the `smt` profile. |

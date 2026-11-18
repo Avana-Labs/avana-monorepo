@@ -4,10 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {IParameterStoreSpeed} from "../../src/policy/parameter-store/IParameterStoreSpeed.sol";
-import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "../../src/policy/parameter-store/types/SpeedLimit.sol";
+import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
+import {MarketSpeedLimits, SpeedLimit} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
@@ -58,21 +57,21 @@ contract ParameterStoreSpeedUnitTest is ParameterStoreFixture {
     // TEST-325 verifies: REQ-PSTORE-036, REQ-CONFIG-049
     function test_TEST_325_firstValueIsALoosening() public {
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenMarketSpeedLimits(M, _defaultMarketSpeed());
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreSpeed.MarketSpeedLimitsSet(
+        emit IParameterStore.MarketSpeedLimitsSet(
             M, MarketSpeedLimits(0, 0, 0, 0, 0, 0, 0), _defaultMarketSpeed(), false
         );
         store.loosenMarketSpeedLimits(M, _defaultMarketSpeed());
         _eq(store.marketSpeedLimits(M), _defaultMarketSpeed());
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenDebtSpeedLimit(address(hub), gho, _debt());
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreSpeed.DebtSpeedLimitSet(address(hub), gho, SpeedLimit(0, 0, 0, 0), _debt(), false);
+        emit IParameterStore.DebtSpeedLimitSet(address(hub), gho, SpeedLimit(0, 0, 0, 0), _debt(), false);
         store.loosenDebtSpeedLimit(address(hub), gho, _debt());
         assertEq(abi.encode(store.debtSpeedLimit(address(hub), gho)), abi.encode(_debt()));
     }
@@ -104,18 +103,18 @@ contract ParameterStoreSpeedUnitTest is ParameterStoreFixture {
         MarketSpeedLimits memory before = store.marketSpeedLimits(M);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreSpeed.MarketSpeedLimitsSet(M, before, v, true);
+        emit IParameterStore.MarketSpeedLimitsSet(M, before, v, true);
         store.tightenMarketSpeedLimits(M, v);
         _eq(store.marketSpeedLimits(M), v);
         // The same value is not stricter; one field looser fails even with another tighter.
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenMarketSpeedLimits(M, v);
         MarketSpeedLimits memory mixed = v;
         mixed.window -= 1;
         mixed.borrowMaxUsd -= K;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenMarketSpeedLimits(M, mixed);
     }
 
@@ -136,13 +135,13 @@ contract ParameterStoreSpeedUnitTest is ParameterStoreFixture {
         store.loosenMarketSpeedLimits(M, v);
         _eq(store.marketSpeedLimits(M), v);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotLooser.selector);
+        vm.expectRevert(IParameterStoreBase.NotLooser.selector);
         store.loosenMarketSpeedLimits(M, v);
         MarketSpeedLimits memory mixed = v;
         mixed.window += 10;
         mixed.borrowMaxUsd += K;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotLooser.selector);
+        vm.expectRevert(IParameterStoreBase.NotLooser.selector);
         store.loosenMarketSpeedLimits(M, mixed);
     }
 
@@ -151,26 +150,26 @@ contract ParameterStoreSpeedUnitTest is ParameterStoreFixture {
         MarketSpeedLimits memory v = _defaultMarketSpeed();
         v.window = 3599;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenMarketSpeedLimits(M, v);
         v.window = 604_801;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenMarketSpeedLimits(M, v);
         v = _defaultMarketSpeed();
         v.borrowRateBps = 10_001;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenMarketSpeedLimits(M, v);
         v = _defaultMarketSpeed();
         v.borrowMinUsd = v.borrowMaxUsd + 1;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenMarketSpeedLimits(M, v);
         v = _defaultMarketSpeed();
         v.pledgeMinUsd = v.pledgeMaxUsd + 1;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenMarketSpeedLimits(M, v);
         // The edges are inside.
         v = _defaultMarketSpeed();
@@ -184,23 +183,23 @@ contract ParameterStoreSpeedUnitTest is ParameterStoreFixture {
         MarketSpeedLimits memory w = v;
         w.borrowMaxUsd = w.borrowMinUsd - 1;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.tightenMarketSpeedLimits(M, w);
         // Debt scope bounds.
         SpeedLimit memory d = _debt();
         d.rateBps = 10_001;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenDebtSpeedLimit(address(hub), gho, d);
         d = _debt();
         d.min = d.max + 1;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenDebtSpeedLimit(address(hub), gho, d);
         d = _debt();
         d.window = 3599;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenDebtSpeedLimit(address(hub), gho, d);
     }
 
@@ -256,21 +255,21 @@ contract ParameterStoreSpeedUnitTest is ParameterStoreFixture {
     // TEST-325 verifies: REQ-PSTORE-036
     function test_TEST_325_unknownScopesRevert() public {
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownMarket.selector, 9));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownMarket.selector, 9));
         store.loosenMarketSpeedLimits(9, _defaultMarketSpeed());
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownMarket.selector, 9));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownMarket.selector, 9));
         store.tightenMarketSpeedLimits(9, _defaultMarketSpeed());
         address noHub = makeAddr("noHub");
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownHub.selector, noHub));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownHub.selector, noHub));
         store.loosenDebtSpeedLimit(noHub, gho, _debt());
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownHub.selector, noHub));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownHub.selector, noHub));
         store.tightenDebtSpeedLimit(noHub, gho, _debt());
         address noAsset = makeAddr("noAsset");
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownDebtReserve.selector, address(0), 0));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownDebtReserve.selector, address(0), 0));
         store.loosenDebtSpeedLimit(address(hub), noAsset, _debt());
     }
 
@@ -293,7 +292,7 @@ contract ParameterStoreSpeedUnitTest is ParameterStoreFixture {
             && pmax <= old.pledgeMaxUsd;
         bool equal = keccak256(abi.encode(v)) == keccak256(abi.encode(old));
         _tl();
-        (bool ok,) = address(store).call(abi.encodeCall(IParameterStoreSpeed.tightenMarketSpeedLimits, (M, v)));
+        (bool ok,) = address(store).call(abi.encodeCall(IParameterStore.tightenMarketSpeedLimits, (M, v)));
         assertEq(ok, valid && noLooser && !equal, "tighten passes exactly for a valid, stricter value");
         if (ok) _eq(store.marketSpeedLimits(M), v);
         else _eq(store.marketSpeedLimits(M), old);
@@ -316,17 +315,17 @@ contract ParameterStoreSpeedUnitTest is ParameterStoreFixture {
         v.max -= K;
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreSpeed.DebtSpeedLimitSet(address(hub), gho, before, v, true);
+        emit IParameterStore.DebtSpeedLimitSet(address(hub), gho, before, v, true);
         store.tightenDebtSpeedLimit(address(hub), gho, v);
         assertEq(abi.encode(store.debtSpeedLimit(address(hub), gho)), abi.encode(v));
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenDebtSpeedLimit(address(hub), gho, v);
         SpeedLimit memory mixed = v;
         mixed.window -= 1;
         mixed.max -= K;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotStricter.selector);
+        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
         store.tightenDebtSpeedLimit(address(hub), gho, mixed);
     }
 
@@ -347,17 +346,17 @@ contract ParameterStoreSpeedUnitTest is ParameterStoreFixture {
         v.max += K;
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreSpeed.DebtSpeedLimitSet(address(hub), gho, before, v, false);
+        emit IParameterStore.DebtSpeedLimitSet(address(hub), gho, before, v, false);
         store.loosenDebtSpeedLimit(address(hub), gho, v);
         assertEq(abi.encode(store.debtSpeedLimit(address(hub), gho)), abi.encode(v));
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotLooser.selector);
+        vm.expectRevert(IParameterStoreBase.NotLooser.selector);
         store.loosenDebtSpeedLimit(address(hub), gho, v);
         SpeedLimit memory mixed = v;
         mixed.window += 1;
         mixed.max += K;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotLooser.selector);
+        vm.expectRevert(IParameterStoreBase.NotLooser.selector);
         store.loosenDebtSpeedLimit(address(hub), gho, mixed);
     }
 
@@ -410,12 +409,10 @@ contract ParameterStoreSpeedUnitTest is ParameterStoreFixture {
         _tl();
         bool ok;
         if (loosen) {
-            (ok,) =
-                address(store).call(abi.encodeCall(IParameterStoreSpeed.loosenDebtSpeedLimit, (address(hub), gho, v)));
+            (ok,) = address(store).call(abi.encodeCall(IParameterStore.loosenDebtSpeedLimit, (address(hub), gho, v)));
             assertEq(ok, valid && noTighter && !equal, "loosen passes exactly for a valid, looser value");
         } else {
-            (ok,) =
-                address(store).call(abi.encodeCall(IParameterStoreSpeed.tightenDebtSpeedLimit, (address(hub), gho, v)));
+            (ok,) = address(store).call(abi.encodeCall(IParameterStore.tightenDebtSpeedLimit, (address(hub), gho, v)));
             assertEq(ok, valid && noLooser && !equal, "tighten passes exactly for a valid, stricter value");
         }
         assertEq(abi.encode(store.debtSpeedLimit(address(hub), gho)), abi.encode(ok ? v : old));
@@ -440,7 +437,7 @@ contract ParameterStoreSpeedUnitTest is ParameterStoreFixture {
             && pmax >= old.pledgeMaxUsd;
         bool equal = keccak256(abi.encode(v)) == keccak256(abi.encode(old));
         _tl();
-        (bool ok,) = address(store).call(abi.encodeCall(IParameterStoreSpeed.loosenMarketSpeedLimits, (M, v)));
+        (bool ok,) = address(store).call(abi.encodeCall(IParameterStore.loosenMarketSpeedLimits, (M, v)));
         assertEq(ok, valid && noTighter && !equal, "loosen passes exactly for a valid, looser value");
         if (ok) _eq(store.marketSpeedLimits(M), v);
         else _eq(store.marketSpeedLimits(M), old);
@@ -460,7 +457,7 @@ contract ParameterStoreSpeedUnitTest is ParameterStoreFixture {
         (uint96 lo, uint96 hi) = a <= b ? (a, b) : (b, a);
         MarketSpeedLimits memory v = MarketSpeedLimits(window, br, pr, lo, hi, lo, hi);
         _tl();
-        (bool t,) = address(store).call(abi.encodeCall(IParameterStoreSpeed.tightenMarketSpeedLimits, (M, v)));
+        (bool t,) = address(store).call(abi.encodeCall(IParameterStore.tightenMarketSpeedLimits, (M, v)));
         assertFalse(t, "no tightening of a never-written scope");
         _tl();
         store.loosenMarketSpeedLimits(M, v);

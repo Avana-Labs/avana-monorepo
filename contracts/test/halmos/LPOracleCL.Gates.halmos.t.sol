@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {LPOracleCLModuleLogic} from "../../src/oracle/lp-oracle/LPOracleCLModuleLogic.sol";
 import {LPOracleCLPokeLogic} from "../../src/oracle/lp-oracle/LPOracleCLPokeLogic.sol";
 import {Evaluation, LegEval, TokenEval} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @notice Exposes the state decision of the deployed concentrated-liquidity poke logic, `LPOracleCLPokeLogic` (the

@@ -4,14 +4,15 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {
+    DebtReserveDef,
+    MarketStatus,
+    RiskTier,
+    SpokeDef
+} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {MarketDef} from "../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryAaveOracleMock, RegistryHubMock, RegistrySpokeMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
@@ -132,7 +133,7 @@ contract MarketRegistrySpecExamplesUnitTest is MarketRegistryFixture {
         MarketDef memory d = _marketDef(vt2, address(o2));
         (d.hub, d.spoke) = (address(hub2), address(spoke2));
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.DuplicateMarketKey.selector);
+        vm.expectRevert(IMarketRegistryBase.DuplicateMarketKey.selector);
         registry.listCollateralMarket(d);
         // Wind the first market down to Closed.
         vm.prank(address(timelock));

@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {TokenDef} from "../../../src/policy/market-registry/types/TokenDef.sol";
-import {FeedDef} from "../../../src/policy/parameter-store/types/FeedDef.sol";
-import {RouteSlot} from "../../../src/types/RouteSlot.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
+import {TokenDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {RouteSlot, SecondSource} from "../../../src/types/OracleTypes.sol";
 
 /// @title HostileConfig
 /// @notice Per-selector hostile behaviour shared by the DebtOracle's registry and store mocks: revert, a short (empty)

@@ -3,11 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
+import {FeedDef} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockAggregator, MockPriceSource} from "../utils/mocks/ParameterStoreMocks.sol";
 
@@ -49,7 +48,7 @@ contract ParameterStoreExamplesUnitTest is ParameterStoreFixture {
         vm.stopPrank();
         assertEq(store.feedAgreementToleranceMinBps(token), 225);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setFeedAgreementToleranceBps(token, 224);
         _tl();
         store.setFeedAgreementToleranceBps(token, 225);
@@ -65,7 +64,7 @@ contract ParameterStoreExamplesUnitTest is ParameterStoreFixture {
         _tl();
         store.setFeed(address(s), _def(86_400, 1800, 25));
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setFeed(address(s), _def(86_400, 1800, 120));
         // Raising the tolerance to 195 first lets it through.
         _tl();
@@ -102,7 +101,7 @@ contract ParameterStoreExamplesUnitTest is ParameterStoreFixture {
         FeedDef memory bad = _feedDef(86_400, 1800);
         bad.borrowPriceMaxAge = 4200;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setFeed(address(fUsdc), bad);
     }
 
@@ -134,7 +133,7 @@ contract ParameterStoreExamplesUnitTest is ParameterStoreFixture {
         (d.reserveId, d.asset, d.decimals, d.priceSource, d.fixedPrice) = (2, usdc, 6, address(usdcPrice), false);
         registry.setDebtReserve(address(spoke), d);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenFloorRoundingAllowance(usdc, 1e6 + 1);
         _tl();
         store.loosenFloorRoundingAllowance(usdc, 1e6);
@@ -143,7 +142,7 @@ contract ParameterStoreExamplesUnitTest is ParameterStoreFixture {
         _tl();
         store.loosenFloorRoundingAllowance(gho, 1e18);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenFloorRoundingAllowance(gho, 1e18 + 1);
     }
 
@@ -155,7 +154,7 @@ contract ParameterStoreExamplesUnitTest is ParameterStoreFixture {
         store.setFeed(address(pyth), _feedDef(86_400, 1800));
         SecondSource memory none;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setSecondSource(
             usdc, SecondSource(SecondSourceKind.OracleNetwork, address(pyth), bytes32(0), 88_200, 1800, 100), none
         );

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 import {LVSFlashSourceMock} from "../utils/mocks/LPVaultSwapMocks.sol";
 
@@ -61,13 +61,13 @@ contract LPVaultSwapCallbacksFuzzTest is LPVaultSwapUnitBase {
         if (available < X) {
             assertEq(
                 reason,
-                abi.encodeWithSelector(ILPVaultSwapErrors.FlashLiquidityShort.selector, available, X),
+                abi.encodeWithSelector(ILPVaultSwapBase.FlashLiquidityShort.selector, available, X),
                 "short liquidity first"
             );
         } else if (quoted * BPS > cap) {
-            assertEq(bytes4(reason), ILPVaultSwapErrors.FlashFeeTooHigh.selector, "quote above the cap");
+            assertEq(bytes4(reason), ILPVaultSwapBase.FlashFeeTooHigh.selector, "quote above the cap");
         } else if (charged * BPS > cap) {
-            assertEq(bytes4(reason), ILPVaultSwapErrors.FlashFeeTooHigh.selector, "charge above the cap");
+            assertEq(bytes4(reason), ILPVaultSwapBase.FlashFeeTooHigh.selector, "charge above the cap");
         } else {
             assertTrue(ok, "a behaving source settles");
             assertEq(usdc.balanceOf(address(source)), sourceBefore + charged, "source repaid x + charged");
@@ -118,7 +118,7 @@ contract LPVaultSwapCallbacksFuzzTest is LPVaultSwapUnitBase {
             if (forward != 0 && forward <= X && calls != 2) {
                 assertEq(
                     reason,
-                    abi.encodeWithSelector(ILPVaultSwapErrors.InvalidFlashCallback.selector),
+                    abi.encodeWithSelector(ILPVaultSwapBase.InvalidFlashCallback.selector),
                     "InvalidFlashCallback"
                 );
             }
@@ -137,10 +137,10 @@ contract LPVaultSwapCallbacksFuzzTest is LPVaultSwapUnitBase {
         uint256 debt = _debtOf(proxy, usdcReserveId);
         (bool ok, bytes memory reason) = _repay();
         if (lenderIsHub) {
-            assertEq(reason, abi.encodeWithSelector(ILPVaultSwapErrors.FlashSourceIsHub.selector), "lender is a Hub");
+            assertEq(reason, abi.encodeWithSelector(ILPVaultSwapBase.FlashSourceIsHub.selector), "lender is a Hub");
         } else if (switchMidway) {
             assertEq(
-                reason, abi.encodeWithSelector(ILPVaultSwapErrors.InvalidFlashCallback.selector), "replaced mid-call"
+                reason, abi.encodeWithSelector(ILPVaultSwapBase.InvalidFlashCallback.selector), "replaced mid-call"
             );
         } else {
             assertTrue(ok, "the registry's source settles");

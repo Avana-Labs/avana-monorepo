@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {LPPriceMath} from "../../src/oracle/lp-oracle/LPPriceMath.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {LPPriceMathHarness} from "../utils/harness/LPPriceMathHarness.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";

@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
@@ -74,7 +74,7 @@ contract RiskModulePokeBreakersGasTest is RealStackFlows, GasCalibration {
     }
 
     function _poke() internal returns (uint256) {
-        return _txGas(keeper, address(riskModule), abi.encodeCall(IRiskModuleChecks.pokeBreakers, (1)));
+        return _txGas(keeper, address(riskModule), abi.encodeCall(IRiskModule.pokeBreakers, (1)));
     }
 
     function _lastBreach() internal view returns (uint64 at) {

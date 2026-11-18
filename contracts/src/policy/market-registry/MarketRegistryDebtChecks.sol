@@ -9,18 +9,14 @@ import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ITetherFee} from "../../interfaces/external/tether/ITetherFee.sol";
-import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
+import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
-import {IParameterStoreLiquidation} from "../parameter-store/IParameterStoreLiquidation.sol";
-import {IParameterStoreViews} from "../parameter-store/IParameterStoreViews.sol";
-import {RiskModuleConstants} from "../risk-module/RiskModuleConstants.sol";
+import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {RiskModuleMath} from "../risk-module/RiskModuleMath.sol";
-import {IMarketRegistryCreditLines} from "./IMarketRegistryCreditLines.sol";
-import {IMarketRegistryHubs} from "./IMarketRegistryHubs.sol";
+import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
-import {DebtReserveDef} from "./types/DebtReserveDef.sol";
 import {IssuerProbes} from "./types/IssuerProbe.sol";
-import {RiskTier} from "./types/RiskTier.sol";
+import {DebtReserveDef, RiskTier} from "./types/MarketRegistryTypes.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /// @title MarketRegistryDebtChecks
@@ -38,12 +34,12 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         if (def.crossHub != cross) revert InvalidDebtReserve("crossHub");
         if (!cross) return;
         Layout storage l = _s();
-        if (!l.crossHubLinesEnabled) revert IMarketRegistryHubs.CrossHubLinesDisabled();
+        if (!l.crossHubLinesEnabled) revert IMarketRegistry.CrossHubLinesDisabled();
         if (l.crossHubLineCap[def.fundingHub][def.asset][spoke] == 0) {
-            revert IMarketRegistryHubs.CrossHubLineClosed(def.fundingHub, def.asset, spoke);
+            revert IMarketRegistry.CrossHubLineClosed(def.fundingHub, def.asset, spoke);
         }
         if (l.creditLines[def.fundingHub][def.asset].line == 0) {
-            revert IMarketRegistryCreditLines.FundingHubConsentMissing(def.fundingHub, def.asset);
+            revert IMarketRegistry.FundingHubConsentMissing(def.fundingHub, def.asset);
         }
     }
 
@@ -83,7 +79,7 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         if (o.ASSET() != def.asset || o.MARKET_REGISTRY() != address(this) || o.PARAMETER_STORE() != _PARAMETER_STORE) {
             revert InvalidDebtReserve("debtOracle");
         }
-        if (IParameterStoreLiquidation(_PARAMETER_STORE).debtStressRiseBps(def.asset) < 100) {
+        if (IParameterStore(_PARAMETER_STORE).debtStressRiseBps(def.asset) < 100) {
             revert InvalidDebtReserve("stressRise");
         }
     }
@@ -93,13 +89,13 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
     ) internal view {
         address cs = def.firstLossReserve;
         if (cs == address(0) || cs != _s().firstLossReserveOf[def.fundingHub][def.asset]) {
-            revert IMarketRegistryCreditLines.AvanaFirstLossReserveMismatch(def.fundingHub, def.asset, cs);
+            revert IMarketRegistry.AvanaFirstLossReserveMismatch(def.fundingHub, def.asset, cs);
         }
         IAvanaFirstLossReserve c = IAvanaFirstLossReserve(cs);
         if (c.ASSET() != def.asset || c.HUB() != def.fundingHub || c.ASSET_ID() != def.hubAssetId) {
             revert InvalidDebtReserve("firstLossReserve");
         }
-        if (c.isBelowMinimum()) revert IMarketRegistryCreditLines.CoverageNotFunded(def.fundingHub, def.asset);
+        if (c.isBelowMinimum()) revert IMarketRegistry.CoverageNotFunded(def.fundingHub, def.asset);
     }
 
     function _checkFlashAndFee(
@@ -112,7 +108,7 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         uint256 available = f.maxFlashLoan(def.asset);
         if (available == 0 || l.hubTier[f.LENDER()] != RiskTier.None) revert InvalidDebtReserve("flash");
         uint256 premium = f.flashPremium(def.asset, available);
-        uint256 maxFee = IParameterStoreViews(_PARAMETER_STORE).maxFlashFeeBps();
+        uint256 maxFee = IParameterStore(_PARAMETER_STORE).maxFlashFeeBps();
         if (premium > type(uint128).max || available > type(uint128).max || premium * _BPS > maxFee * available) {
             revert InvalidDebtReserve("flash");
         }
@@ -125,9 +121,9 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
     function _feeRateZero(
         address token
     ) internal view returns (bool zero) {
-        if (gasleft() < RiskModuleMath.gasFloor(RiskModuleConstants.ISSUER_PROBE_GAS)) return false;
-        (bool ok, bytes memory ret) = RouteReads._staticRead(
-            token, RiskModuleConstants.ISSUER_PROBE_GAS, abi.encodeCall(ITetherFee.basisPointsRate, ()), 33
+        if (gasleft() < RiskModuleMath.gasFloor(RiskModuleMath.ISSUER_PROBE_GAS)) return false;
+        (bool ok, bytes memory ret) = RouteMath._staticRead(
+            token, RiskModuleMath.ISSUER_PROBE_GAS, abi.encodeCall(ITetherFee.basisPointsRate, ()), 33
         );
         zero = ok && ret.length == 32 && abi.decode(ret, (uint256)) == 0;
     }
@@ -145,7 +141,7 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
             if (!_liquidatable(l.markets[id].status)) continue;
             if (
                 !_routesCover(id, asset)
-                    || !IParameterStoreLiquidation(_PARAMETER_STORE).liquidationLivenessHolds(spoke, id, reserveId)
+                    || !IParameterStore(_PARAMETER_STORE).liquidationLivenessHolds(spoke, id, reserveId)
             ) {
                 failed = id;
                 break;

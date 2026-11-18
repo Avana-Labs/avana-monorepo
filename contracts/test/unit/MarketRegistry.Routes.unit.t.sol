@@ -3,17 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PoolKeying} from "../../src/amm/types/PoolKeying.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketRegistryEvents.sol";
-import {IMarketRegistrySafetyEvents} from "../../src/policy/market-registry/IMarketRegistrySafetyEvents.sol";
-import {IMarketRegistryStandby} from "../../src/policy/market-registry/IMarketRegistryStandby.sol";
+import {PoolKeying} from "../../src/amm/types/AmmTypes.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
-import {TokenDef} from "../../src/policy/market-registry/types/TokenDef.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {TokenDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {MarketDef} from "../../src/types/MarketTypes.sol";
+import {RouteSlot} from "../../src/types/OracleTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
     RegistryLPOracleMock,
@@ -49,7 +46,7 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         address route
     ) internal {
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setRoute(id, token, asset, kind, route);
     }
 
@@ -70,12 +67,12 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         address usdcIn = address(usdc);
         address dex = makeAddr("dexA");
         vm.startPrank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 42));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 42));
         registry.setRoute(42, usdcIn, address(gho), 0, alice);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.TokenNotListed.selector, address(gho)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TokenNotListed.selector, address(gho)));
         registry.setRoute(id, address(gho), address(usdc), 0, alice);
         RegistryTokenMock stray = new RegistryTokenMock(18);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.TokenNotListed.selector, address(stray)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TokenNotListed.selector, address(stray)));
         registry.setRoute(id, usdcIn, address(stray), 0, alice);
         vm.stopPrank();
         _expectInvalidRoute(usdcIn, address(gho), 2, address(_routeWithDeps(usdcIn, address(gho), dex, dex)));
@@ -98,7 +95,7 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         assertFalse(usable);
         RegistryRouteMock primary = _routeWithDeps(usdcIn, address(gho), dex, makeAddr("router"));
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.RouteSet(id, usdcIn, address(gho), 0, address(primary));
+        emit IMarketRegistryBase.RouteSet(id, usdcIn, address(gho), 0, address(primary));
         _set(usdcIn, address(gho), 0, address(primary));
         // The backup must be another contract sharing no dependency with the primary.
         _expectInvalidRoute(usdcIn, address(gho), 1, address(primary));
@@ -188,7 +185,7 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         RegistryRouteMock viaPsm = _routeWithDeps(usdcIn, address(gho), psm, makeAddr("dexP"));
         // The backup of a market holding DAI never passes through DAI's peg module.
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setRoute(id2, usdcIn, address(gho), 1, address(viaPsm));
         // A primary may pass through it; the backup then uses other venues.
         vm.prank(address(timelock));
@@ -207,24 +204,24 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         address r1 = _setRoute(id, usdcIn, address(gho), 0, "dexA");
         address r2 = address(_newRoute(usdcIn, address(gho), "dexZ"));
         vm.startPrank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.disableRoute(id, usdcIn, address(gho), 1);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.RouteDisabled(id, usdcIn, address(gho), 0, address(timelock));
+        emit IMarketRegistryBase.RouteDisabled(id, usdcIn, address(gho), 0, address(timelock));
         registry.disableRoute(id, usdcIn, address(gho), 0);
         (, bool usable) = registry.getRoute(id, usdcIn, address(gho), 0);
         assertFalse(usable);
-        vm.expectRevert(IMarketRegistryErrors.NotPreviouslyApproved.selector);
+        vm.expectRevert(IMarketRegistryBase.NotPreviouslyApproved.selector);
         registry.restoreRoute(id, usdcIn, address(gho), 0, r2);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.RouteRestored(id, usdcIn, address(gho), 0, r1);
+        emit IMarketRegistryBase.RouteRestored(id, usdcIn, address(gho), 0, r1);
         registry.restoreRoute(id, usdcIn, address(gho), 0, r1);
         (, usable) = registry.getRoute(id, usdcIn, address(gho), 0);
         assertTrue(usable);
         // A route that `setRoute` replaced leaves the approved set (REQ-ROUTE-017): it cannot come back at the short
         // delay, only through `setRoute` again; the new route is restorable after a disable.
         registry.setRoute(id, usdcIn, address(gho), 0, r2);
-        vm.expectRevert(IMarketRegistryErrors.NotPreviouslyApproved.selector);
+        vm.expectRevert(IMarketRegistryBase.NotPreviouslyApproved.selector);
         registry.restoreRoute(id, usdcIn, address(gho), 0, r1);
         registry.disableRoute(id, usdcIn, address(gho), 0);
         registry.restoreRoute(id, usdcIn, address(gho), 0, r2);
@@ -246,10 +243,10 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         registry.disableRoute(id, usdcIn, address(gho), 0);
         registry.restoreRoute(id, usdcIn, address(gho), 0, bad);
         registry.setRoute(id, usdcIn, address(gho), 0, good);
-        vm.expectRevert(IMarketRegistryErrors.NotPreviouslyApproved.selector);
+        vm.expectRevert(IMarketRegistryBase.NotPreviouslyApproved.selector);
         registry.restoreRoute(id, usdcIn, address(gho), 0, bad);
         registry.disableRoute(id, usdcIn, address(gho), 0);
-        vm.expectRevert(IMarketRegistryErrors.NotPreviouslyApproved.selector);
+        vm.expectRevert(IMarketRegistryBase.NotPreviouslyApproved.selector);
         registry.restoreRoute(id, usdcIn, address(gho), 0, bad);
         registry.restoreRoute(id, usdcIn, address(gho), 0, good);
         vm.stopPrank();
@@ -264,14 +261,14 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         address t = address(usdc);
         TokenDef memory def = registry.getToken(t);
         vm.startPrank(emergencyGuardian);
-        vm.expectRevert(IMarketRegistryErrors.InvalidRouteSlot.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRouteSlot.selector);
         registry.useStandbyRoute(t, RouteSlot.None);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.TokenNotListed.selector, alice));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TokenNotListed.selector, alice));
         registry.useStandbyRoute(alice, RouteSlot.Primary);
         vm.expectEmit(address(registry));
-        emit IMarketRegistrySafetyEvents.StandbyRouteActivated(t, RouteSlot.Primary, emergencyGuardian);
+        emit IMarketRegistryBase.StandbyRouteActivated(t, RouteSlot.Primary, emergencyGuardian);
         registry.useStandbyRoute(t, RouteSlot.Primary);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.StandbyAlreadyActive.selector, t));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.StandbyAlreadyActive.selector, t));
         registry.useStandbyRoute(t, RouteSlot.Alternate);
         vm.stopPrank();
         assertEq(registry.priceRouteVersion(t), 1);
@@ -281,15 +278,15 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         assertEq(a[1], def.alternateRoute[1]);
         // Only the Aave governance executor cancels at once.
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, address(timelock)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, address(timelock)));
         registry.cancelStandbySwitch(t);
         vm.expectEmit(address(registry));
-        emit IMarketRegistrySafetyEvents.StandbySwitchCancelled(t, aaveGovernanceExecutor);
+        emit IMarketRegistryBase.StandbySwitchCancelled(t, aaveGovernanceExecutor);
         vm.prank(aaveGovernanceExecutor);
         registry.cancelStandbySwitch(t);
         assertEq(registry.priceRouteVersion(t), 2);
         vm.prank(aaveGovernanceExecutor);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.StandbyNotActive.selector, t));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.StandbyNotActive.selector, t));
         registry.cancelStandbySwitch(t);
         // The timelock switches the alternate (short delay) and restores at the normal delay.
         vm.prank(address(timelock));
@@ -305,12 +302,12 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         );
         registry.restorePriceRoute(t);
         vm.expectEmit(address(registry));
-        emit IMarketRegistrySafetyEvents.PriceRouteRestored(t);
+        emit IMarketRegistryBase.PriceRouteRestored(t);
         vm.prank(address(timelock));
         registry.restorePriceRoute(t);
         assertEq(registry.priceRouteVersion(t), 4);
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.StandbyNotActive.selector, t));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.StandbyNotActive.selector, t));
         registry.restorePriceRoute(t);
     }
 
@@ -328,11 +325,11 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         assertEq(registry.standbySwitchLockedUntil(t), until);
         // Neither guardian can re-apply what the DAO undid, in the same block or before the lock ends.
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryStandby.StandbySwitchLocked.selector, t, until));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.StandbySwitchLocked.selector, t, until));
         registry.useStandbyRoute(t, RouteSlot.Primary);
         vm.warp(until - 1);
         vm.prank(aaveGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryStandby.StandbySwitchLocked.selector, t, until));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.StandbySwitchLocked.selector, t, until));
         registry.useStandbyRoute(t, RouteSlot.Alternate);
         // Another token is not locked.
         vm.prank(emergencyGuardian);
@@ -392,11 +389,11 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         address standbyFeed = registry.getToken(t).standbyRoute[0];
         ps.setFeed(standbyFeed, 0, 0, 0, 0);
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("feed")));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("feed")));
         registry.useStandbyRoute(t, RouteSlot.Primary);
         ps.setFeed(standbyFeed, 8, 0, 25, 25);
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("heartbeat")));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("heartbeat")));
         registry.useStandbyRoute(t, RouteSlot.Primary);
         // A long published heartbeat (stablecoin feeds, 86,400 s) is accepted: there is no global ceiling.
         ps.setFeed(standbyFeed, 8, 86_400, 25, 25);
@@ -450,7 +447,7 @@ contract MarketRegistryRoutesIdKeyedUnitTest is MarketRegistryFixture {
         RegistryRouteMock elsewhere = _routeWithDeps(address(usdc), address(gho), makeAddr("curve"), makeAddr("uni"));
         // With no AMM contract recorded for the integration, every route of the market is refused (fail closed).
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setRoute(idm, address(usdc), address(gho), 0, address(elsewhere));
         address[] memory amm = new address[](1);
         amm[0] = singleton;
@@ -458,13 +455,13 @@ contract MarketRegistryRoutesIdKeyedUnitTest is MarketRegistryFixture {
         registry.recordIntegrationContracts(V3, amm);
         // Recorded but not finalized: still refused (REQ-MREG-035).
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setRoute(idm, address(usdc), address(gho), 0, address(elsewhere));
         vm.prank(address(timelock));
         registry.finalizeIntegrationContracts(V3);
         // A route through the singleton cannot show it avoids the market's own pool id.
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setRoute(idm, address(usdc), address(gho), 0, address(viaSingleton));
         vm.prank(address(timelock));
         registry.setRoute(idm, address(usdc), address(gho), 0, address(elsewhere));

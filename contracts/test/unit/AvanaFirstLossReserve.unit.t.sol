@@ -4,10 +4,11 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
-import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
-import {IAvanaFirstLossReserveAdmin} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserveAdmin.sol";
-import {IAvanaFirstLossReserveErrors} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserveErrors.sol";
-import {Withdrawal, WithdrawalStatus} from "../../src/coverage/first-loss-reserve/types/Withdrawal.sol";
+import {
+    IAvanaFirstLossReserve,
+    Withdrawal,
+    WithdrawalStatus
+} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {
     AvanaFirstLossReserveFixture,
@@ -57,15 +58,15 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
     /// and an unlisted ID revert.
     function test_TEST_293_constructorFailsClosed() public {
         address am = aave.accessManager;
-        vm.expectRevert(IAvanaFirstLossReserveErrors.ZeroAddress.selector);
+        vm.expectRevert(IAvanaFirstLossReserve.ZeroAddress.selector);
         new AvanaFirstLossReserve(address(0), address(gho), ghoAssetId, am, RESERVE_WITHDRAWAL_DELAY);
-        vm.expectRevert(IAvanaFirstLossReserveErrors.ZeroAddress.selector);
+        vm.expectRevert(IAvanaFirstLossReserve.ZeroAddress.selector);
         new AvanaFirstLossReserve(aave.hub, address(0), ghoAssetId, am, RESERVE_WITHDRAWAL_DELAY);
-        vm.expectRevert(IAvanaFirstLossReserveErrors.ZeroAddress.selector);
+        vm.expectRevert(IAvanaFirstLossReserve.ZeroAddress.selector);
         new AvanaFirstLossReserve(aave.hub, address(gho), ghoAssetId, address(0), RESERVE_WITHDRAWAL_DELAY);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.InvalidHubAsset.selector, usdcAssetId));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.InvalidHubAsset.selector, usdcAssetId));
         new AvanaFirstLossReserve(aave.hub, address(gho), usdcAssetId, am, RESERVE_WITHDRAWAL_DELAY);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.InvalidHubAsset.selector, 99));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.InvalidHubAsset.selector, 99));
         new AvanaFirstLossReserve(aave.hub, address(gho), 99, am, RESERVE_WITHDRAWAL_DELAY);
 
         // A token listed with decimals other than its own.
@@ -73,7 +74,7 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
         vm.prank(aaveDao);
         uint256 oddId = ICoverageHubConfigurator(aave.hubConfigurator)
             .addAssetWithDecimals(aave.hub, address(odd), 18, aave.treasurySpoke, 0, aave.irStrategy, _irData());
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.InvalidHubAsset.selector, oddId));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.InvalidHubAsset.selector, oddId));
         new AvanaFirstLossReserve(aave.hub, address(odd), oddId, am, RESERVE_WITHDRAWAL_DELAY);
     }
 
@@ -83,7 +84,7 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
         uint256 delay
     ) public {
         vm.assume(delay != RESERVE_WITHDRAWAL_DELAY);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.InvalidWithdrawalDelay.selector, delay));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.InvalidWithdrawalDelay.selector, delay));
         new AvanaFirstLossReserve(aave.hub, address(gho), ghoAssetId, aave.accessManager, delay);
     }
 
@@ -193,7 +194,7 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
     function test_TEST_177_zeroFundReverts() public {
         vm.expectCall(address(gho), abi.encodeWithSelector(gho.transferFrom.selector), 0);
         vm.expectCall(aave.hub, abi.encodeWithSelector(IAaveV4Hub.add.selector), 0);
-        vm.expectRevert(IAvanaFirstLossReserveErrors.ZeroAmount.selector);
+        vm.expectRevert(IAvanaFirstLossReserve.ZeroAmount.selector);
         vm.prank(avanaLabs);
         ghoCoverage.fund(0);
     }
@@ -208,9 +209,7 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
         fee.mint(avanaLabs, 100e18);
         vm.startPrank(avanaLabs);
         fee.approve(address(cs), 100e18);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAvanaFirstLossReserveErrors.TransferAmountMismatch.selector, 100e18, 99e18)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.TransferAmountMismatch.selector, 100e18, 99e18));
         cs.fund(100e18);
         vm.stopPrank();
     }
@@ -289,16 +288,16 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
     /// once; each call emits `BorrowSpokeAllowlistUpdated`.
     function test_TEST_293_allowlistRules() public {
         vm.startPrank(aaveGovernanceExecutor);
-        vm.expectRevert(IAvanaFirstLossReserveErrors.ZeroAddress.selector);
+        vm.expectRevert(IAvanaFirstLossReserve.ZeroAddress.selector);
         ghoCoverage.setAllowedBorrowSpoke(address(0), true);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.BorrowSpokeNotListed.selector, attacker));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.BorrowSpokeNotListed.selector, attacker));
         ghoCoverage.setAllowedBorrowSpoke(attacker, true);
         vm.expectEmit(address(ghoCoverage));
-        emit IAvanaFirstLossReserveAdmin.BorrowSpokeAllowlistUpdated(otherSpoke, true);
+        emit IAvanaFirstLossReserve.BorrowSpokeAllowlistUpdated(otherSpoke, true);
         ghoCoverage.setAllowedBorrowSpoke(otherSpoke, true);
         assertTrue(ghoCoverage.allowedBorrowSpoke(otherSpoke), "added");
         vm.expectEmit(address(ghoCoverage));
-        emit IAvanaFirstLossReserveAdmin.BorrowSpokeAllowlistUpdated(otherSpoke, false);
+        emit IAvanaFirstLossReserve.BorrowSpokeAllowlistUpdated(otherSpoke, false);
         ghoCoverage.setAllowedBorrowSpoke(otherSpoke, false);
         assertFalse(ghoCoverage.allowedBorrowSpoke(otherSpoke), "removed");
         ghoCoverage.setAllowedBorrowSpoke(attacker, false);
@@ -309,7 +308,7 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
         CoverageHubSpokeConfig memory config = _config(0, DRAW_CAP);
         vm.prank(aaveDao);
         ICoverageHubConfigurator(aave.hubConfigurator).addSpoke(aave.hub, ghoOnly, ghoAssetId, config);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.BorrowSpokeNotListed.selector, ghoOnly));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.BorrowSpokeNotListed.selector, ghoOnly));
         vm.prank(aaveGovernanceExecutor);
         usdcCoverage.setAllowedBorrowSpoke(ghoOnly, true);
     }
@@ -320,7 +319,7 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
     function test_TEST_293_minimumIsAlertOnly() public {
         uint256 balance = ghoCoverage.fundedBalance();
         vm.expectEmit(address(ghoCoverage));
-        emit IAvanaFirstLossReserveAdmin.FirstLossReserveMinimumUpdated(FIRST_LOSS_RESERVE_MINIMUM_GHO, balance);
+        emit IAvanaFirstLossReserve.FirstLossReserveMinimumUpdated(FIRST_LOSS_RESERVE_MINIMUM_GHO, balance);
         vm.prank(aaveGovernanceExecutor);
         ghoCoverage.setFirstLossReserveMinimum(balance);
         assertEq(ghoCoverage.firstLossReserveMinimum(), balance, "minimum");
@@ -370,7 +369,7 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
 
         vm.warp(1_781_209_599);
         vm.expectRevert(
-            abi.encodeWithSelector(IAvanaFirstLossReserveErrors.WithdrawalNotReady.selector, id, uint64(1_781_209_600))
+            abi.encodeWithSelector(IAvanaFirstLossReserve.WithdrawalNotReady.selector, id, uint64(1_781_209_600))
         );
         _execute(id);
 
@@ -385,7 +384,7 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
         assertEq(gho.balanceOf(address(ghoCoverage)), 0, "nothing held");
         assertEq(ghoCoverage.totalWithdrawn(), 50_000e18, "totalWithdrawn");
         assertEq(uint8(ghoCoverage.getWithdrawal(id).status), uint8(WithdrawalStatus.Executed), "executed");
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.WithdrawalNotPending.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.WithdrawalNotPending.selector, id));
         _execute(id);
     }
 
@@ -446,11 +445,11 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
     /// before or after `executableAt`; cancelled, executed and unknown requests revert `WithdrawalNotPending`.
     function test_TEST_293_requestAndCancelRules() public {
         vm.startPrank(aaveGovernanceExecutor);
-        vm.expectRevert(IAvanaFirstLossReserveErrors.ZeroAmount.selector);
+        vm.expectRevert(IAvanaFirstLossReserve.ZeroAmount.selector);
         ghoCoverage.requestWithdrawal(0, recipient);
         address[3] memory bad = [address(0), address(ghoCoverage), aave.hub];
         for (uint256 i = 0; i < bad.length; ++i) {
-            vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.InvalidRecipient.selector, bad[i]));
+            vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.InvalidRecipient.selector, bad[i]));
             ghoCoverage.requestWithdrawal(1e18, bad[i]);
         }
         uint256 a = ghoCoverage.requestWithdrawal(1e18, recipient);
@@ -460,11 +459,11 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
         emit IAvanaFirstLossReserve.WithdrawalCancelled(a);
         ghoCoverage.cancelWithdrawal(a);
         assertEq(uint8(ghoCoverage.getWithdrawal(a).status), uint8(WithdrawalStatus.Cancelled), "cancelled");
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.WithdrawalNotPending.selector, a));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.WithdrawalNotPending.selector, a));
         ghoCoverage.cancelWithdrawal(a);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.WithdrawalNotPending.selector, a));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.WithdrawalNotPending.selector, a));
         ghoCoverage.executeWithdrawal(a);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.WithdrawalNotPending.selector, 77));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.WithdrawalNotPending.selector, 77));
         ghoCoverage.cancelWithdrawal(77);
         assertEq(uint8(ghoCoverage.getWithdrawal(77).status), uint8(WithdrawalStatus.None), "unknown id");
         vm.warp(block.timestamp + RESERVE_WITHDRAWAL_DELAY + 1);
@@ -494,9 +493,7 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
         if (hub.getSpokeDeficitRay(ghoAssetId, aave.cdpSpoke) != 0) {
             // A deficit larger than the reserve stays open after coverage and blocks the withdrawal until the DAO
             // removes the Spoke from the allowlist (REQ-FLR-026).
-            vm.expectRevert(
-                abi.encodeWithSelector(IAvanaFirstLossReserveErrors.DeficitOutstanding.selector, aave.cdpSpoke)
-            );
+            vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.DeficitOutstanding.selector, aave.cdpSpoke));
             _execute(id);
             vm.prank(aaveGovernanceExecutor);
             ghoCoverage.setAllowedBorrowSpoke(aave.cdpSpoke, false);
@@ -526,11 +523,11 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
     function test_TEST_062_roleMap() public {
         address[4] memory outsiders = [coverageCaller, avanaLabs, governanceMultisig, attacker];
         bytes[5] memory calls = [
-            abi.encodeCall(IAvanaFirstLossReserveAdmin.setAllowedBorrowSpoke, (otherSpoke, true)),
-            abi.encodeCall(IAvanaFirstLossReserveAdmin.setFirstLossReserveMinimum, (1)),
-            abi.encodeCall(IAvanaFirstLossReserveAdmin.requestWithdrawal, (1e18, recipient)),
-            abi.encodeCall(IAvanaFirstLossReserveAdmin.cancelWithdrawal, (1)),
-            abi.encodeCall(IAvanaFirstLossReserveAdmin.executeWithdrawal, (1))
+            abi.encodeCall(IAvanaFirstLossReserve.setAllowedBorrowSpoke, (otherSpoke, true)),
+            abi.encodeCall(IAvanaFirstLossReserve.setFirstLossReserveMinimum, (1)),
+            abi.encodeCall(IAvanaFirstLossReserve.requestWithdrawal, (1e18, recipient)),
+            abi.encodeCall(IAvanaFirstLossReserve.cancelWithdrawal, (1)),
+            abi.encodeCall(IAvanaFirstLossReserve.executeWithdrawal, (1))
         ];
         for (uint256 i = 0; i < outsiders.length; ++i) {
             for (uint256 j = 0; j < calls.length; ++j) {
@@ -633,7 +630,7 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
         _reportDeficit(ghoAssetId, otherSpoke, 1000e18);
         vm.warp(block.timestamp + 1 days);
         vm.prank(aaveGovernanceExecutor);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.DeficitOutstanding.selector, aave.cdpSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.DeficitOutstanding.selector, aave.cdpSpoke));
         ghoCoverage.executeWithdrawal(id);
         assertEq(uint8(ghoCoverage.getWithdrawal(id).status), uint8(WithdrawalStatus.Pending), "still Pending");
         vm.prank(coverageCaller);
@@ -652,7 +649,7 @@ contract AvanaFirstLossReserveUnitTest is AvanaFirstLossReserveFixture {
         _reportDeficit(ghoAssetId, aave.cdpSpoke, 1e18);
         vm.warp(block.timestamp + RESERVE_WITHDRAWAL_DELAY);
         vm.startPrank(aaveGovernanceExecutor);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserveErrors.DeficitOutstanding.selector, aave.cdpSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaFirstLossReserve.DeficitOutstanding.selector, aave.cdpSpoke));
         ghoCoverage.executeWithdrawal(id);
         ghoCoverage.setAllowedBorrowSpoke(aave.cdpSpoke, false);
         assertEq(ghoCoverage.executeWithdrawal(id), 1e18, "executes");

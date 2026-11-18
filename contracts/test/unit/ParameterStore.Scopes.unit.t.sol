@@ -3,18 +3,19 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {DebtReserveParams} from "../../src/policy/parameter-store/types/DebtReserveParams.sol";
-import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
+import {DebtReserveDef, MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
+import {DebtReserveParams, FeedDef, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
-import {MockAggregator, OracleConfigReader, OracleConfigSummary} from "../utils/mocks/ParameterStoreMocks.sol";
-import {MockAvanaFirstLossReserve, MockPriceSource} from "../utils/mocks/ParameterStoreMocks.sol";
+import {
+    MockAggregator,
+    MockAvanaFirstLossReserve,
+    MockPriceSource,
+    OracleConfigReader,
+    OracleConfigSummary
+} from "../utils/mocks/ParameterStoreMocks.sol";
 
 /// @notice Scope checks of every keyed setter (market, Hub, token, feed, Spoke, debt reserve), the listing-only
 /// setters against every market status, and the zero answers of every view for an unknown key (REQ-PSTORE-011).
@@ -40,7 +41,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
     }
 
     function _unknownMarket() internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IParameterStoreErrors.UnknownMarket.selector, UNKNOWN);
+        return abi.encodeWithSelector(IParameterStoreBase.UnknownMarket.selector, UNKNOWN);
     }
 
     // ─── Markets ───
@@ -86,7 +87,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
     // TEST-250 verifies: REQ-PSTORE-004, REQ-PSTORE-012, REQ-RISK-041, REQ-ACCESS-135
     function test_TEST_250_listingSettersOnlyWhileRegistered() public {
         MarketParams memory p = store.getMarketParams(M);
-        bytes memory notInListing = abi.encodeWithSelector(IParameterStoreErrors.NotInListing.selector);
+        bytes memory notInListing = abi.encodeWithSelector(IParameterStoreBase.NotInListing.selector);
         MarketStatus[5] memory others = [
             MarketStatus.None,
             MarketStatus.Active,
@@ -131,7 +132,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         address[2] memory bad = [address(0), stray];
         for (uint256 j = 0; j < bad.length; ++j) {
             address h = bad[j];
-            bytes memory err = abi.encodeWithSelector(IParameterStoreErrors.UnknownHub.selector, h);
+            bytes memory err = abi.encodeWithSelector(IParameterStoreBase.UnknownHub.selector, h);
             _refuses(abi.encodeCall(store.tightenTokenUsdCap, (h, usdc, 1)), err);
             _refuses(abi.encodeCall(store.loosenTokenUsdCap, (h, usdc, 1)), err);
             _refuses(abi.encodeCall(store.setInitialTokenCap, (h, usdt, 1)), err);
@@ -144,7 +145,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
     // TEST-272 verifies: REQ-RISK-044, REQ-PSTORE-026
     function test_TEST_272_hubForgottenByTheRegistryLosesItsSetters() public {
         registry.setHub(address(hub), false);
-        bytes memory err = abi.encodeWithSelector(IParameterStoreErrors.UnknownHub.selector, address(hub));
+        bytes memory err = abi.encodeWithSelector(IParameterStoreBase.UnknownHub.selector, address(hub));
         _refuses(abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 1)), err);
         // Its stored caps are kept and still served.
         assertEq(store.tokenUsdCap(address(hub), usdc), 20_000_000e8);
@@ -155,12 +156,12 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         // Unlisted token first, even under an unrecorded Hub.
         _refuses(
             abi.encodeCall(store.setInitialTokenCap, (stray, unlisted, 1)),
-            abi.encodeWithSelector(IParameterStoreErrors.TokenNotListed.selector, unlisted)
+            abi.encodeWithSelector(IParameterStoreBase.TokenNotListed.selector, unlisted)
         );
         // A pair that already has a cap is no longer in listing.
         _refuses(
             abi.encodeCall(store.setInitialTokenCap, (address(hub), usdc, 1)),
-            abi.encodeWithSelector(IParameterStoreErrors.NotInListing.selector)
+            abi.encodeWithSelector(IParameterStoreBase.NotInListing.selector)
         );
         assertEq(store.tokenUsdCap(address(hub), usdc), 20_000_000e8);
     }
@@ -169,7 +170,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
 
     // TEST-250 verifies: REQ-CONFIG-019, REQ-PSTORE-028, REQ-PSTORE-020, REQ-CONFIG-050
     function test_TEST_250_everyTokenSetterRefusesAnUnlistedToken() public {
-        bytes memory err = abi.encodeWithSelector(IParameterStoreErrors.TokenNotListed.selector, unlisted);
+        bytes memory err = abi.encodeWithSelector(IParameterStoreBase.TokenNotListed.selector, unlisted);
         SecondSource memory none;
         DebtReserveParams memory dp = DebtReserveParams(1);
         _refuses(abi.encodeCall(store.setFeedAgreementToleranceBps, (unlisted, 500)), err);
@@ -189,7 +190,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
     // TEST-246 verifies: REQ-CONFIG-050, REQ-PSTORE-006
     function test_TEST_246_allowanceNeedsAnApprovedReserveOfTheAsset() public {
         // usdt is listed but no approved debt reserve lends it.
-        bytes memory err = abi.encodeWithSelector(IParameterStoreErrors.TokenNotListed.selector, usdt);
+        bytes memory err = abi.encodeWithSelector(IParameterStoreBase.TokenNotListed.selector, usdt);
         _refuses(abi.encodeCall(store.loosenFloorRoundingAllowance, (usdt, 1)), err);
         _refuses(abi.encodeCall(store.setDebtAssetParams, (usdt, DebtReserveParams(1))), err);
         // A reserve of the asset that is recorded but not approved does not count.
@@ -210,8 +211,8 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
     // TEST-064 verifies: REQ-CONFIG-051, REQ-CONFIG-067
     function test_TEST_064_unwrittenAssetValuesHaveNoDirectionToMove() public {
         // An asset with no allowance or stress rise has nothing to tighten (allowance) or loosen (stress rise).
-        bytes memory notStricter = abi.encodeWithSelector(IParameterStoreErrors.NotStricter.selector);
-        bytes memory notLooser = abi.encodeWithSelector(IParameterStoreErrors.NotLooser.selector);
+        bytes memory notStricter = abi.encodeWithSelector(IParameterStoreBase.NotStricter.selector);
+        bytes memory notLooser = abi.encodeWithSelector(IParameterStoreBase.NotLooser.selector);
         _refuses(abi.encodeCall(store.tightenFloorRoundingAllowance, (unlisted, 0)), notStricter);
         _refuses(abi.encodeCall(store.tightenFloorRoundingAllowance, (unlisted, 1)), notStricter);
         _refuses(abi.encodeCall(store.loosenDebtStressRiseBps, (unlisted, 0)), notLooser);
@@ -223,7 +224,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
 
     // TEST-250 verifies: REQ-PSTORE-009, REQ-CONFIG-023
     function test_TEST_250_everyFeedSetterRefusesAnUndefinedFeed() public {
-        bytes memory err = abi.encodeWithSelector(IParameterStoreErrors.UnknownFeed.selector, noFeed);
+        bytes memory err = abi.encodeWithSelector(IParameterStoreBase.UnknownFeed.selector, noFeed);
         _refuses(abi.encodeCall(store.tightenBorrowPriceMaxAge, (noFeed, 1)), err);
         _refuses(abi.encodeCall(store.setBorrowPriceMaxAge, (noFeed, 1)), err);
         _refuses(abi.encodeCall(store.setLiquidationPriceMaxAge, (noFeed, 88_200)), err);
@@ -242,7 +243,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         for (uint256 i = 0; i < bad.length; ++i) {
             _refuses(
                 abi.encodeCall(store.setLiquidationExpectations, (bad[i], 1.1e18, 200)),
-                abi.encodeWithSelector(IParameterStoreErrors.UnknownSpoke.selector, bad[i])
+                abi.encodeWithSelector(IParameterStoreBase.UnknownSpoke.selector, bad[i])
             );
             assertEq(store.aaveTargetHealthFactor(bad[i]), 0);
         }
@@ -250,7 +251,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
 
     // TEST-228 verifies: REQ-PSTORE-016
     function test_TEST_228_deficitLoosenNeedsAReserveFundedByTheHub() public {
-        bytes memory err = abi.encodeWithSelector(IParameterStoreErrors.UnknownDebtReserve.selector, address(0), 0);
+        bytes memory err = abi.encodeWithSelector(IParameterStoreBase.UnknownDebtReserve.selector, address(0), 0);
         address hub2 = makeAddr("hub2");
         registry.setHub(hub2, true);
         // The GHO reserve is funded by `hub`, not `hub2`.
@@ -376,7 +377,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         registry.setDebtReserve(spoke2, d);
         _refuses(
             abi.encodeCall(store.loosenBreakerDeficitMax, (address(hub), gho, 100_000e18 + 1)),
-            abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector)
+            abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector)
         );
         _tl();
         store.loosenBreakerDeficitMax(address(hub), gho, 100_000e18);
@@ -396,7 +397,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         registry.setDebtReserve(spoke2, d);
         _refuses(
             abi.encodeCall(store.setDebtAssetParams, (gho, DebtReserveParams(1e18 + 1))),
-            abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector)
+            abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector)
         );
         _tl();
         store.setDebtAssetParams(gho, DebtReserveParams(1e18));
@@ -409,7 +410,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         vm.mockCallRevert(address(ghoPrice), abi.encodeWithSignature("latestAnswer()"), "down");
         _refuses(
             abi.encodeCall(store.setDebtAssetParams, (gho, DebtReserveParams(1))),
-            abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector)
+            abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector)
         );
     }
 }

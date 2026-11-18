@@ -3,33 +3,32 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
 import {IClIntegration} from "../../src/amm/IClIntegration.sol";
+import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
-import {DexHop, HopKind} from "../../src/liquidation/settlement-routes/types/DexHop.sol";
-import {RouteConfig} from "../../src/liquidation/settlement-routes/types/RouteConfig.sol";
+import {DexHop, HopKind, RouteConfig} from "../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {IDebtOracle} from "../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {DebtOracleInitParams} from "../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
+import {InitParams} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
-import {TokenDef} from "../../src/policy/market-registry/types/TokenDef.sol";
-import {DebtReserveParams} from "../../src/policy/parameter-store/types/DebtReserveParams.sol";
-import {GlobalParams} from "../../src/policy/parameter-store/types/GlobalParams.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
-import {MarketSpeedLimits} from "../../src/policy/parameter-store/types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "../../src/policy/parameter-store/types/SpeedLimit.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
-import {TokenOracleConfig} from "../../src/types/TokenOracleConfig.sol";
+import {
+    DebtReserveDef,
+    MarketStatus,
+    RiskTier,
+    SpokeDef,
+    TokenDef
+} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {
+    DebtReserveParams,
+    GlobalParams,
+    MarketParams,
+    MarketSpeedLimits,
+    SpeedLimit
+} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {MarketDef} from "../../src/types/MarketTypes.sol";
+import {OracleConfig, RouteSlot, SecondSource, TokenOracleConfig} from "../../src/types/OracleTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {ChainInputs} from "./lib/DeployTypes.sol";
 import {IPoolTokens, ListingBase} from "./lib/ListingBase.sol";
@@ -908,7 +907,7 @@ contract ListMarkets is ListingBase {
         // must name the same `d`, and the market's LPOracle the same `k` (SPEC-ORC-005, `CL_CHECK_UNIT_EXP`).
         uint256 snap = vm.snapshotState();
         vm.prank(address(registry));
-        (, m.decimals) = IAmmIntegration(m.lpVault).bindMarket(m.marketId, m.pool, m.poolId, m.shape, m.integrationData);
+        (, m.decimals) = ILPVault(m.lpVault).bindMarket(m.marketId, m.pool, m.poolId, m.shape, m.integrationData);
         m.unitExp = IClIntegration(m.lpVault).unitExponent(m.marketId);
         vm.revertToState(snap);
     }

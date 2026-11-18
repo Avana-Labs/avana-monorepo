@@ -3,13 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketRegistryEvents.sol";
-import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
-import {IMarketRegistrySafetyEvents} from "../../src/policy/market-registry/IMarketRegistrySafetyEvents.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {RiskTier} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -90,29 +87,29 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
         next = s;
         if (op == OP_FREEZE) {
             if (s == S_NONE) return ("", S_FROZEN);
-            if (s == S_FROZEN) return (abi.encodeWithSelector(IMarketRegistryErrors.AlreadyFrozen.selector), s);
-            return (abi.encodeWithSelector(IMarketRegistryErrors.AlreadyPaused.selector), s);
+            if (s == S_FROZEN) return (abi.encodeWithSelector(IMarketRegistryBase.AlreadyFrozen.selector), s);
+            return (abi.encodeWithSelector(IMarketRegistryBase.AlreadyPaused.selector), s);
         }
-        if (op == OP_PAUSE_NONE) return (abi.encodeWithSelector(IMarketRegistryErrors.InvalidPauseReason.selector), s);
+        if (op == OP_PAUSE_NONE) return (abi.encodeWithSelector(IMarketRegistryBase.InvalidPauseReason.selector), s);
         if (op == OP_PAUSE_GENERAL) {
             if (s == S_PAUSED_GENERAL) {
-                return (abi.encodeWithSelector(IMarketRegistryErrors.InvalidPauseReason.selector), s);
+                return (abi.encodeWithSelector(IMarketRegistryBase.InvalidPauseReason.selector), s);
             }
             return ("", S_PAUSED_GENERAL);
         }
         if (op == OP_PAUSE_MINT) {
             if (s == S_PAUSED_MINT) {
-                return (abi.encodeWithSelector(IMarketRegistryErrors.InvalidPauseReason.selector), s);
+                return (abi.encodeWithSelector(IMarketRegistryBase.InvalidPauseReason.selector), s);
             }
             return ("", S_PAUSED_MINT);
         }
         if (op == OP_UNFREEZE) {
             if (s == S_FROZEN) return ("", S_NONE);
-            if (s == S_NONE) return (abi.encodeWithSelector(IMarketRegistryErrors.NotFrozen.selector), s);
-            return (abi.encodeWithSelector(IMarketRegistryErrors.CannotUnfreezeWhilePaused.selector), s);
+            if (s == S_NONE) return (abi.encodeWithSelector(IMarketRegistryBase.NotFrozen.selector), s);
+            return (abi.encodeWithSelector(IMarketRegistryBase.CannotUnfreezeWhilePaused.selector), s);
         }
         if (s == S_PAUSED_GENERAL || s == S_PAUSED_MINT) return ("", S_NONE);
-        return (abi.encodeWithSelector(IMarketRegistryErrors.NotPaused.selector), s);
+        return (abi.encodeWithSelector(IMarketRegistryBase.NotPaused.selector), s);
     }
 
     function _authorized(
@@ -139,7 +136,7 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
         if (s0 != s1) {
             Vm.Log memory g = logs[k++];
             assertEq(g.emitter, address(registry));
-            assertEq(g.topics[0], IMarketRegistryEvents.PauseStateChanged.selector);
+            assertEq(g.topics[0], IMarketRegistryBase.PauseStateChanged.selector);
             assertEq(g.topics[1], bytes32(uint256(uint160(h))));
             assertEq(g.topics[2], bytes32(uint256(s0)));
             assertEq(g.topics[3], bytes32(uint256(s1)));
@@ -147,7 +144,7 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
         }
         if (r0 != r1) {
             Vm.Log memory g = logs[k++];
-            assertEq(g.topics[0], IMarketRegistrySafetyEvents.PauseReasonChanged.selector);
+            assertEq(g.topics[0], IMarketRegistryBase.PauseReasonChanged.selector);
             assertEq(g.topics[1], bytes32(uint256(uint160(h))));
             assertEq(g.topics[2], bytes32(uint256(uint160(caller))));
             (PauseReason p, PauseReason c) = abi.decode(g.data, (PauseReason, PauseReason));
@@ -179,7 +176,7 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         if (!_authorized(caller, op)) {
             assertFalse(ok, "unauthorised call admitted");
-            assertEq(ret, abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, caller));
+            assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, caller));
             assertEq(logs.length, 0);
             _assertState(h, s);
         } else {
@@ -247,13 +244,13 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
     // `InvalidPauseReason`, since the reason is checked before the Hub.
     function test_TEST_065_unrecordedHubRefusedByEveryCall() public {
         address h = makeAddr("notAHub");
-        bytes memory invalidHub = abi.encodeWithSelector(IMarketRegistryHubs.InvalidHub.selector, h);
+        bytes memory invalidHub = abi.encodeWithSelector(IMarketRegistry.InvalidHub.selector, h);
         for (uint8 op = 0; op < 6; ++op) {
             vm.prank(address(timelock));
             (bool ok, bytes memory ret) = address(registry).call(_data(op, h));
             assertFalse(ok);
             if (op == OP_PAUSE_NONE) {
-                assertEq(ret, abi.encodeWithSelector(IMarketRegistryErrors.InvalidPauseReason.selector));
+                assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.InvalidPauseReason.selector));
             } else {
                 assertEq(ret, invalidHub);
             }
@@ -267,7 +264,7 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
     function test_TEST_065_newlyRecordedHubStartsNone() public {
         address late = makeAddr("lateHub");
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidHub.selector, late));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidHub.selector, late));
         registry.freeze(late);
         vm.prank(address(timelock));
         registry.recordHub(late, RiskTier.Volatile);
@@ -290,7 +287,7 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
     function test_TEST_065_freezeAllMovesOnlyHubsInNone() public {
         _mixed();
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.PauseStateChanged(address(hub), PauseState.None, PauseState.Frozen, aaveGuardian);
+        emit IMarketRegistryBase.PauseStateChanged(address(hub), PauseState.None, PauseState.Frozen, aaveGuardian);
         vm.recordLogs();
         vm.prank(aaveGuardian);
         registry.freezeAll();
@@ -301,7 +298,7 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
         _assertState(hubD, S_PAUSED_MINT);
         // Nothing left in None: the second call changes no Hub.
         vm.prank(aaveGuardian);
-        vm.expectRevert(IMarketRegistryErrors.AlreadyFrozen.selector);
+        vm.expectRevert(IMarketRegistryBase.AlreadyFrozen.selector);
         registry.freezeAll();
     }
 
@@ -311,17 +308,17 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
         address g = emergencyGuardian;
         // Hub: None -> Paused(General): state and reason events.
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.PauseStateChanged(address(hub), PauseState.None, PauseState.Paused, g);
+        emit IMarketRegistryBase.PauseStateChanged(address(hub), PauseState.None, PauseState.Paused, g);
         vm.expectEmit(address(registry));
-        emit IMarketRegistrySafetyEvents.PauseReasonChanged(address(hub), PauseReason.None, PauseReason.General, g);
+        emit IMarketRegistryBase.PauseReasonChanged(address(hub), PauseReason.None, PauseReason.General, g);
         // hubB: Frozen -> Paused(General).
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.PauseStateChanged(hubB, PauseState.Frozen, PauseState.Paused, g);
+        emit IMarketRegistryBase.PauseStateChanged(hubB, PauseState.Frozen, PauseState.Paused, g);
         vm.expectEmit(address(registry));
-        emit IMarketRegistrySafetyEvents.PauseReasonChanged(hubB, PauseReason.None, PauseReason.General, g);
+        emit IMarketRegistryBase.PauseReasonChanged(hubB, PauseReason.None, PauseReason.General, g);
         // hubC already Paused(General): skipped. hubD: reason only.
         vm.expectEmit(address(registry));
-        emit IMarketRegistrySafetyEvents.PauseReasonChanged(hubD, PauseReason.MintPathSuspect, PauseReason.General, g);
+        emit IMarketRegistryBase.PauseReasonChanged(hubD, PauseReason.MintPathSuspect, PauseReason.General, g);
         vm.recordLogs();
         vm.prank(g);
         registry.pauseAll(PauseReason.General);
@@ -331,7 +328,7 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
         _assertState(hubC, S_PAUSED_GENERAL);
         _assertState(hubD, S_PAUSED_GENERAL);
         vm.prank(g);
-        vm.expectRevert(IMarketRegistryErrors.AlreadyPaused.selector);
+        vm.expectRevert(IMarketRegistryBase.AlreadyPaused.selector);
         registry.pauseAll(PauseReason.General);
     }
 
@@ -353,7 +350,7 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
     function test_TEST_065_pauseAllNoneIsRefusedWhateverTheStates() public {
         _mixed();
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidPauseReason.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidPauseReason.selector);
         registry.pauseAll(PauseReason.None);
         _assertState(address(hub), S_NONE);
         _assertState(hubB, S_FROZEN);
@@ -362,10 +359,10 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
     // TEST-065 verifies: REQ-MREG-004, REQ-CONFIG-082, REQ-ACCESS-172
     function test_TEST_065_allCallsNeedTheirRole() public {
         vm.prank(pauseOnly);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, pauseOnly));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, pauseOnly));
         registry.freezeAll();
         vm.prank(freezeOnly);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, freezeOnly));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, freezeOnly));
         registry.pauseAll(PauseReason.General);
         vm.prank(freezeOnly);
         registry.freezeAll();
@@ -380,9 +377,9 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
         _deployRegistry();
         assertEq(registry.getHubs().length, 0);
         vm.startPrank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.AlreadyFrozen.selector);
+        vm.expectRevert(IMarketRegistryBase.AlreadyFrozen.selector);
         registry.freezeAll();
-        vm.expectRevert(IMarketRegistryErrors.AlreadyPaused.selector);
+        vm.expectRevert(IMarketRegistryBase.AlreadyPaused.selector);
         registry.pauseAll(PauseReason.General);
         vm.stopPrank();
     }
@@ -410,10 +407,10 @@ contract MarketRegistryPauseMatrixUnitTest is MarketRegistryFixture {
         }
         vm.prank(emergencyGuardian);
         if (!pauseBatch) {
-            if (!any) vm.expectRevert(IMarketRegistryErrors.AlreadyFrozen.selector);
+            if (!any) vm.expectRevert(IMarketRegistryBase.AlreadyFrozen.selector);
             registry.freezeAll();
         } else {
-            if (!any) vm.expectRevert(IMarketRegistryErrors.AlreadyPaused.selector);
+            if (!any) vm.expectRevert(IMarketRegistryBase.AlreadyPaused.selector);
             registry.pauseAll(mintReason ? PauseReason.MintPathSuspect : PauseReason.General);
         }
         for (uint256 i = 0; i < 4; ++i) {

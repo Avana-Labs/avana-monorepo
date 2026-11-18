@@ -3,35 +3,35 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
-import {IAaveV4ExtSload} from "../../interfaces/external/aave/IAaveV4ExtSload.sol";
-import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
-import {Market} from "../../types/Market.sol";
-import {PauseReason} from "../../types/PauseReason.sol";
-import {PauseState} from "../../types/PauseState.sol";
-import {IParameterStoreCoverage} from "../parameter-store/IParameterStoreCoverage.sol";
-import {IParameterStoreViews} from "../parameter-store/IParameterStoreViews.sol";
-import {FeedDef} from "../parameter-store/types/FeedDef.sol";
-import {IMarketRegistryCreditLines} from "./IMarketRegistryCreditLines.sol";
-import {IMarketRegistryErrors} from "./IMarketRegistryErrors.sol";
-import {IMarketRegistryEvents} from "./IMarketRegistryEvents.sol";
-import {IMarketRegistrySafetyEvents} from "./IMarketRegistrySafetyEvents.sol";
-import {BreakerReasons} from "./types/Breaker.sol";
-import {DebtReserveDef} from "./types/DebtReserveDef.sol";
-import {MarketRegistryImmutables} from "./types/MarketRegistryImmutables.sol";
-import {MarketStatus} from "./types/MarketStatus.sol";
-import {RiskTier} from "./types/RiskTier.sol";
-import {SpokeDef} from "./types/SpokeDef.sol";
-import {TokenDef} from "./types/TokenDef.sol";
-import {WindDownState} from "./types/WindDownState.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-
 /// @title MarketRegistryStorage
 /// @notice Storage layout, immutables, constants and shared checks of the MarketRegistry and its logic contracts.
 /// @dev ERC-7201 namespace `avana.storage.MarketRegistry`; logic contracts touch it only by delegatecall.
 // ParameterStore feed-definition reads in loops over a route's one or two feeds and a market's tokens; views only.
 // forge-lint: disable-start(calls-loop)
-abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistrySafetyEvents, IMarketRegistryErrors {
+
+import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
+import {IAaveV4ExtSload} from "../../interfaces/external/aave/IAaveV4ExtSload.sol";
+import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
+import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {PriceState} from "../../types/OracleTypes.sol";
+import {IParameterStore} from "../parameter-store/IParameterStore.sol";
+import {FeedDef} from "../parameter-store/types/ParameterStoreTypes.sol";
+import {IMarketRegistry} from "./IMarketRegistry.sol";
+import {IMarketRegistryBase} from "./IMarketRegistryBase.sol";
+import {BreakerReasons} from "./types/Breaker.sol";
+import {
+    DebtReserveDef,
+    MarketRegistryImmutables,
+    MarketStatus,
+    RiskTier,
+    SpokeDef,
+    TokenDef,
+    WindDownState
+} from "./types/MarketRegistryTypes.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+
+abstract contract MarketRegistryStorage is IMarketRegistryBase {
     struct RouteRecord {
         address route;
         bool active;
@@ -281,7 +281,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         if (route.length == 0 || route.length > 2) return "routeLength";
         for (uint256 i = 0; i < route.length; ++i) {
             if (route[i] == address(0)) return "feed";
-            FeedDef memory f = IParameterStoreViews(_PARAMETER_STORE).getFeed(route[i]);
+            FeedDef memory f = IParameterStore(_PARAMETER_STORE).getFeed(route[i]);
             if (f.decimals == 0) return "feed";
             if (f.feedHeartbeat == 0) return "heartbeat";
         }
@@ -309,7 +309,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         if (cfLp >= _BPS) return false;
         uint256 err = 0;
         for (uint256 i = 0; i < route.length; ++i) {
-            FeedDef memory f = IParameterStoreViews(_PARAMETER_STORE).getFeed(route[i]);
+            FeedDef memory f = IParameterStore(_PARAMETER_STORE).getFeed(route[i]);
             err += uint256(f.feedDeviationThresholdBps) + uint256(f.heartbeatDriftBps);
         }
         return _BPS - cfLp > err;
@@ -366,8 +366,8 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         if (line == 0) return (0, 0);
         address cs = _s().firstLossReserveOf[hub][asset];
         funded = cs == address(0) ? 0 : IAvanaFirstLossReserve(cs).fundedBalance();
-        uint256 k = 10 ** uint256(IERC20Metadata(asset).decimals())
-            * IParameterStoreCoverage(_PARAMETER_STORE).coverageRatioBps();
+        uint256 k =
+            10 ** uint256(IERC20Metadata(asset).decimals()) * IParameterStore(_PARAMETER_STORE).coverageRatioBps();
         if (k != 0 && line > (type(uint256).max - _BPS) / k) return (type(uint256).max, funded);
         required = (line * k + _BPS - 1) / _BPS;
     }
@@ -378,7 +378,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
         uint256 line
     ) internal view {
         (uint256 required, uint256 funded) = _coverage(hub, asset, line);
-        if (required > funded) revert IMarketRegistryCreditLines.CoverageBelowRatio(hub, asset, required, funded);
+        if (required > funded) revert IMarketRegistry.CoverageBelowRatio(hub, asset, required, funded);
     }
 
     function _spokeHashApproved(
@@ -412,5 +412,26 @@ abstract contract MarketRegistryStorage is IMarketRegistryEvents, IMarketRegistr
             count += _s().freezeBuckets[caller][h];
         }
     }
+
+    /// @dev True when the LPOracle's `checkConfig` returns 0 for its stored configuration; any failed call fails.
+    function _oracleConfigPasses(
+        address lpOracle
+    ) internal view returns (bool) {
+        (bool ok, bytes memory cfg) =
+            _PARAMETER_STORE.staticcall(abi.encodeCall(IParameterStore.getOracleConfig, (lpOracle)));
+        if (!ok) return false;
+        bytes memory ret;
+        (ok, ret) = lpOracle.staticcall(bytes.concat(ILPOracle.checkConfig.selector, cfg));
+        return ok && ret.length == 32 && abi.decode(ret, (uint256)) == 0;
+    }
+
+    /// @dev True when the LPOracle reports `Live`. The first word is the struct offset; the second is the state.
+    function _oracleLive(
+        address lpOracle
+    ) internal view returns (bool) {
+        (bool ok, bytes memory ret) = lpOracle.staticcall(abi.encodeCall(ILPOracle.getPriceState, ()));
+        if (!ok || ret.length < 64) return false;
+        (, uint256 state) = abi.decode(ret, (uint256, uint256));
+        return state == uint256(PriceState.Live);
+    }
 }
-// forge-lint: disable-end(calls-loop)

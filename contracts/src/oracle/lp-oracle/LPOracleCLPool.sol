@@ -5,10 +5,8 @@ pragma solidity 0.8.28;
 
 import {ClPriceMath} from "../../amm/concentrated-liquidity/ClPriceMath.sol";
 import {IUniswapV3Pool} from "../../interfaces/external/uniswap/IUniswapV3Pool.sol";
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {SecondSource} from "../../types/SecondSource.sol";
-import {SecondSourceKind} from "../../types/SecondSourceKind.sol";
-import {ShapeKind} from "../../types/ShapeKind.sol";
+import {OracleConfig, SecondSource, SecondSourceKind} from "../../types/OracleTypes.sol";
+import {ShapeKind} from "../../types/PositionTypes.sol";
 import {LPOracleCalls} from "./LPOracleCalls.sol";
 import {LPOracleStorage} from "./LPOracleStorage.sol";
 

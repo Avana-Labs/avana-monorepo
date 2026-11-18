@@ -4,16 +4,16 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
-import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {ILPVaultSwapEvents} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapEvents.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {
+    LiquidationParams,
+    LiquidationResult,
+    RouteMode
+} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
-import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -120,7 +120,7 @@ contract LiquidationCallerFundedIntegrationTest is RealStackFlows {
         LiquidationParams memory p = _liqParams(proxy, mA, usdcReserveId, x);
         _fundCaller(keeper, p);
         vm.expectEmit(true, true, false, true, adapter);
-        emit IAaveAdapterEvents.SeizedUnitsBurned(mA, vt, c);
+        emit IAaveAdapterBase.SeizedUnitsBurned(mA, vt, c);
         vm.prank(keeper);
         LiquidationResult memory r = lvs.liquidate(p);
         assertEq(r.debtRepaid, x, "D: Aave pulled the whole repayment");
@@ -150,7 +150,7 @@ contract LiquidationCallerFundedIntegrationTest is RealStackFlows {
         LiquidationParams memory p = _liqParams(proxy, mA, ghoReserveId, x);
         _fundCaller(keeper, p);
         vm.expectEmit(true, true, false, true, adapter);
-        emit IAaveAdapterEvents.SeizedUnitsBurned(mA, vt, c);
+        emit IAaveAdapterBase.SeizedUnitsBurned(mA, vt, c);
         vm.prank(keeper);
         LiquidationResult memory r = lvs.liquidate(p);
         assertEq(r.debtRepaid, x, "D in GHO, all of the Lens's close amount");
@@ -197,7 +197,7 @@ contract LiquidationCallerFundedIntegrationTest is RealStackFlows {
         address anyEoa = makeAddr("anyEoa");
         _fundCaller(anyEoa, p);
         vm.expectEmit(true, true, false, false, lpVaultSwap);
-        emit ILPVaultSwapEvents.RouteFailed(mA, address(usdt), primary, ISettlementRoute.MinOutNotMet.selector);
+        emit ILPVaultSwapBase.RouteFailed(mA, address(usdt), primary, ISettlementRoute.MinOutNotMet.selector);
         vm.prank(anyEoa);
         LiquidationResult memory r = lvs.liquidate(p);
         _checkSettlement(r, X, _value(r.unitsSeized, usdcReserveId), usdc);
@@ -227,7 +227,7 @@ contract LiquidationCallerFundedIntegrationTest is RealStackFlows {
         usdc.mint(keeper, X);
         vm.startPrank(keeper);
         usdc.approve(lpVaultSwap, X);
-        vm.expectRevert(ILPVaultSwapErrors.NoRouteAvailable.selector);
+        vm.expectRevert(ILPVaultSwapBase.NoRouteAvailable.selector);
         lvs.liquidate(p);
         vm.stopPrank();
         assertEq(IERC20(vt).totalSupply(), supplyBefore, "nothing burned");

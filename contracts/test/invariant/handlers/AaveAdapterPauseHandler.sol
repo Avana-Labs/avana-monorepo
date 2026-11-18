@@ -3,12 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
+import {PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {AdapterRegistryMock, AdapterRiskModuleMock} from "../../utils/mocks/AaveAdapterMocks.sol";
 import {CollLPVaultMock, CollPoolToken} from "../../utils/mocks/CollateralizationMocks.sol";
 import {Test} from "forge-std/Test.sol";
@@ -16,7 +15,7 @@ import {Test} from "forge-std/Test.sol";
 /// @notice The contracts the pause handler drives.
 struct PauseWorld {
     IAaveAdapter adapter;
-    ICollateralizationViews coll;
+    ICollateralization coll;
     AdapterRegistryMock registry;
     AdapterRiskModuleMock risk;
     CollLPVaultMock lpVault;

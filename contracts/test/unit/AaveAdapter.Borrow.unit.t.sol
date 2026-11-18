@@ -3,15 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationDebtMark} from "../../src/custody/collateralization/ICollateralizationDebtMark.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 
 /// @title AaveAdapterBorrowUnitTest
@@ -61,15 +59,13 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
     /// consumed nonce and the health factor the RiskModule returned.
     function test_TEST_027_borrowGho() public {
         uint256 amount = 5000e18;
-        vm.expectCall(
-            address(risk), abi.encodeCall(IRiskModuleChecks.preBorrowCheck, (aliceProxy, debtReserveId, amount))
-        );
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralizationDebtMark.markIndebted, (aliceProxy)));
-        vm.expectCall(address(risk), abi.encodeCall(IRiskModuleChecks.postHealthCheck, (aliceProxy, 1.5e18)));
+        vm.expectCall(address(risk), abi.encodeCall(IRiskModule.preBorrowCheck, (aliceProxy, debtReserveId, amount)));
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.markIndebted, (aliceProxy)));
+        vm.expectCall(address(risk), abi.encodeCall(IRiskModule.postHealthCheck, (aliceProxy, 1.5e18)));
         // $20,000 of collateral at CF 80% over $5,000 of GHO debt.
         uint256 hfExpected = uint256(16_000e18) * 1e18 / amount;
         vm.expectEmit(adapter);
-        emit IAaveAdapterEvents.Borrowed(alice, MARKET_ID, debtReserveId, bob, amount, 0, hfExpected);
+        emit IAaveAdapterBase.Borrowed(alice, MARKET_ID, debtReserveId, bob, amount, 0, hfExpected);
         uint256 drawn = _borrow(debtReserveId, amount, bob, 1.5e18, 0);
         assertEq(drawn, amount, "drawn");
         assertEq(debt.balanceOf(bob), amount, "receiver paid");
@@ -130,35 +126,35 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
         registry.setFrozen(alice, true);
         _pause(PauseState.Frozen, PauseReason.None);
         uint256 past = block.timestamp - 1;
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.DeadlineExpired.selector, past));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.DeadlineExpired.selector, past));
         vm.prank(alice);
         adapterC.borrow(MARKET_B, 99, 0, address(0), past, 0, 7);
         uint256 d = _deadline();
-        vm.expectRevert(IAaveAdapterErrors.ZeroAmount.selector);
+        vm.expectRevert(IAaveAdapterBase.ZeroAmount.selector);
         vm.prank(alice);
         adapterC.borrow(MARKET_B, 99, 0, address(0), d, 0, 7);
-        vm.expectRevert(IAaveAdapterErrors.ApplicationFrozen.selector);
+        vm.expectRevert(IAaveAdapterBase.ApplicationFrozen.selector);
         vm.prank(alice);
         adapterC.borrow(MARKET_B, 99, 1, address(0), d, 0, 7);
         _pause(PauseState.None, PauseReason.None);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.NoProxy.selector, alice, MARKET_B));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.NoProxy.selector, alice, MARKET_B));
         vm.prank(alice);
         adapterC.borrow(MARKET_B, 99, 1, address(0), d, 0, 7);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnknownDebtReserve.selector, aave.cdpSpoke, 99));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnknownDebtReserve.selector, aave.cdpSpoke, 99));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, 99, 1, address(0), d, 0, 7);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.InvalidReceiver.selector, address(0)));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.InvalidReceiver.selector, address(0)));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1, address(0), d, 0, 7);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.AddressIsFrozen.selector, alice));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, alice));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1, bob, d, 0, 7);
         registry.setFrozen(alice, false);
         registry.setFrozen(bob, true);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.AddressIsFrozen.selector, bob));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, bob));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1, bob, d, 0, 7);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.BadNonce.selector, 0, 7));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.BadNonce.selector, 0, 7));
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1, carol, d, 0, 7);
         assertEq(risk.preBorrowCalls(), 0, "no RiskModule call before the bounds pass");
@@ -178,15 +174,15 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
     function test_TEST_192_borrowRefusedUnlessNone() public {
         _pause(PauseState.Frozen, PauseReason.None);
         _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.ApplicationFrozen.selector), debtReserveId, 1, alice, 0
+            abi.encodeWithSelector(IAaveAdapterBase.ApplicationFrozen.selector), debtReserveId, 1, alice, 0
         );
         _pause(PauseState.Paused, PauseReason.General);
         _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector), debtReserveId, 1, alice, 0
+            abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector), debtReserveId, 1, alice, 0
         );
         _pause(PauseState.Paused, PauseReason.MintPathSuspect);
         _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector), debtReserveId, 1, alice, 0
+            abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector), debtReserveId, 1, alice, 0
         );
         _pause(PauseState.None, PauseReason.None);
         _borrow(debtReserveId, 1, alice, 0, 0);
@@ -205,11 +201,11 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
         registry.setPause(makeAddr("unrelated"), PauseState.Paused, PauseReason.General);
         registry.setPause(funding, PauseState.Frozen, PauseReason.None);
         _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.ApplicationFrozen.selector), debtReserveId, 1, alice, 0
+            abi.encodeWithSelector(IAaveAdapterBase.ApplicationFrozen.selector), debtReserveId, 1, alice, 0
         );
         registry.setPause(funding, PauseState.Paused, PauseReason.General);
         _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector), debtReserveId, 1, alice, 0
+            abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector), debtReserveId, 1, alice, 0
         );
     }
 
@@ -220,7 +216,7 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
     /// reserve) reverts `UnknownDebtReserve` before any RiskModule or proxy call.
     function test_TEST_030_unknownDebtReserve() public {
         _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.UnknownDebtReserve.selector, aave.cdpSpoke, vtReserveId),
+            abi.encodeWithSelector(IAaveAdapterBase.UnknownDebtReserve.selector, aave.cdpSpoke, vtReserveId),
             vtReserveId,
             1,
             alice,
@@ -230,7 +226,7 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
         def.approved = false;
         registry.setDebtReserve(aave.cdpSpoke, debtReserveId, def);
         _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.UnknownDebtReserve.selector, aave.cdpSpoke, debtReserveId),
+            abi.encodeWithSelector(IAaveAdapterBase.UnknownDebtReserve.selector, aave.cdpSpoke, debtReserveId),
             debtReserveId,
             1,
             alice,
@@ -268,7 +264,7 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
         refused[19] = address(usdcDebt);
         for (uint256 i = 0; i < refused.length; ++i) {
             _expectBorrowRevert(
-                abi.encodeWithSelector(IAaveAdapterErrors.InvalidReceiver.selector, refused[i]),
+                abi.encodeWithSelector(IAaveAdapterBase.InvalidReceiver.selector, refused[i]),
                 debtReserveId,
                 1e18,
                 refused[i],
@@ -288,17 +284,17 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
     /// even when the registry does not know it as a CDP Spoke, and a token listed on that Hub likewise.
     function test_TEST_027_receiverListedOnFundingHub() public {
         _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.InvalidReceiver.selector, aave.lendSpoke),
+            abi.encodeWithSelector(IAaveAdapterBase.InvalidReceiver.selector, aave.lendSpoke),
             usdcReserveId,
             1e6,
             aave.lendSpoke,
             0
         );
         _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.InvalidReceiver.selector, vt), usdcReserveId, 1e6, vt, 0
+            abi.encodeWithSelector(IAaveAdapterBase.InvalidReceiver.selector, vt), usdcReserveId, 1e6, vt, 0
         );
         _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.InvalidReceiver.selector, vtB), usdcReserveId, 1e6, vtB, 0
+            abi.encodeWithSelector(IAaveAdapterBase.InvalidReceiver.selector, vtB), usdcReserveId, 1e6, vtB, 0
         );
     }
 
@@ -307,12 +303,12 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
     function test_TEST_229_frozenCallerOrReceiver() public {
         registry.setFrozen(alice, true);
         _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.AddressIsFrozen.selector, alice), debtReserveId, 1, bob, 0
+            abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, alice), debtReserveId, 1, bob, 0
         );
         registry.setFrozen(alice, false);
         registry.setFrozen(bob, true);
         _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.AddressIsFrozen.selector, bob), debtReserveId, 1, bob, 0
+            abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, bob), debtReserveId, 1, bob, 0
         );
     }
 
@@ -324,10 +320,10 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
     function test_TEST_096_nonceSingleUse() public {
         _borrow(debtReserveId, 1e18, alice, 0, 0);
         _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.BadNonce.selector, 1, 0), debtReserveId, 1e18, alice, 0
+            abi.encodeWithSelector(IAaveAdapterBase.BadNonce.selector, 1, 0), debtReserveId, 1e18, alice, 0
         );
         _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.BadNonce.selector, 1, 2), debtReserveId, 1e18, alice, 2
+            abi.encodeWithSelector(IAaveAdapterBase.BadNonce.selector, 1, 2), debtReserveId, 1e18, alice, 2
         );
         _borrow(usdcReserveId, 1e6, alice, 0, 1);
         assertEq(adapterC.borrowNonce(aliceProxy), 2, "nonce 2");
@@ -377,7 +373,7 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
     function test_TEST_027_shortDeliveryReverts() public {
         debt.setFeeBps(100);
         _expectBorrowRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.UnitsMismatch.selector, 1000e18, 990e18),
+            abi.encodeWithSelector(IAaveAdapterBase.UnitsMismatch.selector, 1000e18, 990e18),
             debtReserveId,
             1000e18,
             alice,
@@ -389,7 +385,7 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
     /// @notice A wallet borrows only on its own account: another wallet naming the market has no proxy there.
     function test_TEST_026_borrowOnlyOwnAccount() public {
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.NoProxy.selector, attacker, MARKET_ID));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.NoProxy.selector, attacker, MARKET_ID));
         vm.prank(attacker);
         adapterC.borrow(MARKET_ID, debtReserveId, 1e18, attacker, d, 0, 0);
         assertEq(_debtOf(aliceProxy, debtReserveId), 0, "alice untouched");

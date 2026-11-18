@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapEvents} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapEvents.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {SettlementReport} from "../../src/types/SettlementReport.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {SettlementReport} from "../../src/types/PositionTypes.sol";
 import {LPVaultSwapFixture} from "../utils/fixtures/LPVaultSwapFixture.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -17,7 +16,7 @@ import {Vm} from "forge-std/Vm.sol";
 /// fault in either shows), balance snapshots of every account a liquidation touches, and revert helpers.
 /// @dev Every test contract inheriting this base runs one test as one transaction (`isolate = false`), so the Lock,
 /// transient contexts and balances behave as in production within a test.
-abstract contract LPVaultSwapUnitBase is LPVaultSwapFixture, ILPVaultSwapEvents {
+abstract contract LPVaultSwapUnitBase is LPVaultSwapFixture, ILPVaultSwapBase {
     /// @dev Expected settlement of one routed liquidation, from 2.11 SPEC-LIQ-001 to SPEC-LIQ-022.
     struct Expect {
         uint256 value;

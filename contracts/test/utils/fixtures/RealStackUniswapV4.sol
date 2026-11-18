@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.sol";
-import {ClUnitMath} from "../../../src/amm/concentrated-liquidity/ClUnitMath.sol";
 import {UniswapV4State} from "../../../src/amm/uniswap-v4/UniswapV4State.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {
@@ -18,17 +17,12 @@ import {LPOracleCLInitLogic} from "../../../src/oracle/lp-oracle/LPOracleCLInitL
 import {LPOracleCLListingLogic} from "../../../src/oracle/lp-oracle/LPOracleCLListingLogic.sol";
 import {LPOracleCLPokeLogic} from "../../../src/oracle/lp-oracle/LPOracleCLPokeLogic.sol";
 import {LPOracleCLViewLogic} from "../../../src/oracle/lp-oracle/LPOracleCLViewLogic.sol";
+import {InitParams, LPOracleLogicSet} from "../../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {LPOracleV4} from "../../../src/oracle/lp-oracle/LPOracleV4.sol";
 import {LPOracleV4ModuleLogic} from "../../../src/oracle/lp-oracle/LPOracleV4ModuleLogic.sol";
-import {InitParams} from "../../../src/oracle/lp-oracle/types/InitParams.sol";
-import {LPOracleLogicSet} from "../../../src/oracle/lp-oracle/types/LPOracleLogicSet.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {RiskTier} from "../../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../../src/policy/market-registry/types/SpokeDef.sol";
-import {MarketDef} from "../../../src/types/MarketDef.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {DebtReserveDef, RiskTier, SpokeDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {MarketDef} from "../../../src/types/MarketTypes.sol";
+import {PositionRef, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {IAvanaAaveV4Roles, ISpokeInstanceBatch} from "./AaveV4Fixture.sol";
 import {ClTestToken, IClPool} from "./ClPoolFixture.sol";
 import {
@@ -408,13 +402,13 @@ abstract contract RealStackUniswapV4 is RealStackVolatile {
         address t1,
         int24 spacing
     ) internal view returns (uint8 d, uint8 k) {
-        ClUnitMath.Valuation memory v =
-            ClUnitMath.valuation(_usdPrice(t0), _usdPrice(t1), ClTestToken(t0).decimals(), ClTestToken(t1).decimals());
+        ClPriceMath.Valuation memory v =
+            ClPriceMath.valuation(_usdPrice(t0), _usdPrice(t1), ClTestToken(t0).decimals(), ClTestToken(t1).decimals());
         bool found;
-        (found, k) = ClUnitMath.firstBindingExponent(v, spacing);
+        (found, k) = ClPriceMath.firstBindingExponent(v, spacing);
         require(found, "unit exponent");
         (int24 lower, int24 upper) = _v4FullRange(spacing);
-        (found, d) = ClUnitMath.unitDecimals(v, lower, upper, k);
+        (found, d) = ClPriceMath.unitDecimals(v, lower, upper, k);
         require(found, "unit decimals");
     }
 

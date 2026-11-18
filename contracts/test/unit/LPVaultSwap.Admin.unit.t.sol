@@ -4,12 +4,14 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {ILPVaultSwapLogic} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLogic.sol";
 import {LPVaultSwap} from "../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
-import {DeleverageRequest} from "../../src/liquidation/lp-vault-swap/types/DeleverageRequest.sol";
-import {LPVaultSwapImmutables} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
-import {LPVaultSwapLogics} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapLogics.sol";
+import {
+    DeleverageRequest,
+    LPVaultSwapImmutables,
+    LPVaultSwapLogics
+} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -65,15 +67,15 @@ contract LPVaultSwapAdminUnitTest is LPVaultSwapUnitBase {
             if (i == 3) im.marketRegistry = address(0);
             if (i == 4) im.parameterStore = address(0);
             if (i == 5) im.payoutEscrow = address(0);
-            vm.expectRevert(_err(ILPVaultSwapErrors.ZeroAddress.selector));
+            vm.expectRevert(_err(ILPVaultSwapBase.ZeroAddress.selector));
             this.deployImplementation(im, _logics());
         }
         LPVaultSwapImmutables memory bad = immutables();
         bad.keeperFloor = 0;
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, 0, 32));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 0, 32));
         this.deployImplementation(bad, _logics());
         bad.keeperFloor = 33;
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, 33, 32));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 33, 32));
         this.deployImplementation(bad, _logics());
     }
 
@@ -92,7 +94,7 @@ contract LPVaultSwapAdminUnitTest is LPVaultSwapUnitBase {
         assertEq(impl.KEEPER_FLOOR(), 2, "KEEPER_FLOOR");
         address[] memory one = new address[](1);
         one[0] = keeper;
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.KeeperFloor.selector, 1, 2));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.KeeperFloor.selector, 1, 2));
         new ERC1967Proxy(address(impl), abi.encodeCall(LPVaultSwap.initialize, (timelock, one)));
         address[] memory two = new address[](2);
         (two[0], two[1]) = (keeper, carol);
@@ -108,19 +110,19 @@ contract LPVaultSwapAdminUnitTest is LPVaultSwapUnitBase {
         bytes32 hash = keccak256(abi.encode(immutables()));
         LPVaultSwapLogics memory l = _logics();
         l.liquidation = pendingLogic;
-        vm.expectRevert(_err(ILPVaultSwapErrors.InvalidLogic.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.InvalidLogic.selector));
         this.deployImplementation(immutables(), l);
         l = _logics();
         l.pending = address(new LVSFakeLogic(keccak256("LPVaultSwapPendingLogic"), keccak256("other")));
-        vm.expectRevert(_err(ILPVaultSwapErrors.InvalidLogic.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.InvalidLogic.selector));
         this.deployImplementation(immutables(), l);
         l = _logics();
         l.deleverage = address(new LVSFakeLogic(keccak256("LPVaultSwapLiquidationLogic"), hash));
-        vm.expectRevert(_err(ILPVaultSwapErrors.InvalidLogic.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.InvalidLogic.selector));
         this.deployImplementation(immutables(), l);
         l = _logics();
         l.deleverage = address(0);
-        vm.expectRevert(_err(ILPVaultSwapErrors.ZeroAddress.selector));
+        vm.expectRevert(_err(ILPVaultSwapBase.ZeroAddress.selector));
         this.deployImplementation(immutables(), l);
         l.deleverage = address(new LVSFakeLogic(keccak256("LPVaultSwapDeleverageLogic"), hash));
         this.deployImplementation(immutables(), l);
@@ -137,7 +139,7 @@ contract LPVaultSwapAdminUnitTest is LPVaultSwapUnitBase {
         one[0] = keeper;
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization()"));
         implementation.initialize(timelock, one);
-        bytes memory notDelegated = _err(ILPVaultSwapErrors.NotDelegated.selector);
+        bytes memory notDelegated = _err(ILPVaultSwapBase.NotDelegated.selector);
         address[4] memory targets = [address(implementation), liquidationLogic, pendingLogic, deleverageLogic];
         DeleverageRequest memory r;
         for (uint256 i = 0; i < targets.length; ++i) {
@@ -171,9 +173,9 @@ contract LPVaultSwapAdminUnitTest is LPVaultSwapUnitBase {
         assertEq(lvs.TIMELOCK(), timelock, "TIMELOCK");
         assertEq(lvs.APPLICATION_ADMIN(), admin, "role id");
         vm.startPrank(timelock);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.AdminRoleOnlyTimelock.selector, admin, carol));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.AdminRoleOnlyTimelock.selector, admin, carol));
         IAccessControl(address(lvs)).grantRole(admin, carol);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.AdminRoleOnlyTimelock.selector, root, carol));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.AdminRoleOnlyTimelock.selector, root, carol));
         IAccessControl(address(lvs)).grantRole(root, carol);
         bytes32 other = keccak256("SOME_ROLE");
         IAccessControl(address(lvs)).grantRole(other, carol);

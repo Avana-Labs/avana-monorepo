@@ -3,16 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {Market} from "../../types/Market.sol";
+import {Market} from "../../types/MarketTypes.sol";
+import {IParameterStore} from "./IParameterStore.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
 import {IParameterStoreLoosen} from "./IParameterStoreLoosen.sol";
-import {IParameterStoreSpeed} from "./IParameterStoreSpeed.sol";
 import {ParameterStoreRisk} from "./ParameterStoreRisk.sol";
 import {ParameterStoreSpeedRules} from "./ParameterStoreSpeedRules.sol";
 import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";
-import {MarketParams} from "./types/MarketParams.sol";
-import {MarketSpeedLimits} from "./types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "./types/SpeedLimit.sol";
+import {MarketParams, MarketSpeedLimits, SpeedLimit} from "./types/ParameterStoreTypes.sol";
 
 /// @title ParameterStoreLoosenLogic
 /// @notice Bodies of every loosen setter: each moves one risk parameter in its riskier direction.
@@ -211,7 +209,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         emit CapLoosened("poolShareMaxBpsOf", poolKey, old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreLiquidation.loosenMaxShortfallBps`.
+    /// @notice Body of `IParameterStore.loosenMaxShortfallBps`.
     function loosenMaxShortfallBps(
         uint16 value
     ) external {
@@ -223,7 +221,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         emit ParameterLoosened("maxShortfallBps", bytes32(0), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreLiquidation.loosenDebtStressRiseBps`.
+    /// @notice Body of `IParameterStore.loosenDebtStressRiseBps`.
     function loosenDebtStressRiseBps(
         address asset,
         uint16 value
@@ -236,7 +234,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         emit ParameterLoosened("debtStressRiseBps", _a(asset), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreBreakers.loosenGateRecoverySeconds`.
+    /// @notice Body of `IParameterStore.loosenGateRecoverySeconds`.
     function loosenGateRecoverySeconds(
         uint64 value
     ) external {
@@ -248,7 +246,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         emit ParameterLoosened("gateRecoverySeconds", bytes32(0), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreBreakers.loosenBreakerDeficitMax`.
+    /// @notice Body of `IParameterStore.loosenBreakerDeficitMax`.
     function loosenBreakerDeficitMax(
         address hub,
         address asset,
@@ -265,7 +263,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         emit ParameterLoosened("breakerDeficitMax", _pair(hub, asset), old, value, msg.sender);
     }
 
-    /// @notice Body of `IParameterStoreSpeed.loosenMarketSpeedLimits`.
+    /// @notice Body of `IParameterStore.loosenMarketSpeedLimits`.
     function loosenMarketSpeedLimits(
         uint256 marketId,
         MarketSpeedLimits calldata limits
@@ -277,10 +275,10 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         if (!noTighter || !looser) revert NotLooser();
         if (!ParameterStoreSpeedRules.validMarket(limits)) revert OutOfBounds();
         _s().marketSpeed[marketId] = limits;
-        emit IParameterStoreSpeed.MarketSpeedLimitsSet(marketId, old, limits, false);
+        emit IParameterStore.MarketSpeedLimitsSet(marketId, old, limits, false);
     }
 
-    /// @notice Body of `IParameterStoreSpeed.loosenDebtSpeedLimit`.
+    /// @notice Body of `IParameterStore.loosenDebtSpeedLimit`.
     function loosenDebtSpeedLimit(
         address hub,
         address asset,
@@ -296,7 +294,7 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         (bool found,,,) = _scanReserves(asset, hub);
         if (!found) revert UnknownDebtReserve(address(0), 0);
         _s().debtSpeed[hub][asset] = limit;
-        emit IParameterStoreSpeed.DebtSpeedLimitSet(hub, asset, old, limit, false);
+        emit IParameterStore.DebtSpeedLimitSet(hub, asset, old, limit, false);
     }
 }
 // forge-lint: disable-end(reentrancy-events)

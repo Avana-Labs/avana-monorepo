@@ -5,15 +5,11 @@ pragma solidity 0.8.28;
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
+import {InitParams, LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {LPPriceMath} from "../../src/oracle/lp-oracle/LPPriceMath.sol";
-import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {OracleLeg} from "../../src/types/OracleLeg.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {OracleConfig, OracleLeg, PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
 import {IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {LPOracleCLDeployer, LPOracleCLFixture} from "../utils/fixtures/LPOracleCLFixture.sol";
 import {OracleFeedMock} from "../utils/mocks/LPOracleMocks.sol";
@@ -221,7 +217,7 @@ contract LPOracleCLPoolShapesTest is LPOracleCLFixture {
         InitParams memory p = _params();
         p.config = c;
         store.setConfig(c);
-        vm.expectPartialRevert(ILPOracleErrors.ConfigCheckFailed.selector);
+        vm.expectPartialRevert(ILPOracleBase.ConfigCheckFailed.selector);
         new ERC1967Proxy(address(implementation), abi.encodeCall(ILPOracle.initialize, (p)));
         OracleFeedMock ok = new OracleFeedMock(18, 1e10, 1e28);
         ok.push(1e18, block.timestamp);

@@ -3,17 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {Market} from "../../types/Market.sol";
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {OracleLeg} from "../../types/OracleLeg.sol";
-import {OracleRoute} from "../../types/OracleRoute.sol";
-import {TokenOracleConfig} from "../../types/TokenOracleConfig.sol";
-import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
+import {Market} from "../../types/MarketTypes.sol";
+import {OracleConfig, OracleLeg, OracleRoute, TokenOracleConfig} from "../../types/OracleTypes.sol";
+import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
 import {ParameterStoreRisk} from "./ParameterStoreRisk.sol";
 import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";
-import {FeedDef} from "./types/FeedDef.sol";
-import {MarketParams} from "./types/MarketParams.sol";
+import {FeedDef, MarketParams} from "./types/ParameterStoreTypes.sol";
 
 /// @title ParameterStoreAdminOracleLogic
 /// @notice Bodies of the structural oracle setters and the views `getOracleConfig` and `liquidationLivenessHolds`.
@@ -41,7 +37,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         return (keccak256("ParameterStoreAdminOracleLogic"), _TIMELOCK, address(_REGISTRY), _BLOCK_TIME, _HAS_SEQUENCER);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setBorrowPriceMaxAge`.
+    /// @notice Body of `IParameterStore.setBorrowPriceMaxAge`.
     function setBorrowPriceMaxAge(
         address feed,
         uint32 value
@@ -55,7 +51,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         _emitFeed(feed, d);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setConsistencyToleranceBps`.
+    /// @notice Body of `IParameterStore.setConsistencyToleranceBps`.
     function setConsistencyToleranceBps(
         uint256 marketId,
         uint16 value
@@ -71,7 +67,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("consistencyToleranceBps", bytes32(marketId), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setFeedAgreementToleranceBps`.
+    /// @notice Body of `IParameterStore.setFeedAgreementToleranceBps`.
     function setFeedAgreementToleranceBps(
         address token,
         uint16 value
@@ -86,7 +82,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("feedAgreementToleranceBps", _a(token), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setCachedWindow`.
+    /// @notice Body of `IParameterStore.setCachedWindow`.
     function setCachedWindow(
         uint32 value
     ) external {
@@ -98,7 +94,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("cachedWindow", bytes32(0), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setDisagreementPauseMax`.
+    /// @notice Body of `IParameterStore.setDisagreementPauseMax`.
     function setDisagreementPauseMax(
         uint32 value
     ) external {
@@ -110,7 +106,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("disagreementPauseMax", bytes32(0), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setTwapWindow`.
+    /// @notice Body of `IParameterStore.setTwapWindow`.
     function setTwapWindow(
         uint256 marketId,
         uint32 value
@@ -125,7 +121,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("twapWindow", bytes32(marketId), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setUsdBand`.
+    /// @notice Body of `IParameterStore.setUsdBand`.
     function setUsdBand(
         uint256 low,
         uint256 high
@@ -141,7 +137,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("usdBandHigh", bytes32(0), oldHigh, high);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setLiquidationPriceMaxAge`.
+    /// @notice Body of `IParameterStore.setLiquidationPriceMaxAge`.
     function setLiquidationPriceMaxAge(
         address feed,
         uint32 value
@@ -156,7 +152,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         _emitFeed(feed, d);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setFeedMaxAge`.
+    /// @notice Body of `IParameterStore.setFeedMaxAge`.
     function setFeedMaxAge(
         address feed,
         uint32 value
@@ -169,7 +165,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         _emitFeed(feed, d);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setGraceDuration`.
+    /// @notice Body of `IParameterStore.setGraceDuration`.
     function setGraceDuration(
         uint32 value
     ) external {
@@ -181,7 +177,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("graceDuration", bytes32(0), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setGraceHealthFactor`.
+    /// @notice Body of `IParameterStore.setGraceHealthFactor`.
     function setGraceHealthFactor(
         uint256 value
     ) external {
@@ -192,7 +188,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("graceHealthFactor", bytes32(0), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setFeedAgreementMarginBps`.
+    /// @notice Body of `IParameterStore.setFeedAgreementMarginBps`.
     function setFeedAgreementMarginBps(
         uint16 value
     ) external {
@@ -204,7 +200,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("feedAgreementMarginBps", bytes32(0), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setMaxFlashFeeBps`.
+    /// @notice Body of `IParameterStore.setMaxFlashFeeBps`.
     function setMaxFlashFeeBps(
         uint16 value
     ) external {
@@ -216,7 +212,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         emit ParameterSet("maxFlashFeeBps", bytes32(0), old, value);
     }
 
-    /// @notice Body of `IParameterStoreAdmin.setSlippageAllowanceMinBps`.
+    /// @notice Body of `IParameterStore.setSlippageAllowanceMinBps`.
     function setSlippageAllowanceMinBps(
         uint256 marketId,
         uint16 value
@@ -233,7 +229,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
 
     // The loop below makes one registry view call per market token.
     // forge-lint: disable-start(calls-loop)
-    /// @notice Body of `IParameterStoreViews.getOracleConfig`.
+    /// @notice Body of `IParameterStore.getOracleConfig`.
     function getOracleConfig(
         address lpOracle
     ) external view returns (OracleConfig memory config) {
@@ -243,7 +239,7 @@ contract ParameterStoreAdminOracleLogic is ParameterStoreRisk, IParameterStoreLo
         config = _buildConfig(marketId, _REGISTRY.getMarket(marketId));
     }
 
-    /// @notice Body of `IParameterStoreLiquidation.liquidationLivenessHolds`.
+    /// @notice Body of `IParameterStore.liquidationLivenessHolds`.
     function liquidationLivenessHolds(
         address spoke,
         uint256 marketId,

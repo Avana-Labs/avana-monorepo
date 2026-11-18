@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {DeleverageSizing} from "../../src/lens/lens/types/DeleverageSizing.sol";
-import {RemovalSizing} from "../../src/lens/lens/types/RemovalSizing.sol";
+import {DeleverageSizing, RemovalSizing} from "../../src/lens/lens/types/LensTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensInverseSizingFuzzTest

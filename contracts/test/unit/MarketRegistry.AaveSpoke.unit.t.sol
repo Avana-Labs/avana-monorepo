@@ -4,10 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4ExtSload} from "../../src/interfaces/external/aave/IAaveV4ExtSload.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {DriftReason} from "../../src/types/MarketTypes.sol";
 import {AaveV4Fixture} from "../utils/fixtures/AaveV4Fixture.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryLPVaultMock} from "../utils/mocks/MarketRegistryMocks.sol";
@@ -56,7 +55,7 @@ contract MarketRegistryAaveSpokeUnitTest is MarketRegistryFixture, AaveV4Fixture
         assertEq(address(uint160(uint256(IAaveV4ExtSload(aave.cdpSpoke).extSload(slot)))), aave.cdpSpokeImplementation);
         // The Lend Spoke's implementation is another deployment of the same audited code, but not this Spoke's.
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.InvalidSpoke.selector, aave.cdpSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, aave.cdpSpoke));
         registry.deployCdpSpoke(_def(aave.lendSpokeImplementation));
         vm.prank(address(timelock));
         address s = registry.deployCdpSpoke(_def(aave.cdpSpokeImplementation));
@@ -114,7 +113,7 @@ contract MarketRegistryAaveSpokeUnitTest is MarketRegistryFixture, AaveV4Fixture
         assertTrue(impl2.codehash != aave.cdpSpokeImplementation.codehash);
         SpokeDef memory d2 = SpokeDef(false, aave.hub, SLIP, RiskTier.Stable, impl2, oracle2);
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.InvalidSpoke.selector, spoke2));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, spoke2));
         registry.deployCdpSpoke(d2);
         // Governance approves the reviewed hash at the normal delay; the same batch records the Spoke.
         vm.startPrank(address(timelock));
@@ -153,7 +152,7 @@ contract MarketRegistryAaveSpokeUnitTest is MarketRegistryFixture, AaveV4Fixture
         assertEq(uint8(r), uint8(DriftReason.SpokeImplementation));
         // Re-approval needs the new hash approved first; one batch runs both.
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.InvalidSpoke.selector, s));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, s));
         registry.deployCdpSpoke(_def(upgraded));
         vm.startPrank(address(timelock));
         registry.approveSpokeCodeHash(upgraded.codehash);
@@ -171,7 +170,7 @@ contract MarketRegistryAaveSpokeUnitTest is MarketRegistryFixture, AaveV4Fixture
         d.aaveOracle = aave.lendOracle;
         // The Lend Spoke's oracle names the Lend Spoke, whose implementation is not `d.implementation`.
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.InvalidSpoke.selector, aave.lendSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, aave.lendSpoke));
         registry.deployCdpSpoke(d);
     }
 }

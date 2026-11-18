@@ -10,22 +10,20 @@ import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {LPVaultSwap} from "../../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
-import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
-import {LPVaultSwapLogics} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapLogics.sol";
-import {LiquidationParams} from "../../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {RouteMode} from "../../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {
+    LPVaultSwapImmutables,
+    LPVaultSwapLogics,
+    LiquidationParams,
+    LiquidationResult,
+    RouteMode
+} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {PayoutEscrow} from "../../../src/liquidation/payout-escrow/PayoutEscrow.sol";
 import {DexPathRoute} from "../../../src/liquidation/settlement-routes/DexPathRoute.sol";
-import {DexHop, HopKind} from "../../../src/liquidation/settlement-routes/types/DexHop.sol";
-import {RouteConfig} from "../../../src/liquidation/settlement-routes/types/RouteConfig.sol";
+import {DexHop, HopKind, RouteConfig} from "../../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../../../src/policy/market-registry/types/MarketStatus.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {DebtReserveDef, MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
+import {PositionRef, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {VaultToken} from "../../../src/vault-token/vault-token/VaultToken.sol";
 import {AaveAdapterMock} from "../mocks/AaveAdapterMock.sol";

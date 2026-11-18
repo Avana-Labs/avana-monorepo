@@ -3,20 +3,16 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {IAmmIntegrationHooks} from "../../amm/IAmmIntegrationHooks.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILock} from "../../lock/lock/ILock.sol";
-import {PledgeCharge} from "../../policy/risk-module/types/PledgeCharge.sol";
+import {PledgeCharge} from "../../policy/risk-module/types/RiskModuleTypes.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
-import {ICollateralizationErrors} from "./ICollateralizationErrors.sol";
-import {ICollateralizationEvents} from "./ICollateralizationEvents.sol";
-import {BackingRecord} from "./types/BackingRecord.sol";
-import {CounterKind} from "./types/CounterKind.sol";
-import {Pending} from "./types/Pending.sol";
+import {ILPVault} from "../lp-vault/ILPVault.sol";
+import {ICollateralizationBase} from "./ICollateralizationBase.sol";
+import {BackingRecord, CounterKind, Pending} from "./types/CollateralizationTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
@@ -29,7 +25,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 // forge-lint: disable-start(unused-state-variables)
 /// @title CollateralizationBase
 /// @notice Storage, caller and lock checks and exposure counters shared by the Collateralization facets.
-abstract contract CollateralizationBase is ICollateralizationEvents, ICollateralizationErrors {
+abstract contract CollateralizationBase is ICollateralizationBase {
     enum Bucket {
         Regular,
         Slice
@@ -63,7 +59,7 @@ abstract contract CollateralizationBase is ICollateralizationEvents, ICollateral
     function _recordCap(
         address lpVault
     ) internal view returns (uint256) {
-        return Math.min(IAmmIntegration(lpVault).maxRecordsPerAccountMarket(), MAX_RECORDS_PER_ACCOUNT_MARKET);
+        return Math.min(ILPVault(lpVault).maxRecordsPerAccountMarket(), MAX_RECORDS_PER_ACCOUNT_MARKET);
     }
 
     /// @notice Bound of a record's credited units, the Hub's share type (`2^120 - 1`).
@@ -183,7 +179,7 @@ abstract contract CollateralizationBase is ICollateralizationEvents, ICollateral
         c.hub = token.hub();
         // The shape is the LPVault's to enforce; the ledger needs the pool keys and tokens only.
         // forge-lint: disable-next-line(unused-return)
-        (address pool, bytes32 poolId,, address[] memory tokens) = IAmmIntegration(c.lpVault).marketOf(c.marketId);
+        (address pool, bytes32 poolId,, address[] memory tokens) = ILPVault(c.lpVault).marketOf(c.marketId);
         c.tokens = tokens;
         c.poolKey = keccak256(abi.encode(c.integrationId, pool, poolId));
     }
@@ -211,7 +207,7 @@ abstract contract CollateralizationBase is ICollateralizationEvents, ICollateral
     function _checkReadSafe(
         Ctx memory c
     ) internal view {
-        IAmmIntegrationHooks(c.lpVault).checkReadSafe(c.marketId);
+        ILPVault(c.lpVault).checkReadSafe(c.marketId);
     }
 
     function _returnPosition(
@@ -220,7 +216,7 @@ abstract contract CollateralizationBase is ICollateralizationEvents, ICollateral
     ) internal {
         // The LPVault returns the position to its own depositor of record; the address it reports is not needed.
         // forge-lint: disable-next-line(unused-return)
-        IAmmIntegration(c.lpVault).returnPosition(positionKey);
+        ILPVault(c.lpVault).returnPosition(positionKey);
     }
 
     function _unwind(
@@ -232,7 +228,7 @@ abstract contract CollateralizationBase is ICollateralizationEvents, ICollateral
     ) internal returns (uint256[] memory) {
         // Called once per debited record; bounded by the open-record cap.
         // forge-lint: disable-next-line(calls-loop)
-        return IAmmIntegration(c.lpVault).unwind(positionKey, units, minAmounts, recipient);
+        return ILPVault(c.lpVault).unwind(positionKey, units, minAmounts, recipient);
     }
 
     function _balances(

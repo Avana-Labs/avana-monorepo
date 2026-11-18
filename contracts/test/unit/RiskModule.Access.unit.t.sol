@@ -10,8 +10,7 @@ import {RiskModuleBorrowLogic} from "../../src/policy/risk-module/RiskModuleBorr
 import {RiskModuleBreakerLogic} from "../../src/policy/risk-module/RiskModuleBreakerLogic.sol";
 import {RiskModulePledgeLogic} from "../../src/policy/risk-module/RiskModulePledgeLogic.sol";
 import {RiskModuleStatusLogic} from "../../src/policy/risk-module/RiskModuleStatusLogic.sol";
-import {RiskModuleImmutables} from "../../src/policy/risk-module/types/RiskModuleImmutables.sol";
-import {RiskModuleLogics} from "../../src/policy/risk-module/types/RiskModuleLogics.sol";
+import {RiskModuleImmutables, RiskModuleLogics} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";

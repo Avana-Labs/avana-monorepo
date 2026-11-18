@@ -3,11 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
-import {PledgeCharge} from "../../src/policy/risk-module/types/PledgeCharge.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
+import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 
 /// @title CollateralizationRescueUnitTest
@@ -94,12 +94,12 @@ contract CollateralizationRescueUnitTest is CollateralizationFixture {
         riskModule.setOverride(
             PledgeCharge({usdCharge: 100_000_000_000, sliceUsd: 0, rescue: true, rescueUnits: 499_999_999})
         );
-        vm.expectRevert(ICollateralizationErrors.InvalidCharge.selector);
+        vm.expectRevert(ICollateralizationBase.InvalidCharge.selector);
         coll.recredit(alice, aliceProxy, vt, K1, "", true);
         riskModule.setOverride(
             PledgeCharge({usdCharge: 100_000_000_000, sliceUsd: 0, rescue: false, rescueUnits: 500_000_001})
         );
-        vm.expectRevert(ICollateralizationErrors.InvalidCharge.selector);
+        vm.expectRevert(ICollateralizationBase.InvalidCharge.selector);
         coll.recredit(alice, aliceProxy, vt, K1, "", false);
         riskModule.clearOverride();
         riskModule.setRescue(true);
@@ -108,7 +108,7 @@ contract CollateralizationRescueUnitTest is CollateralizationFixture {
             // The head of checkPledge's calldata up to `requireRescue`: the counters struct is dynamic, so its slot holds
             // the offset 8 x 32 = 256 and `requireRescue` follows it.
             abi.encodeWithSelector(
-                IRiskModuleChecks.checkPledge.selector,
+                IRiskModule.checkPledge.selector,
                 alice,
                 aliceProxy,
                 MARKET_ID,

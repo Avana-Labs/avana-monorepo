@@ -3,24 +3,18 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAvanaTimelockViews} from "../../governance/timelock/IAvanaTimelockViews.sol";
-import {Market} from "../../types/Market.sol";
-import {SecondSource} from "../../types/SecondSource.sol";
-import {SequencerConfig} from "../../types/SequencerConfig.sol";
+import {IAvanaTimelock} from "../../governance/timelock/IAvanaTimelock.sol";
+import {Market} from "../../types/MarketTypes.sol";
+import {SecondSource, SequencerConfig} from "../../types/OracleTypes.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
-import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
-import {IParameterStoreErrors} from "./IParameterStoreErrors.sol";
-import {IParameterStoreEvents} from "./IParameterStoreEvents.sol";
-import {FeedDef} from "./types/FeedDef.sol";
-import {GlobalParams} from "./types/GlobalParams.sol";
-import {MarketParams} from "./types/MarketParams.sol";
-import {MarketSpeedLimits} from "./types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "./types/SpeedLimit.sol";
+import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
+import {IParameterStoreBase} from "./IParameterStoreBase.sol";
+import {FeedDef, GlobalParams, MarketParams, MarketSpeedLimits, SpeedLimit} from "./types/ParameterStoreTypes.sol";
 
 /// @title ParameterStoreStorage
 /// @notice Storage layout, immutables, hard bounds and shared checks of the ParameterStore and its logic contracts.
 /// @dev Hard and liveness bounds are constants, so each changes only by an upgrade.
-abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStoreErrors {
+abstract contract ParameterStoreStorage is IParameterStoreBase {
     /// @custom:storage-location erc7201:avana.storage.ParameterStore
     struct Layout {
         GlobalParams g;
@@ -204,7 +198,7 @@ abstract contract ParameterStoreStorage is IParameterStoreEvents, IParameterStor
         bytes32 key = keccak256(abi.encode(name, scope));
         uint256 last = _s().lastLoosenedAt[key];
         if (last != 0) {
-            uint256 nextAt = last + IAvanaTimelockViews(_TIMELOCK).normalDelay();
+            uint256 nextAt = last + IAvanaTimelock(_TIMELOCK).normalDelay();
             if (block.timestamp < nextAt) revert LoosenTooSoon(key, nextAt);
         }
         // Block timestamps stay far below 2^64 seconds.

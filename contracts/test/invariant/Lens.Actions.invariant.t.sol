@@ -4,9 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ActionPreview} from "../../src/lens/lens/types/ActionPreview.sol";
-import {HubAssetView} from "../../src/lens/lens/types/HubAssetView.sol";
-import {RemovalSizing} from "../../src/lens/lens/types/RemovalSizing.sol";
+import {ActionPreview, HubAssetView, RemovalSizing} from "../../src/lens/lens/types/LensTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";

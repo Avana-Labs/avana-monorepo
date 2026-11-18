@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {ProxyManager} from "../../src/proxy/proxy-manager/ProxyManager.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockProxyManager} from "../utils/mocks/ParameterStoreMocks.sol";
@@ -66,7 +65,7 @@ contract ParameterStoreFeeRecipientUnitTest is ParameterStoreFixture {
     ) internal {
         (bool ok, bytes memory ret) = _set(r);
         assertFalse(ok, "Avana contract accepted as fee recipient");
-        assertEq(ret, abi.encodeWithSelector(IParameterStoreErrors.InvalidFeeRecipient.selector, r));
+        assertEq(ret, abi.encodeWithSelector(IParameterStoreBase.InvalidFeeRecipient.selector, r));
     }
 
     function _accepted(
@@ -198,7 +197,7 @@ contract ParameterStoreFeeRecipientUnitTest is ParameterStoreFixture {
     function test_TEST_062_plainAccountsAndTheEvent() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.ParameterSet("feeRecipient", bytes32(0), uint160(feeRecipient), uint160(alice));
+        emit IParameterStoreBase.ParameterSet("feeRecipient", bytes32(0), uint160(feeRecipient), uint160(alice));
         store.setFeeRecipient(alice);
         // An account with no code is never probed and is accepted.
         _accepted(makeAddr("treasurySafeNotYetDeployed"));

@@ -4,15 +4,15 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV3FlashLoanReceiver} from "../../../src/interfaces/external/aave/IAaveV3FlashLoanReceiver.sol";
-import {LiquidationParams} from "../../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {RouteMode} from "../../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {
+    LiquidationParams,
+    LiquidationResult,
+    RouteMode
+} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {FlashLiquidator} from "../../../src/periphery/flash-liquidator/FlashLiquidator.sol";
-import {IFlashLiquidator} from "../../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
-import {IFlashLiquidatorErrors} from "../../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
-import {FlashLiquidationRequest} from "../../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {Market} from "../../../src/types/Market.sol";
+import {FlashLiquidationRequest, IFlashLiquidator} from "../../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
+import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
 import {MockFlashFeeCap} from "../../utils/mocks/MockFlashReceiver.sol";
 import {PayoutToken} from "../../utils/mocks/PayoutToken.sol";
 
@@ -304,7 +304,7 @@ contract FlashLiquidatorProperties {
                 )
             );
         assert(!ok);
-        assert(ret.length >= 4 && bytes4(ret) == IFlashLiquidatorErrors.InvalidFlashCallback.selector);
+        assert(ret.length >= 4 && bytes4(ret) == IFlashLiquidator.InvalidFlashCallback.selector);
     }
 
     /// @notice A Pool reporting any initiator other than the helper makes the whole call revert; a call that completes

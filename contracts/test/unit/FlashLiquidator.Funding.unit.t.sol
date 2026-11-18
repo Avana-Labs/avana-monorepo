@@ -3,11 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {FlashLiquidationRequest, IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {IOperatorFlashLiquidator} from "../../src/periphery/flash-liquidator/IOperatorFlashLiquidator.sol";
 import {OperatorFlashLiquidator} from "../../src/periphery/flash-liquidator/OperatorFlashLiquidator.sol";
-import {FlashLiquidationRequest} from "../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
 import {FlashLiquidatorFixture} from "../utils/fixtures/FlashLiquidatorFixture.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 
@@ -89,7 +88,7 @@ contract FlashLiquidatorFundingUnitTest is FlashLiquidatorFixture {
         _fund(keeper, address(helper), 100e6);
         FlashLiquidationRequest memory r = _floorRequest(X_FLOOR, 100e6);
         vm.prank(keeper);
-        vm.expectRevert(ILPVaultSwapErrors.RecoveryBelowFloor.selector);
+        vm.expectRevert(ILPVaultSwapBase.RecoveryBelowFloor.selector);
         helper.flashLiquidate(r);
 
         // The 2.11 example recovers above its floor: the 50 USDC budget is untouched and paid back.
@@ -134,7 +133,7 @@ contract FlashLiquidatorFundingUnitTest is FlashLiquidatorFixture {
         uint256 f = x - 5000e6;
         FlashLiquidationRequest memory r = _request(x, f, 5000e6, 0, 0);
         vm.prank(signer);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.FlashAmountAboveNeed.selector, f, 2047.5e6));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.FlashAmountAboveNeed.selector, f, 2047.5e6));
         noTopUp.flashLiquidate(r);
         assertEq(usdcToken.balanceOf(safe), 10_000e6, "the Safe keeps its inventory");
 
@@ -142,7 +141,7 @@ contract FlashLiquidatorFundingUnitTest is FlashLiquidatorFixture {
         _fund(safe, address(opHelper), 10_000e6);
         r = _request(x, x, 5000e6, type(uint256).max, 0);
         vm.prank(signer);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.FlashAmountAboveNeed.selector, x, 2047.5e6));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.FlashAmountAboveNeed.selector, x, 2047.5e6));
         opHelper.flashLiquidate(r);
 
         // The honest sizing (F at most the debt plus the Lens margin) still settles.
@@ -159,7 +158,7 @@ contract FlashLiquidatorFundingUnitTest is FlashLiquidatorFixture {
         lvs.setOutcome(D_EXAMPLE, 1900e6, 0);
         FlashLiquidationRequest memory r = _request(2047.5e6, D_EXAMPLE, 975_000, 0, 0);
         vm.prank(signer);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.OutlayExceeded.selector, 50.975e6, 19.5e6));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.OutlayExceeded.selector, 50.975e6, 19.5e6));
         opHelper.flashLiquidate(r);
 
         lvs.setOutcome(D_EXAMPLE, 1940e6, 0);
@@ -178,7 +177,7 @@ contract FlashLiquidatorFundingUnitTest is FlashLiquidatorFixture {
         lvs.setOutcome(D_EXAMPLE, 1850e6, 0);
         FlashLiquidationRequest memory r = _request(2047.5e6, 2047.5e6, 1_023_750, type(uint256).max, 0);
         vm.prank(signer);
-        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidatorErrors.TopUpExceeded.selector, 101.02375e6, 19.5e6));
+        vm.expectRevert(abi.encodeWithSelector(IFlashLiquidator.TopUpExceeded.selector, 101.02375e6, 19.5e6));
         opHelper.flashLiquidate(r);
     }
 
@@ -270,7 +269,7 @@ contract FlashLiquidatorFundingUnitTest is FlashLiquidatorFixture {
         vm.prank(caller);
         helper.flashLiquidate(_exampleRequest());
         vm.mockCall(address(store), abi.encodeWithSelector(store.feeRecipient.selector), abi.encode(address(0)));
-        vm.expectRevert(IFlashLiquidatorErrors.InvalidFeeRecipient.selector);
+        vm.expectRevert(IFlashLiquidator.InvalidFeeRecipient.selector);
         IOperatorFlashLiquidator(address(helper)).claimEscrowed(address(usdtToken));
         vm.clearMockedCalls();
         assertEq(escrow.claimable(address(usdtToken), address(helper)), 0.4e6, "credit kept");

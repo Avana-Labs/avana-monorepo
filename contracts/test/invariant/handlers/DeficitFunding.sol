@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapEvents} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapEvents.sol";
+import {ILPVaultSwapBase} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 /// @title DeficitFunding
@@ -18,7 +18,7 @@ library DeficitFunding {
         for (uint256 i = 0; i < logs.length; ++i) {
             if (
                 logs[i].emitter == lvs && logs[i].topics.length != 0
-                    && logs[i].topics[0] == ILPVaultSwapEvents.DeficitSurplusFunded.selector
+                    && logs[i].topics[0] == ILPVaultSwapBase.DeficitSurplusFunded.selector
             ) {
                 (uint256 taken,) = abi.decode(logs[i].data, (uint256, uint256));
                 amount += taken;

@@ -3,17 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
-import {Market} from "../../types/Market.sol";
-import {IMarketRegistryCreditLines} from "./IMarketRegistryCreditLines.sol";
-import {IMarketRegistryHubs} from "./IMarketRegistryHubs.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
+import {Market} from "../../types/MarketTypes.sol";
+import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
-import {IMarketRegistryWindDown} from "./IMarketRegistryWindDown.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
-import {DebtReserveDef} from "./types/DebtReserveDef.sol";
-import {MarketRegistryImmutables} from "./types/MarketRegistryImmutables.sol";
-import {MarketStatus} from "./types/MarketStatus.sol";
-import {RiskTier} from "./types/RiskTier.sol";
+import {DebtReserveDef, MarketRegistryImmutables, MarketStatus, RiskTier} from "./types/MarketRegistryTypes.sol";
 
 /// @title MarketRegistryWindDownLogic
 /// @notice Bodies of `closeMarket`, `setSettlementReserve`, `recordCreditLine` and `syncDrawCap`.
@@ -37,14 +32,14 @@ contract MarketRegistryWindDownLogic is MarketRegistryStorage, IMarketRegistryLo
     ) external {
         _onlyDelegated();
         Market storage m = _s().markets[marketId];
-        if (m.status != MarketStatus.Offboarding) revert IMarketRegistryWindDown.MarketNotOffboarding(marketId);
+        if (m.status != MarketStatus.Offboarding) revert IMarketRegistry.MarketNotOffboarding(marketId);
         uint256 notBefore = uint256(_s().windDown[marketId].offboardedAt) + OFFBOARD_NOTICE_SECONDS;
-        if (block.timestamp < notBefore) revert IMarketRegistryWindDown.OffboardNoticeRunning(notBefore);
-        if (!ICollateralizationViews(_COLLATERALIZATION).getMarketDebtFree(m.vaultToken)) {
-            revert IMarketRegistryWindDown.MarketHasDebt(marketId);
+        if (block.timestamp < notBefore) revert IMarketRegistry.OffboardNoticeRunning(notBefore);
+        if (!ICollateralization(_COLLATERALIZATION).getMarketDebtFree(m.vaultToken)) {
+            revert IMarketRegistry.MarketHasDebt(marketId);
         }
         m.status = MarketStatus.Closed;
-        emit IMarketRegistryWindDown.MarketClosed(marketId);
+        emit IMarketRegistry.MarketClosed(marketId);
     }
 
     function setSettlementReserve(
@@ -57,7 +52,7 @@ contract MarketRegistryWindDownLogic is MarketRegistryStorage, IMarketRegistryLo
         if (m.status == MarketStatus.None) revert UnknownMarket(marketId);
         if (!l.debtReserves[m.spoke][debtReserveId].approved) revert UnknownDebtReserve(m.spoke, debtReserveId);
         l.settlementReserve[marketId] = debtReserveId;
-        emit IMarketRegistryWindDown.SettlementReserveSet(marketId, debtReserveId);
+        emit IMarketRegistry.SettlementReserveSet(marketId, debtReserveId);
     }
 
     function recordCreditLine(
@@ -67,13 +62,13 @@ contract MarketRegistryWindDownLogic is MarketRegistryStorage, IMarketRegistryLo
     ) external {
         _onlyDelegated();
         Layout storage l = _s();
-        if (l.hubTier[fundingHub] == RiskTier.None) revert IMarketRegistryHubs.InvalidHub(fundingHub);
+        if (l.hubTier[fundingHub] == RiskTier.None) revert IMarketRegistry.InvalidHub(fundingHub);
         CreditLine storage cl = l.creditLines[fundingHub][asset];
         uint256 sum = cl.drawCapSum;
-        if (sum > line) revert IMarketRegistryCreditLines.CreditLineExceeded(fundingHub, asset, sum, line);
+        if (sum > line) revert IMarketRegistry.CreditLineExceeded(fundingHub, asset, sum, line);
         _requireCovered(fundingHub, asset, line);
         cl.line = line;
-        emit IMarketRegistryCreditLines.CreditLineSet(fundingHub, asset, line, sum);
+        emit IMarketRegistry.CreditLineSet(fundingHub, asset, line, sum);
     }
 
     function syncDrawCap(
@@ -90,6 +85,6 @@ contract MarketRegistryWindDownLogic is MarketRegistryStorage, IMarketRegistryLo
         uint256 sum = cl.drawCapSum - old + cap;
         l.recordedDrawCap[spoke][debtReserveId] = cap;
         cl.drawCapSum = sum;
-        emit IMarketRegistryCreditLines.CreditLineRecorded(d.fundingHub, d.asset, spoke, cap, sum);
+        emit IMarketRegistry.CreditLineRecorded(d.fundingHub, d.asset, spoke, cap, sum);
     }
 }

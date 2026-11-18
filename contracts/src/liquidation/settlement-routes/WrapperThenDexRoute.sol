@@ -6,10 +6,8 @@ pragma solidity 0.8.28;
 import {IDaiUsds} from "../../interfaces/external/sky/IDaiUsds.sol";
 import {DexHops} from "./DexHops.sol";
 import {ISettlementRoute} from "./ISettlementRoute.sol";
-import {RouteReads} from "./RouteReads.sol";
-import {DexHop} from "./types/DexHop.sol";
-import {RouteConfig} from "./types/RouteConfig.sol";
-import {WrapperKind, WrapperStep} from "./types/WrapperStep.sol";
+import {RouteMath} from "./RouteMath.sol";
+import {DexHop, RouteConfig, WrapperKind, WrapperStep} from "./types/SettlementRouteTypes.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
 /// @title WrapperThenDexRoute
@@ -32,11 +30,11 @@ contract WrapperThenDexRoute is DexHops {
     ) DexHops(config, step.underlying, hops) {
         if (step.wrapper == address(0) || step.underlying == config.tokenIn) revert InvalidRouteConfig();
         if (step.kind == WrapperKind.Erc4626Redeem) {
-            (bool okAsset, address asset) = RouteReads.addressOf(step.wrapper, abi.encodeCall(IERC4626.asset, ()));
+            (bool okAsset, address asset) = RouteMath.addressOf(step.wrapper, abi.encodeCall(IERC4626.asset, ()));
             if (step.wrapper != config.tokenIn || !okAsset || asset != step.underlying) revert InvalidRouteConfig();
         } else {
-            (bool okUsds, address usds) = RouteReads.addressOf(step.wrapper, abi.encodeCall(IDaiUsds.usds, ()));
-            (bool okDai, address dai) = RouteReads.addressOf(step.wrapper, abi.encodeCall(IDaiUsds.dai, ()));
+            (bool okUsds, address usds) = RouteMath.addressOf(step.wrapper, abi.encodeCall(IDaiUsds.usds, ()));
+            (bool okDai, address dai) = RouteMath.addressOf(step.wrapper, abi.encodeCall(IDaiUsds.dai, ()));
             if (
                 step.wrapper == config.tokenIn || step.wrapper == config.tokenOut || !okUsds || !okDai
                     || usds != config.tokenIn || dai != step.underlying

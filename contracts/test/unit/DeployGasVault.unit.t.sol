@@ -6,10 +6,9 @@ pragma solidity 0.8.28;
 import {ExecuteOperations} from "../../script/deploy/05_ExecuteOperations.s.sol";
 import {DeployGasVault} from "../../script/deploy/12_DeployGasVault.s.sol";
 import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
-import {GovernedTargets} from "../../src/governance/timelock/types/GovernedTargets.sol";
-import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
+import {GovernedTargets, SelectorPair} from "../../src/governance/timelock/IAvanaTimelock.sol";
 import {IAvanaGasVault} from "../../src/periphery/gas-vault/IAvanaGasVault.sol";
-import {IParameterStoreViews} from "../../src/policy/parameter-store/IParameterStoreViews.sol";
+import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @notice The gas vault's deploy steps (`script/deploy/12_DeployGasVault.s.sol`) as `step.sh` runs them, against a
@@ -54,7 +53,7 @@ contract DeployGasVaultTest is Test {
             GovernedTargets(store, makeAddr("marketRegistry"), makeAddr("lpVaultSwap"))
         );
         vm.etch(store, hex"00");
-        vm.mockCall(store, abi.encodeCall(IParameterStoreViews.feeRecipient, ()), abi.encode(treasury));
+        vm.mockCall(store, abi.encodeCall(IParameterStore.feeRecipient, ()), abi.encode(treasury));
         vm.createDir(DIR, true);
         vm.writeFile(
             string.concat(DIR, "/avana.json"),
@@ -114,11 +113,11 @@ contract DeployGasVaultTest is Test {
         _config(makeAddr("otherTreasury"), fundingSafe);
         vm.expectRevert();
         script.runStep("deploy");
-        vm.mockCall(store, abi.encodeCall(IParameterStoreViews.feeRecipient, ()), abi.encode(fundingSafe));
+        vm.mockCall(store, abi.encodeCall(IParameterStore.feeRecipient, ()), abi.encode(fundingSafe));
         _config(fundingSafe, fundingSafe);
         vm.expectRevert(bytes("gas vault treasury is an operator helper's FUNDING_SAFE"));
         script.runStep("deploy");
-        vm.mockCall(store, abi.encodeCall(IParameterStoreViews.feeRecipient, ()), abi.encode(treasury));
+        vm.mockCall(store, abi.encodeCall(IParameterStore.feeRecipient, ()), abi.encode(treasury));
         _config(treasury, fundingSafe);
 
         // Signers and funding need the vault first.

@@ -6,17 +6,18 @@ pragma solidity 0.8.28;
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
-import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {Market} from "../../src/types/Market.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {OracleLeg} from "../../src/types/OracleLeg.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
-import {SecondSource} from "../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
-import {TokenOracleConfig} from "../../src/types/TokenOracleConfig.sol";
+import {InitParams, LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
+import {
+    OracleConfig,
+    OracleLeg,
+    PriceState,
+    PriceStateView,
+    SecondSource,
+    SecondSourceKind,
+    TokenOracleConfig
+} from "../../src/types/OracleTypes.sol";
 import {ClPoolActor, ClTestToken, IClFactory, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {LPOracleCLDeployer} from "../utils/fixtures/LPOracleCLFixture.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
@@ -182,7 +183,7 @@ contract LPOracleCLRealStoreTest is ParameterStoreFixture {
         _tl();
         vm.expectRevert(
             abi.encodeWithSelector(
-                IParameterStoreErrors.OracleConfigRejected.selector, address(oracle), LPOracleCodes.CHECK_TOLERANCE
+                IParameterStoreBase.OracleConfigRejected.selector, address(oracle), LPOracleCodes.CHECK_TOLERANCE
             )
         );
         store.setFeedAgreementMarginBps(51);

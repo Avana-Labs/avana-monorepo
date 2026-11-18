@@ -3,11 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {ICollateralizationEvents} from "../../src/custody/collateralization/ICollateralizationEvents.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
@@ -84,7 +83,7 @@ contract CollateralizationPreviewsUnitTest is CollateralizationFixture {
         vm.startPrank(adapter);
         lock.acquire();
         vm.expectEmit(address(coll));
-        emit ICollateralizationEvents.RecordRecredited(3, 700_000_000, 140_000_000_000, 0);
+        emit ICollateralizationBase.RecordRecredited(3, 700_000_000, 140_000_000_000, 0);
         (uint128 added,) = coll.recredit(alice, aliceProxy, vt, KEY_C, "", false);
         token.mint(aliceProxy, added);
         vm.stopPrank();
@@ -133,11 +132,11 @@ contract CollateralizationPreviewsUnitTest is CollateralizationFixture {
         lock.acquire();
         _withdrawAndBurn(aliceProxy, 1_000_000_000);
         vm.expectEmit(address(coll));
-        emit ICollateralizationEvents.RecordDebited(1, KEY_A, aliceProxy, vt, 3_000_000_000, 0, a, 600_000_000_000);
+        emit ICollateralizationBase.RecordDebited(1, KEY_A, aliceProxy, vt, 3_000_000_000, 0, a, 600_000_000_000);
         vm.expectEmit(address(coll));
-        emit ICollateralizationEvents.RecordDebited(2, KEY_B, aliceProxy, vt, takeB, afterB, b, releasedB);
+        emit ICollateralizationBase.RecordDebited(2, KEY_B, aliceProxy, vt, takeB, afterB, b, releasedB);
         vm.expectEmit(address(coll));
-        emit ICollateralizationEvents.SeizureReconciled(aliceProxy, vt, c, sum);
+        emit ICollateralizationBase.SeizureReconciled(aliceProxy, vt, c, sum);
         vm.prank(adapter);
         coll.release(aliceProxy, vt, KEY_C, 1_000_000_000);
         vm.prank(adapter);
@@ -154,7 +153,7 @@ contract CollateralizationPreviewsUnitTest is CollateralizationFixture {
         PledgeCounters memory k = coll.getCounters(vt, alice);
         assertEq(k.accountRecords, 0, "no proxy named");
         assertEq(coll.getCounters(vt, bob).regularUsed, k.regularUsed, "market counters do not depend on the depositor");
-        vm.expectRevert(ICollateralizationErrors.InvalidVaultToken.selector);
+        vm.expectRevert(ICollateralizationBase.InvalidVaultToken.selector);
         coll.getCounters(makeAddr("notAVaultToken"), alice);
     }
 }

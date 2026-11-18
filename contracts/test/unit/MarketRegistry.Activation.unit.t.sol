@@ -4,17 +4,12 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketRegistryEvents.sol";
-import {IMarketRegistryWindDown} from "../../src/policy/market-registry/IMarketRegistryWindDown.sol";
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {WindDownState} from "../../src/policy/market-registry/types/WindDownState.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
-import {Market} from "../../src/types/Market.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {MarketStatus, WindDownState} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {DriftReason, Market, MarketDef} from "../../src/types/MarketTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryLPOracleMock} from "../utils/mocks/MarketRegistryMocks.sol";
 
@@ -39,7 +34,7 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         bytes32 check
     ) internal {
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ActivationCheckFailed.selector, id, check));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ActivationCheckFailed.selector, id, check));
         registry.activateMarket(id);
     }
 
@@ -57,9 +52,7 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
     // Sources: 5.1 TEST-138
     function test_TEST_138_activationWiresTheReserve() public {
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.MarketActivated(
-            id, block.chainid, address(spoke), VT_RESERVE, address(hub), VT_ASSET
-        );
+        emit IMarketRegistryBase.MarketActivated(id, block.chainid, address(spoke), VT_RESERVE, address(hub), VT_ASSET);
         _activate();
         Market memory m = registry.getMarket(id);
         assertEq(uint8(m.status), uint8(MarketStatus.Active));
@@ -70,10 +63,10 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         assertEq(registry.marketOfHubAsset(address(hub), VT_ASSET), id);
         assertEq(registry.activeMarketCount(address(spoke)), 1);
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.MarketNotRegistered.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.MarketNotRegistered.selector, id));
         registry.activateMarket(id);
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.MarketNotRegistered.selector, 42));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.MarketNotRegistered.selector, 42));
         registry.activateMarket(42);
     }
 
@@ -196,7 +189,7 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         ps.setLivenessFails(address(spoke), id, GHO_RESERVE, true);
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.LivenessBound.selector, address(spoke), id, GHO_RESERVE)
+            abi.encodeWithSelector(IMarketRegistryBase.LivenessBound.selector, address(spoke), id, GHO_RESERVE)
         );
         registry.activateMarket(id);
     }
@@ -211,7 +204,7 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         hub.setAsset(vt2, VT_ASSET);
         ps.setMarket(2, 9500, 10e8, 1_000_000e8, 100_000e8, 1e8);
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.DuplicateMarketKey.selector);
+        vm.expectRevert(IMarketRegistryBase.DuplicateMarketKey.selector);
         registry.activateMarket(2);
     }
 
@@ -228,20 +221,20 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
     // Sources: 5.1 TEST-213
     function test_TEST_213_cancelAndOffboard() public {
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.MarketNotActive.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.MarketNotActive.selector, id));
         registry.setMarketOffboarding(id);
         _activate();
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.MarketNotRegistered.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.MarketNotRegistered.selector, id));
         registry.cancelRegistration(id);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.MarketOffboarding(id);
+        emit IMarketRegistryBase.MarketOffboarding(id);
         vm.prank(address(timelock));
         registry.setMarketOffboarding(id);
         assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Offboarding));
         assertEq(registry.activeMarketCount(address(spoke)), 1, "Offboarding markets still count");
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.MarketNotActive.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.MarketNotActive.selector, id));
         registry.setMarketOffboarding(id);
     }
 
@@ -252,25 +245,25 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         vm.prank(address(timelock));
         registry.setMarketOffboarding(id);
         uint256 t0 = block.timestamp;
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.MarketNotOffboarding.selector, 42));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.MarketNotOffboarding.selector, 42));
         registry.closeMarket(42);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.OffboardNoticeRunning.selector, t0 + 5 days));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.OffboardNoticeRunning.selector, t0 + 5 days));
         registry.closeMarket(id);
         // The published target of a 7,500 bps reserve: the Aave DAO lowers it once, to 3,750, after day 5.
         assertEq(registry.windDownState(id).targetLtBps, 3750);
         vm.warp(t0 + 40 days);
         collat.setHasDebt(vt, true);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.MarketHasDebt.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.MarketHasDebt.selector, id));
         registry.closeMarket(id);
         collat.setHasDebt(vt, false);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryWindDown.MarketClosed(id);
+        emit IMarketRegistry.MarketClosed(id);
         vm.prank(alice);
         registry.closeMarket(id);
         assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Closed));
         assertEq(registry.activeMarketCount(address(spoke)), 0);
         assertEq(registry.marketOfVaultToken(vt), id, "the old token stays bound to the closed market");
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.MarketNotOffboarding.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.MarketNotOffboarding.selector, id));
         registry.closeMarket(id);
     }
 
@@ -291,10 +284,10 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
         assertEq(w.startLtBps, 7500);
         assertEq(w.targetLtBps, 3750);
         // Debt-free, but the notice has not run: no close in the offboarding block or before the notice ends.
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.OffboardNoticeRunning.selector, t0 + 5 days));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.OffboardNoticeRunning.selector, t0 + 5 days));
         registry.closeMarket(id);
         vm.warp(t0 + 5 days - 1);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.OffboardNoticeRunning.selector, t0 + 5 days));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.OffboardNoticeRunning.selector, t0 + 5 days));
         registry.closeMarket(id);
         vm.warp(t0 + 5 days);
         vm.prank(alice);
@@ -322,12 +315,12 @@ contract MarketRegistryActivationUnitTest is MarketRegistryFixture {
     // TEST-213 verifies: REQ-MREG-033, Q-358
     function test_TEST_213_settlementReserveChange() public {
         vm.startPrank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 42));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 42));
         registry.setSettlementReserve(42, GHO_RESERVE);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownDebtReserve.selector, address(spoke), 3));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownDebtReserve.selector, address(spoke), 3));
         registry.setSettlementReserve(id, 3);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryWindDown.SettlementReserveSet(id, GHO_RESERVE);
+        emit IMarketRegistry.SettlementReserveSet(id, GHO_RESERVE);
         registry.setSettlementReserve(id, GHO_RESERVE);
         vm.stopPrank();
     }

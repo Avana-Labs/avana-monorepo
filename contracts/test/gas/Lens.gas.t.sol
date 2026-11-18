@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RecordBackingView} from "../../src/lens/lens/types/RecordBackingView.sol";
-import {RecordView} from "../../src/lens/lens/types/RecordView.sol";
+import {RecordBackingView, RecordView} from "../../src/lens/lens/types/LensTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensGasTest

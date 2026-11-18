@@ -5,19 +5,18 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {DebtReserveParams} from "../../src/policy/parameter-store/types/DebtReserveParams.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
+import {DebtReserveParams, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 
 /// @notice Hard and liveness bounds of every parameter of 1.5 at its minimum, its maximum, one below the minimum and
 /// one above the maximum, through every setter that writes it. Each refused write leaves the stored value unchanged.
 contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
     uint256 internal constant USD_MAX = type(uint128).max;
-    bytes internal oob = abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector);
-    bytes internal live = abi.encodeWithSelector(IParameterStoreErrors.LivenessBound.selector);
-    bytes internal notStricter = abi.encodeWithSelector(IParameterStoreErrors.NotStricter.selector);
-    bytes internal notLooser = abi.encodeWithSelector(IParameterStoreErrors.NotLooser.selector);
+    bytes internal oob = abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
+    bytes internal live = abi.encodeWithSelector(IParameterStoreBase.LivenessBound.selector);
+    bytes internal notStricter = abi.encodeWithSelector(IParameterStoreBase.NotStricter.selector);
+    bytes internal notLooser = abi.encodeWithSelector(IParameterStoreBase.NotLooser.selector);
 
     function setUp() public {
         _deployStore(false);
@@ -454,7 +453,7 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         _refuses(abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, USD_MAX + 1)), oob);
         _refuses(
             abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, USD_MAX)),
-            abi.encodeWithSelector(IParameterStoreErrors.LoosenStepTooLarge.selector, tokenKey)
+            abi.encodeWithSelector(IParameterStoreBase.LoosenStepTooLarge.selector, tokenKey)
         );
         _refuses(abi.encodeCall(store.loosenMarketUsdCap, (M, USD_MAX + 1)), oob);
         // From one below the ceiling, the ceiling itself is one step away and accepted.

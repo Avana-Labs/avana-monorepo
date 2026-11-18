@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {DexPathRoute} from "../../../src/liquidation/settlement-routes/DexPathRoute.sol";
 import {ISettlementRoute} from "../../../src/liquidation/settlement-routes/ISettlementRoute.sol";
-import {DexHop, HopKind} from "../../../src/liquidation/settlement-routes/types/DexHop.sol";
-import {RouteConfig} from "../../../src/liquidation/settlement-routes/types/RouteConfig.sol";
+import {DexHop, HopKind, RouteConfig} from "../../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
 import {LockMember} from "../../utils/mocks/LockMember.sol";
 import {PayoutToken} from "../../utils/mocks/PayoutToken.sol";

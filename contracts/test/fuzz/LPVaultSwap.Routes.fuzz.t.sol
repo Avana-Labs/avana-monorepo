@@ -3,11 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {
+    LiquidationParams,
+    LiquidationResult,
+    RouteMode
+} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 import {LVSLyingRoute} from "../utils/mocks/LPVaultSwapMocks.sol";
 
@@ -60,8 +62,7 @@ contract LPVaultSwapRoutesFuzzTest is LPVaultSwapUnitBase {
             assertFalse(primaryOk || backupOk, "refused although a route met the minimum");
             bytes4 s = bytes4(reason);
             assertTrue(
-                s == ILPVaultSwapErrors.NoRouteAvailable.selector
-                    || s == ILPVaultSwapErrors.RecoveryBelowFloor.selector,
+                s == ILPVaultSwapBase.NoRouteAvailable.selector || s == ILPVaultSwapBase.RecoveryBelowFloor.selector,
                 "named refusal"
             );
         }
@@ -87,7 +88,7 @@ contract LPVaultSwapRoutesFuzzTest is LPVaultSwapUnitBase {
             assertGe(r.recovered + r.shortfall, r.minOut, "the aggregate floor still binds");
         } catch (bytes memory reason) {
             assertLt(out, minOut, "only an output below the leg minimum can fail the floor");
-            assertEq(bytes4(reason), ILPVaultSwapErrors.RecoveryBelowFloor.selector, "held to the floor");
+            assertEq(bytes4(reason), ILPVaultSwapBase.RecoveryBelowFloor.selector, "held to the floor");
         }
     }
 
@@ -117,8 +118,8 @@ contract LPVaultSwapRoutesFuzzTest is LPVaultSwapUnitBase {
     ) public {
         debtToCover = bound(debtToCover, 1, 10_000e6);
         bytes memory call = pending
-            ? abi.encodeCall(ILPVaultSwapLiquidation.settlePending, (MARKET_ID, usdcReserveId))
-            : abi.encodeCall(ILPVaultSwapLiquidation.liquidate, (_params(proxy, debtToCover)));
+            ? abi.encodeCall(ILPVaultSwap.settlePending, (MARKET_ID, usdcReserveId))
+            : abi.encodeCall(ILPVaultSwap.liquidate, (_params(proxy, debtToCover)));
         LVSLyingRoute reentrant = new LVSLyingRoute(address(usdt), address(usdc));
         usdc.mint(address(reentrant), 1_009_594_950);
         reentrant.setOut(1_009_594_950);
@@ -128,7 +129,7 @@ contract LPVaultSwapRoutesFuzzTest is LPVaultSwapUnitBase {
         assertFalse(reentrant.lastReenterOk(), "re-entry refused");
         assertEq(
             keccak256(reentrant.lastReenterData()),
-            keccak256(abi.encodeWithSelector(ILPVaultSwapErrors.LockHeld.selector, address(lvs))),
+            keccak256(abi.encodeWithSelector(ILPVaultSwapBase.LockHeld.selector, address(lvs))),
             "LockHeld(LPVaultSwap)"
         );
         assertGt(r.debtRepaid, 0, "outer call settles");

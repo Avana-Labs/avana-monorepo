@@ -3,29 +3,25 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapViews} from "../../liquidation/lp-vault-swap/ILPVaultSwapViews.sol";
+import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {DebtPriceView} from "../../oracle/debt-oracle/types/DebtPriceView.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {PriceAge} from "../../oracle/lp-oracle/PriceAge.sol";
-import {DriftReason} from "../../types/DriftReason.sol";
-import {Market} from "../../types/Market.sol";
-import {PriceState} from "../../types/PriceState.sol";
-import {PriceStateView} from "../../types/PriceStateView.sol";
-import {TokenPriceView} from "../../types/TokenPriceView.sol";
-import {IMarketRegistryCreditLines} from "../market-registry/IMarketRegistryCreditLines.sol";
-import {IMarketRegistryHubs} from "../market-registry/IMarketRegistryHubs.sol";
-import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
+import {LPPriceMath} from "../../oracle/lp-oracle/LPPriceMath.sol";
+import {DriftReason, Market} from "../../types/MarketTypes.sol";
+import {PriceState, PriceStateView, TokenPriceView} from "../../types/OracleTypes.sol";
+import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
+import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleBorrowLogic} from "./IRiskModuleBorrowLogic.sol";
 import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
 import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 import {RiskModuleBorrowScope} from "./RiskModuleBorrowScope.sol";
 import {RiskModuleMath} from "./RiskModuleMath.sol";
-import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
+import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleBorrowLogic
 /// @notice Bodies of the borrow-side checks and `debtValueUsd`, and the same gates as a view for the account status.
@@ -119,7 +115,7 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
         lpOracle = m.lpOracle;
         IAaveV4Spoke.UserAccountData memory a = _accountData(spoke, proxy);
         hf = a.healthFactor;
-        uint256 u = ICollateralizationViews(_COLLATERALIZATION).getAccountRescueUnits(proxy, m.vaultToken);
+        uint256 u = ICollateralization(_COLLATERALIZATION).getAccountRescueUnits(proxy, m.vaultToken);
         if (u == 0) return (hf, hf, 0, marketId, lpOracle);
         IAaveV4Spoke sp = IAaveV4Spoke(spoke);
         uint32 key = sp.getUserPosition(m.reserveId, proxy).dynamicConfigKey;
@@ -149,7 +145,7 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
         if (!IRiskModuleDriftLogic(_DRIFT).isHubSharesEqualAssets(s.marketId)) {
             revert HubSharesNotEqualAssets(s.marketId);
         }
-        if (ILPVaultSwapViews(_LP_VAULT_SWAP).activeKeeperCount() == 0) revert LiquidationHalted(s.marketId);
+        if (ILPVaultSwap(_LP_VAULT_SWAP).activeKeeperCount() == 0) revert LiquidationHalted(s.marketId);
         (bool halted, uint256 haltedReserve) = _routeHalt(s);
         if (halted) revert DebtLiquidationHalted(haltedReserve);
         _breakers(s, borrow);
@@ -167,9 +163,9 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
                 address feed = t.legFeeds[j];
                 if (feed == address(0)) continue;
                 uint256 at = t.legUpdatedAt[j];
-                if (!PriceAge.borrowFresh(at, _store().borrowPriceMaxAge(feed))) {
+                if (!LPPriceMath.borrowFresh(at, _store().borrowPriceMaxAge(feed))) {
                     // forge-lint: disable-next-line(require-revert-in-loop)
-                    revert PriceTooOld(feed, PriceAge.age(at));
+                    revert PriceTooOld(feed, LPPriceMath.age(at));
                 }
             }
             // forge-lint: disable-next-line(require-revert-in-loop)
@@ -205,9 +201,9 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
             if (source != s.defs[i].priceSource) revert UnexpectedDebtPriceSource(r, source);
             if (s.defs[i].fixedPrice) continue;
             DebtPriceView memory dv = IDebtOracle(source).getPriceState();
-            if (!PriceAge.debtBorrowable(dv, IDebtOracle(source).borrowPriceMaxAge())) {
+            if (!LPPriceMath.debtBorrowable(dv, IDebtOracle(source).borrowPriceMaxAge())) {
                 // forge-lint: disable-next-line(require-revert-in-loop)
-                revert DebtPriceTooOld(r, source, PriceAge.age(dv.servedUpdatedAt));
+                revert DebtPriceTooOld(r, source, LPPriceMath.age(dv.servedUpdatedAt));
             }
         }
     }
@@ -242,16 +238,16 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
             if (fundingHub == s.m.hub) return;
             // A disabled cross-Hub line refuses the whole borrow.
             // forge-lint: disable-next-line(require-revert-in-loop)
-            if (!_registry().crossHubLinesEnabled()) revert IMarketRegistryHubs.CrossHubLinesDisabled();
+            if (!_registry().crossHubLinesEnabled()) revert IMarketRegistry.CrossHubLinesDisabled();
             address asset = s.defs[i].asset;
             (uint256 line, uint256 sum) = _registry().creditLine(fundingHub, asset);
             // A full credit line refuses the whole borrow.
             // forge-lint: disable-next-line(require-revert-in-loop)
-            if (sum > line) revert IMarketRegistryCreditLines.CreditLineExceeded(fundingHub, asset, sum, line);
+            if (sum > line) revert IMarketRegistry.CreditLineExceeded(fundingHub, asset, sum, line);
             (uint256 required, uint256 funded) = _registry().creditLineCoverage(fundingHub, asset);
             if (required > funded) {
                 // forge-lint: disable-next-line(require-revert-in-loop)
-                revert IMarketRegistryCreditLines.CoverageBelowRatio(fundingHub, asset, required, funded);
+                revert IMarketRegistry.CoverageBelowRatio(fundingHub, asset, required, funded);
             }
             return;
         }

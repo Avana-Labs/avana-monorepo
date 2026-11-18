@@ -3,12 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
-import {DeleverageRequest} from "../../src/liquidation/lp-vault-swap/types/DeleverageRequest.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {DeleverageRequest, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {LVSLyingRoute} from "../utils/mocks/LPVaultSwapMocks.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 
@@ -85,14 +84,14 @@ contract LPVaultSwapLockUnitTest is LPVaultSwapUnitBase {
     // TEST-060 verifies: REQ-SWAP-002, REQ-LOCK-005, REQ-SWAP-106, INV-054, PROP-037
     function test_TEST_060_noReentryFromRoute() public {
         bytes[3] memory calls = [
-            abi.encodeCall(ILPVaultSwapLiquidation.liquidate, (_params(proxy, 1950e6))),
-            abi.encodeCall(ILPVaultSwapLiquidation.settlePending, (MARKET_ID, usdcReserveId)),
+            abi.encodeCall(ILPVaultSwap.liquidate, (_params(proxy, 1950e6))),
+            abi.encodeCall(ILPVaultSwap.settlePending, (MARKET_ID, usdcReserveId)),
             abi.encodeCall(lvs.deleverage, (_emptyRequest()))
         ];
         bytes[3] memory errors = [
-            abi.encodeWithSelector(ILPVaultSwapErrors.LockHeld.selector, address(lvs)),
-            abi.encodeWithSelector(ILPVaultSwapErrors.LockHeld.selector, address(lvs)),
-            abi.encodeWithSelector(ILPVaultSwapErrors.NotAdapter.selector)
+            abi.encodeWithSelector(ILPVaultSwapBase.LockHeld.selector, address(lvs)),
+            abi.encodeWithSelector(ILPVaultSwapBase.LockHeld.selector, address(lvs)),
+            abi.encodeWithSelector(ILPVaultSwapBase.NotAdapter.selector)
         ];
         for (uint256 i = 0; i < calls.length; ++i) {
             LVSLyingRoute reentrant = new LVSLyingRoute(address(usdt), address(usdc));
@@ -116,7 +115,7 @@ contract LPVaultSwapLockUnitTest is LPVaultSwapUnitBase {
     // TEST-060 verifies: REQ-SWAP-002, REQ-LOCK-007
     function test_TEST_060_revertLeavesLockFree() public {
         lpOracle.setAnswer(250_000_000); // healthy: NotLiquidatable inside the Lock
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.NotLiquidatable.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.NotLiquidatable.selector));
         assertFalse(lock.isLocked(), "free after a revert");
         vm.prank(address(adapter));
         lock.acquire();
@@ -130,10 +129,10 @@ contract LPVaultSwapLockUnitTest is LPVaultSwapUnitBase {
     function test_TEST_060_deleverageStepsOnlyInOrderUnderAdapterLock() public {
         (address aliceProxy, bytes32 key) = _openAccount(alice, 10_000e6, 15_000e6, 250_000_000);
         vm.prank(attacker);
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         adapter.deleverageRepay(aliceProxy, usdcReserveId, 1);
         vm.prank(address(lvs));
-        vm.expectRevert(IAaveAdapterErrors.NotLPVaultSwap.selector);
+        vm.expectRevert(IAaveAdapterBase.NotLPVaultSwap.selector);
         adapter.deleverageRelease(aliceProxy, _position(key), 1, new uint256[](0));
         uint256 repays = adapter.repayCalls();
         uint256 releases = adapter.releaseCalls();
@@ -149,9 +148,9 @@ contract LPVaultSwapLockUnitTest is LPVaultSwapUnitBase {
     // TEST-060 verifies: REQ-SWAP-002, REQ-SWAP-076, INV-054
     function test_TEST_060_payoutHookCannotReenter() public {
         _fund(usdc, keeper, 2 * 1950e6);
-        usdc.setHook(address(lvs), abi.encodeCall(ILPVaultSwapLiquidation.liquidate, (_params(proxy, 1950e6))));
+        usdc.setHook(address(lvs), abi.encodeCall(ILPVaultSwap.liquidate, (_params(proxy, 1950e6))));
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.LockHeld.selector, address(lvs)));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.LockHeld.selector, address(lvs)));
         lvs.liquidate(_params(proxy, 1950e6));
         assertFalse(lock.isLocked(), "free");
     }

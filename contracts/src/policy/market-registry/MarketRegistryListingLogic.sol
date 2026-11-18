@@ -3,27 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {Market} from "../../types/Market.sol";
-import {MarketDef} from "../../types/MarketDef.sol";
-import {PositionShape} from "../../types/PositionShape.sol";
-import {RouteSlot} from "../../types/RouteSlot.sol";
-import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
-import {IParameterStoreViews} from "../parameter-store/IParameterStoreViews.sol";
-import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
-import {IRiskModuleViews} from "../risk-module/IRiskModuleViews.sol";
-import {IMarketRegistryHubs} from "./IMarketRegistryHubs.sol";
-import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
-import {MarketRegistryMarketChecks} from "./MarketRegistryMarketChecks.sol";
-import {MarketRegistryOracleChecks} from "./MarketRegistryOracleChecks.sol";
-import {MarketRegistryRouteChecks} from "./MarketRegistryRouteChecks.sol";
-import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
-import {MarketRegistryImmutables} from "./types/MarketRegistryImmutables.sol";
-import {MarketStatus} from "./types/MarketStatus.sol";
-import {SpokeDef} from "./types/SpokeDef.sol";
-import {TokenDef} from "./types/TokenDef.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-
 /// @title MarketRegistryListingLogic
 /// @notice Bodies of `listToken`, `setPriceSource` and `listCollateralMarket`. Normal delay.
 /// @dev Runs only by delegatecall from the MarketRegistry, which checks `APPLICATION_ADMIN` first.
@@ -32,12 +11,164 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 // forge-lint: disable-start(reentrancy-events)
 // setPriceSource re-checks every market using the token with view calls; bounded by the market count.
 // forge-lint: disable-start(calls-loop)
-contract MarketRegistryListingLogic is
-    MarketRegistryMarketChecks,
-    MarketRegistryOracleChecks,
-    MarketRegistryRouteChecks,
-    IMarketRegistryLogic
-{
+
+import {IntegrationCapabilities, PoolKeying} from "../../amm/types/AmmTypes.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
+import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
+import {IAggregatorV3} from "../../interfaces/external/chainlink/IAggregatorV3.sol";
+import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
+import {AmmConstants} from "../../types/AmmConstants.sol";
+import {Market, MarketDef} from "../../types/MarketTypes.sol";
+import {RouteSlot} from "../../types/OracleTypes.sol";
+import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
+import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
+import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
+import {IParameterStore} from "../parameter-store/IParameterStore.sol";
+import {IRiskModule} from "../risk-module/IRiskModule.sol";
+import {IMarketRegistry} from "./IMarketRegistry.sol";
+import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
+import {MarketRegistryRouteChecks} from "./MarketRegistryRouteChecks.sol";
+import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
+import {MarketRegistryImmutables, MarketStatus, RiskTier, SpokeDef, TokenDef} from "./types/MarketRegistryTypes.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+
+contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistryLogic {
+    function _checkShape(
+        address lpVault,
+        MarketDef calldata def
+    ) internal view {
+        IntegrationCapabilities memory caps = ILPVault(lpVault).capabilities();
+        bool byAddress = caps.poolKeying == PoolKeying.Address;
+        if (byAddress ? (def.pool == address(0) || def.poolId != 0) : (def.pool != address(0) || def.poolId == 0)) {
+            revert ListingCheckFailed("pool");
+        }
+        PositionShape calldata sh = def.shape;
+        if (sh.kind == ShapeKind.None || sh.kind != caps.shapeKind) revert ListingCheckFailed("shape");
+        if (sh.kind == ShapeKind.FullPool ? (sh.tickLower != 0 || sh.tickUpper != 0) : sh.tickLower >= sh.tickUpper) {
+            revert ListingCheckFailed("shape");
+        }
+        uint256 records = ILPVault(lpVault).maxRecordsPerAccountMarket();
+        if (records == 0 || records > AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET) {
+            revert ListingCheckFailed("records");
+        }
+    }
+
+    function _resolveMarketId(
+        MarketDef calldata def,
+        bytes32 key
+    ) internal view returns (uint256 marketId, bool relisting) {
+        Layout storage l = _s();
+        if (
+            def.vaultToken == address(0)
+                || IVaultTokenFactory(_VAULT_TOKEN_FACTORY).tokenOf(def.spoke, key) != def.vaultToken
+        ) {
+            revert VaultTokenMismatch();
+        }
+        marketId = IVaultToken(def.vaultToken).marketId();
+        if (marketId == l.marketCount + 1) return (marketId, false);
+        if (
+            marketId == 0 || marketId > l.marketCount || l.markets[marketId].status != MarketStatus.Cancelled
+                || l.keyOf[marketId] != key || l.markets[marketId].spoke != def.spoke
+        ) revert VaultTokenMismatch();
+        relisting = true;
+    }
+
+    function _checkVaultToken(
+        MarketDef calldata def,
+        bytes32 key,
+        uint256 marketId,
+        address lpVault,
+        uint8 unitDecimals
+    ) internal view {
+        IVaultToken t = IVaultToken(def.vaultToken);
+        if (
+            t.marketKey() != key || t.integrationId() != def.integrationId || t.integration() != lpVault
+                || t.hub() != def.hub || t.spoke() != def.spoke || t.marketId() != marketId
+                || t.lpOracle() != def.lpOracle
+        ) revert VaultTokenMismatch();
+        if (
+            t.decimals() != unitDecimals || t.adapter() != _AAVE_ADAPTER || t.collateralization() != _COLLATERALIZATION
+                || t.lpVaultSwap() != _LP_VAULT_SWAP
+        ) revert VaultTokenMismatch();
+    }
+
+    function _checkTokens(
+        address[] memory tokens,
+        RiskTier tier,
+        address hub,
+        uint8 unitDecimals
+    ) internal view returns (uint8[] memory decs) {
+        uint256 n = tokens.length;
+        if (n < AmmConstants.MIN_POOL_TOKENS || n > AmmConstants.MAX_POOL_TOKENS) revert ListingCheckFailed("tokens");
+        decs = new uint8[](n);
+        address unlisted = address(0);
+        bool classOk = true;
+        bool routesOk = true;
+        for (uint256 i = 0; i < n; ++i) {
+            TokenDef storage t = _s().tokens[tokens[i]];
+            if (!t.listed && unlisted == address(0)) unlisted = tokens[i];
+            if (tier == RiskTier.Stable && !t.isUsdStable) classOk = false;
+            if (t.alternateRoute.length == 0) routesOk = false;
+            decs[i] = t.decimals;
+        }
+        if (unlisted != address(0)) revert TokenNotListed(unlisted);
+        if (!routesOk) revert ListingCheckFailed("routeLength");
+        if (!classOk) revert ListingCheckFailed("tokenClass");
+        IAaveV4Hub h = IAaveV4Hub(hub);
+        if (unitDecimals < h.MIN_ALLOWED_UNDERLYING_DECIMALS() || unitDecimals > h.MAX_ALLOWED_UNDERLYING_DECIMALS()) {
+            revert ListingCheckFailed("decimals");
+        }
+    }
+
+    /// @dev For a two-token pool, the raw price ratio stays below `2^128` under a 100x shock.
+    function _checkRawPrice(
+        address[] memory tokens,
+        uint8[] memory decs
+    ) internal view {
+        if (tokens.length != 2) return;
+        uint256 a0 = _primaryAnswer8(tokens[0]);
+        uint256 a1 = _primaryAnswer8(tokens[1]);
+        if (a0 == 0 || a1 == 0 || decs[0] > 36 || decs[1] > 36) revert ListingCheckFailed("rawPrice");
+        uint256 lhs = 1e4 * a0 * 10 ** uint256(decs[1]);
+        uint256 rhs = (uint256(1) << 128) * a1;
+        // rhs × 10^d0 can exceed 2^256 only when the bound already holds by a wide margin.
+        if (rhs <= type(uint256).max / 10 ** uint256(decs[0]) && lhs >= rhs * 10 ** uint256(decs[0])) {
+            revert ListingCheckFailed("rawPrice");
+        }
+    }
+
+    function _checkLpOracleSeed(
+        address lpOracle,
+        uint256 marketId,
+        address lpVault
+    ) internal view {
+        ILPOracle o = ILPOracle(lpOracle);
+        if (lpOracle == address(0) || o.decimals() != _ORACLE_DECIMALS || o.latestAnswer() <= 0) {
+            revert ListingCheckFailed("lpOracle");
+        }
+        if (o.marketId() != marketId || o.integration() != lpVault) revert ListingCheckFailed("lpOracle");
+    }
+
+    /// @dev 8-decimal USD answer of a token's primary route, rounded down; 0 when a leg or the result is out of range.
+    function _primaryAnswer8(
+        address token
+    ) internal view returns (uint256 a) {
+        address[] storage route = _s().tokens[token].primaryRoute;
+        a = 1e8;
+        for (uint256 i = 0; i < route.length; ++i) {
+            // Only the answer is used: this is a listing-time magnitude check.
+            // forge-lint: disable-next-line(unused-return)
+            (, int256 answer,,,) = IAggregatorV3(route[i]).latestRoundData();
+            uint8 dec = IParameterStore(_PARAMETER_STORE).getFeed(route[i]).decimals;
+            if (answer <= 0 || answer >= 2 ** 96 || dec > 36) return 0;
+            // `0 < answer < 2^96`, so the conversion is exact.
+            // forge-lint: disable-next-line(unsafe-typecast)
+            a = Math.mulDiv(a, uint256(answer), 10 ** uint256(dec));
+        }
+        if (a >= 2 ** 96) a = 0;
+    }
+
     constructor(
         MarketRegistryImmutables memory im
     ) MarketRegistryStorage(im) {}
@@ -95,7 +226,7 @@ contract MarketRegistryListingLogic is
         delete l.standbyCancelledAt[token];
         ++l.priceRouteVersion[token];
         // The checks below read the routes from this registry, so they run after the write.
-        IParameterStoreViews ps = IParameterStoreViews(_PARAMETER_STORE);
+        IParameterStore ps = IParameterStore(_PARAMETER_STORE);
         if (ps.feedAgreementToleranceBps(token) < ps.feedAgreementToleranceMinBps(token)) {
             revert ListingCheckFailed("tolerance");
         }
@@ -133,7 +264,7 @@ contract MarketRegistryListingLogic is
             delete l.latched[bytes32(marketId)];
             _clearBreachTimes(l, bytes32(marketId));
         }
-        try IRiskModuleChecks(_RISK_MODULE).checkAaveConfig(def.spoke, new uint256[](0)) {}
+        try IRiskModule(_RISK_MODULE).checkAaveConfig(def.spoke, new uint256[](0)) {}
         catch {
             revert ActivationCheckFailed(marketId, "aaveConfig");
         }
@@ -150,7 +281,7 @@ contract MarketRegistryListingLogic is
         if (!sp.approved || sp.hub != def.hub) revert InvalidSpoke(def.spoke);
         lpVault = l.integrationLpVault[def.integrationId];
         if (sp.integrationId != def.integrationId || lpVault == address(0)) {
-            revert IMarketRegistryHubs.InvalidIntegration(def.integrationId);
+            revert IMarketRegistry.InvalidIntegration(def.integrationId);
         }
         _checkShape(lpVault, def);
         key = IVaultTokenFactory(_VAULT_TOKEN_FACTORY).marketKeyOf(def.integrationId, def.pool, def.poolId, def.shape);
@@ -202,12 +333,12 @@ contract MarketRegistryListingLogic is
         MarketDef calldata def
     ) private returns (address[] memory tokens, uint8 unitDecimals) {
         if (!relisting) {
-            return IAmmIntegration(lpVault).bindMarket(marketId, def.pool, def.poolId, def.shape, def.integrationData);
+            return ILPVault(lpVault).bindMarket(marketId, def.pool, def.poolId, def.shape, def.integrationData);
         }
         PositionShape memory sh;
         address pool;
         bytes32 poolId;
-        (pool, poolId, sh, tokens) = IAmmIntegration(lpVault).marketOf(marketId);
+        (pool, poolId, sh, tokens) = ILPVault(lpVault).marketOf(marketId);
         if (
             pool != def.pool || poolId != def.poolId || sh.kind != def.shape.kind || sh.tickLower != def.shape.tickLower
                 || sh.tickUpper != def.shape.tickUpper
@@ -255,7 +386,7 @@ contract MarketRegistryListingLogic is
         address lpOracle
     ) private view returns (bytes32 failed) {
         if (!_commonModeHolds(tokens)) return "commonMode";
-        uint256 cfLp = IRiskModuleViews(_RISK_MODULE).expectedCollateralFactorBps(marketId);
+        uint256 cfLp = IRiskModule(_RISK_MODULE).expectedCollateralFactorBps(marketId);
         if (!_listingMarginHolds(cfLp, tokens)) return "listingMargin";
         if (!_oracleConfigPasses(lpOracle)) return "oracleConfig";
     }
@@ -270,4 +401,3 @@ contract MarketRegistryListingLogic is
         return false;
     }
 }
-// forge-lint: disable-end(calls-loop)

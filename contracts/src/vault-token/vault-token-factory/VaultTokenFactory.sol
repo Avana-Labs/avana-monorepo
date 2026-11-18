@@ -3,14 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {PoolKeying} from "../../amm/types/PoolKeying.sol";
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {PoolKeying} from "../../amm/types/AmmTypes.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
-import {RouteReads} from "../../liquidation/settlement-routes/RouteReads.sol";
-import {PositionShape} from "../../types/PositionShape.sol";
-import {ShapeKind} from "../../types/ShapeKind.sol";
-import {VaultTokenBindings} from "../../types/VaultTokenBindings.sol";
+import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
+import {VaultTokenBindings} from "../../types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
 import {IVaultToken} from "../vault-token/IVaultToken.sol";
 import {VaultToken} from "../vault-token/VaultToken.sol";
 import {IVaultTokenFactory} from "./IVaultTokenFactory.sol";
@@ -261,9 +259,9 @@ contract VaultTokenFactory is IVaultTokenFactory {
     function _checkCore() private view {
         address coll = _COLLATERALIZATION;
         if (
-            _readAddress(coll, abi.encodeCall(ICollateralizationViews.VAULT_TOKEN_FACTORY, ())) != address(this)
-                || _readAddress(coll, abi.encodeCall(ICollateralizationViews.ADAPTER, ())) != _ADAPTER
-                || _readAddress(coll, abi.encodeCall(ICollateralizationViews.LP_VAULT_SWAP, ())) != _LP_VAULT_SWAP
+            _readAddress(coll, abi.encodeCall(ICollateralization.VAULT_TOKEN_FACTORY, ())) != address(this)
+                || _readAddress(coll, abi.encodeCall(ICollateralization.ADAPTER, ())) != _ADAPTER
+                || _readAddress(coll, abi.encodeCall(ICollateralization.LP_VAULT_SWAP, ())) != _LP_VAULT_SWAP
         ) revert InvalidIntegration();
     }
 
@@ -271,11 +269,11 @@ contract VaultTokenFactory is IVaultTokenFactory {
         uint32 integrationId,
         address lpVault
     ) private view returns (bytes32 ammProtocol) {
-        (bool idOk, uint256 id) = _readWord(lpVault, abi.encodeCall(IAmmIntegration.INTEGRATION_ID, ()));
+        (bool idOk, uint256 id) = _readWord(lpVault, abi.encodeCall(ILPVault.INTEGRATION_ID, ()));
         bool protocolOk;
         uint256 protocol;
-        (protocolOk, protocol) = _readWord(lpVault, abi.encodeCall(IAmmIntegration.AMM_PROTOCOL, ()));
-        address lock = _readAddress(_COLLATERALIZATION, abi.encodeCall(ICollateralizationViews.LOCK, ()));
+        (protocolOk, protocol) = _readWord(lpVault, abi.encodeCall(ILPVault.AMM_PROTOCOL, ()));
+        address lock = _readAddress(_COLLATERALIZATION, abi.encodeCall(ICollateralization.LOCK, ()));
         if (
             !idOk || id != integrationId || !protocolOk || protocol == 0 || lock == address(0)
                 || _readAddress(lpVault, abi.encodeCall(ILPVault.COLLATERALIZATION, ())) != _COLLATERALIZATION
@@ -290,8 +288,7 @@ contract VaultTokenFactory is IVaultTokenFactory {
     function _readCapabilities(
         address lpVault
     ) private view returns (PoolKeying keying, ShapeKind kind) {
-        (bool ok, bytes memory ret) =
-            _read(lpVault, abi.encodeCall(IAmmIntegration.capabilities, ()), CAPABILITIES_SIZE);
+        (bool ok, bytes memory ret) = _read(lpVault, abi.encodeCall(ILPVault.capabilities, ()), CAPABILITIES_SIZE);
         if (!ok) revert InvalidIntegration();
         (uint256 keyingWord,,, uint256 kindWord) = abi.decode(ret, (uint256, uint256, uint256, uint256));
         if (
@@ -328,7 +325,7 @@ contract VaultTokenFactory is IVaultTokenFactory {
         bytes memory data,
         uint256 size
     ) private view returns (bool ok, bytes memory ret) {
-        (ok, ret) = RouteReads._staticRead(target, READ_GAS, data, size + 32);
+        (ok, ret) = RouteMath._staticRead(target, READ_GAS, data, size + 32);
         ok = ok && ret.length == size;
     }
 

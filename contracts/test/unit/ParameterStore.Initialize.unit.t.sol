@@ -5,17 +5,14 @@ pragma solidity 0.8.28;
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
-import {IParameterStoreAdmin} from "../../src/policy/parameter-store/IParameterStoreAdmin.sol";
-import {IParameterStoreChain} from "../../src/policy/parameter-store/IParameterStoreChain.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {ParameterStore} from "../../src/policy/parameter-store/ParameterStore.sol";
 import {ParameterStoreAdminOracleLogic} from "../../src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol";
 import {ParameterStoreAdminRiskLogic} from "../../src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol";
 import {ParameterStoreListingLogic} from "../../src/policy/parameter-store/ParameterStoreListingLogic.sol";
 import {ParameterStoreLoosenLogic} from "../../src/policy/parameter-store/ParameterStoreLoosenLogic.sol";
 import {ParameterStoreTightenLogic} from "../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
-import {GlobalParams} from "../../src/policy/parameter-store/types/GlobalParams.sol";
-import {ParameterStoreLogics} from "../../src/policy/parameter-store/types/ParameterStoreLogics.sol";
+import {GlobalParams, ParameterStoreLogics} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -26,8 +23,8 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 /// ERC-7201 namespace the values land in.
 contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
     ParameterStore internal impl;
-    bytes internal oob = abi.encodeWithSelector(IParameterStoreErrors.OutOfBounds.selector);
-    bytes internal live = abi.encodeWithSelector(IParameterStoreErrors.LivenessBound.selector);
+    bytes internal oob = abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
+    bytes internal live = abi.encodeWithSelector(IParameterStoreBase.LivenessBound.selector);
 
     function setUp() public {
         _deployStore(false);
@@ -38,7 +35,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         GlobalParams memory g,
         uint16 poolShare
     ) internal returns (bool ok, bytes memory err, IParameterStore s) {
-        bytes memory data = abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), g, poolShare));
+        bytes memory data = abi.encodeCall(IParameterStore.initialize, (address(timelock), g, poolShare));
         try new ERC1967Proxy(address(impl), data) returns (ERC1967Proxy p) {
             (ok, s) = (true, IParameterStore(address(p)));
         } catch (bytes memory reason) {
@@ -199,7 +196,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         address[4] memory bad = [address(0), address(timelock), address(registry), address(hub)];
         for (uint256 i = 0; i < bad.length; ++i) {
             g.feeRecipient = bad[i];
-            _refused(g, abi.encodeWithSelector(IParameterStoreErrors.InvalidFeeRecipient.selector, bad[i]));
+            _refused(g, abi.encodeWithSelector(IParameterStoreBase.InvalidFeeRecipient.selector, bad[i]));
         }
         g.feeRecipient = bob;
         assertEq(_accepted(g).feeRecipient(), bob);
@@ -220,10 +217,10 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         g.graceHealthFactor = 0.95e18;
         _refused(g, oob);
         g.cachedWindow = 3600;
-        _refused(g, abi.encodeWithSelector(IParameterStoreErrors.InvalidFeeRecipient.selector, address(0)));
+        _refused(g, abi.encodeWithSelector(IParameterStoreBase.InvalidFeeRecipient.selector, address(0)));
         // The timelock argument is checked before any value.
-        bytes memory data = abi.encodeCall(IParameterStoreAdmin.initialize, (alice, g, 0));
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.AdminRoleOnlyTimelock.selector, bytes32(0), alice));
+        bytes memory data = abi.encodeCall(IParameterStore.initialize, (alice, g, 0));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.AdminRoleOnlyTimelock.selector, bytes32(0), alice));
         new ERC1967Proxy(address(impl), data);
     }
 
@@ -231,14 +228,13 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-023, REQ-ACCESS-153, REQ-ACCESS-150
     function test_TEST_242_initializeGrantsRolesAndEmits() public {
-        bytes memory data =
-            abi.encodeCall(IParameterStoreAdmin.initialize, (address(timelock), _defaultGlobals(), 10_000));
+        bytes memory data = abi.encodeCall(IParameterStore.initialize, (address(timelock), _defaultGlobals(), 10_000));
         vm.expectEmit();
         emit IAccessControl.RoleGranted(bytes32(0), address(timelock), address(this));
         vm.expectEmit();
         emit IAccessControl.RoleGranted(AvanaRoles.APPLICATION_ADMIN, address(timelock), address(this));
         vm.expectEmit();
-        emit IParameterStoreChain.SequencerSet(address(0), 0);
+        emit IParameterStore.SequencerSet(address(0), 0);
         vm.expectEmit();
         emit Initializable.Initialized(1);
         IParameterStore s = IParameterStore(address(new ERC1967Proxy(address(impl), data)));
@@ -339,7 +335,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
             adminRisk: address(new ParameterStoreAdminRiskLogic(tl, noCode, BLOCK_TIME, false))
         });
         ParameterStore early = new ParameterStore(tl, noCode, BLOCK_TIME, false, l);
-        bytes memory data = abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _defaultGlobals(), 10_000));
+        bytes memory data = abi.encodeCall(IParameterStore.initialize, (tl, _defaultGlobals(), 10_000));
         IParameterStore s = IParameterStore(address(new ERC1967Proxy(address(early), data)));
         assertEq(s.feeRecipient(), feeRecipient);
     }

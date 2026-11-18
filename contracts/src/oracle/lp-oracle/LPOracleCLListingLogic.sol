@@ -7,7 +7,7 @@ import {LPOracleCLModuleCaller} from "./LPOracleCLModuleCaller.sol";
 import {LPOracleCLPool} from "./LPOracleCLPool.sol";
 import {LPOracleListingLogic} from "./LPOracleListingLogic.sol";
 import {LPOracleLogicBase} from "./LPOracleLogicBase.sol";
-import {InitParams} from "./types/InitParams.sol";
+import {InitParams} from "./LPOracleTypes.sol";
 
 /// @title LPOracleCLListingLogic
 /// @notice `checkConfig` of the concentrated-liquidity LPOracle, run by delegatecall.

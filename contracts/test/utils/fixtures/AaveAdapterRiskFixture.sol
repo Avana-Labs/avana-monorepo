@@ -9,8 +9,8 @@ import {AaveAdapterCollateralLogic} from "../../../src/policy/aave-adapter/AaveA
 import {AaveAdapterExitLogic} from "../../../src/policy/aave-adapter/AaveAdapterExitLogic.sol";
 import {AaveAdapterSettlementLogic} from "../../../src/policy/aave-adapter/AaveAdapterSettlementLogic.sol";
 import {AaveAdapterUserLogic} from "../../../src/policy/aave-adapter/AaveAdapterUserLogic.sol";
-import {AaveAdapterLogics} from "../../../src/policy/aave-adapter/types/AaveAdapterLogics.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
+import {AaveAdapterLogics} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
+import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {RiskModule} from "../../../src/policy/risk-module/RiskModule.sol";
 import {RiskModuleBorrowLogic} from "../../../src/policy/risk-module/RiskModuleBorrowLogic.sol";
 import {RiskModuleBreakerLogic} from "../../../src/policy/risk-module/RiskModuleBreakerLogic.sol";
@@ -18,8 +18,7 @@ import {RiskModuleDriftLogic} from "../../../src/policy/risk-module/RiskModuleDr
 import {RiskModulePledgeLogic} from "../../../src/policy/risk-module/RiskModulePledgeLogic.sol";
 import {RiskModuleSpeedLogic} from "../../../src/policy/risk-module/RiskModuleSpeedLogic.sol";
 import {RiskModuleStatusLogic} from "../../../src/policy/risk-module/RiskModuleStatusLogic.sol";
-import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleImmutables.sol";
-import {RiskModuleLogics} from "../../../src/policy/risk-module/types/RiskModuleLogics.sol";
+import {RiskModuleImmutables, RiskModuleLogics} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {RiskDebtOracleMock, RiskLPOracleMock, RiskLPVaultMock, RiskStoreMock} from "../mocks/RiskModuleMocks.sol";
 import {AaveAdapterFixture} from "./AaveAdapterFixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";

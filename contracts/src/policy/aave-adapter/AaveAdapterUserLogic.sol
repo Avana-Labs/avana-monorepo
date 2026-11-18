@@ -3,27 +3,21 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../custody/collateralization/ICollateralizationAdapter.sol";
-import {ICollateralizationDebtMark} from "../../custody/collateralization/ICollateralizationDebtMark.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
-import {Market} from "../../types/Market.sol";
-import {PauseReason} from "../../types/PauseReason.sol";
-import {PauseState} from "../../types/PauseState.sol";
-import {PositionRef} from "../../types/PositionRef.sol";
+import {Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {PositionRef} from "../../types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
-import {IMarketRegistryHubs} from "../market-registry/IMarketRegistryHubs.sol";
-import {IMarketRegistryRouteViews} from "../market-registry/IMarketRegistryRouteViews.sol";
-import {IMarketRegistryViews} from "../market-registry/IMarketRegistryViews.sol";
-import {DebtReserveDef} from "../market-registry/types/DebtReserveDef.sol";
-import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
+import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
+import {DebtReserveDef} from "../market-registry/types/MarketRegistryTypes.sol";
+import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
-import {AaveAdapterImmutables} from "./types/AaveAdapterImmutables.sol";
-import {AdapterAccount} from "./types/AdapterAccount.sol";
+import {AaveAdapterImmutables, AdapterAccount} from "./types/AaveAdapterTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title AaveAdapterUserLogic
@@ -72,7 +66,7 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         PauseReason reason;
         (state, reason) = _pauseOf(m.hub);
         if (state == PauseState.Paused && reason == PauseReason.MintPathSuspect) revert ApplicationPaused();
-        if (!IMarketRegistryViews(_MARKET_REGISTRY).getSpoke(m.spoke).approved) revert UnknownSpoke(m.spoke);
+        if (!IMarketRegistry(_MARKET_REGISTRY).getSpoke(m.spoke).approved) revert UnknownSpoke(m.spoke);
         if (integrationId != m.integrationId) revert IntegrationMismatch(marketId, integrationId);
     }
 
@@ -86,8 +80,8 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         IVaultToken vt = IVaultToken(m.vaultToken);
         if (!vt.isValidProxy(proxy)) vt.addValidProxy(proxy);
         int256 gapBefore = _gap(m.vaultToken);
-        (recordId, credited) = ICollateralizationAdapter(_COLLATERALIZATION)
-            .pledge(msg.sender, proxy, m.vaultToken, positionKey, requireRescue);
+        (recordId, credited) =
+            ICollateralization(_COLLATERALIZATION).pledge(msg.sender, proxy, m.vaultToken, positionKey, requireRescue);
         if (credited == 0) revert ZeroAmount();
         vt.mint(proxy, credited);
         _supply(proxy, m.spoke, m.vaultToken, reserveId, vt.marketId(), credited);
@@ -97,7 +91,7 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
     function _marketForPledge(
         uint256 marketId
     ) private view returns (Market memory m) {
-        m = IMarketRegistryViews(_MARKET_REGISTRY).getMarket(marketId);
+        m = IMarketRegistry(_MARKET_REGISTRY).getMarket(marketId);
         address vt = m.vaultToken;
         if (
             vt == address(0) || !IVaultTokenFactory(_VAULT_TOKEN_FACTORY).isVaultToken(vt)
@@ -143,7 +137,7 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (amount == 0) revert ZeroAmount();
         DebtReserveDef memory def = _borrowPauseGate(marketId, debtReserveId);
         (address proxy, AdapterAccount memory account) = _accountOf(msg.sender, marketId);
-        if (!IMarketRegistryRouteViews(_MARKET_REGISTRY).isApprovedDebtReserve(account.spoke, debtReserveId)) {
+        if (!IMarketRegistry(_MARKET_REGISTRY).isApprovedDebtReserve(account.spoke, debtReserveId)) {
             revert UnknownDebtReserve(account.spoke, debtReserveId);
         }
         _checkReceiver(receiver, def);
@@ -152,10 +146,10 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         uint256 nonce = _s().borrowNonce[proxy];
         if (nonce != expectedNonce) revert BadNonce(nonce, expectedNonce);
         _s().borrowNonce[proxy] = nonce + 1;
-        IRiskModuleChecks(_RISK_MODULE).preBorrowCheck(proxy, debtReserveId, amount);
-        ICollateralizationDebtMark(_COLLATERALIZATION).markIndebted(proxy);
+        IRiskModule(_RISK_MODULE).preBorrowCheck(proxy, debtReserveId, amount);
+        ICollateralization(_COLLATERALIZATION).markIndebted(proxy);
         _borrowStep(proxy, account.spoke, debtReserveId, amount, receiver);
-        uint256 hf = IRiskModuleChecks(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
+        uint256 hf = IRiskModule(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
         emit Borrowed(msg.sender, marketId, debtReserveId, receiver, amount, nonce, hf);
         _release();
         drawn = amount;
@@ -165,9 +159,9 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         uint256 marketId,
         uint256 debtReserveId
     ) private view returns (DebtReserveDef memory def) {
-        Market memory m = IMarketRegistryViews(_MARKET_REGISTRY).getMarket(marketId);
+        Market memory m = IMarketRegistry(_MARKET_REGISTRY).getMarket(marketId);
         _requireNone(m.hub);
-        def = IMarketRegistryRouteViews(_MARKET_REGISTRY).getDebtReserve(m.spoke, debtReserveId);
+        def = IMarketRegistry(_MARKET_REGISTRY).getDebtReserve(m.spoke, debtReserveId);
         if (def.fundingHub != m.hub) _requireNone(def.fundingHub);
     }
 
@@ -189,11 +183,9 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
             || receiver == _PROXY_MANAGER;
         if (!refused) {
             address reg = _MARKET_REGISTRY;
-            refused = IMarketRegistryHubs(reg).integrationIdOf(receiver) != 0
-                || receiver == IMarketRegistryViews(reg).PAYOUT_ESCROW()
-                || receiver == IMarketRegistryViews(reg).flashSource()
-                || IMarketRegistryHubs(reg).isRecordedHub(receiver)
-                || IMarketRegistryViews(reg).getSpoke(receiver).approved
+            refused = IMarketRegistry(reg).integrationIdOf(receiver) != 0
+                || receiver == IMarketRegistry(reg).PAYOUT_ESCROW() || receiver == IMarketRegistry(reg).flashSource()
+                || IMarketRegistry(reg).isRecordedHub(receiver) || IMarketRegistry(reg).getSpoke(receiver).approved
                 || IAaveV4Hub(def.fundingHub).isSpokeListed(def.hubAssetId, receiver)
                 || IAaveV4Hub(def.fundingHub).isUnderlyingListed(receiver);
         }
@@ -237,7 +229,7 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (moved) {
             emit Repaid(msg.sender, borrower, marketId, debtReserveId, paid, debtAfter, repayAll);
             // Collateralization reads `borrowCount` itself and clears the mark only at 0.
-            if (debtAfter == 0) ICollateralizationDebtMark(_COLLATERALIZATION).markDebtFree(proxy);
+            if (debtAfter == 0) ICollateralization(_COLLATERALIZATION).markDebtFree(proxy);
         }
         _release();
         spent = paid;

@@ -6,10 +6,12 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {ILPVaultSwapErrors} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {RouteMode} from "../../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {ILPVaultSwapBase} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {
+    LiquidationParams,
+    LiquidationResult,
+    RouteMode
+} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IPayoutEscrow} from "../../../src/liquidation/payout-escrow/IPayoutEscrow.sol";
 import {LVSLPOracleMock, LVSMarketRegistryMock} from "../../utils/mocks/LPVaultSwapMocks.sol";
 import {PayoutToken} from "../../utils/mocks/PayoutToken.sol";
@@ -221,7 +223,7 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
                     last = abi.encodePacked("account still liquidatable after a full-size liquidation");
                 }
             } catch (bytes memory reason) {
-                if (bytes4(reason) != ILPVaultSwapErrors.NoRouteAvailable.selector || _routeWorks()) {
+                if (bytes4(reason) != ILPVaultSwapBase.NoRouteAvailable.selector || _routeWorks()) {
                     ++failures;
                     last = reason;
                 }
@@ -238,8 +240,8 @@ contract LPVaultSwapHandler is CommonBase, StdCheats, StdUtils {
         bytes memory reason
     ) internal pure returns (bool) {
         bytes4 s = bytes4(reason);
-        return s == ILPVaultSwapErrors.NotLiquidatable.selector || s == ILPVaultSwapErrors.NoRouteAvailable.selector
-            || s == ILPVaultSwapErrors.RecoveryBelowFloor.selector || s == ILPVaultSwapErrors.NothingSeized.selector
+        return s == ILPVaultSwapBase.NotLiquidatable.selector || s == ILPVaultSwapBase.NoRouteAvailable.selector
+            || s == ILPVaultSwapBase.RecoveryBelowFloor.selector || s == ILPVaultSwapBase.NothingSeized.selector
             || s == bytes4(keccak256("MustNotLeaveDust()"));
     }
 

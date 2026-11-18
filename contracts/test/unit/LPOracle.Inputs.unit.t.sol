@@ -4,13 +4,10 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
-import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
+import {InitParams, LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {OracleConfig, PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 import {LPOracleHarness, LPOracleHarnessDeployer} from "../utils/harness/LPOracleHarness.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -158,7 +155,7 @@ contract LPOracleInputsUnitTest is LPOracleFixture {
         LPOracleHarness impl = LPOracleHarnessDeployer.deploy(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false);
         InitParams memory p = _params();
         p.config.tokens[0].routes[1].legs[0].aggregator = address(0);
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.ConfigCheckFailed.selector, LPOracleCodes.CHECK_QUOTES));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.ConfigCheckFailed.selector, LPOracleCodes.CHECK_QUOTES));
         new ERC1967Proxy(address(impl), abi.encodeCall(ILPOracle.initialize, (p)));
     }
 
@@ -167,7 +164,7 @@ contract LPOracleInputsUnitTest is LPOracleFixture {
         LPOracleHarness impl = LPOracleHarnessDeployer.deploy(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false);
         InitParams memory p = _params();
         p.config.tokens[1] = _tokenConfig(address(tokenA), address(pB), address(aB), address(sB));
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, MARKET));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, MARKET));
         new ERC1967Proxy(address(impl), abi.encodeCall(ILPOracle.initialize, (p)));
     }
 
@@ -209,7 +206,7 @@ contract LPOracleInputsUnitTest is LPOracleFixture {
             (bool ok, bytes memory ret) = address(oracle).staticcall{gas: g}(call);
             // An empty revert is the proxy or the implementation running out of gas before the forward.
             if (ok || ret.length == 0) continue;
-            assertEq(bytes4(ret), ILPOracleErrors.InsufficientGas.selector, "the only view revert");
+            assertEq(bytes4(ret), ILPOracleBase.InsufficientGas.selector, "the only view revert");
             assertEq(ret.length, 68, "InsufficientGas(gasLeft, required)");
             uint256 required;
             assembly {

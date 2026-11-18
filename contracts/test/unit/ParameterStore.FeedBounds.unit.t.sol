@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 
 /// @notice A Chainlink proxy that is its own aggregator and answers `minAnswer()` and `maxAnswer()` with any raw word,
@@ -68,7 +68,7 @@ contract ParameterStoreFeedBoundsUnitTest is ParameterStoreFixture {
     function _invalid(
         bytes32 check
     ) internal view returns (bytes memory) {
-        return abi.encodeWithSelector(IParameterStoreErrors.InvalidFeed.selector, address(f), check);
+        return abi.encodeWithSelector(IParameterStoreBase.InvalidFeed.selector, address(f), check);
     }
 
     // TEST-250 verifies: REQ-CONFIG-022, Q-191

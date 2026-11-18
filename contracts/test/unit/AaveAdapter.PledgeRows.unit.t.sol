@@ -3,11 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
@@ -30,18 +29,18 @@ contract AaveAdapterPledgeRowsUnitTest is AaveAdapterFixture {
         bytes32 key = _newKey();
         lpVault.mintPosition(key, alice, MARKET_ID, UNITS);
         uint256 past = block.timestamp - 1;
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.DeadlineExpired.selector, past));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.DeadlineExpired.selector, past));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key), past);
 
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnknownMarket.selector, 99));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnknownMarket.selector, 99));
         vm.prank(alice);
         adapterC.pledge(99, _ref(key), d);
 
         // The registry names another Spoke than the vault token's own `spoke()`.
         registry.setMarketSpoke(MARKET_ID, aave.lendSpoke);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnknownMarket.selector, MARKET_ID));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnknownMarket.selector, MARKET_ID));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key), d);
         registry.setMarketSpoke(MARKET_ID, aave.cdpSpoke);
@@ -49,7 +48,7 @@ contract AaveAdapterPledgeRowsUnitTest is AaveAdapterFixture {
         registry.setSpoke(
             aave.cdpSpoke, SpokeDef(false, aave.hub, INTEGRATION, RiskTier.Stable, address(0), address(0))
         );
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.UnknownSpoke.selector, aave.cdpSpoke));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.UnknownSpoke.selector, aave.cdpSpoke));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key), d);
 
@@ -68,7 +67,7 @@ contract AaveAdapterPledgeRowsUnitTest is AaveAdapterFixture {
         uint256 d = _deadline();
         bytes32 bobKey = _newKey();
         lpVault.mintPosition(bobKey, bob, MARKET_ID, UNITS);
-        vm.expectRevert(ILPVaultErrors.NotTokenOwner.selector);
+        vm.expectRevert(ILPVaultBase.NotTokenOwner.selector);
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(bobKey), d);
         assertEq(token.totalSupply(), 0, "non-owner minted nothing");
@@ -76,7 +75,7 @@ contract AaveAdapterPledgeRowsUnitTest is AaveAdapterFixture {
         // A position bound to market B's range, named for market A.
         bytes32 otherRange = _newKey();
         lpVault.mintPosition(otherRange, alice, MARKET_B, UNITS);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultErrors.RangeMismatch.selector, int24(-1), int24(1)));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultBase.RangeMismatch.selector, int24(-1), int24(1)));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(otherRange), d);
         assertEq(token.totalSupply(), 0, "range mismatch minted nothing");
@@ -85,10 +84,10 @@ contract AaveAdapterPledgeRowsUnitTest is AaveAdapterFixture {
         adapterC.pledge(MARKET_ID, _ref(bobKey), d);
         uint256 recordId = coll.recordIdOf(INTEGRATION, bobKey);
         assertGt(recordId, 0, "record open");
-        vm.expectRevert(ICollateralizationErrors.AlreadyPledged.selector);
+        vm.expectRevert(ICollateralizationBase.AlreadyPledged.selector);
         vm.prank(bob);
         adapterC.pledge(MARKET_ID, _ref(bobKey), d);
-        vm.expectRevert(ICollateralizationErrors.AlreadyPledged.selector);
+        vm.expectRevert(ICollateralizationBase.AlreadyPledged.selector);
         vm.prank(bob);
         adapterC.pledge(MARKET_B, _ref(bobKey), d);
         assertEq(token.totalSupply(), UNITS, "one credit in market A");
@@ -116,7 +115,7 @@ contract AaveAdapterPledgeRowsUnitTest is AaveAdapterFixture {
         lpVault.mintPosition(key, alice, MARKET_ID, 1_000_000_000);
         uint256 supply = token.totalSupply();
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.TooManyRecords.selector, 16));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.TooManyRecords.selector, 16));
         vm.prank(alice);
         adapterC.pledge(MARKET_ID, _ref(key), d);
         assertEq(token.totalSupply(), supply, "17th record minted nothing");

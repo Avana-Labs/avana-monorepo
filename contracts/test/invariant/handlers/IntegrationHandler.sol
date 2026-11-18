@@ -6,22 +6,18 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILens} from "../../../src/lens/lens/ILens.sol";
-import {LiquidationPreview} from "../../../src/lens/lens/types/LiquidationPreview.sol";
-import {RecordView} from "../../../src/lens/lens/types/RecordView.sol";
+import {LiquidationPreview, RecordView} from "../../../src/lens/lens/types/LensTypes.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {RouteMode} from "../../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {LiquidationResult, RouteMode} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IPayoutEscrow} from "../../../src/liquidation/payout-escrow/IPayoutEscrow.sol";
-import {IFlashLiquidator} from "../../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
-import {FlashLiquidationRequest} from "../../../src/periphery/flash-liquidator/types/FlashLiquidationRequest.sol";
+import {FlashLiquidationRequest, IFlashLiquidator} from "../../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {IAaveAdapterErrors} from "../../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
+import {IAaveAdapterBase} from "../../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
+import {PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {ClTestToken} from "../../utils/fixtures/ClPoolFixture.sol";
 import {MockAaveV3Pool} from "../../utils/mocks/AaveV3PoolMocks.sol";
 import {DeficitFunding} from "./DeficitFunding.sol";
@@ -181,10 +177,10 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
             if (state != PauseState.None || frozen) ++gateBreaks;
         } catch (bytes memory err) {
             bytes4 s = bytes4(err);
-            if (state == PauseState.Frozen && !frozen && s != IAaveAdapterErrors.ApplicationFrozen.selector) {
+            if (state == PauseState.Frozen && !frozen && s != IAaveAdapterBase.ApplicationFrozen.selector) {
                 ++gateBreaks;
             }
-            if (state == PauseState.Paused && !frozen && s != IAaveAdapterErrors.ApplicationPaused.selector) {
+            if (state == PauseState.Paused && !frozen && s != IAaveAdapterBase.ApplicationPaused.selector) {
                 ++gateBreaks;
             }
         }
@@ -589,8 +585,8 @@ contract IntegrationHandler is CommonBase, StdCheats, StdUtils {
     ) internal {
         bytes4 s = bytes4(err);
         if (
-            s == IAaveAdapterErrors.ApplicationFrozen.selector || s == IAaveAdapterErrors.ApplicationPaused.selector
-                || s == IAaveAdapterErrors.AddressIsFrozen.selector || s == IRiskModuleErrors.BreakerTripped.selector
+            s == IAaveAdapterBase.ApplicationFrozen.selector || s == IAaveAdapterBase.ApplicationPaused.selector
+                || s == IAaveAdapterBase.AddressIsFrozen.selector || s == IRiskModuleErrors.BreakerTripped.selector
                 || s == IRiskModuleErrors.DebtBreakerTripped.selector
         ) ++exitBlockedByStop;
         ++exitFailures;

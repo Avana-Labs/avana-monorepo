@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
@@ -109,7 +109,7 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
         }
         assertEq(lvs.approvedKeeperCount(), 32, "32 registered");
         vm.prank(timelock);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.TooManyKeepers.selector, 32));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.TooManyKeepers.selector, 32));
         lvs.addKeeper(makeAddr("thirtyThird"));
         vm.prank(timelock);
         lvs.removeKeeper(address(uint160(0xA100)));
@@ -124,17 +124,17 @@ contract LPVaultSwapViewsUnitTest is LPVaultSwapUnitBase {
     function test_TEST_098_invalidKeeperAndEvents() public {
         address k = makeAddr("newKeeper");
         vm.prank(timelock);
-        vm.expectRevert(ILPVaultSwapErrors.InvalidKeeper.selector);
+        vm.expectRevert(ILPVaultSwapBase.InvalidKeeper.selector);
         lvs.addKeeper(address(0));
         vm.expectEmit(address(lvs));
         emit KeeperAdded(k);
         vm.prank(timelock);
         lvs.addKeeper(k);
         vm.prank(timelock);
-        vm.expectRevert(ILPVaultSwapErrors.InvalidKeeper.selector);
+        vm.expectRevert(ILPVaultSwapBase.InvalidKeeper.selector);
         lvs.addKeeper(k);
         vm.prank(timelock);
-        vm.expectRevert(ILPVaultSwapErrors.InvalidKeeper.selector);
+        vm.expectRevert(ILPVaultSwapBase.InvalidKeeper.selector);
         lvs.removeKeeper(makeAddr("stranger"));
         vm.expectEmit(address(lvs));
         emit KeeperRemoved(k);

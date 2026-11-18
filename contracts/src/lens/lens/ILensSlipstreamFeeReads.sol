@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LensClPosition, LensSlipstreamTick} from "./types/LensClReads.sol";
+import {LensClPosition, LensSlipstreamTick} from "./types/LensTypes.sol";
 
 /// @title ILensSlipstreamFeeReads
 /// @notice Aerodrome Slipstream pool and position manager views used by the Lens fee reader.

@@ -3,15 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {DriftReason, PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
+import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
 
 interface IGatesSpokeConfigurator {
@@ -104,12 +102,12 @@ contract AaveAdapterRiskModuleGatesIntegrationTest is AaveAdapterRiskFixture {
         PauseState[3] memory states = [PauseState.Frozen, PauseState.Paused, PauseState.Paused];
         PauseReason[3] memory reasons = [PauseReason.None, PauseReason.General, PauseReason.MintPathSuspect];
         bytes4[3] memory errs = [
-            IAaveAdapterErrors.ApplicationFrozen.selector,
-            IAaveAdapterErrors.ApplicationPaused.selector,
-            IAaveAdapterErrors.ApplicationPaused.selector
+            IAaveAdapterBase.ApplicationFrozen.selector,
+            IAaveAdapterBase.ApplicationPaused.selector,
+            IAaveAdapterBase.ApplicationPaused.selector
         ];
         // Over the whole test exactly one `preBorrowCheck` reaches the RiskModule: the final borrow's.
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.preBorrowCheck.selector), 1);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preBorrowCheck.selector), 1);
         for (uint256 i = 0; i < 3; ++i) {
             _pause(states[i], reasons[i]);
             _expectBorrow(abi.encodeWithSelector(errs[i]));
@@ -126,10 +124,10 @@ contract AaveAdapterRiskModuleGatesIntegrationTest is AaveAdapterRiskFixture {
         (bytes32 kb,) = _pledgeAs(bob, MARKET_B, UNITS);
         PauseReason[2] memory reasons = [PauseReason.General, PauseReason.MintPathSuspect];
         // No `preWithdrawCheck` reaches the RiskModule anywhere below.
-        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModuleChecks.preWithdrawCheck.selector), 0);
+        vm.expectCall(address(rm), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
         for (uint256 i = 0; i < 2; ++i) {
             _pause(PauseState.Paused, reasons[i]);
-            _expectWithdrawWithDebt(abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector));
+            _expectWithdrawWithDebt(abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector));
         }
         vm.prank(bob);
         adapterC.withdraw(MARKET_B, _ref(kb), UNITS, _deadline(), 0);
@@ -163,7 +161,7 @@ contract AaveAdapterRiskModuleGatesIntegrationTest is AaveAdapterRiskFixture {
     function test_TEST_284_aaveSourceSwitchIsDriftForNewRiskOnly() public {
         rstore.setTokenCap(aave.hub, address(usdc), 1e30);
         rstore.setTokenCap(aave.hub, address(usdt), 1e30);
-        PledgeCounters memory k = ICollateralizationViews(address(coll)).getCounters(vt, bob);
+        PledgeCounters memory k = ICollateralization(address(coll)).getCounters(vt, bob);
         address bobProxy_ = makeAddr("bob's proxy");
         rm.checkPledge(bob, bobProxy_, MARKET_ID, INTEGRATION, bytes32(uint256(77)), UNITS, k, false);
         vm.prank(aaveDao);

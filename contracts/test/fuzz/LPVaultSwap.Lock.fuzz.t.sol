@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {ILPVaultSwapLiquidation} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapLiquidation.sol";
-import {DeleverageRequest} from "../../src/liquidation/lp-vault-swap/types/DeleverageRequest.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
+import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {DeleverageRequest, LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapLockFuzzTest
@@ -34,10 +33,9 @@ contract LPVaultSwapLockFuzzTest is LPVaultSwapUnitBase {
     ) public {
         debtToCover = bound(debtToCover, 1, 10_000e6);
         marketId = bound(marketId, MARKET_ID, MARKET_ID + 1);
-        bytes memory call =
-            abi.encodeCall(ILPVaultSwapLiquidation.liquidate, (_withMarket(_params(proxy, debtToCover), marketId)));
+        bytes memory call = abi.encodeCall(ILPVaultSwap.liquidate, (_withMarket(_params(proxy, debtToCover), marketId)));
         uint256 debt = _debtOf(proxy, usdcReserveId);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.LockHeld.selector, address(adapter)));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.LockHeld.selector, address(adapter)));
         adapter.callUnderLock(call);
         assertEq(_debtOf(proxy, usdcReserveId), debt, "nothing repaid");
         assertFalse(lock.isLocked(), "Lock free after the refusal");
@@ -54,8 +52,8 @@ contract LPVaultSwapLockFuzzTest is LPVaultSwapUnitBase {
         _seizeAndKeep(proxy, kept);
         _liquidateAs(keeper, _params(proxy, 100e6));
         uint256 pending = coll.getPending(address(vt)).units;
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.LockHeld.selector, address(adapter)));
-        adapter.callUnderLock(abi.encodeCall(ILPVaultSwapLiquidation.settlePending, (MARKET_ID, usdcReserveId)));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.LockHeld.selector, address(adapter)));
+        adapter.callUnderLock(abi.encodeCall(ILPVaultSwap.settlePending, (MARKET_ID, usdcReserveId)));
         assertEq(coll.getPending(address(vt)).units, pending, "pending unchanged");
         assertFalse(lock.isLocked(), "Lock free");
     }
@@ -81,9 +79,9 @@ contract LPVaultSwapLockFuzzTest is LPVaultSwapUnitBase {
             minDebtRepaid: 0
         });
         vm.prank(caller);
-        vm.expectRevert(ILPVaultSwapErrors.NotAdapter.selector);
+        vm.expectRevert(ILPVaultSwapBase.NotAdapter.selector);
         lvs.deleverage(r);
-        vm.expectRevert(ILPVaultSwapErrors.NotAdapter.selector);
+        vm.expectRevert(ILPVaultSwapBase.NotAdapter.selector);
         adapter.deleverageUnlocked(r);
         assertFalse(lock.isLocked(), "Lock free");
     }

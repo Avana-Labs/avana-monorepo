@@ -4,10 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {MarketDef} from "../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryFeedMock, RegistryLPOracleMock, RegistryTokenMock} from "../utils/mocks/MarketRegistryMocks.sol";
 
@@ -24,7 +23,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
     function _expectListing(
         bytes32 check
     ) internal {
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, check));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, check));
     }
 
     /// @dev Lists a stable token of `decimals` whose primary route is one 8-decimal feed answering `answer`.
@@ -98,9 +97,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
             assertTrue(ok, "a pool inside the bound was refused");
         } else {
             assertFalse(ok);
-            assertEq(
-                ret, abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("rawPrice"))
-            );
+            assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("rawPrice")));
         }
     }
 
@@ -114,7 +111,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         _pool(t0, t1);
         (bool ok, bytes memory ret) = _tryList();
         assertFalse(ok);
-        assertEq(ret, abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("rawPrice")));
+        assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("rawPrice")));
         RegistryFeedMock(registry.getToken(t0).primaryRoute[0]).setAnswer(int256(edge));
         (ok,) = _tryList();
         assertTrue(ok);
@@ -144,9 +141,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
             _pool(t0, t1);
             (bool ok, bytes memory ret) = _tryList();
             assertFalse(ok);
-            assertEq(
-                ret, abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("rawPrice"))
-            );
+            assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("rawPrice")));
             _pool(t1, t0);
             (ok, ret) = _tryList();
             assertFalse(ok, "either side");
@@ -182,7 +177,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         bytes memory ret;
         (ok, ret) = _tryList();
         assertFalse(ok);
-        assertEq(ret, abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("rawPrice")));
+        assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("rawPrice")));
     }
 
     // TEST-139 verifies: REQ-CONFIG-035
@@ -222,8 +217,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
             } else {
                 assertFalse(ok);
                 assertEq(
-                    ret,
-                    abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("commonMode"))
+                    ret, abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("commonMode"))
                 );
             }
         }
@@ -242,7 +236,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         lpVault.setPoolTokens(toks, 18);
         (bool ok, bytes memory ret) = _tryList();
         assertFalse(ok);
-        assertEq(ret, abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("commonMode")));
+        assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("commonMode")));
     }
 
     // ─── Activation edges ───
@@ -259,7 +253,7 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
     ) internal {
         vm.prank(address(timelock));
         if (check != bytes32(0)) {
-            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ActivationCheckFailed.selector, id, check));
+            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ActivationCheckFailed.selector, id, check));
         }
         registry.activateMarket(id);
     }

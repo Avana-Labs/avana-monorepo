@@ -4,10 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IMarketRegistryCreditLines} from "../../src/policy/market-registry/IMarketRegistryCreditLines.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketRegistryEvents.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
     RegistryAvanaFirstLossReserveMock,
@@ -153,7 +152,7 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
         bytes32 check
     ) internal {
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.InvalidDebtReserve.selector, check));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidDebtReserve.selector, check));
         registry.enableDebtReserve(address(spoke), d);
     }
 
@@ -194,9 +193,7 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
     // Each enablement records the Spoke's draw cap against its own (Hub, asset) line and emits it.
     function test_TEST_273_eachReserveRecordsItsOwnDrawCap() public {
         vm.expectEmit(address(registry));
-        emit IMarketRegistryCreditLines.CreditLineRecorded(
-            address(hub), address(usdt), address(spoke), 300_000, 300_000
-        );
+        emit IMarketRegistry.CreditLineRecorded(address(hub), address(usdt), address(spoke), 300_000, 300_000);
         _enable(_usdtDef());
         _enable(_usdcDef());
         (uint256 line, uint256 sum) = registry.creditLine(address(hub), address(usdt));
@@ -222,7 +219,7 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
     function test_TEST_213_removeFirstKeepsTheOrder() public {
         _enableBoth();
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.DebtReserveRemoved(address(spoke), GHO_RESERVE);
+        emit IMarketRegistryBase.DebtReserveRemoved(address(spoke), GHO_RESERVE);
         _remove(GHO_RESERVE);
         _assertIds(_two(USDC_RESERVE, USDT_RESERVE));
     }
@@ -289,29 +286,29 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
     function test_TEST_213_removalRefusals() public {
         _enable(_usdcDef());
         vm.startPrank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownDebtReserve.selector, address(spoke), 77));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownDebtReserve.selector, address(spoke), 77));
         registry.removeDebtReserve(address(spoke), 77);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownDebtReserve.selector, alice, USDC_RESERVE));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownDebtReserve.selector, alice, USDC_RESERVE));
         registry.removeDebtReserve(alice, USDC_RESERVE);
         vm.stopPrank();
         // Owed amount, then deficit alone, each block the removal.
         hub.setOwed(USDC_ASSET, address(spoke), 1, 0);
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.DebtReserveInUse.selector, address(spoke), USDC_RESERVE)
+            abi.encodeWithSelector(IMarketRegistryBase.DebtReserveInUse.selector, address(spoke), USDC_RESERVE)
         );
         registry.removeDebtReserve(address(spoke), USDC_RESERVE);
         hub.setOwed(USDC_ASSET, address(spoke), 0, 1);
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.DebtReserveInUse.selector, address(spoke), USDC_RESERVE)
+            abi.encodeWithSelector(IMarketRegistryBase.DebtReserveInUse.selector, address(spoke), USDC_RESERVE)
         );
         registry.removeDebtReserve(address(spoke), USDC_RESERVE);
         hub.setOwed(USDC_ASSET, address(spoke), 0, 0);
         _remove(USDC_RESERVE);
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.UnknownDebtReserve.selector, address(spoke), USDC_RESERVE)
+            abi.encodeWithSelector(IMarketRegistryBase.UnknownDebtReserve.selector, address(spoke), USDC_RESERVE)
         );
         registry.removeDebtReserve(address(spoke), USDC_RESERVE);
     }
@@ -334,7 +331,7 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
         (address vt, address o) = _tokenAndOracle();
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("settlementReserve"))
+            abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("settlementReserve"))
         );
         registry.listCollateralMarket(_marketDef(vt, o));
     }
@@ -354,7 +351,7 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
         registry.setSettlementReserve(id, USDC_RESERVE);
         vm.prank(address(timelock));
         vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.DebtReserveInUse.selector, address(spoke), USDC_RESERVE)
+            abi.encodeWithSelector(IMarketRegistryBase.DebtReserveInUse.selector, address(spoke), USDC_RESERVE)
         );
         registry.removeDebtReserve(address(spoke), USDC_RESERVE);
         // GHO is no market's settlement reserve now and can go even with the market listed.
@@ -378,7 +375,7 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
         assertEq(registry.settlementReserve(id), USDC_RESERVE);
         registry.removeDebtReserve(address(spoke), USDT_RESERVE);
         vm.expectRevert(
-            abi.encodeWithSelector(IMarketRegistryErrors.UnknownDebtReserve.selector, address(spoke), USDT_RESERVE)
+            abi.encodeWithSelector(IMarketRegistryBase.UnknownDebtReserve.selector, address(spoke), USDT_RESERVE)
         );
         registry.setSettlementReserve(id, USDT_RESERVE);
         vm.stopPrank();
@@ -460,11 +457,7 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
         vm.prank(address(timelock));
         vm.expectRevert(
             abi.encodeWithSelector(
-                IMarketRegistryCreditLines.CreditLineExceeded.selector,
-                address(hub),
-                address(usdc),
-                1_000_001,
-                1_000_000
+                IMarketRegistry.CreditLineExceeded.selector, address(hub), address(usdc), 1_000_001, 1_000_000
             )
         );
         registry.enableDebtReserve(address(spoke), _usdcDef());
@@ -482,7 +475,7 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
         vm.prank(address(timelock));
         vm.expectRevert(
             abi.encodeWithSelector(
-                IMarketRegistryCreditLines.CoverageBelowRatio.selector, address(hub), address(usdc), 2e11, 2e11 - 1
+                IMarketRegistry.CoverageBelowRatio.selector, address(hub), address(usdc), 2e11, 2e11 - 1
             )
         );
         registry.enableDebtReserve(address(spoke), _usdcDef());
@@ -500,9 +493,7 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
         _enable(_usdcDef());
         hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 1_500_000);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryCreditLines.CreditLineRecorded(
-            address(hub), address(usdc), address(spoke), 1_500_000, 1_500_000
-        );
+        emit IMarketRegistry.CreditLineRecorded(address(hub), address(usdc), address(spoke), 1_500_000, 1_500_000);
         registry.syncDrawCap(address(spoke), USDC_RESERVE);
         hub.setSpokeConfig(USDC_ASSET, address(spoke), 0, 200_000);
         registry.syncDrawCap(address(spoke), USDC_RESERVE);
@@ -516,7 +507,7 @@ contract MarketRegistryDebtReserveSetUnitTest is MarketRegistryFixture {
         vm.prank(address(timelock));
         vm.expectRevert(
             abi.encodeWithSelector(
-                IMarketRegistryCreditLines.CreditLineExceeded.selector, address(hub), address(usdc), 2 ** 128, 2_000_000
+                IMarketRegistry.CreditLineExceeded.selector, address(hub), address(usdc), 2 ** 128, 2_000_000
             )
         );
         registry.recordCreditLine(address(hub), address(usdc), 2_000_000);

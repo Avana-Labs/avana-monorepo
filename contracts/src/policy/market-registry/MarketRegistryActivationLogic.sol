@@ -5,21 +5,14 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {DriftReason} from "../../types/DriftReason.sol";
-import {Market} from "../../types/Market.sol";
-import {IParameterStoreLiquidation} from "../parameter-store/IParameterStoreLiquidation.sol";
-import {IParameterStoreRiskViews} from "../parameter-store/IParameterStoreRiskViews.sol";
-import {IParameterStoreViews} from "../parameter-store/IParameterStoreViews.sol";
-import {MarketParams} from "../parameter-store/types/MarketParams.sol";
-import {IRiskModuleChecks} from "../risk-module/IRiskModuleChecks.sol";
-import {IRiskModuleViews} from "../risk-module/IRiskModuleViews.sol";
+import {DriftReason, Market} from "../../types/MarketTypes.sol";
+import {IParameterStore} from "../parameter-store/IParameterStore.sol";
+import {MarketParams} from "../parameter-store/types/ParameterStoreTypes.sol";
+import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {IMarketRegistryDriftLogic} from "./IMarketRegistryDriftLogic.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
-import {MarketRegistryOracleChecks} from "./MarketRegistryOracleChecks.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
-import {MarketRegistryImmutables} from "./types/MarketRegistryImmutables.sol";
-import {MarketStatus} from "./types/MarketStatus.sol";
-import {WindDownState} from "./types/WindDownState.sol";
+import {MarketRegistryImmutables, MarketStatus, WindDownState} from "./types/MarketRegistryTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title MarketRegistryActivationLogic
@@ -31,7 +24,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 // forge-lint: disable-start(reentrancy-events)
 // ParameterStore liveness views over the Spoke's enabled debt reserves; views only.
 // forge-lint: disable-start(calls-loop)
-contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketRegistryLogic, IMarketRegistryDriftLogic {
+contract MarketRegistryActivationLogic is MarketRegistryStorage, IMarketRegistryLogic, IMarketRegistryDriftLogic {
     constructor(
         MarketRegistryImmutables memory im
     ) MarketRegistryStorage(im) {}
@@ -93,13 +86,13 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
         l.marketOfReserve[m.spoke][reserveId] = marketId;
         uint256[] memory ids = new uint256[](1);
         ids[0] = marketId;
-        IRiskModuleChecks rm = IRiskModuleChecks(_RISK_MODULE);
+        IRiskModule rm = IRiskModule(_RISK_MODULE);
         try rm.checkAaveConfig(m.spoke, ids) {}
         catch {
             revert ActivationCheckFailed(marketId, "aaveConfig");
         }
         if (!rm.isHubSharesEqualAssets(marketId)) revert ActivationCheckFailed(marketId, "hubShares");
-        uint256 cfLp = IRiskModuleViews(_RISK_MODULE).expectedCollateralFactorBps(marketId);
+        uint256 cfLp = IRiskModule(_RISK_MODULE).expectedCollateralFactorBps(marketId);
         _checkReserve(marketId, m, cfLp);
         _checkParamsAndCap(marketId, m);
         _checkOracleAndRoutes(marketId, m, cfLp);
@@ -185,7 +178,7 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
             revert ActivationCheckFailed(marketId, "liquidityFee");
         }
         IAaveV4Spoke.LiquidationConfig memory lc = s.getLiquidationConfig();
-        IParameterStoreLiquidation ps = IParameterStoreLiquidation(_PARAMETER_STORE);
+        IParameterStore ps = IParameterStore(_PARAMETER_STORE);
         if (lc.targetHealthFactor <= 1e18 || lc.targetHealthFactor != ps.aaveTargetHealthFactor(m.spoke)) {
             revert ActivationCheckFailed(marketId, "liquidationConfig");
         }
@@ -200,8 +193,8 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
         uint256 marketId,
         uint256 minLb
     ) private view {
-        uint256 s = IParameterStoreViews(_PARAMETER_STORE).getMarketParams(marketId).slippageAllowanceBps;
-        uint256 f = IParameterStoreViews(_PARAMETER_STORE).avanaFeeShareBps();
+        uint256 s = IParameterStore(_PARAMETER_STORE).getMarketParams(marketId).slippageAllowanceBps;
+        uint256 f = IParameterStore(_PARAMETER_STORE).avanaFeeShareBps();
         if (f > _BPS || s * minLb > (_BPS - f) * (minLb - _BPS)) revert ActivationCheckFailed(marketId, "feeBound");
     }
 
@@ -210,9 +203,9 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
         uint256 marketId,
         Market storage m
     ) private view {
-        MarketParams memory p = IParameterStoreViews(_PARAMETER_STORE).getMarketParams(marketId);
+        MarketParams memory p = IParameterStore(_PARAMETER_STORE).getMarketParams(marketId);
         if (p.poolRiskFactor == 0 || p.minPledgeUsd == 0) revert ActivationCheckFailed(marketId, "params");
-        IParameterStoreRiskViews r = IParameterStoreRiskViews(_PARAMETER_STORE);
+        IParameterStore r = IParameterStore(_PARAMETER_STORE);
         uint256 capUsd = r.marketUsdCap(marketId);
         uint256 floorUsd = r.stressFloorUsd(marketId);
         if (capUsd == 0 || floorUsd == 0) revert ActivationCheckFailed(marketId, "caps");
@@ -255,7 +248,7 @@ contract MarketRegistryActivationLogic is MarketRegistryOracleChecks, IMarketReg
         uint256 n = drs.length;
         uint256 at = n;
         for (uint256 i = 0; i < n; ++i) {
-            if (!IParameterStoreLiquidation(_PARAMETER_STORE).liquidationLivenessHolds(spoke, marketId, drs[i])) {
+            if (!IParameterStore(_PARAMETER_STORE).liquidationLivenessHolds(spoke, marketId, drs[i])) {
                 at = i;
                 break;
             }

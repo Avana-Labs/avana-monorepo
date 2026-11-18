@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {Lock} from "../../../src/lock/lock/Lock.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {UniswapV3IntegrationHarness} from "../../utils/harness/UniswapV3IntegrationHarness.sol";
 import {MockV3Factory, MockV3Pool} from "../../utils/mocks/UniswapV3Mocks.sol";
 

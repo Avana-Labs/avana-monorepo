@@ -5,11 +5,10 @@ pragma solidity 0.8.28;
 
 import {IUniswapV4Integration} from "../../src/amm/uniswap-v4/IUniswapV4Integration.sol";
 import {UniswapV4Integration} from "../../src/amm/uniswap-v4/UniswapV4Integration.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {V4StandInManager, V4StandInReference, V4StandInToken} from "../invariant/echidna/UniswapV4StandIns.sol";
 import {Test} from "forge-std/Test.sol";
 
@@ -73,13 +72,13 @@ contract UniswapV4IntegrationHalmosTest is Test {
         } else if (subscribed) {
             assert(bytes4(ret) == IUniswapV4Integration.SubscribedPosition.selector);
         } else if (otherPool) {
-            assert(bytes4(ret) == ILPVaultErrors.PoolMismatch.selector);
+            assert(bytes4(ret) == ILPVaultBase.PoolMismatch.selector);
         } else if (lower != -50 || upper != 50) {
             assert(
-                keccak256(ret) == keccak256(abi.encodeWithSelector(ILPVaultErrors.RangeMismatch.selector, lower, upper))
+                keccak256(ret) == keccak256(abi.encodeWithSelector(ILPVaultBase.RangeMismatch.selector, lower, upper))
             );
         } else {
-            assert(liquidity == 0 && bytes4(ret) == ILPVaultErrors.ZeroUnits.selector);
+            assert(liquidity == 0 && bytes4(ret) == ILPVaultBase.ZeroUnits.selector);
         }
     }
 }

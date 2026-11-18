@@ -3,10 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryEvents} from "../../src/policy/market-registry/IMarketRegistryEvents.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
     RegistryAaveOracleMock,
@@ -43,7 +41,7 @@ contract MarketRegistrySpokeRecordsUnitTest is MarketRegistryFixture {
         address s
     ) internal {
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.InvalidSpoke.selector, s));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, s));
         registry.deployCdpSpoke(d);
     }
 
@@ -105,9 +103,7 @@ contract MarketRegistrySpokeRecordsUnitTest is MarketRegistryFixture {
         d = _spokeDef();
         d.implementation = address(upgraded);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryEvents.SpokeApproved(
-            address(spoke), address(hub), V3, address(upgraded), address(aaveOracle)
-        );
+        emit IMarketRegistryBase.SpokeApproved(address(spoke), address(hub), V3, address(upgraded), address(aaveOracle));
         vm.prank(address(timelock));
         assertEq(registry.deployCdpSpoke(d), address(spoke));
         assertEq(registry.getSpokes().length, 1);
@@ -144,7 +140,7 @@ contract MarketRegistrySpokeRecordsUnitTest is MarketRegistryFixture {
         assertEq(registry.getDebtReserveIds(address(spoke2)).length, 0);
         assertEq(registry.activeMarketCount(address(spoke2)), 0);
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ProtectedAddress.selector, address(spoke2)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, address(spoke2)));
         registry.freezeAddress(address(spoke2));
     }
 
@@ -152,7 +148,7 @@ contract MarketRegistrySpokeRecordsUnitTest is MarketRegistryFixture {
     // A debt reserve can be enabled only on an approved Spoke.
     function test_TEST_185_debtReserveNeedsAnApprovedSpoke() public {
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.InvalidSpoke.selector, address(spoke2)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.InvalidSpoke.selector, address(spoke2)));
         registry.enableDebtReserve(address(spoke2), _ghoDef());
     }
 }

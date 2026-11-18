@@ -7,12 +7,14 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
-import {AccountGateStatus} from "../../src/types/AccountGateStatus.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
-import {MarketGateStatus} from "../../src/types/MarketGateStatus.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
+import {
+    AccountGateStatus,
+    DriftReason,
+    MarketGateStatus,
+    PauseReason,
+    PauseState
+} from "../../src/types/MarketTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {RiskSpokeMock} from "../utils/mocks/RiskModuleMocks.sol";
 

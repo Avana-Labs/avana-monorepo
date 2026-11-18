@@ -3,25 +3,20 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {Market} from "../../types/Market.sol";
-import {PledgeCounters} from "../../types/PledgeCounters.sol";
-import {DebtReserveDef} from "../market-registry/types/DebtReserveDef.sol";
-import {MarketSpeedLimits} from "../parameter-store/types/MarketSpeedLimits.sol";
-import {SpeedLimit} from "../parameter-store/types/SpeedLimit.sol";
+import {Market} from "../../types/MarketTypes.sol";
+import {PledgeCounters} from "../../types/PositionTypes.sol";
+import {DebtReserveDef} from "../market-registry/types/MarketRegistryTypes.sol";
+import {MarketSpeedLimits, SpeedLimit} from "../parameter-store/types/ParameterStoreTypes.sol";
+import {IRiskModule} from "./IRiskModule.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 import {IRiskModuleSpeedLogic} from "./IRiskModuleSpeedLogic.sol";
-import {IRiskModuleViews} from "./IRiskModuleViews.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";
 import {SpeedLimitMath} from "./SpeedLimitMath.sol";
-import {BorrowSpeedInputs} from "./types/BorrowSpeedInputs.sol";
-import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
-import {SpeedScope} from "./types/SpeedScope.sol";
-import {SpeedView} from "./types/SpeedView.sol";
-import {SpeedWindow} from "./types/SpeedWindow.sol";
+import {BorrowSpeedInputs, RiskModuleImmutables, SpeedScope, SpeedView, SpeedWindow} from "./types/RiskModuleTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title RiskModuleSpeedLogic
@@ -182,7 +177,7 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
         uint256 max,
         uint256 liveBase
     ) internal view returns (SpeedWindow memory r, uint256 lim, uint256 base) {
-        SpeedWindow memory stored = IRiskModuleViews(msg.sender).getSpeedWindow(scope, key);
+        SpeedWindow memory stored = IRiskModule(msg.sender).getSpeedWindow(scope, key);
         r = SpeedLimitMath.roll(stored, window, block.timestamp);
         base = SpeedLimitMath.windowBase(stored, r, liveBase);
         if (window != 0) lim = SpeedLimitMath.limit(rateBps, min, max, base);
@@ -194,8 +189,7 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
         uint256 window,
         uint256 x
     ) internal view returns (SpeedWindow memory) {
-        return
-            SpeedLimitMath.credit(IRiskModuleViews(msg.sender).getSpeedWindow(scope, key), window, block.timestamp, x);
+        return SpeedLimitMath.credit(IRiskModule(msg.sender).getSpeedWindow(scope, key), window, block.timestamp, x);
     }
 
     function _pledgeInputs(
@@ -204,7 +198,7 @@ contract RiskModuleSpeedLogic is RiskModuleBase, IRiskModuleSpeedLogic {
         Market memory m = _market(marketId);
         if (m.vaultToken == address(0)) revert MarketNotActive(marketId);
         limits = _store().marketSpeedLimits(marketId);
-        PledgeCounters memory c = ICollateralizationViews(_COLLATERALIZATION).getCounters(m.vaultToken, address(0));
+        PledgeCounters memory c = ICollateralization(_COLLATERALIZATION).getCounters(m.vaultToken, address(0));
         bookedUsd = uint256(c.regularUsed) + c.sliceUsed;
     }
 

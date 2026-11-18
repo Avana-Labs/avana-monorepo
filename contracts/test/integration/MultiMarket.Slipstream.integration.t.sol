@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AccountView} from "../../src/lens/lens/types/AccountView.sol";
-import {LiquidationPreview} from "../../src/lens/lens/types/LiquidationPreview.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {PositionRef} from "../../src/types/PositionRef.sol";
+import {AccountView, LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
+import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {PositionRef} from "../../src/types/PositionTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackSlipstream} from "../utils/fixtures/RealStackSlipstream.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";

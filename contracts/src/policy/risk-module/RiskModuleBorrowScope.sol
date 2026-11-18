@@ -4,12 +4,10 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {DriftReason} from "../../types/DriftReason.sol";
-import {Market} from "../../types/Market.sol";
-import {DebtReserveDef} from "../market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
+import {DriftReason, Market} from "../../types/MarketTypes.sol";
+import {DebtReserveDef, MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";
-import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
+import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleBorrowScope
 /// @notice The account scope of the borrow-side checks, read from the Spoke, and the swap-route halt.

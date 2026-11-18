@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 import {LPOracleHarness, LPOracleHarnessDeployer} from "../utils/harness/LPOracleHarness.sol";
 import {Errors} from "@openzeppelin/contracts/utils/Errors.sol";
@@ -145,7 +144,7 @@ contract LPOracleConfirmationFuzzTest is LPOracleFixture {
         } else {
             bytes4 sel = bytes4(ret);
             assertTrue(
-                ret.length == 0 || sel == ILPOracleErrors.InsufficientGas.selector || sel == Errors.FailedCall.selector
+                ret.length == 0 || sel == ILPOracleBase.InsufficientGas.selector || sel == Errors.FailedCall.selector
             );
             assertEq(failedSince, 0, "a starved poke stores no failure");
             assertEq(accepted, acceptedBefore);

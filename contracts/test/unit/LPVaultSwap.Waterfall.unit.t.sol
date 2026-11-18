@@ -4,11 +4,13 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
-import {SettlementReport} from "../../src/types/SettlementReport.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {
+    LiquidationParams,
+    LiquidationResult,
+    RouteMode
+} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {SettlementReport} from "../../src/types/PositionTypes.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -174,7 +176,7 @@ contract LPVaultSwapWaterfallUnitTest is LPVaultSwapUnitBase {
         LiquidationParams memory p = _params(proxy, 1950e6);
         p.minPayout = r.keeperOut + 1;
         _expectLiquidateRevert(
-            keeper, p, abi.encodeWithSelector(ILPVaultSwapErrors.PayoutTooLow.selector, r.keeperOut, r.keeperOut + 1)
+            keeper, p, abi.encodeWithSelector(ILPVaultSwapBase.PayoutTooLow.selector, r.keeperOut, r.keeperOut + 1)
         );
         p.minPayout = r.keeperOut;
         vm.prank(keeper);
@@ -187,7 +189,7 @@ contract LPVaultSwapWaterfallUnitTest is LPVaultSwapUnitBase {
     function test_TEST_051_feeRecipientReadPerCall() public {
         (address proxy,) = _bobAccount();
         store.setFeeRecipient(address(0));
-        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapErrors.InvalidFeeRecipient.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 1950e6), _err(ILPVaultSwapBase.InvalidFeeRecipient.selector));
         address treasury = makeAddr("newTreasury");
         store.setFeeRecipient(treasury);
         vm.prank(keeper);

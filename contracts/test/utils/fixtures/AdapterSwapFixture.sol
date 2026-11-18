@@ -6,8 +6,10 @@ pragma solidity 0.8.28;
 import {AaveV3FlashSource} from "../../../src/flash/AaveV3FlashSource.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {LPVaultSwap} from "../../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
-import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
-import {LPVaultSwapLogics} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapLogics.sol";
+import {
+    LPVaultSwapImmutables,
+    LPVaultSwapLogics
+} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {PayoutEscrow} from "../../../src/liquidation/payout-escrow/PayoutEscrow.sol";
 import {AaveAdapter} from "../../../src/policy/aave-adapter/AaveAdapter.sol";
 import {AaveAdapterCollateralLogic} from "../../../src/policy/aave-adapter/AaveAdapterCollateralLogic.sol";
@@ -15,8 +17,7 @@ import {AaveAdapterExitLogic} from "../../../src/policy/aave-adapter/AaveAdapter
 import {AaveAdapterSettlementLogic} from "../../../src/policy/aave-adapter/AaveAdapterSettlementLogic.sol";
 import {AaveAdapterUserLogic} from "../../../src/policy/aave-adapter/AaveAdapterUserLogic.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
-import {AaveAdapterLogics} from "../../../src/policy/aave-adapter/types/AaveAdapterLogics.sol";
+import {AaveAdapterImmutables, AaveAdapterLogics} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
 import {
     AdapterParameterStoreMock,

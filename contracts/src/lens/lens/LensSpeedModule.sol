@@ -5,12 +5,12 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {DebtReserveDef} from "../../policy/market-registry/types/DebtReserveDef.sol";
-import {IRiskModuleViews} from "../../policy/risk-module/IRiskModuleViews.sol";
-import {SpeedView} from "../../policy/risk-module/types/SpeedView.sol";
+import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
+import {IRiskModule} from "../../policy/risk-module/IRiskModule.sol";
+import {SpeedView} from "../../policy/risk-module/types/RiskModuleTypes.sol";
 import {ILensSpeed} from "./ILensSpeed.sol";
 import {LensBase} from "./LensBase.sol";
-import {BorrowSpeedView} from "./types/BorrowSpeedView.sol";
+import {BorrowSpeedView} from "./types/LensTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title LensSpeedModule
@@ -27,7 +27,7 @@ contract LensSpeedModule is LensBase, ILensSpeed {
         uint256 debtReserveId
     ) external view override returns (BorrowSpeedView memory speed) {
         _unlocked();
-        (speed.market, speed.debt) = IRiskModuleViews(_RISK_MODULE).getBorrowSpeed(marketId, debtReserveId);
+        (speed.market, speed.debt) = IRiskModule(_RISK_MODULE).getBorrowSpeed(marketId, debtReserveId);
         speed.moreAt = _earlier(speed.market.moreAt, speed.debt.moreAt);
         if (speed.market.unavailable || speed.debt.unavailable) return speed;
         address spoke = _market(marketId).spoke;
@@ -43,7 +43,7 @@ contract LensSpeedModule is LensBase, ILensSpeed {
         uint256 marketId
     ) external view override returns (SpeedView memory pledge) {
         _unlocked();
-        pledge = IRiskModuleViews(_RISK_MODULE).getPledgeSpeed(marketId);
+        pledge = IRiskModule(_RISK_MODULE).getPledgeSpeed(marketId);
     }
 
     function _earlier(

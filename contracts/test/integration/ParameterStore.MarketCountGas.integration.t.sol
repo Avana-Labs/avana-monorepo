@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {MarketDef} from "../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {ParameterStoreRegistryFixture} from "../utils/fixtures/ParameterStoreRegistryFixture.sol";
 import {RegistryLPOracleMock} from "../utils/mocks/MarketRegistryMocks.sol";
 import {console} from "forge-std/console.sol";
@@ -89,7 +88,7 @@ contract ParameterStoreMarketCountGasIntegrationTest is ParameterStoreRegistryFi
         (d.hub, d.spoke, d.integrationId, d.pool, d.shape) = (address(hub), address(spoke), V3, pool, shape);
         (d.vaultToken, d.lpOracle) = (vt, address(o));
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.MarketCountLimit.selector, MAX_MARKETS));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.MarketCountLimit.selector, MAX_MARKETS));
         registry.listCollateralMarket(d);
     }
 }

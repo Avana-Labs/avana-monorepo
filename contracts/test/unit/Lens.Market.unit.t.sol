@@ -3,17 +3,15 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
-import {Pending} from "../../src/custody/collateralization/types/Pending.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
+import {Pending} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILensErrors} from "../../src/lens/lens/ILensErrors.sol";
-import {BackingView} from "../../src/lens/lens/types/BackingView.sol";
-import {RecordBackingView} from "../../src/lens/lens/types/RecordBackingView.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {CapView} from "../../src/types/CapView.sol";
-import {PendingView} from "../../src/types/PendingView.sol";
-import {PledgeCounters} from "../../src/types/PledgeCounters.sol";
+import {BackingView, RecordBackingView} from "../../src/lens/lens/types/LensTypes.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {CapView} from "../../src/types/MarketTypes.sol";
+import {PendingView, PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensMarketUnitTest
@@ -173,7 +171,7 @@ contract LensMarketUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-022
     function test_TEST_247_checkBackingUnknownVaultTokenReverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 0));
         lens.checkBacking(makeAddr("notAVaultToken"));
     }
 
@@ -254,7 +252,7 @@ contract LensMarketUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-022
     function test_TEST_247_checkRecordBackingUnknownVaultTokenReverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 0));
         lens.checkRecordBacking(makeAddr("x"), 0, 10);
     }
 
@@ -423,7 +421,7 @@ contract LensMarketUnitTest is LensFixture {
 
     // TEST-247 verifies: REQ-LENS-022
     function test_TEST_247_capHeadroomUnknownVaultTokenReverts() public {
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownMarket.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownMarket.selector, 0));
         lens.getCapHeadroom(makeAddr("x"), alice);
     }
 
@@ -436,12 +434,8 @@ contract LensMarketUnitTest is LensFixture {
     function test_TEST_060_pendingAndCapHeadroomRefuseOnTheLensCheck() public {
         Pending memory none;
         PledgeCounters memory zero;
-        vm.mockCall(
-            address(coll), abi.encodeWithSelector(ICollateralizationViews.getPending.selector), abi.encode(none)
-        );
-        vm.mockCall(
-            address(coll), abi.encodeWithSelector(ICollateralizationViews.getCounters.selector), abi.encode(zero)
-        );
+        vm.mockCall(address(coll), abi.encodeWithSelector(ICollateralization.getPending.selector), abi.encode(none));
+        vm.mockCall(address(coll), abi.encodeWithSelector(ICollateralization.getCounters.selector), abi.encode(zero));
         _holdLock();
         vm.expectRevert(ILensErrors.Locked.selector);
         lens.getPendingSettlement(vt);

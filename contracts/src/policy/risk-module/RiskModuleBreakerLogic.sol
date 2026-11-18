@@ -3,27 +3,23 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
-import {RiskStatus} from "../../amm/types/RiskStatus.sol";
-import {ICollateralizationViews} from "../../custody/collateralization/ICollateralizationViews.sol";
+import {RiskStatus} from "../../amm/types/AmmTypes.sol";
+import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IDebtOracle} from "../../oracle/debt-oracle/IDebtOracle.sol";
 import {ILPOracle} from "../../oracle/lp-oracle/ILPOracle.sol";
-import {DriftReason} from "../../types/DriftReason.sol";
-import {Market} from "../../types/Market.sol";
-import {PriceState} from "../../types/PriceState.sol";
-import {PriceStateView} from "../../types/PriceStateView.sol";
+import {DriftReason, Market} from "../../types/MarketTypes.sol";
+import {PriceState, PriceStateView} from "../../types/OracleTypes.sol";
 import {BreakerReasons} from "../market-registry/types/Breaker.sol";
-import {DebtReserveDef} from "../market-registry/types/DebtReserveDef.sol";
 import {IssuerProbe, IssuerProbes} from "../market-registry/types/IssuerProbe.sol";
+import {DebtReserveDef} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
 import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";
-import {RiskModuleCalls} from "./RiskModuleCalls.sol";
-import {RiskModuleConstants} from "./RiskModuleConstants.sol";
 import {RiskModuleMath} from "./RiskModuleMath.sol";
-import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
+import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleBreakerLogic
 /// @notice Circuit-breaker conditions and tripped state of markets and debt reserves.
@@ -144,7 +140,7 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
         PriceStateView memory pv = ILPOracle(m.lpOracle).getPriceState();
         if (pv.state != PriceState.Live || !pv.borrowAllowed) live |= BreakerReasons.ORACLE;
         RiskStatus memory rs =
-            IAmmIntegration(m.integration).riskStatus(marketId, _store().getMarketParams(marketId).twapWindow);
+            ILPVault(m.integration).riskStatus(marketId, _store().getMarketParams(marketId).twapWindow);
         if (!rs.depthAvailable || rs.depthUnits == 0) live |= BreakerReasons.POOL_DEPTH;
         if (_concentrated(m, pv, rs, unitsGiven, poolUnits)) live |= BreakerReasons.POOL_SHARE;
         for (uint256 i = 0; i < m.tokens.length; ++i) {
@@ -176,7 +172,7 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
         }
         if (!RiskModuleMath.atOrBelowPeg(quotes)) return false;
         if (!rs.depthAvailable) return true;
-        uint256 units = unitsGiven ? poolUnits : ICollateralizationViews(_COLLATERALIZATION).poolUnits(key);
+        uint256 units = unitsGiven ? poolUnits : ICollateralization(_COLLATERALIZATION).poolUnits(key);
         tripped = RiskModuleMath.poolShareExceeds(units, cap, rs.depthUnits);
     }
 
@@ -207,7 +203,7 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
         bytes4 sel
     ) private view returns (bool) {
         (bool ok, uint256 word) =
-            RiskModuleCalls.staticReadWord(token, RiskModuleConstants.ISSUER_PROBE_GAS, abi.encodePacked(sel));
+            RiskModuleMath.staticReadWord(token, RiskModuleMath.ISSUER_PROBE_GAS, abi.encodePacked(sel));
         return !ok || word != 0;
     }
 }

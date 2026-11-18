@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
-import {FeeMode} from "../../src/amm/types/FeeMode.sol";
+import {FeeMode} from "../../src/amm/types/AmmTypes.sol";
 import {UniswapV3IntegrationFixture} from "../utils/fixtures/UniswapV3IntegrationFixture.sol";
 import {MintableToken, MockNFPM} from "../utils/mocks/UniswapV3Mocks.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";

@@ -3,19 +3,15 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../src/custody/collateralization/ICollateralizationAdapter.sol";
-import {ICollateralizationDebtMark} from "../../src/custody/collateralization/ICollateralizationDebtMark.sol";
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {ICollateralizationEvents} from "../../src/custody/collateralization/ICollateralizationEvents.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
-import {IAaveAdapterErrors} from "../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {IAaveAdapterEvents} from "../../src/policy/aave-adapter/IAaveAdapterEvents.sol";
-import {IRiskModuleChecks} from "../../src/policy/risk-module/IRiskModuleChecks.sol";
+import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {PauseState} from "../../src/types/PauseState.sol";
-import {PositionRef} from "../../src/types/PositionRef.sol";
+import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
+import {PositionRef} from "../../src/types/PositionTypes.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -75,11 +71,11 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     /// position to its depositor and emits `CollateralWithdrawn(…, false, type(uint256).max)`.
     function test_TEST_018_debtFreeWithdraw() public {
         vm.expectCall(vt, abi.encodeCall(IVaultToken.burn, (p, UNITS)), 1);
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralizationAdapter.release, (p, vt, k1, UNITS)), 1);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.preWithdrawCheck.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.postHealthCheck.selector), 0);
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.release, (p, vt, k1, UNITS)), 1);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.postHealthCheck.selector), 0);
         vm.expectEmit(adapter);
-        emit IAaveAdapterEvents.CollateralWithdrawn(alice, MARKET_ID, vt, k1, UNITS, false, type(uint256).max);
+        emit IAaveAdapterBase.CollateralWithdrawn(alice, MARKET_ID, vt, k1, UNITS, false, type(uint256).max);
         _withdraw(k1, UNITS, 0);
         assertEq(lpVault.ownerOf(k1), alice, "position returned");
         assertEq(_sharesOf(p, vtReserveId), UNITS / 2, "one record left");
@@ -112,11 +108,11 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
                 if (from == aave.hub && to == p) hubToProxy = i;
                 if (from == p && to == address(0)) burn = i;
             }
-            if (logs[i].emitter == address(coll) && t0 == ICollateralizationEvents.CollateralReleased.selector) {
+            if (logs[i].emitter == address(coll) && t0 == ICollateralizationBase.CollateralReleased.selector) {
                 released = i;
             }
-            if (logs[i].emitter == adapter && t0 == IAaveAdapterEvents.CollateralDisabled.selector) disabled = i;
-            if (logs[i].emitter == adapter && t0 == IAaveAdapterEvents.CollateralWithdrawn.selector) withdrawn = i;
+            if (logs[i].emitter == adapter && t0 == IAaveAdapterBase.CollateralDisabled.selector) disabled = i;
+            if (logs[i].emitter == adapter && t0 == IAaveAdapterBase.CollateralWithdrawn.selector) withdrawn = i;
         }
         assertLt(hubToProxy, burn, "withdraw before burn");
         assertLt(burn, released, "burn before release");
@@ -131,7 +127,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     function test_TEST_018_closeOutCleansUp() public {
         _withdraw(k2, UNITS / 2, 0);
         vm.expectEmit(adapter);
-        emit IAaveAdapterEvents.CollateralDisabled(p, vtReserveId);
+        emit IAaveAdapterBase.CollateralDisabled(p, vtReserveId);
         _withdraw(k1, UNITS, 0);
         (bool enabled,) = IAaveV4Spoke(aave.cdpSpoke).getUserReserveStatus(vtReserveId, p);
         assertFalse(enabled, "disabled");
@@ -150,7 +146,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         _withdraw(k1, UNITS, 0);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         for (uint256 i = 0; i < logs.length; ++i) {
-            assertTrue(logs[i].topics[0] != IAaveAdapterEvents.CollateralDisabled.selector, "no cleanup");
+            assertTrue(logs[i].topics[0] != IAaveAdapterBase.CollateralDisabled.selector, "no cleanup");
         }
         (bool enabled,) = IAaveV4Spoke(aave.cdpSpoke).getUserReserveStatus(vtReserveId, p);
         assertTrue(enabled, "still enabled");
@@ -180,9 +176,9 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     function test_TEST_019_withDebtPauseGate() public {
         _borrowAs(alice, MARKET_ID, debtReserveId, 1000e18);
         _pause(PauseState.Paused, PauseReason.General);
-        _expectWithdrawRevert(abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector), k2, UNITS / 2);
+        _expectWithdrawRevert(abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector), k2, UNITS / 2);
         _pause(PauseState.Paused, PauseReason.MintPathSuspect);
-        _expectWithdrawRevert(abi.encodeWithSelector(IAaveAdapterErrors.ApplicationPaused.selector), k2, UNITS / 2);
+        _expectWithdrawRevert(abi.encodeWithSelector(IAaveAdapterBase.ApplicationPaused.selector), k2, UNITS / 2);
         _pause(PauseState.Frozen, PauseReason.None);
         assertEq(risk.preWithdrawCalls(), 0, "refused before the RiskModule");
         _withdraw(k2, UNITS / 2, 0);
@@ -195,13 +191,13 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     function test_TEST_019_withDebtGatesAndHealthCheck() public {
         _borrowAs(alice, MARKET_ID, debtReserveId, 1000e18);
         registry.setFrozen(alice, true);
-        _expectWithdrawRevert(abi.encodeWithSelector(IAaveAdapterErrors.AddressIsFrozen.selector, alice), k2, UNITS / 2);
+        _expectWithdrawRevert(abi.encodeWithSelector(IAaveAdapterBase.AddressIsFrozen.selector, alice), k2, UNITS / 2);
         registry.setFrozen(alice, false);
-        vm.expectCall(address(risk), abi.encodeCall(IRiskModuleChecks.preWithdrawCheck, (p)), 1);
-        vm.expectCall(address(risk), abi.encodeCall(IRiskModuleChecks.postHealthCheck, (p, 1.2e18)), 1);
+        vm.expectCall(address(risk), abi.encodeCall(IRiskModule.preWithdrawCheck, (p)), 1);
+        vm.expectCall(address(risk), abi.encodeCall(IRiskModule.postHealthCheck, (p, 1.2e18)), 1);
         uint256 hfAfter = uint256(16_000e18) * 1e18 / 1000e18; // the remaining $20,000 record at CF 80%
         vm.expectEmit(adapter);
-        emit IAaveAdapterEvents.CollateralWithdrawn(alice, MARKET_ID, vt, k2, UNITS / 2, true, hfAfter);
+        emit IAaveAdapterBase.CollateralWithdrawn(alice, MARKET_ID, vt, k2, UNITS / 2, true, hfAfter);
         _withdraw(k2, UNITS / 2, 1.2e18);
         assertEq(risk.preWithdrawCalls(), 1, "pre-check");
     }
@@ -250,7 +246,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     /// with-debt path.
     function test_TEST_203_oneBaseUnitIsDebt() public {
         _borrowAs(alice, MARKET_ID, usdcReserveId, 1);
-        vm.expectCall(address(risk), abi.encodeCall(IRiskModuleChecks.preWithdrawCheck, (p)), 1);
+        vm.expectCall(address(risk), abi.encodeCall(IRiskModule.preWithdrawCheck, (p)), 1);
         _withdraw(k2, UNITS / 2, 0);
     }
 
@@ -260,17 +256,17 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     /// @notice Deadline, proxy, zero units and integration are checked in that order.
     function test_TEST_018_checkOrder() public {
         uint256 past = block.timestamp - 1;
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.DeadlineExpired.selector, past));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.DeadlineExpired.selector, past));
         vm.prank(bob);
         adapterC.withdraw(MARKET_ID, PositionRef(9, k1), 0, past, 0);
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.NoProxy.selector, bob, MARKET_ID));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.NoProxy.selector, bob, MARKET_ID));
         vm.prank(bob);
         adapterC.withdraw(MARKET_ID, PositionRef(9, k1), 0, d, 0);
-        vm.expectRevert(IAaveAdapterErrors.ZeroAmount.selector);
+        vm.expectRevert(IAaveAdapterBase.ZeroAmount.selector);
         vm.prank(alice);
         adapterC.withdraw(MARKET_ID, PositionRef(9, k1), 0, d, 0);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.IntegrationMismatch.selector, MARKET_ID, 9));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.IntegrationMismatch.selector, MARKET_ID, 9));
         vm.prank(alice);
         adapterC.withdraw(MARKET_ID, PositionRef(9, k1), UNITS, d, 0);
     }
@@ -279,7 +275,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     /// @notice Units other than the record's credited units fail in Collateralization with `UnitsMismatch`, undoing
     /// the Spoke withdrawal and the burn.
     function test_TEST_018_unitsMustEqualCredited() public {
-        _expectWithdrawRevert(abi.encodeWithSelector(ICollateralizationErrors.UnitsMismatch.selector), k1, UNITS / 2);
+        _expectWithdrawRevert(abi.encodeWithSelector(ICollateralizationBase.UnitsMismatch.selector), k1, UNITS / 2);
         assertEq(_sharesOf(p, vtReserveId), UNITS + UNITS / 2, "nothing withdrawn");
     }
 
@@ -288,7 +284,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     function test_TEST_026_cannotWithdrawOthersRecord() public {
         _pledgeAs(bob, MARKET_ID, UNITS);
         uint256 d = _deadline();
-        vm.expectRevert(ICollateralizationErrors.NotRecordProxy.selector);
+        vm.expectRevert(ICollateralizationBase.NotRecordProxy.selector);
         vm.prank(bob);
         adapterC.withdraw(MARKET_ID, _ref(k1), UNITS, d, 0);
     }
@@ -296,11 +292,11 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     // TEST-209 verifies: REQ-ADAPTER-069, REQ-ADAPTER-075, SPEC-PROXY-008
     /// @notice A Collateralization that skips the debit makes the burn unmatched: `BackingMismatch`.
     function test_TEST_209_skippedDebitRevertsBackingMismatch() public {
-        vm.mockCall(address(coll), abi.encodeWithSelector(ICollateralizationAdapter.release.selector), "");
+        vm.mockCall(address(coll), abi.encodeWithSelector(ICollateralization.release.selector), "");
         uint256 supplyAfter = UNITS / 2;
         uint256 credited = UNITS + UNITS / 2;
         _expectWithdrawRevert(
-            abi.encodeWithSelector(IAaveAdapterErrors.BackingMismatch.selector, supplyAfter, credited, 0), k1, UNITS
+            abi.encodeWithSelector(IAaveAdapterBase.BackingMismatch.selector, supplyAfter, credited, 0), k1, UNITS
         );
     }
 
@@ -328,7 +324,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         vm.prank(alice);
         adapterC.repay(alice, MARKET_ID, debtReserveId, debtLeft, true, _deadline());
         // The list starts with the larger record k1, so the shortfall is debited from it.
-        _expectWithdrawRevert(abi.encodeWithSelector(ICollateralizationErrors.UnitsMismatch.selector), k1, UNITS);
+        _expectWithdrawRevert(abi.encodeWithSelector(ICollateralizationBase.UnitsMismatch.selector), k1, UNITS);
         uint256 units = coll.previewRelease(INTEGRATION, k1);
         assertEq(units, UNITS - seized, "reconciled from the head of the list");
         _withdraw(k1, units, 0);
@@ -355,7 +351,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         uint256[] memory onlyGhoCap = new uint256[](1);
         onlyGhoCap[0] = 8040e18;
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.DebtRemaining.selector, usdcReserveId, u));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.DebtRemaining.selector, usdcReserveId, u));
         vm.prank(alice);
         adapterC.repayAllAndWithdraw(MARKET_ID, _ref(k2), UNITS / 2, onlyGho, onlyGhoCap, d);
         uint256[] memory ids = new uint256[](2);
@@ -367,11 +363,11 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         uint256 ghoBefore = debt.balanceOf(alice);
         uint256 usdcBefore = usdcDebt.balanceOf(alice);
         vm.expectEmit(adapter);
-        emit IAaveAdapterEvents.Repaid(alice, alice, MARKET_ID, debtReserveId, g, 0, true);
+        emit IAaveAdapterBase.Repaid(alice, alice, MARKET_ID, debtReserveId, g, 0, true);
         vm.expectEmit(adapter);
-        emit IAaveAdapterEvents.Repaid(alice, alice, MARKET_ID, usdcReserveId, u, 0, true);
+        emit IAaveAdapterBase.Repaid(alice, alice, MARKET_ID, usdcReserveId, u, 0, true);
         vm.expectEmit(adapter);
-        emit IAaveAdapterEvents.CollateralWithdrawn(alice, MARKET_ID, vt, k2, UNITS / 2, false, type(uint256).max);
+        emit IAaveAdapterBase.CollateralWithdrawn(alice, MARKET_ID, vt, k2, UNITS / 2, false, type(uint256).max);
         vm.prank(alice);
         adapterC.repayAllAndWithdraw(MARKET_ID, _ref(k2), UNITS / 2, ids, caps, d);
         assertEq(ghoBefore - debt.balanceOf(alice), g, "GHO spent the debt");
@@ -386,7 +382,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         uint256[] memory ids = new uint256[](2);
         uint256[] memory caps = new uint256[](1);
         uint256 d = _deadline();
-        vm.expectRevert(IAaveAdapterErrors.LengthMismatch.selector);
+        vm.expectRevert(IAaveAdapterBase.LengthMismatch.selector);
         vm.prank(alice);
         adapterC.repayAllAndWithdraw(MARKET_ID, _ref(k1), UNITS, ids, caps, d);
     }
@@ -423,14 +419,14 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         caps[0] = g;
         vm.expectCall(address(registry), "", 0);
         // The one RiskModule call an exit makes is the speed credit (REQ-RISK-005); no check is called.
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.preBorrowCheck.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.preWithdrawCheck.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.postHealthCheck.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.checkPledge.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.pokeBreakers.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.pokeConfig.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.checkRemainingRecord.selector), 0);
-        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModuleChecks.checkAaveConfig.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.preBorrowCheck.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.preWithdrawCheck.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.postHealthCheck.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.checkPledge.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.pokeBreakers.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.pokeConfig.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.checkRemainingRecord.selector), 0);
+        vm.expectCall(address(risk), abi.encodeWithSelector(IRiskModule.checkAaveConfig.selector), 0);
         vm.prank(alice);
         adapterC.repayAllAndWithdraw(MARKET_ID, _ref(k1), UNITS, ids, caps, _deadline());
         assertEq(lpVault.ownerOf(k1), alice, "exit completed");
@@ -445,7 +441,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         uint256 first = debtReserveId < usdcReserveId ? debtReserveId : usdcReserveId;
         uint256 owed = _debtOf(p, first);
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.DebtRemaining.selector, first, owed));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.DebtRemaining.selector, first, owed));
         vm.prank(alice);
         adapterC.repayAllAndWithdraw(MARKET_ID, _ref(k1), UNITS, new uint256[](0), new uint256[](0), d);
     }
@@ -459,7 +455,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         uint256[] memory caps = new uint256[](1);
         caps[0] = 99e18;
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.RepayExceedsMax.selector, 100e18, 99e18));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.RepayExceedsMax.selector, 100e18, 99e18));
         vm.prank(alice);
         adapterC.repayAllAndWithdraw(MARKET_ID, _ref(k1), UNITS, ids, caps, d);
     }
@@ -470,20 +466,20 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         uint256 past = block.timestamp - 1;
         uint256[] memory two = new uint256[](2);
         uint256[] memory one = new uint256[](1);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.DeadlineExpired.selector, past));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.DeadlineExpired.selector, past));
         vm.prank(bob);
         adapterC.repayAllAndWithdraw(MARKET_ID, PositionRef(9, k1), 0, two, one, past);
         uint256 d = _deadline();
-        vm.expectRevert(IAaveAdapterErrors.LengthMismatch.selector);
+        vm.expectRevert(IAaveAdapterBase.LengthMismatch.selector);
         vm.prank(bob);
         adapterC.repayAllAndWithdraw(MARKET_ID, PositionRef(9, k1), 0, two, one, d);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.NoProxy.selector, bob, MARKET_ID));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.NoProxy.selector, bob, MARKET_ID));
         vm.prank(bob);
         adapterC.repayAllAndWithdraw(MARKET_ID, PositionRef(9, k1), 0, one, one, d);
-        vm.expectRevert(IAaveAdapterErrors.ZeroAmount.selector);
+        vm.expectRevert(IAaveAdapterBase.ZeroAmount.selector);
         vm.prank(alice);
         adapterC.repayAllAndWithdraw(MARKET_ID, PositionRef(9, k1), 0, one, one, d);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.IntegrationMismatch.selector, MARKET_ID, 9));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.IntegrationMismatch.selector, MARKET_ID, 9));
         vm.prank(alice);
         adapterC.repayAllAndWithdraw(MARKET_ID, PositionRef(9, k1), UNITS, one, one, d);
     }
@@ -512,18 +508,18 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     /// is not the depositor; a wrong integration reverts.
     function test_TEST_060_collectFeesBounds() public {
         uint256 d = _deadline();
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.NoProxy.selector, bob, MARKET_ID));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.NoProxy.selector, bob, MARKET_ID));
         vm.prank(bob);
         adapterC.collectFees(MARKET_ID, _ref(k1), d);
         _pledgeAs(bob, MARKET_ID, UNITS);
-        vm.expectRevert(ICollateralizationErrors.NotDepositor.selector);
+        vm.expectRevert(ICollateralizationBase.NotDepositor.selector);
         vm.prank(bob);
         adapterC.collectFees(MARKET_ID, _ref(k1), d);
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.IntegrationMismatch.selector, MARKET_ID, 9));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.IntegrationMismatch.selector, MARKET_ID, 9));
         vm.prank(alice);
         adapterC.collectFees(MARKET_ID, PositionRef(9, k1), d);
         uint256 past = block.timestamp - 1;
-        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterErrors.DeadlineExpired.selector, past));
+        vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.DeadlineExpired.selector, past));
         vm.prank(alice);
         adapterC.collectFees(MARKET_ID, _ref(k1), past);
     }
@@ -546,7 +542,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         adapterC.releaseZeroCredit(MARKET_ID, _ref(zero), d);
         assertEq(lpVault.ownerOf(zero), alice, "returned");
         if (coll.getRecord(coll.recordIdOf(INTEGRATION, left)).credited != 0) {
-            vm.expectRevert(ICollateralizationErrors.RecordHasCredit.selector);
+            vm.expectRevert(ICollateralizationBase.RecordHasCredit.selector);
             vm.prank(alice);
             adapterC.releaseZeroCredit(MARKET_ID, _ref(left), d);
         }
@@ -567,7 +563,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         vm.clearMockedCalls();
         assertFalse(coll.getMarketDebtFree(vt), "stale mark");
         registry.setBroken(true);
-        vm.expectCall(address(coll), abi.encodeCall(ICollateralizationDebtMark.markDebtFree, (p)), 1);
+        vm.expectCall(address(coll), abi.encodeCall(ICollateralization.markDebtFree, (p)), 1);
         vm.prank(attacker);
         adapterC.refreshDebtMark(p);
         assertTrue(coll.getMarketDebtFree(vt), "cleared");

@@ -6,13 +6,11 @@ pragma solidity 0.8.28;
 import {IUniswapV4Integration} from "../../src/amm/uniswap-v4/IUniswapV4Integration.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
-import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
+import {InitParams, LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {LPOracleV4} from "../../src/oracle/lp-oracle/LPOracleV4.sol";
-import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
-import {Market} from "../../src/types/Market.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {LPOracleV4Fixture} from "../utils/fixtures/LPOracleV4Fixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -131,7 +129,7 @@ contract LPOracleV4UnitExponentUnitTest is LPOracleV4Fixture {
         (uint8 k,) = _bind();
         uint8[2] memory wrong = [k + 1, k == 0 ? k + 2 : k - 1];
         for (uint256 i = 0; i < 2; ++i) {
-            vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.ConfigCheckFailed.selector, UNIT_EXP_BIT));
+            vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.ConfigCheckFailed.selector, UNIT_EXP_BIT));
             new ERC1967Proxy(address(implementation), abi.encodeCall(ILPOracle.initialize, (_feedParams(wrong[i]))));
         }
         _deployFeed(k);

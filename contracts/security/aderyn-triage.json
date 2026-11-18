@@ -321,9 +321,9 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "9dce35880f02f57d",
+      "fingerprint": "f4b54f786ce0f704",
       "check": "unchecked-return",
-      "file": "src/policy/market-registry/MarketRegistryRouter.sol",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
       "reason": "_forward discards the empty return data of a write that returns nothing; Address.functionDelegateCall reverts on failure and bubbles the logic contract's error.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
@@ -384,16 +384,16 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "d1e8b0436feb59bd",
+      "fingerprint": "ed52039e6f9b0d3c",
       "check": "unused-import",
-      "file": "src/policy/market-registry/MarketRegistryRouter.sol",
+      "file": "src/policy/market-registry/MarketRegistry.sol",
       "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "22330cb295c0dba4",
+      "fingerprint": "2bc8e33fbf58fb53",
       "check": "reentrancy-state-change",
-      "file": "src/custody/collateralization/CollateralizationDebtMark.sol",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
       "function": "markDebtFree",
       "reason": "Aderyn form of the reentrancy finding: the record is written after receivePosition, marketOfPosition, poke and checkPledge because the credit must be the units read after custody (REQ-VAULT-012, SPEC-BACK-002) and the charge the RiskModule's answer; in markDebtFree the write follows a STATICCALL to the Aave Spoke, which cannot change state. All callees are Avana immutables, Aave or a view, under the Lock. Covered by TEST-010, TEST-272.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -479,33 +479,33 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "8ca41ba89dadf74b",
+      "fingerprint": "979dd67334b5e604",
       "check": "costly-loop",
-      "file": "src/custody/collateralization/CollateralizationPending.sol",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
       "function": "settlePending",
       "reason": "Storage writes inside loops bounded by the record limit (at most 16 list entries, SPEC-BACK-016) or the market's token count (at most 8 counters or pending amounts, REQ-COLL-028); the gas is part of the measured seizure budget of SPEC-BACK-016. Covered by TEST-269, TEST-124, TEST-057.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "5a0d8b98e4734ab3",
+      "fingerprint": "6941ac95a3621901",
       "check": "require-revert-in-loop",
-      "file": "src/custody/collateralization/CollateralizationPending.sol",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
       "function": "settlePending",
       "reason": "SafeERC20.safeTransfer of each non-zero pending amount to LPVaultSwap in settlePending: a reverting market token must revert the whole settlement and leave the pending balance for a later one (REQ-VAULT-142); the loop is at most 8 tokens. Covered by TEST-152, TEST-177.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "2084acb30d7e1cbc",
+      "fingerprint": "57c3a35009a8f850",
       "check": "state-change-without-event",
-      "file": "src/custody/collateralization/CollateralizationDebtMark.sol",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
       "function": "markIndebted",
       "reason": "markIndebted and markDebtFree change only the indebted mark and indebtedCount, which 2.3 gives no event (REQ-COLL-039, REQ-COLL-040); they run inside the Adapter's borrow, repay and LPVaultSwap's liquidation, whose own events record the action, and getMarketDebtFree exposes the count. Covered by TEST-272.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "05570b5e610cc4d7",
+      "fingerprint": "b21426e1e3c60a6d",
       "check": "state-change-without-event",
-      "file": "src/custody/collateralization/CollateralizationDebtMark.sol",
+      "file": "src/custody/collateralization/CollateralizationSeizure.sol",
       "function": "markDebtFree",
       "reason": "markIndebted and markDebtFree change only the indebted mark and indebtedCount, which 2.3 gives no event (REQ-COLL-039, REQ-COLL-040); they run inside the Adapter's borrow, repay and LPVaultSwap's liquidation, whose own events record the action, and getMarketDebtFree exposes the count. Covered by TEST-272.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -527,17 +527,17 @@
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "1c70fef2b3fa8eab",
+      "fingerprint": "8bc46641c93fca21",
       "check": "unchecked-return",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "releasePartial",
       "reason": "Aderyn form of unused-return: the LPVault calls (marketOf, returnPosition, topUpPosition, releaseToDepositor) and LPOracle.poke revert on failure, and their reported values are deliberately not used (shape enforced by the LPVault, live units read after a top-up per REQ-COLL-037, measured deltas per REQ-VAULT-088, price state read by the RiskModule). Covered by TEST-018, TEST-237, TEST-238.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
     },
     {
-      "fingerprint": "78006a2948516101",
+      "fingerprint": "9888df951f51fda9",
       "check": "unchecked-return",
-      "file": "src/custody/collateralization/CollateralizationRelease.sol",
+      "file": "src/custody/collateralization/CollateralizationPledge.sol",
       "function": "collectFees",
       "reason": "Aderyn form of unused-return: the LPVault calls (marketOf, returnPosition, topUpPosition, releaseToDepositor) and LPOracle.poke revert on failure, and their reported values are deliberately not used (shape enforced by the LPVault, live units read after a top-up per REQ-COLL-037, measured deltas per REQ-VAULT-088, price state read by the RiskModule). Covered by TEST-018, TEST-237, TEST-238.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -1147,19 +1147,19 @@
       "review": "Pattern: bounded loops (bounded by MAX_MARKET_COUNT and timelock-set route slots)."
     },
     {
-      "fingerprint": "4973347c39d31818",
+      "fingerprint": "cf3fcd201b98c378",
       "check": "costly-loop",
-      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
-      "function": "ParameterStoreOracle._failures",
+      "file": "src/policy/parameter-store/ParameterStoreRisk.sol",
+      "function": "ParameterStoreRisk._failures",
       "reason": "Loop over the affected markets of a tighten setter that re-runs checkConfig (REQ-PSTORE-009, REQ-PSTORE-029): per market one checkConfig with the recorded second sources and, when a token has a standby on its recorded source, the standby switched in for one more checkConfig and switched back (_switchStandbys), so a tightening never leaves a configuration that fails with a standby in force. Bounded by the registry's market count, which only timelock operations grow, and by MAX_POOL_TOKENS (8) per market; every write is undone in the same call. Covered by TEST-250 (tightenConsistencyChecksTheStandby, tightenToleranceChecksTheStandby, tightenBorrowAgeChecksTheStandby, standbyFailureThatPredatesTheTighteningNeverBlocksIt).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: bounded loops (2026-11-10 list); the storage writes are transient switches undone before return."
     },
     {
-      "fingerprint": "ef56ab2f47e7c23f",
+      "fingerprint": "a2d243a62479c2d7",
       "check": "costly-loop",
-      "file": "src/policy/parameter-store/ParameterStoreOracle.sol",
-      "function": "ParameterStoreOracle._switchStandbys",
+      "file": "src/policy/parameter-store/ParameterStoreRisk.sol",
+      "function": "ParameterStoreRisk._switchStandbys",
       "reason": "Writes onStandby for at most MAX_POOL_TOKENS (8) tokens of one market to put each standby in force for one checkConfig, then writes the same slots back (REQ-PSTORE-029, REQ-PSTORE-009); bounded by the market's token count, net state change zero. Covered by TEST-250 (tightenBorrowAgeChecksTheStandby asserts onStandby is false after the call).",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: bounded loops (2026-11-10 list), at most 8 iterations."
@@ -1663,9 +1663,9 @@
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "e6e914ac551ec6ec",
+      "fingerprint": "a9dc7f4b894e6b68",
       "check": "unused-error",
-      "file": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+      "file": "src/policy/aave-adapter/IAaveAdapterBase.sol",
       "reason": "`LockHeld` is raised by the Lock's acquire and propagates through every entry point; it is declared on the Adapter so the app decodes it from the Adapter's ABI (REQ-PROXY-076). Covered by the LockHeld tests of AaveAdapter.Lock.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: errors declared for the ABI (as the ILPVaultSwapErrors LockHeld entry)."
@@ -1871,9 +1871,9 @@
       "review": "Lens (wave 1), new site"
     },
     {
-      "fingerprint": "4d7b8b1e8e561347",
+      "fingerprint": "6c3dd4dac8c84f77",
       "check": "require-revert-in-loop",
-      "file": "src/lens/lens/LensAccount.sol",
+      "file": "src/lens/lens/LensAccountModule.sol",
       "reason": "getAccounts loops over the caller's own market list and an unlisted market ends the whole call with UnknownMarket (REQ-LENS-022, REQ-LENS-040); no partial answer is meaningful. Test: getAccountsUnknownMarketReverts.",
       "approval": "pending review (approved pattern)",
       "review": "Lens (wave 1), new site"
@@ -2027,37 +2027,37 @@
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
     },
     {
-      "fingerprint": "4ea0e639c02a5a26",
+      "fingerprint": "180530c698463329",
       "check": "delegate-call-unchecked-address",
-      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
-      "function": "ParameterStoreForwardSpeed.tightenMarketSpeedLimits",
+      "file": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+      "function": "ParameterStoreForwardRisk.tightenMarketSpeedLimits",
       "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
     },
     {
-      "fingerprint": "0b129f11f0e49d77",
+      "fingerprint": "d3520d6f3ddd832d",
       "check": "delegate-call-unchecked-address",
-      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
-      "function": "ParameterStoreForwardSpeed.loosenMarketSpeedLimits",
+      "file": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+      "function": "ParameterStoreForwardRisk.loosenMarketSpeedLimits",
       "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
     },
     {
-      "fingerprint": "951bfd95771a4b6d",
+      "fingerprint": "e7b130caa3485dc1",
       "check": "delegate-call-unchecked-address",
-      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
-      "function": "ParameterStoreForwardSpeed.tightenDebtSpeedLimit",
+      "file": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+      "function": "ParameterStoreForwardRisk.tightenDebtSpeedLimit",
       "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
     },
     {
-      "fingerprint": "d2ab20ca0da965e4",
+      "fingerprint": "9f9453946d423489",
       "check": "delegate-call-unchecked-address",
-      "file": "src/policy/parameter-store/ParameterStoreForwardSpeed.sol",
-      "function": "ParameterStoreForwardSpeed.loosenDebtSpeedLimit",
+      "file": "src/policy/parameter-store/ParameterStoreForwardRisk.sol",
+      "function": "ParameterStoreForwardRisk.loosenDebtSpeedLimit",
       "reason": "Same router pattern as ParameterStoreForwardAdmin and ParameterStoreForwardRisk: the setter forwards to the tighten or loosen logic contract held in an implementation immutable, checked at construction through logicConfig() and changed only by an upgrade at the normal delay; no address comes from calldata or storage, and the caller's role is checked before the delegatecall (REQ-PSTORE-001, REQ-PSTORE-002, REQ-PSTORE-036). Covered by TEST-062 and the ParameterStore.Speed tests (TEST-324).",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
@@ -2145,25 +2145,25 @@
       "review": "Pattern: a3325c90f300c483 (bounded storage writes, approved Josue 2026-11-10)"
     },
     {
-      "fingerprint": "625a60f92f0b4ac0",
+      "fingerprint": "97eb1598510586f2",
       "check": "costly-loop",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
       "reason": "Storage writes inside loops bounded by the market's token count (2 to 8) and, for the seen records, 2 routes x at most 2 legs per token (REQ-ORACLE-031): initialize and the seed write each token's identity, decimals, route version, last route and listing price once; poke rewrites the accepted valuation vector (one word per token) and writes only the route versions and last routes that changed, the outage latch and the seen record of each decoded leg, behind the pokeMinGas floor (REQ-ORACLE-082). Same reasoning as the Collateralization entry a3325c90f300c483.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: a3325c90f300c483 (bounded storage writes, approved Josue 2026-11-10)"
     },
     {
-      "fingerprint": "ff7b5c4e58585b0d",
+      "fingerprint": "41c88001f4fa38aa",
       "check": "costly-loop",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
       "reason": "Storage writes inside loops bounded by the market's token count (2 to 8) and, for the seen records, 2 routes x at most 2 legs per token (REQ-ORACLE-031): initialize and the seed write each token's identity, decimals, route version, last route and listing price once; poke rewrites the accepted valuation vector (one word per token) and writes only the route versions and last routes that changed, the outage latch and the seen record of each decoded leg, behind the pokeMinGas floor (REQ-ORACLE-082). Same reasoning as the Collateralization entry a3325c90f300c483.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: a3325c90f300c483 (bounded storage writes, approved Josue 2026-11-10)"
     },
     {
-      "fingerprint": "7cf9954cc6833ff2",
+      "fingerprint": "80c355232ff3fe4d",
       "check": "costly-loop",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
       "reason": "Storage writes inside loops bounded by the market's token count (2 to 8) and, for the seen records, 2 routes x at most 2 legs per token (REQ-ORACLE-031): initialize and the seed write each token's identity, decimals, route version, last route and listing price once; poke rewrites the accepted valuation vector (one word per token) and writes only the route versions and last routes that changed, the outage latch and the seen record of each decoded leg, behind the pokeMinGas floor (REQ-ORACLE-082). Same reasoning as the Collateralization entry a3325c90f300c483.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: a3325c90f300c483 (bounded storage writes, approved Josue 2026-11-10)"
@@ -2209,9 +2209,9 @@
       "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
     },
     {
-      "fingerprint": "094328c473cc36ad",
+      "fingerprint": "24cbae04044a29c0",
       "check": "require-revert-in-loop",
-      "file": "src/lens/lens/LensSizing.sol",
+      "file": "src/lens/lens/LensPriceModule.sol",
       "reason": "The bisection loops of previewDeleverageTo (at most 2 x 128 steps) call the pure SettlementMath sizing, which reverts only for decimals above 36 (InvalidDecimals; no listed market has them) or an arithmetic overflow; zero prices return before it. Either one ends the whole preview, which has no meaningful partial answer (REQ-LENS-055). Tests: Lens.DeleverageTo (TEST-247).",
       "approval": "approved (Josue, 2026-11-13)",
       "review": "Lens round 2, new reasoning"
@@ -2241,9 +2241,9 @@
       "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
     },
     {
-      "fingerprint": "3f1a936bf3ce3e49",
+      "fingerprint": "f47dbaf486473ecc",
       "check": "require-revert-in-loop",
-      "file": "src/oracle/lp-oracle/LPOracleEval.sol",
+      "file": "src/oracle/lp-oracle/LPOracleRecovery.sol",
       "reason": "Bounded loops over the market's tokens (2 to 8; initialize refuses other counts), a token's two routes or a route's legs (at most 2). The only reverts reachable inside are the SPEC-ORC-023 gas guard InsufficientGas of LPOracleCalls.staticRead, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions of values already bounded (a token index below 8, a stale leg's end below now), which cannot fail. No partial evaluation is meaningful. Same as the DebtOracleEvaluation entry b27d930973ab3212.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
@@ -2257,17 +2257,17 @@
       "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
     },
     {
-      "fingerprint": "bc7119848011c2a4",
+      "fingerprint": "46c28ce7c7b7fe8b",
       "check": "require-revert-in-loop",
-      "file": "src/oracle/lp-oracle/LPOraclePoke.sol",
+      "file": "src/oracle/lp-oracle/LPOracleViews.sol",
       "reason": "Bounded loops over the market's tokens (2 to 8; initialize refuses other counts), a token's two routes or a route's legs (at most 2). The only reverts reachable inside are the SPEC-ORC-023 gas guard InsufficientGas of LPOracleCalls.staticRead, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions of values already bounded (a token index below 8, a stale leg's end below now), which cannot fail. No partial evaluation is meaningful. Same as the DebtOracleEvaluation entry b27d930973ab3212.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"
     },
     {
-      "fingerprint": "83310c2ff871f406",
+      "fingerprint": "c0b6fb5b6a5e3766",
       "check": "require-revert-in-loop",
-      "file": "src/oracle/lp-oracle/LPOracleReads.sol",
+      "file": "src/oracle/lp-oracle/LPOracleConfig.sol",
       "reason": "Bounded loops over the market's tokens (2 to 8; initialize refuses other counts), a token's two routes or a route's legs (at most 2). The only reverts reachable inside are the SPEC-ORC-023 gas guard InsufficientGas of LPOracleCalls.staticRead, which must revert wherever a read is made so no read runs with less than its explicit gas (REQ-ORACLE-102), and SafeCast conversions of values already bounded (a token index below 8, a stale leg's end below now), which cannot fail. No partial evaluation is meaningful. Same as the DebtOracleEvaluation entry b27d930973ab3212.",
       "approval": "pending review (approved pattern)",
       "review": "Pattern: b27d930973ab3212 (DebtOracleEvaluation, approved by pattern)"

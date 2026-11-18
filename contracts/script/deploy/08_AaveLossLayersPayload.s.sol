@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
-import {IAvanaFirstLossReserveAdmin} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserveAdmin.sol";
 import {
     AFlags,
     ARoleMembership,
@@ -206,11 +205,11 @@ contract AaveLossLayersPayload is AavePayloads {
         bytes4[] memory cover = new bytes4[](1);
         cover[0] = IAvanaFirstLossReserve.coverDeficit.selector;
         bytes4[] memory admin = new bytes4[](5);
-        admin[0] = IAvanaFirstLossReserveAdmin.setAllowedBorrowSpoke.selector;
-        admin[1] = IAvanaFirstLossReserveAdmin.setFirstLossReserveMinimum.selector;
-        admin[2] = IAvanaFirstLossReserveAdmin.requestWithdrawal.selector;
-        admin[3] = IAvanaFirstLossReserveAdmin.cancelWithdrawal.selector;
-        admin[4] = IAvanaFirstLossReserveAdmin.executeWithdrawal.selector;
+        admin[0] = IAvanaFirstLossReserve.setAllowedBorrowSpoke.selector;
+        admin[1] = IAvanaFirstLossReserve.setFirstLossReserveMinimum.selector;
+        admin[2] = IAvanaFirstLossReserve.requestWithdrawal.selector;
+        admin[3] = IAvanaFirstLossReserve.cancelWithdrawal.selector;
+        admin[4] = IAvanaFirstLossReserve.executeWithdrawal.selector;
         _targetFunctionRole(b, ATargetFunctionRoleUpdate(am, layer, cover, coverageRole));
         _targetFunctionRole(b, ATargetFunctionRoleUpdate(am, layer, admin, reserveAdminRole));
         ASpokeToAssetsAddition memory add;
@@ -231,9 +230,9 @@ contract AaveLossLayersPayload is AavePayloads {
         _spokeToAssets(b, add);
         for (uint256 s = 0; s < cdps.length; ++s) {
             address spoke = _cdp(cdps[s]);
-            _postCall(b, layer, abi.encodeCall(IAvanaFirstLossReserveAdmin.setAllowedBorrowSpoke, (spoke, true)));
+            _postCall(b, layer, abi.encodeCall(IAvanaFirstLossReserve.setAllowedBorrowSpoke, (spoke, true)));
         }
-        _postCall(b, layer, abi.encodeCall(IAvanaFirstLossReserveAdmin.setFirstLossReserveMinimum, (minimum)));
+        _postCall(b, layer, abi.encodeCall(IAvanaFirstLossReserve.setFirstLossReserveMinimum, (minimum)));
         if (fund != 0) {
             _postCall(b, c.ASSET(), abi.encodeCall(ILayerFunding.approve, (layer, fund)));
             _postCall(b, layer, abi.encodeCall(IAvanaFirstLossReserve.fund, (fund)));
@@ -249,7 +248,7 @@ contract AaveLossLayersPayload is AavePayloads {
         for (uint256 s = 0; s < cdps.length; ++s) {
             address spoke = _cdp(cdps[s]);
             if (ILossLayerViews(layer).allowedBorrowSpoke(spoke)) continue;
-            _postCall(b, layer, abi.encodeCall(IAvanaFirstLossReserveAdmin.setAllowedBorrowSpoke, (spoke, true)));
+            _postCall(b, layer, abi.encodeCall(IAvanaFirstLossReserve.setAllowedBorrowSpoke, (spoke, true)));
         }
     }
 

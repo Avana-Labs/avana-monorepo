@@ -5,14 +5,13 @@ pragma solidity 0.8.28;
 
 import {IUniswapV4Integration} from "../../src/amm/uniswap-v4/IUniswapV4Integration.sol";
 import {UniswapV4State} from "../../src/amm/uniswap-v4/UniswapV4State.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {
     IUniswapV4PoolManager,
     UniswapV4PoolKey
 } from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {ForkConstants} from "../utils/fixtures/ForkConstants.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -169,7 +168,7 @@ contract UniswapV4IntegrationForkTest is AvanaTest {
 
         // Any other range of the same pool is refused.
         uint256 other = _mint(alice, lower - SPACING, upper, l);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultErrors.RangeMismatch.selector, lower - SPACING, upper));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultBase.RangeMismatch.selector, lower - SPACING, upper));
         vault.validatePosition(MARKET, alice, bytes32(other));
 
         // Received at the exact range: the credited units are the position's liquidity in the market's unit.
@@ -215,7 +214,7 @@ contract UniswapV4IntegrationForkTest is AvanaTest {
         V4ForkUnlockProbe probe = new V4ForkUnlockProbe(POOL_MANAGER);
         probe.probe(vault, MARKET);
         assertTrue(probe.ran());
-        assertEq(probe.probed(), ILPVaultErrors.PoolLocked.selector, "PoolLocked inside unlock");
+        assertEq(probe.probed(), ILPVaultBase.PoolLocked.selector, "PoolLocked inside unlock");
         vault.checkReadSafe(MARKET);
 
         _lock();

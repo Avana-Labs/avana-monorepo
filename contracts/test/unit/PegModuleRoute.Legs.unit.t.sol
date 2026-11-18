@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ISettlementRoute} from "../../src/liquidation/settlement-routes/ISettlementRoute.sol";
 import {PegModuleRoute} from "../../src/liquidation/settlement-routes/PegModuleRoute.sol";
-import {PegModuleKind, PegModuleStep} from "../../src/liquidation/settlement-routes/types/PegModuleStep.sol";
+import {PegModuleKind, PegModuleStep} from "../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {SwapRouteFixture} from "../utils/fixtures/SwapRouteFixture.sol";
 import {PayoutToken} from "../utils/mocks/PayoutToken.sol";
 import {RawAnswer} from "../utils/mocks/RouteReadTargets.sol";

@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LVSFlashSourceMock, LVSLyingRoute} from "../utils/mocks/LPVaultSwapMocks.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 
@@ -40,7 +40,7 @@ contract LPVaultSwapCallbacksUnitTest is LPVaultSwapUnitBase {
     }
 
     function _invalid() internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(ILPVaultSwapErrors.InvalidFlashCallback.selector);
+        return abi.encodeWithSelector(ILPVaultSwapBase.InvalidFlashCallback.selector);
     }
 
     /// @notice A correct source: the callback returns the magic value, the source is repaid `F + φ` and the wallet paid.
@@ -80,7 +80,7 @@ contract LPVaultSwapCallbacksUnitTest is LPVaultSwapUnitBase {
         registry.setRoute(MARKET_ID, address(usdt), address(usdc), 0, address(reentrant), true);
         LiquidationResult memory r = _liquidateAs(keeper, _params(bobProxy, 1950e6));
         assertFalse(reentrant.lastReenterOk(), "re-entry refused");
-        assertEq(bytes4(reentrant.lastReenterData()), ILPVaultSwapErrors.InvalidFlashCallback.selector, "error");
+        assertEq(bytes4(reentrant.lastReenterData()), ILPVaultSwapBase.InvalidFlashCallback.selector, "error");
         assertGt(r.recovered, 0, "the liquidation itself settles");
     }
 
@@ -147,7 +147,7 @@ contract LPVaultSwapCallbacksUnitTest is LPVaultSwapUnitBase {
     function test_TEST_052_chargedPremiumAboveCapRefused() public {
         uint256 cap = X * 10 / 10_000;
         source.setQuote(0, cap + 1);
-        _repayExpect(abi.encodeWithSelector(ILPVaultSwapErrors.FlashFeeTooHigh.selector));
+        _repayExpect(abi.encodeWithSelector(ILPVaultSwapBase.FlashFeeTooHigh.selector));
         source.setQuote(0, cap);
         vm.prank(alice);
         adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);
@@ -158,10 +158,10 @@ contract LPVaultSwapCallbacksUnitTest is LPVaultSwapUnitBase {
     function test_TEST_052_preLoanQuoteAndLiquidity() public {
         uint256 cap = X * 10 / 10_000;
         source.setQuote(cap + 1, 0);
-        _repayExpect(abi.encodeWithSelector(ILPVaultSwapErrors.FlashFeeTooHigh.selector));
+        _repayExpect(abi.encodeWithSelector(ILPVaultSwapBase.FlashFeeTooHigh.selector));
         source.setQuote(cap, 0);
         source.setAvailable(X - 1);
-        _repayExpect(abi.encodeWithSelector(ILPVaultSwapErrors.FlashLiquidityShort.selector, X - 1, X));
+        _repayExpect(abi.encodeWithSelector(ILPVaultSwapBase.FlashLiquidityShort.selector, X - 1, X));
         source.setAvailable(X);
         vm.prank(alice);
         adapter.repayWithCollateral(proxy, _position(key), 1000e6, usdcReserveId, new uint256[](2), 0);

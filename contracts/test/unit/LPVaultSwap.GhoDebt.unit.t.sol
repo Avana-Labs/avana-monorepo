@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {MockCLPool} from "../utils/mocks/SwapRouteMocks.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 
@@ -128,7 +127,7 @@ contract LPVaultSwapGhoDebtUnitTest is LPVaultSwapUnitBase {
         } catch (bytes memory reason) {
             bytes4 s = bytes4(reason);
             assertTrue(
-                s == ILPVaultSwapErrors.RecoveryBelowFloor.selector || s == ILPVaultSwapErrors.NoRouteAvailable.selector
+                s == ILPVaultSwapBase.RecoveryBelowFloor.selector || s == ILPVaultSwapBase.NoRouteAvailable.selector
                     || s == bytes4(keccak256("MustNotLeaveDust()")),
                 "unexpected refusal"
             );
@@ -154,7 +153,7 @@ contract LPVaultSwapGhoDebtUnitTest is LPVaultSwapUnitBase {
     function test_TEST_233_ghoShortfallTopUp() public {
         lpOracle.setAnswer(215_000_000);
         uint256 debt = _debtOf(proxy, ghoReserveId);
-        _expectLiquidateRevert(keeper, _ghoParams(1950e18), _err(ILPVaultSwapErrors.RecoveryBelowFloor.selector));
+        _expectLiquidateRevert(keeper, _ghoParams(1950e18), _err(ILPVaultSwapBase.RecoveryBelowFloor.selector));
         assertEq(_debtOf(proxy, ghoReserveId), debt, "nothing repaid");
         LiquidationParams memory p = _ghoParams(1950e18);
         p.maxShortfall = 200e18;
@@ -228,7 +227,7 @@ contract LPVaultSwapGhoDebtUnitTest is LPVaultSwapUnitBase {
         _seizeAndKeep(bobProxy, 1000e6);
         _liquidateAs(keeper, _params(bobProxy, 500e6));
         registry.setSettlementReserve(MARKET_ID, ghoReserveId);
-        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.UnknownDebtReserve.selector, usdcReserveId));
+        vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.UnknownDebtReserve.selector, usdcReserveId));
         lvs.settlePending(MARKET_ID, usdcReserveId);
     }
 }

@@ -4,12 +4,10 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {DebtPriceView} from "../../../src/oracle/debt-oracle/types/DebtPriceView.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
-import {MarketParams} from "../../../src/policy/parameter-store/types/MarketParams.sol";
-import {Market} from "../../../src/types/Market.sol";
-import {PriceState} from "../../../src/types/PriceState.sol";
-import {PriceStateView} from "../../../src/types/PriceStateView.sol";
-import {TokenPriceView} from "../../../src/types/TokenPriceView.sol";
+import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {Market} from "../../../src/types/MarketTypes.sol";
+import {PriceState, PriceStateView, TokenPriceView} from "../../../src/types/OracleTypes.sol";
 
 /// @title LVSMarketRegistryMock
 /// @notice MarketRegistry stand-in for the LPVaultSwap suites: the market and debt-reserve records, the settlement

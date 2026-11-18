@@ -4,20 +4,18 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.sol";
-import {LiquidationParams} from "../../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {RouteMode} from "../../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {
+    LiquidationParams,
+    LiquidationResult,
+    RouteMode
+} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IDebtOracle} from "../../../src/oracle/debt-oracle/IDebtOracle.sol";
 import {DebtOracleInitParams} from "../../../src/oracle/debt-oracle/types/DebtOracleInitParams.sol";
-import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
-import {DebtReserveDef} from "../../../src/policy/market-registry/types/DebtReserveDef.sol";
+import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
-import {TokenDef} from "../../../src/policy/market-registry/types/TokenDef.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
-import {RouteSlot} from "../../../src/types/RouteSlot.sol";
-import {SecondSource} from "../../../src/types/SecondSource.sol";
-import {SecondSourceKind} from "../../../src/types/SecondSourceKind.sol";
+import {DebtReserveDef, TokenDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {RouteSlot, SecondSource, SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {OracleFeedMock} from "../mocks/LPOracleMocks.sol";
 import {ClTestToken, IClPool} from "./ClPoolFixture.sol";
 import {FullStackMarkets} from "./FullStackMarkets.sol";

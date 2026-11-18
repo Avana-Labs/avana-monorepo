@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
+import {RiskTier} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {ChainInputs} from "./lib/DeployTypes.sol";
 import {ITimelockOps, TimelockOperations} from "./lib/TimelockOperations.sol";
 import {console2} from "forge-std/console2.sol";

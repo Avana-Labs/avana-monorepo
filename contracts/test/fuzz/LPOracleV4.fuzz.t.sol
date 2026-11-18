@@ -6,10 +6,8 @@ pragma solidity 0.8.28;
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
 import {IUniswapV3Pool} from "../../src/interfaces/external/uniswap/IUniswapV3Pool.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
-import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {ClPriceStateView} from "../../src/oracle/lp-oracle/types/ClPriceStateView.sol";
-import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
+import {ClPriceStateView, InitParams, LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
 import {LPOracleV4Fixture} from "../utils/fixtures/LPOracleV4Fixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
@@ -90,7 +88,7 @@ contract LPOracleV4FuzzTest is LPOracleV4Fixture {
         try new ERC1967Proxy(address(implementation), abi.encodeCall(ILPOracle.initialize, (p))) {
             return true;
         } catch (bytes memory err) {
-            assertEq(err, abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, MARKET), "revert data");
+            assertEq(err, abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, MARKET), "revert data");
             return false;
         }
     }

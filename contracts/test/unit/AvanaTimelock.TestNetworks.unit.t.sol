@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
-import {IAvanaTimelockErrors} from "../../src/governance/timelock/IAvanaTimelockErrors.sol";
-import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
+import {IAvanaTimelock, SelectorPair} from "../../src/governance/timelock/IAvanaTimelock.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {TimelockFixture} from "../utils/fixtures/TimelockFixture.sol";
 import {TimelockShortDelayLists} from "../utils/fixtures/TimelockShortDelayLists.sol";
@@ -84,7 +83,7 @@ contract AvanaTimelockTestNetworksUnitTest is TimelockFixture {
             _execute(governanceMultisig, short, SALT);
 
             vm.prank(address(timelock));
-            vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.DelayOutOfBounds.selector, 59));
+            vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.DelayOutOfBounds.selector, 59));
             timelock.setNormalDelay(59);
             vm.prank(address(timelock));
             timelock.setNormalDelay(TEST_DELAY);
@@ -96,7 +95,7 @@ contract AvanaTimelockTestNetworksUnitTest is TimelockFixture {
     /// @notice Below 60 s the constructor refuses the normal delay on a test network.
     function test_TEST_345_testNetworksRefuseNormalDelayBelowFloor() public {
         for (uint256 i = 0; i < 4; ++i) {
-            vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.DelayOutOfBounds.selector, 59));
+            vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.DelayOutOfBounds.selector, 59));
             this.deployOn(_testChain(i), 59);
         }
     }
@@ -108,9 +107,9 @@ contract AvanaTimelockTestNetworksUnitTest is TimelockFixture {
         uint64 chainId
     ) public {
         vm.assume(chainId != 11_155_111 && chainId != 84_532 && chainId != 31_337 && chainId != 31_338);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.DelayOutOfBounds.selector, 120));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.DelayOutOfBounds.selector, 120));
         this.deployOn(chainId, 120);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.DelayOutOfBounds.selector, 345_599));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.DelayOutOfBounds.selector, 345_599));
         this.deployOn(chainId, 345_599);
         timelock = _on(chainId, 345_600);
         assertEq(timelock.SHORT_DELAY(), 43_200);

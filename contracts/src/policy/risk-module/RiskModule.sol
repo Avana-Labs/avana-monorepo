@@ -4,41 +4,74 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
-import {AccountGateStatus} from "../../types/AccountGateStatus.sol";
-import {DriftReason} from "../../types/DriftReason.sol";
-import {Market} from "../../types/Market.sol";
-import {PauseReason} from "../../types/PauseReason.sol";
-import {PauseState} from "../../types/PauseState.sol";
-import {PledgeCounters} from "../../types/PledgeCounters.sol";
-import {PledgePreview} from "../../types/PledgePreview.sol";
+import {AccountGateStatus, DriftReason, Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
+import {PledgeCounters, PledgePreview} from "../../types/PositionTypes.sol";
 import {BreakerReasons} from "../market-registry/types/Breaker.sol";
-import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
+import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "./IRiskModule.sol";
-import {IRiskModuleAdmin} from "./IRiskModuleAdmin.sol";
 import {IRiskModuleBorrowLogic} from "./IRiskModuleBorrowLogic.sol";
 import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
-import {IRiskModuleChecks} from "./IRiskModuleChecks.sol";
 import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
 import {IRiskModulePledgeLogic} from "./IRiskModulePledgeLogic.sol";
 import {IRiskModuleSpeedLogic} from "./IRiskModuleSpeedLogic.sol";
 import {IRiskModuleStatusLogic} from "./IRiskModuleStatusLogic.sol";
-import {IRiskModuleViews} from "./IRiskModuleViews.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";
-import {RiskModuleConstants} from "./RiskModuleConstants.sol";
-import {RiskModuleSpeed} from "./RiskModuleSpeed.sol";
-import {PledgeCharge} from "./types/PledgeCharge.sol";
-import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
-import {RiskModuleLogics} from "./types/RiskModuleLogics.sol";
-import {SpeedScope} from "./types/SpeedScope.sol";
-import {SpeedView} from "./types/SpeedView.sol";
-import {SpeedWindow} from "./types/SpeedWindow.sol";
+import {RiskModuleMath} from "./RiskModuleMath.sol";
+import {
+    PledgeCharge,
+    RiskModuleImmutables,
+    RiskModuleLogics,
+    SpeedScope,
+    SpeedView,
+    SpeedWindow
+} from "./types/RiskModuleTypes.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title RiskModule
 /// @notice Avana's risk checks on one chain: pledge, borrow-side, speed-limit, drift and breaker checks.
 /// @dev UUPS proxy; only the timelock can upgrade it. Check bodies run in six stateless logic contracts.
-contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpeed, IRiskModule {
+contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase, IRiskModule {
+    /// @custom:storage-location erc7201:avana.storage.RiskModule.speed
+    struct SpeedLayout {
+        mapping(uint256 marketId => SpeedWindow) marketBorrow;
+        mapping(bytes32 hubAssetKey => SpeedWindow) debtBorrow;
+        mapping(uint256 marketId => SpeedWindow) marketPledge;
+    }
+
+    bytes32 private constant _SPEED_SLOT = 0x1858dc028745fe2a4f37a8a31dd3ca321a1f7863f165bffa26e588c97f1ff200;
+
+    function _speed() internal pure returns (SpeedLayout storage $) {
+        // ERC-7201 namespaced storage: the slot is a compile-time constant.
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            $.slot := _SPEED_SLOT
+        }
+    }
+
+    function _window(
+        SpeedScope scope,
+        bytes32 key
+    ) internal view returns (SpeedWindow storage w) {
+        SpeedLayout storage $ = _speed();
+        if (scope == SpeedScope.DebtBorrow) return $.debtBorrow[key];
+        if (scope == SpeedScope.MarketBorrow) return $.marketBorrow[uint256(key)];
+        return $.marketPledge[uint256(key)];
+    }
+
+    function _putWindow(
+        SpeedScope scope,
+        bytes32 key,
+        SpeedWindow memory w
+    ) internal {
+        SpeedWindow storage s = _window(scope, key);
+        s.start = w.start;
+        s.prev = w.prev;
+        s.curr = w.curr;
+        s.base = w.base;
+        s.opened = w.opened;
+    }
+
     address internal immutable _DRIFT_LOGIC;
     address internal immutable _BREAKER_LOGIC;
     address internal immutable _PLEDGE_LOGIC;
@@ -65,7 +98,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         _disableInitializers();
     }
 
-    /// @inheritdoc IRiskModuleAdmin
+    /// @inheritdoc IRiskModule
     function initialize(
         address timelock
     ) external override initializer {
@@ -76,7 +109,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         _grantRole(AvanaRoles.APPLICATION_ADMIN, timelock);
     }
 
-    /// @inheritdoc IRiskModuleChecks
+    /// @inheritdoc IRiskModule
     function checkPledge(
         address depositor,
         address proxy,
@@ -96,7 +129,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         }
     }
 
-    /// @inheritdoc IRiskModuleChecks
+    /// @inheritdoc IRiskModule
     function preBorrowCheck(
         address proxy,
         uint256 debtReserveId,
@@ -108,7 +141,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         if (msg.sender == _ADAPTER) _putBorrowWindows(marketId, debtKey, m, d);
     }
 
-    /// @inheritdoc IRiskModuleChecks
+    /// @inheritdoc IRiskModule
     function creditRepay(
         address proxy,
         uint256 debtReserveId,
@@ -120,7 +153,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         _putBorrowWindows(marketId, debtKey, m, d);
     }
 
-    /// @inheritdoc IRiskModuleChecks
+    /// @inheritdoc IRiskModule
     function creditWithdraw(
         uint256 marketId,
         uint256 usd
@@ -140,14 +173,14 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         _putWindow(SpeedScope.DebtBorrow, debtKey, debt);
     }
 
-    /// @inheritdoc IRiskModuleChecks
+    /// @inheritdoc IRiskModule
     function preWithdrawCheck(
         address proxy
     ) external override {
         IRiskModuleBorrowLogic(_BORROW_LOGIC).preCheck(proxy, type(uint256).max, false);
     }
 
-    /// @inheritdoc IRiskModuleChecks
+    /// @inheritdoc IRiskModule
     function postHealthCheck(
         address proxy,
         uint256 minHealthFactor
@@ -155,7 +188,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         healthFactor = IRiskModuleBorrowLogic(_BORROW_LOGIC).postHealthCheck(proxy, minHealthFactor);
     }
 
-    /// @inheritdoc IRiskModuleChecks
+    /// @inheritdoc IRiskModule
     function checkAaveConfig(
         address spoke,
         uint256[] calldata marketIds
@@ -165,7 +198,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         if (reason != DriftReason.None) revert ConfigDrift(marketId, reason);
     }
 
-    /// @inheritdoc IRiskModuleChecks
+    /// @inheritdoc IRiskModule
     function pokeConfig(
         address spoke
     ) external override returns (DriftReason reason) {
@@ -185,7 +218,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         }
     }
 
-    /// @inheritdoc IRiskModuleChecks
+    /// @inheritdoc IRiskModule
     function pokeBreakers(
         uint256 marketId
     ) external override returns (uint32 reasons) {
@@ -210,14 +243,14 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         emit BreakersPoked(marketId, reasons);
     }
 
-    /// @inheritdoc IRiskModuleChecks
+    /// @inheritdoc IRiskModule
     function isHubSharesEqualAssets(
         uint256 marketId
     ) external view override returns (bool equal) {
         equal = IRiskModuleDriftLogic(_DRIFT_LOGIC).isHubSharesEqualAssets(marketId);
     }
 
-    /// @inheritdoc IRiskModuleChecks
+    /// @inheritdoc IRiskModule
     function checkRemainingRecord(
         uint256 marketId,
         uint128 remainingUnits
@@ -225,7 +258,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         IRiskModulePledgeLogic(_PLEDGE_LOGIC).checkRemainingRecord(marketId, remainingUnits);
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     /// @dev Never reverts: a failure of the preview body is reported as `eligible = false` with its selector.
     function previewPledge(
         address depositor,
@@ -243,7 +276,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         }
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function getAccountGateStatus(
         address proxy
     ) external view override returns (AccountGateStatus memory status) {
@@ -271,21 +304,21 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         status.breakerDebtReserveId = type(uint256).max;
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function usdToRestore(
         address proxy
     ) external view override returns (uint256 usd) {
         usd = IRiskModulePledgeLogic(_PLEDGE_LOGIC).usdToRestore(proxy);
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function expectedCollateralFactorBps(
         uint256 marketId
     ) external view override returns (uint256 cfBps) {
         cfBps = IRiskModuleDriftLogic(_DRIFT_LOGIC).expectedCollateralFactorBps(marketId);
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function getBreakerStatus(
         uint256 marketId
     ) external view override returns (uint32 reasons, uint64 reopensAt) {
@@ -296,7 +329,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         }
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function getDebtBreakerStatus(
         address spoke,
         uint256 debtReserveId
@@ -308,7 +341,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         }
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     /// @dev Never reverts: a failed evaluation reports every security reason, so a reset is refused.
     function liveBreakerReasons(
         uint256 marketId
@@ -320,7 +353,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         }
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     /// @dev Never reverts: a failed evaluation reports every security reason, so a reset is refused.
     function liveDebtBreakerReasons(
         address spoke,
@@ -333,7 +366,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         }
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function checkBorrowGate(
         address proxy,
         uint256 debtReserveId
@@ -341,14 +374,14 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         IRiskModuleBorrowLogic(_BORROW_LOGIC).gate(proxy, debtReserveId, true);
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function debtValueUsd(
         address proxy
     ) external view override returns (uint256 usd) {
         usd = IRiskModuleBorrowLogic(_BORROW_LOGIC).debtValueUsd(proxy);
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function getBorrowSpeed(
         uint256 marketId,
         uint256 debtReserveId
@@ -362,7 +395,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         }
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function getPledgeSpeed(
         uint256 marketId
     ) external view override returns (SpeedView memory pledge) {
@@ -373,7 +406,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         }
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function getSpeedWindow(
         SpeedScope scope,
         bytes32 key
@@ -381,42 +414,42 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleSpee
         window = _window(scope, key);
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function rescueHealthFactor() external pure override returns (uint256 value) {
-        value = RiskModuleConstants.RESCUE_HEALTH_FACTOR;
+        value = RiskModuleMath.RESCUE_HEALTH_FACTOR;
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function RESCUE_MIN_PLEDGE_USD() external pure override returns (uint256 usd) {
-        usd = RiskModuleConstants.RESCUE_MIN_PLEDGE_USD;
+        usd = RiskModuleMath.RESCUE_MIN_PLEDGE_USD;
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function MARKET_REGISTRY() external view override returns (address marketRegistry) {
         marketRegistry = _MARKET_REGISTRY;
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function PARAMETER_STORE() external view override returns (address parameterStore) {
         parameterStore = _PARAMETER_STORE;
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function COLLATERALIZATION() external view override returns (address collateralization) {
         collateralization = _COLLATERALIZATION;
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function ADAPTER() external view override returns (address adapter) {
         adapter = _ADAPTER;
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function LP_VAULT_SWAP() external view override returns (address lpVaultSwap) {
         lpVaultSwap = _LP_VAULT_SWAP;
     }
 
-    /// @inheritdoc IRiskModuleViews
+    /// @inheritdoc IRiskModule
     function TIMELOCK() external view override returns (address timelock) {
         timelock = _TIMELOCK;
     }

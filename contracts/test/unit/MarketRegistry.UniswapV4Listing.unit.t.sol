@@ -4,18 +4,15 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IClIntegration} from "../../src/amm/IClIntegration.sol";
-import {ClMarketConfig} from "../../src/amm/types/ClMarketConfig.sol";
+import {ClMarketConfig} from "../../src/amm/types/AmmTypes.sol";
 import {IUniswapV4Integration} from "../../src/amm/uniswap-v4/IUniswapV4Integration.sol";
-import {ILPVaultErrors} from "../../src/custody/lp-vault/ILPVaultErrors.sol";
+import {ILPVaultBase} from "../../src/custody/lp-vault/ILPVaultBase.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
-import {Market} from "../../src/types/Market.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {Market, MarketDef} from "../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {IClFactory, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {TestWETH9} from "../utils/fixtures/UniswapV4WorldFixture.sol";
@@ -180,7 +177,7 @@ contract MarketRegistryUniswapV4ListingUnitTest is MarketRegistryFixture {
         (MarketDef memory d, uint8 unitDecimals) = _uni4Def(_data());
         d.integrationData = "";
         vm.prank(address(timelock));
-        vm.expectRevert(ILPVaultErrors.InvalidPool.selector);
+        vm.expectRevert(ILPVaultBase.InvalidPool.selector);
         registry.listCollateralMarket(d);
         d.integrationData = _data();
         vm.prank(address(timelock));
@@ -222,7 +219,7 @@ contract MarketRegistryUniswapV4ListingUnitTest is MarketRegistryFixture {
             deps[0] = bad[i];
             address route = address(new RegistryRouteMock(address(usdc), address(gho), address(lpVaultSwap), deps));
             vm.prank(address(timelock));
-            vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+            vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
             registry.setRoute(id, address(usdc), address(gho), 0, route);
         }
         address ok = address(_newRoute(address(usdc), address(gho), "otherPool"));

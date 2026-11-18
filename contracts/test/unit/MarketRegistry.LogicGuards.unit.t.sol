@@ -4,9 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {IMarketRegistryLogic} from "../../src/policy/market-registry/IMarketRegistryLogic.sol";
-import {IMarketRegistryWindDown} from "../../src/policy/market-registry/IMarketRegistryWindDown.sol";
 import {MarketRegistry} from "../../src/policy/market-registry/MarketRegistry.sol";
 import {MarketRegistryActivationLogic} from "../../src/policy/market-registry/MarketRegistryActivationLogic.sol";
 import {MarketRegistryHubsLogic} from "../../src/policy/market-registry/MarketRegistryHubsLogic.sol";
@@ -14,12 +14,13 @@ import {MarketRegistryListingLogic} from "../../src/policy/market-registry/Marke
 import {MarketRegistryRoutesLogic} from "../../src/policy/market-registry/MarketRegistryRoutesLogic.sol";
 import {MarketRegistrySafetyLogic} from "../../src/policy/market-registry/MarketRegistrySafetyLogic.sol";
 import {MarketRegistryWindDownLogic} from "../../src/policy/market-registry/MarketRegistryWindDownLogic.sol";
-import {MarketRegistryImmutables} from "../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
-import {MarketRegistryLogics} from "../../src/policy/market-registry/types/MarketRegistryLogics.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {DriftReason} from "../../src/types/DriftReason.sol";
-import {PauseReason} from "../../src/types/PauseReason.sol";
-import {RouteSlot} from "../../src/types/RouteSlot.sol";
+import {
+    MarketRegistryImmutables,
+    MarketRegistryLogics,
+    RiskTier
+} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {DriftReason, PauseReason} from "../../src/types/MarketTypes.sol";
+import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
@@ -124,7 +125,7 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
                 vm.prank(callers[c]);
                 (bool ok, bytes memory ret) = b[i].logic.call(b[i].data);
                 assertFalse(ok, "direct call admitted");
-                assertEq(ret, abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, callers[c]));
+                assertEq(ret, abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, callers[c]));
             }
         }
     }
@@ -132,7 +133,7 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
     // TEST-168 verifies: REQ-CONFIG-001, REQ-CONFIG-005
     // The remaining bodies (resets and the settlement reserve) refuse a direct call the same way.
     function test_TEST_168_resetAndSettlementBodiesRefuseDirectCalls() public {
-        bytes memory unauthorized = abi.encodeWithSelector(IMarketRegistryErrors.Unauthorized.selector, address(this));
+        bytes memory unauthorized = abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, address(this));
         vm.expectRevert(unauthorized);
         MarketRegistrySafetyLogic(logics.safety).resetMarketBreaker(1);
         vm.expectRevert(unauthorized);
@@ -176,7 +177,7 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
             if (slot == 3) l.routes = wrong;
             if (slot == 4) l.safety = wrong;
             if (slot == 5) l.windDown = wrong;
-            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("logic")));
+            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("logic")));
             new MarketRegistry(im, l);
         }
     }
@@ -207,7 +208,7 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
             if (slot == 3) l.routes = foreign.routes;
             if (slot == 4) l.safety = foreign.safety;
             if (slot == 5) l.windDown = foreign.windDown;
-            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("logic")));
+            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("logic")));
             new MarketRegistry(im, l);
         }
     }
@@ -238,7 +239,7 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
     // by every logic contract and by the registry implementation.
     function test_TEST_168_everyZeroImmutableRefused() public {
         bytes memory err =
-            abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("immutables"));
+            abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("immutables"));
         for (uint256 i = 0; i < 14; ++i) {
             MarketRegistryImmutables memory x = _zeroField(i);
             vm.expectRevert(err);
@@ -289,9 +290,9 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
         MarketRegistry impl = new MarketRegistry(im, logics);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         impl.initialize(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryWindDown.MarketNotOffboarding.selector, 1));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.MarketNotOffboarding.selector, 1));
         impl.closeMarket(1);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.UnknownDebtReserve.selector, address(spoke), 0));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.UnknownDebtReserve.selector, address(spoke), 0));
         impl.syncDrawCap(address(spoke), 0);
         vm.prank(address(rm));
         impl.recordBreach(bytes32(uint256(1)), 8);

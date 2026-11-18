@@ -5,11 +5,10 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {DexPathRoute} from "../../src/liquidation/settlement-routes/DexPathRoute.sol";
-import {DexHop, HopKind} from "../../src/liquidation/settlement-routes/types/DexHop.sol";
-import {RouteConfig} from "../../src/liquidation/settlement-routes/types/RouteConfig.sol";
+import {DexHop, HopKind, RouteConfig} from "../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {Lock} from "../../src/lock/lock/Lock.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
     RegistryAvanaFirstLossReserveMock,
@@ -119,7 +118,7 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
         address route
     ) internal {
         vm.prank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setRoute(id, token, asset, kind, route);
     }
 
@@ -139,7 +138,7 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
     }
 
     function _routesErr() internal view returns (bytes memory) {
-        return abi.encodeWithSelector(IMarketRegistryErrors.ActivationCheckFailed.selector, id, bytes32("routes"));
+        return abi.encodeWithSelector(IMarketRegistryBase.ActivationCheckFailed.selector, id, bytes32("routes"));
     }
 
     function _activate(
@@ -233,7 +232,7 @@ contract SwapRoutesRegistryRulesUnitTest is MarketRegistryFixture {
         _activate("");
         DebtReserveDef memory def = _listDai();
         bytes memory bound =
-            abi.encodeWithSelector(IMarketRegistryErrors.LivenessBound.selector, address(spoke), id, DAI_RESERVE);
+            abi.encodeWithSelector(IMarketRegistryBase.LivenessBound.selector, address(spoke), id, DAI_RESERVE);
 
         vm.prank(address(timelock));
         vm.expectRevert(bound);

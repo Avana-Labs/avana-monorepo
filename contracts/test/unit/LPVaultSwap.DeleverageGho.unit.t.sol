@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {MockCLPool} from "../utils/mocks/SwapRouteMocks.sol";
 import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 
@@ -81,7 +81,7 @@ contract LPVaultSwapDeleverageGhoUnitTest is LPVaultSwapUnitBase {
         uint256 x = debt < cap ? debt : cap;
         if (aboveMinimum) {
             vm.prank(alice);
-            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapErrors.DeleverageTooSmall.selector, x, x + 1));
+            vm.expectRevert(abi.encodeWithSelector(ILPVaultSwapBase.DeleverageTooSmall.selector, x, x + 1));
             adapter.repayWithCollateral(proxy, _position(key), uint128(units), ghoReserveId, new uint256[](2), x + 1);
         } else {
             (uint256 repaid,) = _repayGho(uint128(units), x);
@@ -105,7 +105,7 @@ contract LPVaultSwapDeleverageGhoUnitTest is LPVaultSwapUnitBase {
         uint256 debt = _debtOf(proxy, ghoReserveId);
         uint256 sourceBefore = gho.balanceOf(address(flashSource));
         vm.prank(alice);
-        vm.expectRevert(ILPVaultSwapErrors.NoRouteAvailable.selector);
+        vm.expectRevert(ILPVaultSwapBase.NoRouteAvailable.selector);
         adapter.repayWithCollateral(proxy, _position(key), 1000e6, ghoReserveId, new uint256[](2), 0);
         assertEq(_debtOf(proxy, ghoReserveId), debt, "nothing repaid");
         assertEq(gho.balanceOf(address(flashSource)), sourceBefore, "source unchanged");

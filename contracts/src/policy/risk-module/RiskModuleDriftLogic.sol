@@ -6,16 +6,13 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {DriftReason} from "../../types/DriftReason.sol";
-import {Market} from "../../types/Market.sol";
-import {DebtReserveDef} from "../market-registry/types/DebtReserveDef.sol";
-import {MarketStatus} from "../market-registry/types/MarketStatus.sol";
-import {SpokeDef} from "../market-registry/types/SpokeDef.sol";
+import {DriftReason, Market} from "../../types/MarketTypes.sol";
+import {DebtReserveDef, MarketStatus, SpokeDef} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";
 import {RiskModuleMath} from "./RiskModuleMath.sol";
-import {RiskModuleImmutables} from "./types/RiskModuleImmutables.sol";
+import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleDriftLogic
 /// @notice Aave configuration drift of a CDP Spoke and its markets, Hub shares == assets and expected CF.

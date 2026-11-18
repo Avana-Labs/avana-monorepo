@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationErrors} from "../../src/custody/collateralization/ICollateralizationErrors.sol";
-import {Pending} from "../../src/custody/collateralization/types/Pending.sol";
+import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
+import {Pending} from "../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {CollateralizationFixture} from "../utils/fixtures/CollateralizationFixture.sol";
 import {CollateralizationLedgerModel} from "./Collateralization.LedgerModel.sol";
@@ -89,9 +89,9 @@ contract CollateralizationHostileUnitTest is CollateralizationLedgerModel {
         vm.prank(adapter);
         token.burn(lpVaultSwap, seized);
         vm.startPrank(lpVaultSwap);
-        vm.expectRevert(ICollateralizationErrors.SeizureMismatch.selector);
+        vm.expectRevert(ICollateralizationBase.SeizureMismatch.selector);
         coll.settleSeizure(bobProxy, vt, seized, new uint256[](2));
-        vm.expectRevert(ICollateralizationErrors.DebitMismatch.selector);
+        vm.expectRevert(ICollateralizationBase.DebitMismatch.selector);
         coll.settleSeizure(aliceProxy, vt, seized, new uint256[](2));
         lock.release();
         vm.stopPrank();
@@ -126,11 +126,11 @@ contract CollateralizationHostileUnitTest is CollateralizationLedgerModel {
         vm.prank(aliceProxy);
         IAaveV4Spoke(aave.cdpSpoke).withdraw(vtReserveId, 1_000_000_000, aliceProxy);
         vm.prank(lpVaultSwap);
-        vm.expectRevert(abi.encodeWithSelector(ICollateralizationErrors.SupplyDropMismatch.selector, 1_000_000_000, 0));
+        vm.expectRevert(abi.encodeWithSelector(ICollateralizationBase.SupplyDropMismatch.selector, 1_000_000_000, 0));
         coll.settleSeizure(aliceProxy, vt, 1_000_000_000, new uint256[](2));
         assertEq(token.balanceOf(lpVaultSwap), 0, "LPVaultSwap holds nothing it could have burned");
         vm.prank(lpVaultSwap);
-        vm.expectRevert(ICollateralizationErrors.DebitMismatch.selector);
+        vm.expectRevert(ICollateralizationBase.DebitMismatch.selector);
         coll.settleSeizure(aliceProxy, vt, 0, new uint256[](2));
         vm.prank(lpVaultSwap);
         lock.release();
@@ -197,16 +197,14 @@ contract CollateralizationSnapshotScopeUnitTest is CollateralizationFixture {
         assertTrue(ok1, "snapshot taken");
         (bool ok2, bytes memory ret2,,) = _session(settleZero, "");
         assertFalse(ok2, "a later transaction finds no snapshot");
-        assertEq(ret2, abi.encodeWithSelector(ICollateralizationErrors.SeizureMismatch.selector));
+        assertEq(ret2, abi.encodeWithSelector(ICollateralizationBase.SeizureMismatch.selector));
         (bool ok3,, bool ok4, bytes memory ret4) = _session(begin, abi.encodeCall(coll.settlePending, (vt, 1)));
         assertTrue(ok3, "a new snapshot in a new transaction");
         assertFalse(ok4);
-        assertEq(ret4, abi.encodeWithSelector(ICollateralizationErrors.SeizureActive.selector), "pending blocked");
+        assertEq(ret4, abi.encodeWithSelector(ICollateralizationBase.SeizureActive.selector), "pending blocked");
         (,, bool ok6, bytes memory ret6) = _session(begin, begin);
         assertFalse(ok6);
-        assertEq(
-            ret6, abi.encodeWithSelector(ICollateralizationErrors.SeizureActive.selector), "one snapshot at a time"
-        );
+        assertEq(ret6, abi.encodeWithSelector(ICollateralizationBase.SeizureActive.selector), "one snapshot at a time");
         (,, bool ok7,) = _session(begin, settleZero);
         assertTrue(ok7, "same-transaction settlement of a zero seizure");
     }
@@ -221,9 +219,9 @@ contract CollateralizationSnapshotScopeUnitTest is CollateralizationFixture {
             abi.encodeCall(coll.settleSeizure, (stranger, vt, 0, new uint256[](2)))
         );
         assertFalse(ok1);
-        assertEq(ret1, abi.encodeWithSelector(ICollateralizationErrors.UnknownProxy.selector, stranger));
+        assertEq(ret1, abi.encodeWithSelector(ICollateralizationBase.UnknownProxy.selector, stranger));
         assertFalse(ok2);
-        assertEq(ret2, abi.encodeWithSelector(ICollateralizationErrors.SeizureMismatch.selector));
+        assertEq(ret2, abi.encodeWithSelector(ICollateralizationBase.SeizureMismatch.selector));
     }
 
     function _session(

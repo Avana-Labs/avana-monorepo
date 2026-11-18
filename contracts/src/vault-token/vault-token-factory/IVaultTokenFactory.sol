@@ -3,10 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PoolKeying} from "../../amm/types/PoolKeying.sol";
-import {PositionShape} from "../../types/PositionShape.sol";
-import {ShapeKind} from "../../types/ShapeKind.sol";
-import {VaultTokenBindings} from "../../types/VaultTokenBindings.sol";
+import {PoolKeying} from "../../amm/types/AmmTypes.sol";
+import {VaultTokenBindings} from "../../types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
 
 /// @title IVaultTokenFactory
 /// @notice Registry of AMM integrations and vault tokens; one vault token per (CDP Spoke, market key), via CREATE3.

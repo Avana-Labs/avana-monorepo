@@ -3,11 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {SettlementMath} from "../../src/liquidation/lp-vault-swap/SettlementMath.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {RouteMode} from "../../src/liquidation/lp-vault-swap/types/RouteMode.sol";
+import {
+    LiquidationParams,
+    LiquidationResult,
+    RouteMode
+} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapSettlementFuzzTest
@@ -30,8 +32,8 @@ contract LPVaultSwapSettlementFuzzTest is LPVaultSwapUnitBase {
         bytes memory reason
     ) internal pure returns (bool) {
         bytes4 s = bytes4(reason);
-        return s == ILPVaultSwapErrors.NoRouteAvailable.selector || s == ILPVaultSwapErrors.RecoveryBelowFloor.selector
-            || s == ILPVaultSwapErrors.NothingSeized.selector || s == bytes4(keccak256("MustNotLeaveDust()"));
+        return s == ILPVaultSwapBase.NoRouteAvailable.selector || s == ILPVaultSwapBase.RecoveryBelowFloor.selector
+            || s == ILPVaultSwapBase.NothingSeized.selector || s == bytes4(keccak256("MustNotLeaveDust()"));
     }
 
     /// @notice TEST-078 and TEST-072: any repayment from 3 USDC to 8,000 USDC at any vault price that keeps the account
@@ -106,7 +108,7 @@ contract LPVaultSwapSettlementFuzzTest is LPVaultSwapUnitBase {
             assertEq(r.shortfall, 0, "no top-up for dust");
             assertLe(r.debtRepaid - (r.recovered < r.debtRepaid ? r.recovered : r.debtRepaid), 2e6, "loss bounded");
         } catch (bytes memory reason) {
-            assertEq(bytes4(reason), ILPVaultSwapErrors.NothingSeized.selector, "only a zero seizure is refused");
+            assertEq(bytes4(reason), ILPVaultSwapBase.NothingSeized.selector, "only a zero seizure is refused");
         }
     }
 

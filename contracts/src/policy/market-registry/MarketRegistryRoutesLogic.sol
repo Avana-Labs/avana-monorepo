@@ -3,20 +3,17 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../amm/IAmmIntegration.sol";
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {ISettlementRoute} from "../../liquidation/settlement-routes/ISettlementRoute.sol";
-import {Market} from "../../types/Market.sol";
-import {RouteSlot} from "../../types/RouteSlot.sol";
-import {IMarketRegistryApprovals} from "./IMarketRegistryApprovals.sol";
-import {IMarketRegistryHubs} from "./IMarketRegistryHubs.sol";
+import {Market} from "../../types/MarketTypes.sol";
+import {RouteSlot} from "../../types/OracleTypes.sol";
+import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {IMarketRegistryRoutes} from "./IMarketRegistryRoutes.sol";
 import {MarketRegistryRouteChecks} from "./MarketRegistryRouteChecks.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
 import {IssuerProbes} from "./types/IssuerProbe.sol";
-import {MarketRegistryImmutables} from "./types/MarketRegistryImmutables.sol";
-import {MarketStatus} from "./types/MarketStatus.sol";
-import {TokenDef} from "./types/TokenDef.sol";
+import {MarketRegistryImmutables, MarketStatus, TokenDef} from "./types/MarketRegistryTypes.sol";
 
 /// @title MarketRegistryRoutesLogic
 /// @notice Bodies of the swap-route writes, the AMM integration contract record and the standby switch.
@@ -89,9 +86,9 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
                 l.knownIntegrationContract[c] = true;
             }
         }
-        if (bad != 0) revert IMarketRegistryHubs.InvalidIntegration(integrationId);
+        if (bad != 0) revert IMarketRegistry.InvalidIntegration(integrationId);
         rec.key = recordKey;
-        emit IMarketRegistryApprovals.IntegrationContractsRecorded(integrationId, recordKey, contracts);
+        emit IMarketRegistry.IntegrationContractsRecorded(integrationId, recordKey, contracts);
         if (rec.finalized) _recheckRoutes(integrationId, contracts);
     }
 
@@ -104,10 +101,10 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         uint256 count = l.integrationContracts[integrationId].length;
         IntegrationRecord storage rec = l.integrationRecords[integrationId];
         if (count == 0 || rec.finalized || rec.key != recordKey) {
-            revert IMarketRegistryHubs.InvalidIntegration(integrationId);
+            revert IMarketRegistry.InvalidIntegration(integrationId);
         }
         rec.finalized = true;
-        emit IMarketRegistryApprovals.IntegrationContractsFinalized(integrationId, recordKey, count);
+        emit IMarketRegistry.IntegrationContractsFinalized(integrationId, recordKey, count);
     }
 
     /// @inheritdoc IMarketRegistryRoutes
@@ -281,8 +278,8 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         uint32 integrationId
     ) private view returns (bytes32) {
         address lpVault = _s().integrationLpVault[integrationId];
-        if (lpVault == address(0)) revert IMarketRegistryHubs.InvalidIntegration(integrationId);
-        IAmmIntegration v = IAmmIntegration(lpVault);
+        if (lpVault == address(0)) revert IMarketRegistry.InvalidIntegration(integrationId);
+        ILPVault v = ILPVault(lpVault);
         return
             keccak256(
                 abi.encode(block.chainid, lpVault, lpVault.codehash, v.AMM_PROTOCOL(), v.capabilities().poolKeying)

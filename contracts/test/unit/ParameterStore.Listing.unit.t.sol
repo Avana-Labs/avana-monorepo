@@ -3,14 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {MarketStatus} from "../../src/policy/market-registry/types/MarketStatus.sol";
-import {IParameterStoreChain} from "../../src/policy/parameter-store/IParameterStoreChain.sol";
-import {IParameterStoreErrors} from "../../src/policy/parameter-store/IParameterStoreErrors.sol";
-import {IParameterStoreEvents} from "../../src/policy/parameter-store/IParameterStoreEvents.sol";
-import {FeedDef} from "../../src/policy/parameter-store/types/FeedDef.sol";
-import {MarketParams} from "../../src/policy/parameter-store/types/MarketParams.sol";
-import {Market} from "../../src/types/Market.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
+import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
+import {FeedDef, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
+import {ShapeKind} from "../../src/types/PositionTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {
     MockAggregator,
@@ -32,7 +30,7 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         address f = address(fUsdc);
         // With no tolerance written, the token's tolerance is below its lower bound and the feed is refused.
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setFeed(f, _feedDef(86_400, 1800));
         _tl();
         store.setFeedAgreementToleranceBps(usdc, 150);
@@ -49,13 +47,13 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         FeedDef memory bad = _feedDef(86_400, 1800);
         bad.borrowPriceMaxAge = 4200;
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setFeed(f, bad);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setFeed(f, _feedDef(86_401, 1800));
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setFeed(f, _feedDef(86_400, 3601));
     }
 
@@ -64,7 +62,7 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         MockAggregator f18 = new MockAggregator(18, 1e9, 1e30);
         _tl();
         vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.InvalidFeed.selector, address(f18), bytes32("minAnswer"))
+            abi.encodeWithSelector(IParameterStoreBase.InvalidFeed.selector, address(f18), bytes32("minAnswer"))
         );
         store.setFeed(address(f18), _feedDef(3600, 600));
         f18.setBounds(18, 1e10, 1e30);
@@ -74,13 +72,13 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         f18.setBounds(19, 1e10, 1e30);
         _tl();
         vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.InvalidFeed.selector, address(f18), bytes32("decimals"))
+            abi.encodeWithSelector(IParameterStoreBase.InvalidFeed.selector, address(f18), bytes32("decimals"))
         );
         store.setFeed(address(f18), _feedDef(3600, 600));
         f18.setBounds(18, 1e10, 1e10);
         _tl();
         vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.InvalidFeed.selector, address(f18), bytes32("maxAnswer"))
+            abi.encodeWithSelector(IParameterStoreBase.InvalidFeed.selector, address(f18), bytes32("maxAnswer"))
         );
         store.setFeed(address(f18), _feedDef(3600, 600));
     }
@@ -94,26 +92,24 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         _tl();
         store.setBorrowPriceMaxAge(f, 88_200);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setBorrowPriceMaxAge(f, 88_201);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setLiquidationPriceMaxAge(f, 88_199);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setLiquidationPriceMaxAge(f, 88_201);
         _tl();
         store.setLiquidationPriceMaxAge(f, 88_200);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setFeedMaxAge(f, 88_199);
         _tl();
         store.setFeedMaxAge(f, 88_200);
         lpOracle.setFailed(1);
         _tl();
-        vm.expectRevert(
-            abi.encodeWithSelector(IParameterStoreErrors.OracleConfigRejected.selector, address(lpOracle), 1)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.OracleConfigRejected.selector, address(lpOracle), 1));
         store.setBorrowPriceMaxAge(f, 1000);
     }
 
@@ -123,10 +119,10 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         FeedDef memory wide = _feedDef(86_400, 1800);
         wide.feedDeviationThresholdBps = 76; // 76 + 25 + 50 = 151 > 150
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setFeed(address(fUsdc), wide);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.LivenessBound.selector);
+        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.setFeedAgreementMarginBps(101);
         _tl();
         store.setFeedAgreementMarginBps(100);
@@ -142,21 +138,21 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         // The pool's buffer must hold 151 observations.
         pool.setCardinality(150);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setInitialMarketParams(M, _defaultMarketParams());
         pool.setCardinality(151);
         integration.set(true, false, false, ShapeKind.TickRange);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setInitialMarketParams(M, _defaultMarketParams());
         integration.set(true, true, true, ShapeKind.TickRange);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setInitialMarketParams(M, _defaultMarketParams());
         // An AMM protocol without a time-weighted price takes only twapWindow = 0.
         integration.set(false, true, false, ShapeKind.FullPool);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setInitialMarketParams(M, _defaultMarketParams());
         MarketParams memory noTwap = _defaultMarketParams();
         noTwap.twapWindow = 0;
@@ -165,7 +161,7 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         assertEq(store.twapMinObservations(M), 0);
         _activate();
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotInListing.selector);
+        vm.expectRevert(IParameterStoreBase.NotInListing.selector);
         store.setInitialMarketParams(M, noTwap);
     }
 
@@ -174,19 +170,19 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         _listMarket();
         MarketParams memory p = _defaultMarketParams();
         p.consistencyToleranceBps = 9;
-        _initialParamsRevert(p, IParameterStoreErrors.LivenessBound.selector);
+        _initialParamsRevert(p, IParameterStoreBase.LivenessBound.selector);
         p = _defaultMarketParams();
         p.slippageAllowanceBps = 29;
-        _initialParamsRevert(p, IParameterStoreErrors.LivenessBound.selector);
+        _initialParamsRevert(p, IParameterStoreBase.LivenessBound.selector);
         p = _defaultMarketParams();
         p.poolRiskFactor = 9001;
-        _initialParamsRevert(p, IParameterStoreErrors.OutOfBounds.selector);
+        _initialParamsRevert(p, IParameterStoreBase.OutOfBounds.selector);
         p = _defaultMarketParams();
         p.minPledgeUsd = 100_000e8 + 1;
-        _initialParamsRevert(p, IParameterStoreErrors.OutOfBounds.selector);
+        _initialParamsRevert(p, IParameterStoreBase.OutOfBounds.selector);
         p = _defaultMarketParams();
         p.hardHealthFloor = 0.99e18;
-        _initialParamsRevert(p, IParameterStoreErrors.OutOfBounds.selector);
+        _initialParamsRevert(p, IParameterStoreBase.OutOfBounds.selector);
         // Listing margin: CF_LP = ⌊7,500 × 4,000 / 10⁴⌋ = 3,000; 10⁴ − 3,000 = 7,000 > 50 for every route. A route
         // of deviation + drift ≥ margin is refused, both when the market's parameters are written and, once they are,
         // when a feed change thins the margin (setFeed re-runs SPEC-CF-004 for the market).
@@ -196,7 +192,7 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         _tl();
         store.setFeedAgreementToleranceBps(usdc, 200);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setFeed(address(fUsdcAlt), wide);
         // A market whose parameters are not written yet has no margin to re-run: the feed change passes, and
         // setInitialMarketParams then refuses the factor that leaves no margin.
@@ -211,7 +207,7 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         _tl();
         store.setFeed(address(fUsdcAlt), wide);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setInitialMarketParams(2, _defaultMarketParams());
         p = _defaultMarketParams();
         p.poolRiskFactor = 3999; // CF_LP 2,999: margin 7,001 > 7,000
@@ -236,20 +232,20 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         assertEq(store.stressFloorUsd(M), 1e8);
         address h = address(hub);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotInListing.selector);
+        vm.expectRevert(IParameterStoreBase.NotInListing.selector);
         store.setInitialTokenCap(h, usdc, 1);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.TokenNotListed.selector, alice));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.TokenNotListed.selector, alice));
         store.setInitialTokenCap(h, alice, 1);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownHub.selector, bob));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownHub.selector, bob));
         store.setInitialTokenCap(bob, usdt, 1);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setInitialMarketCaps(M, 1e8, 2e8, 1e8);
         _activate();
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotInListing.selector);
+        vm.expectRevert(IParameterStoreBase.NotInListing.selector);
         store.setInitialMarketCaps(M, 1e8, 0, 1e8);
     }
 
@@ -262,10 +258,10 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         _tl();
         store.tightenTokenUsdCap(h, usdc, 0);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotInListing.selector);
+        vm.expectRevert(IParameterStoreBase.NotInListing.selector);
         store.setInitialTokenCap(h, usdc, 20_000_000e8);
         bytes memory tokenStep = abi.encodeWithSelector(
-            IParameterStoreErrors.LoosenStepTooLarge.selector,
+            IParameterStoreBase.LoosenStepTooLarge.selector,
             keccak256(abi.encode(bytes32("tokenUsdCap"), _pairKey(h, usdc)))
         );
         _tl();
@@ -279,12 +275,12 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         _tl();
         store.tightenMarketUsdCap(M, 0);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.NotInListing.selector);
+        vm.expectRevert(IParameterStoreBase.NotInListing.selector);
         store.setInitialMarketCaps(M, 5_000_000e8, 0, 1e8);
         _tl();
         vm.expectRevert(
             abi.encodeWithSelector(
-                IParameterStoreErrors.LoosenStepTooLarge.selector,
+                IParameterStoreBase.LoosenStepTooLarge.selector,
                 keccak256(abi.encode(bytes32("marketUsdCap"), bytes32(M)))
             )
         );
@@ -307,18 +303,18 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         _activate();
         // Lowering: (5M + 0.5M) / $0.50 = 11M tokens > addCap 10M.
         _tl();
-        vm.expectRevert(IParameterStoreErrors.AddCapTooSmall.selector);
+        vm.expectRevert(IParameterStoreBase.AddCapTooSmall.selector);
         store.setStressFloorUsd(M, 0.5e8);
         _tl();
         store.setStressFloorUsd(M, 0.6e8);
         vaultToken.setSupply(1);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.SupplyNotZero.selector, M));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.SupplyNotZero.selector, M));
         store.setStressFloorUsd(M, 1e8);
         vaultToken.setSupply(0);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreEvents.StressFloorSet(M, 0.6e8, 1e8);
+        emit IParameterStoreBase.StressFloorSet(M, 0.6e8, 1e8);
         store.setStressFloorUsd(M, 1e8);
     }
 
@@ -371,10 +367,10 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         store.setTwapWindow(M, 3600);
         assertEq(store.twapMinObservations(M), 301);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setTwapWindow(M, 0);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setTwapWindow(M, 12_000);
     }
 
@@ -382,14 +378,14 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
     function test_TEST_250_ethereumSequencerIsEmpty() public {
         assertEq(store.CHAIN_BLOCK_TIME(), 12);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreChain.InvalidSequencerFeed.selector, address(fUsdc)));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStore.InvalidSequencerFeed.selector, address(fUsdc)));
         store.setSequencer(address(fUsdc), 3600);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setSequencer(address(0), 1);
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreChain.SequencerSet(address(0), 0);
+        emit IParameterStore.SequencerSet(address(0), 0);
         store.setSequencer(address(0), 0);
     }
 
@@ -400,7 +396,7 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         store.setCoverageRatioBps(2000);
         assertEq(store.coverageRatioBps(), 2000);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setCoverageRatioBps(10_001);
     }
 
@@ -412,13 +408,13 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
         assertEq(store.aaveTargetHealthFactor(s), 1.1e18);
         assertEq(store.minLiquidationBonus(s), 200);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setLiquidationExpectations(s, 1e18, 200);
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setLiquidationExpectations(s, 1.1e18, 199);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownSpoke.selector, alice));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownSpoke.selector, alice));
         store.setLiquidationExpectations(alice, 1.1e18, 200);
     }
 
@@ -435,7 +431,7 @@ contract ParameterStoreListingUnitTest is ParameterStoreFixture {
     // TEST-250 verifies: REQ-PSTORE-011
     function test_TEST_250_unknownMarketIsRefused() public {
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreErrors.UnknownMarket.selector, 2));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownMarket.selector, 2));
         store.setTwapWindow(2, 1800);
         assertEq(uint8(registry.getMarket(2).status), uint8(MarketStatus.None));
     }
@@ -458,18 +454,18 @@ contract ParameterStoreSequencerUnitTest is ParameterStoreFixture {
         assertEq(grace, 3600);
 
         _tl();
-        vm.expectRevert(IParameterStoreErrors.OutOfBounds.selector);
+        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.setSequencer(address(seq), 599);
         seq.setRound(2, 1_000_000);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreChain.InvalidSequencerFeed.selector, address(seq)));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStore.InvalidSequencerFeed.selector, address(seq)));
         store.setSequencer(address(seq), 3600);
         seq.setRound(1, 0);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreChain.InvalidSequencerFeed.selector, address(seq)));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStore.InvalidSequencerFeed.selector, address(seq)));
         store.setSequencer(address(seq), 3600);
         _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreChain.InvalidSequencerFeed.selector, alice));
+        vm.expectRevert(abi.encodeWithSelector(IParameterStore.InvalidSequencerFeed.selector, alice));
         store.setSequencer(alice, 3600);
     }
 

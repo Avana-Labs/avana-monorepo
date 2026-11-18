@@ -4,11 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {ILPVaultSwapEvents} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapEvents.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
-import {DebtReserveDef} from "../../src/policy/market-registry/types/DebtReserveDef.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -99,7 +97,7 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
         for (uint256 i = 0; i < logs.length; ++i) {
             if (
                 logs[i].emitter == address(lvs) && logs[i].topics.length != 0
-                    && logs[i].topics[0] == ILPVaultSwapEvents.DeficitSurplusFunded.selector
+                    && logs[i].topics[0] == ILPVaultSwapBase.DeficitSurplusFunded.selector
             ) {
                 assertFalse(seen, "one DeficitSurplusFunded per call");
                 seen = true;
@@ -436,6 +434,6 @@ contract LPVaultSwapBadDebtIntegrationTest is LPVaultSwapUnitBase {
     // TEST-055 verifies: REQ-SWAP-030, REQ-SWAP-077
     function test_TEST_055_zeroRepaymentRefused() public {
         lpOracle.setAnswer(100_000_000);
-        _expectLiquidateRevert(keeper, _params(proxy, 0), _err(ILPVaultSwapErrors.InvalidAmount.selector));
+        _expectLiquidateRevert(keeper, _params(proxy, 0), _err(ILPVaultSwapBase.InvalidAmount.selector));
     }
 }

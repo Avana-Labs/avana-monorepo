@@ -5,12 +5,9 @@ pragma solidity 0.8.28;
 
 import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
-import {LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
-import {ClPriceStateView} from "../../src/oracle/lp-oracle/types/ClPriceStateView.sol";
-import {InitParams} from "../../src/oracle/lp-oracle/types/InitParams.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
+import {ClPriceStateView, InitParams, LPOracleCodes} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
+import {PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
 import {LPOracleV4Fixture} from "../utils/fixtures/LPOracleV4Fixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
@@ -105,7 +102,7 @@ contract LPOracleV4UnitTest is LPOracleV4Fixture {
     ) internal {
         address impl = address(implementation);
         bytes memory init = abi.encodeCall(ILPOracle.initialize, (_withMarket(market)));
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, MARKET));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, MARKET));
         new ERC1967Proxy(impl, init);
     }
 

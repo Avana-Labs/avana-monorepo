@@ -3,11 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {SecondSource} from "../../types/SecondSource.sol";
+import {OracleConfig, SecondSource} from "../../types/OracleTypes.sol";
 import {LPOracleCLModuleLogic} from "./LPOracleCLModuleLogic.sol";
 import {LPOracleCLPool} from "./LPOracleCLPool.sol";
-import {ClPriceStateView} from "./types/ClPriceStateView.sol";
+import {ClPriceStateView} from "./LPOracleTypes.sol";
 
 /// @title LPOracleCLModuleCaller
 /// @notice Runs a logic contract's concentrated-liquidity pricing hooks in `LPOracleCLModuleLogic` by delegatecall.

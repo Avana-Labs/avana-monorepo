@@ -3,12 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PoolKeying} from "../../src/amm/types/PoolKeying.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
-import {MarketDef} from "../../src/types/MarketDef.sol";
-import {PositionShape} from "../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {PoolKeying} from "../../src/amm/types/AmmTypes.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {MarketDef} from "../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
     RegistryAvanaFirstLossReserveMock,
@@ -67,9 +66,9 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
         bytes32 rule = _shapeRule(keying, capKind, hasPool, hasPoolId, sh);
         vm.prank(address(timelock));
         if (rule != 0) {
-            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, rule));
+            vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, rule));
         } else {
-            vm.expectRevert(IMarketRegistryErrors.VaultTokenMismatch.selector);
+            vm.expectRevert(IMarketRegistryBase.VaultTokenMismatch.selector);
         }
         registry.listCollateralMarket(d);
     }
@@ -85,10 +84,10 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
             vm.prank(address(timelock));
             if (deltas[i] <= 0) {
                 vm.expectRevert(
-                    abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("shape"))
+                    abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("shape"))
                 );
             } else {
-                vm.expectRevert(IMarketRegistryErrors.VaultTokenMismatch.selector);
+                vm.expectRevert(IMarketRegistryBase.VaultTokenMismatch.selector);
             }
             registry.listCollateralMarket(d);
         }
@@ -100,10 +99,10 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
             vm.prank(address(timelock));
             if (i < 2) {
                 vm.expectRevert(
-                    abi.encodeWithSelector(IMarketRegistryErrors.ListingCheckFailed.selector, bytes32("shape"))
+                    abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("shape"))
                 );
             } else {
-                vm.expectRevert(IMarketRegistryErrors.VaultTokenMismatch.selector);
+                vm.expectRevert(IMarketRegistryBase.VaultTokenMismatch.selector);
             }
             registry.listCollateralMarket(d);
         }
@@ -117,7 +116,7 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
         address cs
     ) internal {
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidAvanaFirstLossReserve.selector, cs));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidAvanaFirstLossReserve.selector, cs));
         registry.setAvanaFirstLossReserve(h, asset, cs);
     }
 
@@ -141,7 +140,7 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
             address(hub), address(dai), address(new RegistryAvanaFirstLossReserveMock(address(hub), address(dai), 5))
         );
         vm.expectEmit(address(registry));
-        emit IMarketRegistryHubs.AvanaFirstLossReserveSet(address(hub), address(dai), address(good));
+        emit IMarketRegistry.AvanaFirstLossReserveSet(address(hub), address(dai), address(good));
         vm.prank(address(timelock));
         registry.setAvanaFirstLossReserve(address(hub), address(dai), address(good));
         assertEq(registry.firstLossReserveOf(address(hub), address(dai)), address(good));
@@ -151,7 +150,7 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
         );
         // The recorded First-Loss Reserve is protected from the address freeze.
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ProtectedAddress.selector, address(good)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, address(good)));
         registry.freezeAddress(address(good));
     }
 
@@ -178,20 +177,20 @@ contract MarketRegistryShapeAndCoverageUnitTest is MarketRegistryFixture {
         vm.startPrank(address(timelock));
         factory.registerIntegration(2, address(v2));
         vm.expectEmit(address(registry));
-        emit IMarketRegistryHubs.IntegrationRegistered(2, address(v2), pricing2);
+        emit IMarketRegistry.IntegrationRegistered(2, address(v2), pricing2);
         registry.registerIntegration(2, address(v2), pricing2);
         // The V3 LPVault cannot be pinned again under a new id.
         RegistryLPVaultMock v3 = new RegistryLPVaultMock(3, address(collat), lockAddr);
         v3.setRegistry(address(registry));
         factory.registerIntegration(3, address(v3));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidIntegration.selector, uint32(3)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, uint32(3)));
         registry.registerIntegration(3, address(lpVault), makeAddr("pricing3"));
         vm.stopPrank();
         assertEq(registry.integrationIdOf(address(v2)), 2);
         vm.startPrank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ProtectedAddress.selector, address(v2)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, address(v2)));
         registry.freezeAddress(address(v2));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ProtectedAddress.selector, pricing2));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, pricing2));
         registry.freezeAddress(pricing2);
         vm.stopPrank();
     }

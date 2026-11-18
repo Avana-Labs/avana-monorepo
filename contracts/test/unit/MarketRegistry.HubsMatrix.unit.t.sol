@@ -3,11 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryApprovals} from "../../src/policy/market-registry/IMarketRegistryApprovals.sol";
-import {IMarketRegistryErrors} from "../../src/policy/market-registry/IMarketRegistryErrors.sol";
-import {IMarketRegistryHubs} from "../../src/policy/market-registry/IMarketRegistryHubs.sol";
-import {RiskTier} from "../../src/policy/market-registry/types/RiskTier.sol";
-import {SpokeDef} from "../../src/policy/market-registry/types/SpokeDef.sol";
+import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
+import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
+import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryAaveOracleMock, RegistryHubMock, RegistrySpokeMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
 import {RegistryFlashSourceMock, RegistryLPVaultMock, RegistryTokenMock} from "../utils/mocks/MarketRegistryMocks.sol";
@@ -79,14 +77,14 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
     function test_TEST_054_integrationContractsCountBound() public {
         address[] memory seventeen = _contracts(17);
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidIntegration.selector, V3));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, V3));
         registry.recordIntegrationContracts(V3, seventeen);
         address[] memory sixteen = new address[](16);
         for (uint256 i = 0; i < 16; ++i) {
             sixteen[i] = seventeen[i];
         }
         vm.expectEmit(address(registry));
-        emit IMarketRegistryApprovals.IntegrationContractsRecorded(V3, _recordKeyOf(V3), sixteen);
+        emit IMarketRegistry.IntegrationContractsRecorded(V3, _recordKeyOf(V3), sixteen);
         vm.prank(address(timelock));
         registry.recordIntegrationContracts(V3, sixteen);
         assertEq(registry.integrationContracts(V3).length, 16);
@@ -107,7 +105,7 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         address[] memory list = _contracts(3);
         list[2] = makeAddr("eoa");
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidIntegration.selector, V3));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, V3));
         registry.recordIntegrationContracts(V3, list);
         assertEq(registry.integrationContracts(V3).length, 0);
         // The first entry was not protected: a guardian can freeze it.
@@ -123,7 +121,7 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         vm.startPrank(address(timelock));
         registry.recordIntegrationContracts(V3, list);
         registry.recordIntegrationContracts(10, list);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidIntegration.selector, uint32(10)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidIntegration.selector, uint32(10)));
         registry.recordIntegrationContracts(10, list);
         vm.stopPrank();
         assertEq(registry.integrationContracts(V3)[0], list[0]);
@@ -142,14 +140,14 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         vm.assume(h != address(0) && h != address(hub) && h != address(hub2) && h != aaveV3Pool);
         RiskTier tier = RiskTier(bound(tierSeed, 1, 3));
         vm.expectEmit(address(registry));
-        emit IMarketRegistryHubs.HubRecorded(h, tier);
+        emit IMarketRegistry.HubRecorded(h, tier);
         vm.prank(address(timelock));
         registry.recordHub(h, tier);
         assertEq(uint8(registry.hubTier(h)), uint8(tier));
         assertTrue(registry.isRecordedHub(h));
         assertEq(registry.getHubs()[2], h);
         vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidHub.selector, h));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidHub.selector, h));
         registry.recordHub(h, tier == RiskTier.Stable ? RiskTier.Volatile : RiskTier.Stable);
         assertEq(uint8(registry.hubTier(h)), uint8(tier), "the tier never changes");
     }
@@ -174,14 +172,12 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
             uint256 total = cur[0] + cur[1] + cur[2] - cur[s] + cap;
             vm.prank(address(timelock));
             if (cap > cur[s] && total > coverage) {
-                vm.expectRevert(
-                    abi.encodeWithSelector(IMarketRegistryHubs.CrossHubCapExceeded.selector, total, coverage)
-                );
+                vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.CrossHubCapExceeded.selector, total, coverage));
                 registry.setCrossHubLine(address(hub), address(gho), spokes[s], cap);
                 continue;
             }
             vm.expectEmit(address(registry));
-            emit IMarketRegistryHubs.CrossHubLineSet(address(hub), address(gho), spokes[s], cap, total);
+            emit IMarketRegistry.CrossHubLineSet(address(hub), address(gho), spokes[s], cap, total);
             registry.setCrossHubLine(address(hub), address(gho), spokes[s], cap);
             cur[s] = cap;
             assertEq(registry.crossHubLineTotal(address(hub), address(gho)), cur[0] + cur[1] + cur[2]);
@@ -197,9 +193,9 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         registry.setCrossHubLinesEnabled(true);
         registry.setCrossHubLine(address(hub), address(gho), spokes[0], 3e24);
         registry.setCrossHubLine(address(hub), address(gho), spokes[1], 1e24);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.CrossHubCapExceeded.selector, 4e24 + 1, 4e24));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.CrossHubCapExceeded.selector, 4e24 + 1, 4e24));
         registry.setCrossHubLine(address(hub), address(gho), spokes[2], 1);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.CrossHubCapExceeded.selector, 1, 0));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.CrossHubCapExceeded.selector, 1, 0));
         registry.setCrossHubLine(address(hub), address(usdc), spokes[2], 1);
         vm.stopPrank();
         assertEq(registry.crossHubLineTotal(address(hub), address(gho)), 4e24);
@@ -212,14 +208,14 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
     function test_TEST_273_switchOffKeepsCapsAndAllowsClosing() public {
         vm.startPrank(address(timelock));
         vm.expectEmit(address(registry));
-        emit IMarketRegistryHubs.CrossHubLinesEnabledSet(true);
+        emit IMarketRegistry.CrossHubLinesEnabledSet(true);
         registry.setCrossHubLinesEnabled(true);
         registry.setCrossHubLine(address(hub), address(gho), spokes[0], 2e24);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryHubs.CrossHubLinesEnabledSet(false);
+        emit IMarketRegistry.CrossHubLinesEnabledSet(false);
         registry.setCrossHubLinesEnabled(false);
         assertEq(registry.crossHubLineCap(address(hub), address(gho), spokes[0]), 2e24);
-        vm.expectRevert(IMarketRegistryHubs.CrossHubLinesDisabled.selector);
+        vm.expectRevert(IMarketRegistry.CrossHubLinesDisabled.selector);
         registry.setCrossHubLine(address(hub), address(gho), spokes[0], 1e24);
         registry.setCrossHubLine(address(hub), address(gho), spokes[0], 0);
         vm.stopPrank();
@@ -231,9 +227,9 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
     function test_TEST_273_noCrossHubLineFromTheHomeHub() public {
         vm.startPrank(address(timelock));
         registry.setCrossHubLinesEnabled(true);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidHub.selector, address(hub2)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidHub.selector, address(hub2)));
         registry.setCrossHubLine(address(hub2), address(gho), spokes[0], 1);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryHubs.InvalidHub.selector, address(hub)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.InvalidHub.selector, address(hub)));
         registry.setCrossHubLine(address(hub), address(gho), address(spoke), 1);
         vm.stopPrank();
     }
@@ -248,15 +244,15 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         RegistryFlashSourceMock hubLender = new RegistryFlashSourceMock(address(hub2), address(lpVaultSwap));
         RegistryFlashSourceMock good = new RegistryFlashSourceMock(makeAddr("otherPool"), address(lpVaultSwap));
         vm.startPrank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setFlashSource(address(0));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setFlashSource(address(wrongSwap));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setFlashSource(address(hubLender));
         assertEq(registry.flashSource(), address(flash));
         vm.expectEmit(address(registry));
-        emit IMarketRegistryHubs.FlashSourceSet(address(flash), address(good));
+        emit IMarketRegistry.FlashSourceSet(address(flash), address(good));
         registry.setFlashSource(address(good));
         // The old source and its lender lose their protection; the new ones gain it.
         vm.stopPrank();
@@ -264,11 +260,11 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         vm.prank(emergencyGuardian);
         registry.freezeAddress(address(flash));
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ProtectedAddress.selector, address(good)));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, address(good)));
         registry.freezeAddress(address(good));
         address otherPool = makeAddr("otherPool");
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryErrors.ProtectedAddress.selector, otherPool));
+        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ProtectedAddress.selector, otherPool));
         registry.freezeAddress(otherPool);
         vm.prank(emergencyGuardian);
         registry.freezeAddress(aaveV3Pool);
@@ -281,14 +277,14 @@ contract MarketRegistryHubsMatrixUnitTest is MarketRegistryFixture {
         address newLender = makeAddr("newLender");
         RegistryFlashSourceMock next = new RegistryFlashSourceMock(newLender, address(lpVaultSwap));
         vm.startPrank(address(timelock));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.recordHub(aaveV3Pool, RiskTier.Volatile);
         registry.setFlashSource(address(next));
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.recordHub(newLender, RiskTier.Volatile);
         registry.recordHub(aaveV3Pool, RiskTier.Volatile);
         // With the old lender now a Hub, the old source can no longer be set back.
-        vm.expectRevert(IMarketRegistryErrors.InvalidRoute.selector);
+        vm.expectRevert(IMarketRegistryBase.InvalidRoute.selector);
         registry.setFlashSource(address(flash));
         vm.stopPrank();
         assertTrue(registry.isRecordedHub(aaveV3Pool));

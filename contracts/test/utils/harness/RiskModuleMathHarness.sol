@@ -3,11 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RiskModuleCalls} from "../../../src/policy/risk-module/RiskModuleCalls.sol";
 import {RiskModuleMath} from "../../../src/policy/risk-module/RiskModuleMath.sol";
 
 /// @title RiskModuleMathHarness
-/// @notice External entry points over `RiskModuleMath` and `RiskModuleCalls` for the fuzz, Halmos and Echidna suites.
+/// @notice External entry points over `RiskModuleMath` and `RiskModuleMath` for the fuzz, Halmos and Echidna suites.
 contract RiskModuleMathHarness {
     function pledgeUsd(
         uint256 units,
@@ -137,7 +136,7 @@ contract RiskModuleMathHarness {
         uint256 callGas
     ) external view returns (bool ok, uint256 length) {
         bytes memory ret;
-        (ok, ret) = RiskModuleCalls.staticRead(target, callGas, abi.encodeWithSignature("paused()"), 32);
+        (ok, ret) = RiskModuleMath.staticRead(target, callGas, abi.encodeWithSignature("paused()"), 32);
         length = ret.length;
     }
 
@@ -146,6 +145,6 @@ contract RiskModuleMathHarness {
         uint256 callGas,
         bytes4 sel
     ) external view returns (bool ok, uint256 word) {
-        (ok, word) = RiskModuleCalls.staticReadWord(target, callGas, abi.encodePacked(sel));
+        (ok, word) = RiskModuleMath.staticReadWord(target, callGas, abi.encodePacked(sel));
     }
 }

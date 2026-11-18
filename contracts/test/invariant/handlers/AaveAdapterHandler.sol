@@ -7,12 +7,11 @@ import {ICollateralization} from "../../../src/custody/collateralization/ICollat
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {IAaveAdapterErrors} from "../../../src/policy/aave-adapter/IAaveAdapterErrors.sol";
-import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/RepayWithCollateralParams.sol";
+import {IAaveAdapterBase} from "../../../src/policy/aave-adapter/IAaveAdapterBase.sol";
+import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
+import {PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
+import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {VaultToken} from "../../../src/vault-token/vault-token/VaultToken.sol";
 import {CollPriceSource} from "../../utils/fixtures/CollateralizationFixture.sol";
 import {AdapterRegistryMock} from "../../utils/mocks/AaveAdapterMocks.sol";

@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapThresholdsFuzzTest
@@ -44,9 +43,7 @@ contract LPVaultSwapThresholdsFuzzTest is LPVaultSwapUnitBase {
         ahead = bound(ahead, 0, 1_000_000);
         LiquidationParams memory p = _params(proxy, 1950e6);
         p.deadline = block.timestamp - back;
-        _expectLiquidateRevert(
-            keeper, p, abi.encodeWithSelector(ILPVaultSwapErrors.DeadlineExpired.selector, p.deadline)
-        );
+        _expectLiquidateRevert(keeper, p, abi.encodeWithSelector(ILPVaultSwapBase.DeadlineExpired.selector, p.deadline));
         p.deadline = block.timestamp + ahead;
         LiquidationResult memory r = _liquidateAs(keeper, p);
         assertGt(r.unitsSeized, 0, "a deadline at or after now settles");
@@ -66,7 +63,7 @@ contract LPVaultSwapThresholdsFuzzTest is LPVaultSwapUnitBase {
         _expectLiquidateRevert(
             keeper,
             p,
-            abi.encodeWithSelector(ILPVaultSwapErrors.PayoutTooLow.selector, probe.keeperOut, probe.keeperOut + extra)
+            abi.encodeWithSelector(ILPVaultSwapBase.PayoutTooLow.selector, probe.keeperOut, probe.keeperOut + extra)
         );
         p.minPayout = probe.keeperOut;
         LiquidationResult memory r = _liquidateAs(keeper, p);
@@ -94,7 +91,7 @@ contract LPVaultSwapThresholdsFuzzTest is LPVaultSwapUnitBase {
         assertEq(probe.recovered + gap, probe.minOut, "the top-up closes the floor exactly");
         p.maxShortfall = gap - 1;
         vm.prank(keeper);
-        vm.expectRevert(ILPVaultSwapErrors.RecoveryBelowFloor.selector);
+        vm.expectRevert(ILPVaultSwapBase.RecoveryBelowFloor.selector);
         lvs.liquidate(p);
         p.maxShortfall = gap;
         uint256 before = usdc.balanceOf(keeper);
@@ -111,7 +108,7 @@ contract LPVaultSwapThresholdsFuzzTest is LPVaultSwapUnitBase {
         uint8 length
     ) public {
         LiquidationParams memory p = _params(proxy, 0);
-        _expectLiquidateRevert(keeper, p, abi.encodeWithSelector(ILPVaultSwapErrors.InvalidAmount.selector));
+        _expectLiquidateRevert(keeper, p, abi.encodeWithSelector(ILPVaultSwapBase.InvalidAmount.selector));
         p.debtToCover = 1950e6;
         uint256 n = bound(length, 0, 8);
         p.minAmounts = new uint256[](n);
@@ -161,7 +158,7 @@ contract LPVaultSwapThresholdsFuzzTest is LPVaultSwapUnitBase {
         vm.assume(caller != address(lvs) && caller != bob && caller != aave.cdpSpoke);
         registry.setFrozen(caller, true);
         _expectLiquidateRevert(
-            caller, _params(proxy, 1950e6), abi.encodeWithSelector(ILPVaultSwapErrors.AddressIsFrozen.selector, caller)
+            caller, _params(proxy, 1950e6), abi.encodeWithSelector(ILPVaultSwapBase.AddressIsFrozen.selector, caller)
         );
         registry.setFrozen(caller, false);
         LiquidationResult memory r = _liquidateAs(caller, _params(proxy, 1950e6));

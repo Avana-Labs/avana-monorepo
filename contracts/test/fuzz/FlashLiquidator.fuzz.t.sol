@@ -4,8 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
-import {IFlashLiquidatorErrors} from "../../src/periphery/flash-liquidator/IFlashLiquidatorErrors.sol";
-import {IFlashLiquidatorEvents} from "../../src/periphery/flash-liquidator/IFlashLiquidatorEvents.sol";
 import {FlashLiquidatorProperties} from "../invariant/echidna/FlashLiquidatorProperties.sol";
 import {FlashLiquidatorFixture} from "../utils/fixtures/FlashLiquidatorFixture.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -106,12 +104,11 @@ contract FlashLiquidatorFuzzTest is FlashLiquidatorFixture {
         e.topUp = keeperOut < owed ? owed - keeperOut : 0;
         e.payout = keeperOut + e.topUp - owed;
         if (e.quote * 10_000 > 10 * c.f) {
-            e.revertData =
-                abi.encodeWithSelector(IFlashLiquidatorErrors.FlashFeeTooHigh.selector, e.quote, c.f * 10 / 10_000);
+            e.revertData = abi.encodeWithSelector(IFlashLiquidator.FlashFeeTooHigh.selector, e.quote, c.f * 10 / 10_000);
         } else if (e.topUp > c.maxTopUp) {
-            e.revertData = abi.encodeWithSelector(IFlashLiquidatorErrors.TopUpExceeded.selector, e.topUp, c.maxTopUp);
+            e.revertData = abi.encodeWithSelector(IFlashLiquidator.TopUpExceeded.selector, e.topUp, c.maxTopUp);
         } else if (e.payout < c.minPayout) {
-            e.revertData = abi.encodeWithSelector(IFlashLiquidatorErrors.PayoutTooLow.selector, e.payout, c.minPayout);
+            e.revertData = abi.encodeWithSelector(IFlashLiquidator.PayoutTooLow.selector, e.payout, c.minPayout);
         }
     }
 
@@ -135,7 +132,7 @@ contract FlashLiquidatorFuzzTest is FlashLiquidatorFixture {
             address(opHelper).call(abi.encodeCall(IFlashLiquidator.flashLiquidate, (_request(x, x, 0, maxTopUp, 0))));
         if (shortBy > bound_) {
             assertFalse(ok);
-            assertEq(ret, abi.encodeWithSelector(IFlashLiquidatorErrors.TopUpExceeded.selector, shortBy, bound_));
+            assertEq(ret, abi.encodeWithSelector(IFlashLiquidator.TopUpExceeded.selector, shortBy, bound_));
             assertEq(usdcToken.balanceOf(safe), x);
         } else {
             assertTrue(ok);
@@ -161,7 +158,7 @@ contract FlashLiquidatorFuzzTest is FlashLiquidatorFixture {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         bool completed;
         for (uint256 i = 0; i < logs.length; ++i) {
-            completed = completed || logs[i].topics[0] == IFlashLiquidatorEvents.FlashLiquidated.selector;
+            completed = completed || logs[i].topics[0] == IFlashLiquidator.FlashLiquidated.selector;
         }
         assertTrue(completed, "a liquidation at 5 bps completes");
         _checkProperties(h);

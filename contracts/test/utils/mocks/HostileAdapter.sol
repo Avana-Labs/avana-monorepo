@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralizationAdapter} from "../../../src/custody/collateralization/ICollateralizationAdapter.sol";
+import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILock} from "../../../src/lock/lock/ILock.sol";
 import {IPositionProxy} from "../../../src/proxy/position-proxy/IPositionProxy.sol";
@@ -90,7 +90,7 @@ contract HostileAdapter is UUPSUpgradeable {
         uint256 units
     ) external {
         ILock(lock).acquire();
-        ICollateralizationAdapter(collateralization).release(proxy, vaultToken, positionKey, units);
+        ICollateralization(collateralization).release(proxy, vaultToken, positionKey, units);
         ILock(lock).release();
     }
 

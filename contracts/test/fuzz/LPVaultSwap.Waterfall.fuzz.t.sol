@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapErrors} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapErrors.sol";
-import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LiquidationParams.sol";
-import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LiquidationResult.sol";
+import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 
 /// @title LPVaultSwapWaterfallFuzzTest
@@ -55,7 +54,7 @@ contract LPVaultSwapWaterfallFuzzTest is LPVaultSwapUnitBase {
         } catch (bytes memory reason) {
             bytes4 s = bytes4(reason);
             assertTrue(
-                s == ILPVaultSwapErrors.RecoveryBelowFloor.selector || s == bytes4(keccak256("MustNotLeaveDust()")),
+                s == ILPVaultSwapBase.RecoveryBelowFloor.selector || s == bytes4(keccak256("MustNotLeaveDust()")),
                 "named refusal"
             );
         }
@@ -70,11 +69,9 @@ contract LPVaultSwapWaterfallFuzzTest is LPVaultSwapUnitBase {
         (address proxy,) = _bobAccount();
         store.setFeeRecipient(address(0));
         uint256 debt = _debtOf(proxy, usdcReserveId);
-        _expectLiquidateRevert(
-            keeper, _params(proxy, debtToCover), _err(ILPVaultSwapErrors.InvalidFeeRecipient.selector)
-        );
+        _expectLiquidateRevert(keeper, _params(proxy, debtToCover), _err(ILPVaultSwapBase.InvalidFeeRecipient.selector));
         assertEq(_debtOf(proxy, usdcReserveId), debt, "nothing repaid");
-        vm.expectRevert(ILPVaultSwapErrors.InvalidFeeRecipient.selector);
+        vm.expectRevert(ILPVaultSwapBase.InvalidFeeRecipient.selector);
         lvs.settlePending(MARKET_ID, usdcReserveId);
     }
 

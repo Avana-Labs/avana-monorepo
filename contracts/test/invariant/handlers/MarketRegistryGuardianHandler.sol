@@ -3,11 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IMarketRegistryEvents} from "../../../src/policy/market-registry/IMarketRegistryEvents.sol";
-import {IMarketRegistrySafetyEvents} from "../../../src/policy/market-registry/IMarketRegistrySafetyEvents.sol";
+import {IMarketRegistryBase} from "../../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
-import {PauseReason} from "../../../src/types/PauseReason.sol";
-import {PauseState} from "../../../src/types/PauseState.sol";
+import {PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -264,13 +262,13 @@ contract MarketRegistryGuardianHandler is CommonBase, StdUtils {
                 Vm.Log memory g = logs[k];
                 if (g.emitter != address(REGISTRY) || g.topics.length < 2) continue;
                 if (g.topics[1] != bytes32(uint256(uint160(_hubs[i])))) continue;
-                if (g.topics[0] == IMarketRegistryEvents.PauseStateChanged.selector) {
+                if (g.topics[0] == IMarketRegistryBase.PauseStateChanged.selector) {
                     bool exact = g.topics[2] == bytes32(uint256(before.state[i]))
                         && g.topics[3] == bytes32(uint256(afterCall.state[i]))
                         && abi.decode(g.data, (address)) == caller;
                     if (!exact) return false;
                     ++stateLogs;
-                } else if (g.topics[0] == IMarketRegistrySafetyEvents.PauseReasonChanged.selector) {
+                } else if (g.topics[0] == IMarketRegistryBase.PauseReasonChanged.selector) {
                     (PauseReason prev, PauseReason cur) = abi.decode(g.data, (PauseReason, PauseReason));
                     bool exact = prev == before.reason[i] && cur == afterCall.reason[i]
                         && g.topics[2] == bytes32(uint256(uint160(caller)));

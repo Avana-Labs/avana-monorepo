@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PriceState} from "../../src/types/PriceState.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {DebtOracleFixture} from "../utils/fixtures/DebtOracleFixture.sol";
 import {HostileConfig} from "../utils/mocks/DebtOracleConfigMocks.sol";
 import {MockAggregator} from "../utils/mocks/MockAggregator.sol";

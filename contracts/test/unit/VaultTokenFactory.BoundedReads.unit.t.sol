@@ -3,12 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAmmIntegration} from "../../src/amm/IAmmIntegration.sol";
-import {PoolKeying} from "../../src/amm/types/PoolKeying.sol";
+import {PoolKeying} from "../../src/amm/types/AmmTypes.sol";
 import {UniswapV3Integration} from "../../src/amm/uniswap-v3/UniswapV3Integration.sol";
-import {ICollateralizationViews} from "../../src/custody/collateralization/ICollateralizationViews.sol";
+import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
-import {ShapeKind} from "../../src/types/ShapeKind.sol";
+import {ShapeKind} from "../../src/types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {VaultTokenFactoryFixture} from "../utils/fixtures/VaultTokenFactoryFixture.sol";
 import {MockNFPM, MockV3Factory} from "../utils/mocks/UniswapV3Mocks.sol";
@@ -104,13 +103,13 @@ contract VaultTokenFactoryBoundedReadsUnitTest is VaultTokenFactoryFixture {
         _deployFactory();
         vault = new ProgrammableLPVault();
         getters = [
-            IAmmIntegration.INTEGRATION_ID.selector,
-            IAmmIntegration.AMM_PROTOCOL.selector,
+            ILPVault.INTEGRATION_ID.selector,
+            ILPVault.AMM_PROTOCOL.selector,
             ILPVault.COLLATERALIZATION.selector,
             ILPVault.LOCK.selector,
             ILPVault.TIMELOCK.selector,
             ILPVault.MARKET_REGISTRY.selector,
-            IAmmIntegration.capabilities.selector
+            ILPVault.capabilities.selector
         ];
         vault.setAnswer(getters[0], abi.encode(uint256(SLIPSTREAM_ID)));
         vault.setAnswer(getters[1], abi.encode(AERODROME_SLIPSTREAM));
@@ -169,22 +168,22 @@ contract VaultTokenFactoryBoundedReadsUnitTest is VaultTokenFactoryFixture {
     function test_TEST_024_collateralizationGettersAreBoundedToo() public {
         // Collateralization answering its own getters with 1 MB, a long or a short answer fails every registration.
         ProgrammableLPVault coll = new ProgrammableLPVault();
-        coll.setAnswer(ICollateralizationViews.ADAPTER.selector, abi.encode(adapter));
-        coll.setAnswer(ICollateralizationViews.LP_VAULT_SWAP.selector, abi.encode(address(lpVaultSwap)));
-        coll.setAnswer(ICollateralizationViews.LOCK.selector, abi.encode(lock));
+        coll.setAnswer(ICollateralization.ADAPTER.selector, abi.encode(adapter));
+        coll.setAnswer(ICollateralization.LP_VAULT_SWAP.selector, abi.encode(address(lpVaultSwap)));
+        coll.setAnswer(ICollateralization.LOCK.selector, abi.encode(lock));
         IVaultTokenFactory f = IVaultTokenFactory(
             deployCode(
                 "VaultTokenFactory.sol:VaultTokenFactory:default",
                 abi.encode(adapter, address(lpVaultSwap), address(coll), address(timelock), address(marketRegistry))
             )
         );
-        coll.setAnswer(ICollateralizationViews.VAULT_TOKEN_FACTORY.selector, abi.encode(address(f)));
+        coll.setAnswer(ICollateralization.VAULT_TOKEN_FACTORY.selector, abi.encode(address(f)));
         vault.setAnswer(getters[2], abi.encode(address(coll)));
         bytes4[4] memory sels = [
-            ICollateralizationViews.VAULT_TOKEN_FACTORY.selector,
-            ICollateralizationViews.ADAPTER.selector,
-            ICollateralizationViews.LP_VAULT_SWAP.selector,
-            ICollateralizationViews.LOCK.selector
+            ICollateralization.VAULT_TOKEN_FACTORY.selector,
+            ICollateralization.ADAPTER.selector,
+            ICollateralization.LP_VAULT_SWAP.selector,
+            ICollateralization.LOCK.selector
         ];
         ProgrammableLPVault.Mode[3] memory bad =
             [ProgrammableLPVault.Mode.Oversized, ProgrammableLPVault.Mode.Long, ProgrammableLPVault.Mode.Short];

@@ -3,11 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {SecondSource} from "../../types/SecondSource.sol";
+import {SecondSource} from "../../types/OracleTypes.sol";
 import {LPOracleCLModule} from "./LPOracleCLModule.sol";
 import {LPOracleCLPool} from "./LPOracleCLPool.sol";
 import {LPOracleStorage} from "./LPOracleStorage.sol";
-import {ClPriceStateView} from "./types/ClPriceStateView.sol";
+import {ClPriceStateView} from "./LPOracleTypes.sol";
 
 /// @title LPOracleCLModuleLogic
 /// @notice The concentrated-liquidity pricing module as one immutable logic contract, run by delegatecall.

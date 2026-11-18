@@ -4,12 +4,11 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
-import {BackingRecord} from "../../../src/custody/collateralization/types/BackingRecord.sol";
+import {BackingRecord} from "../../../src/custody/collateralization/types/CollateralizationTypes.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
-import {PositionShape} from "../../../src/types/PositionShape.sol";
-import {ShapeKind} from "../../../src/types/ShapeKind.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {VaultToken} from "../../../src/vault-token/vault-token/VaultToken.sol";
 import {CollLPVaultMock, CollOracleMock, CollPoolToken, CollRiskModuleMock} from "../mocks/CollateralizationMocks.sol";

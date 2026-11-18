@@ -3,9 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
+import {PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
 import {LPOracleFixture} from "../utils/fixtures/LPOracleFixture.sol";
 import {ReadMode} from "../utils/mocks/LPOracleMocks.sol";
 
@@ -104,7 +103,7 @@ contract LPOraclePriceUnitTest is LPOracleFixture {
         // A caller who leaves less than the pre-call bound gets InsufficientGas, never a stricter state.
         (bool ok, bytes memory ret) = address(oracle).staticcall{gas: 120_000}(abi.encodeCall(oracle.latestAnswer, ()));
         assertFalse(ok);
-        assertEq(bytes4(ret), ILPOracleErrors.InsufficientGas.selector);
+        assertEq(bytes4(ret), ILPOracleBase.InsufficientGas.selector);
     }
 
     // TEST-038 verifies: REQ-ORACLE-001, REQ-ORACLE-061, Q-056

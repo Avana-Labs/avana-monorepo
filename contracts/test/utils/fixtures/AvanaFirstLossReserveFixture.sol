@@ -5,7 +5,6 @@ pragma solidity 0.8.28;
 
 import {AvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {IAvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
-import {IAvanaFirstLossReserveAdmin} from "../../../src/coverage/first-loss-reserve/IAvanaFirstLossReserveAdmin.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {MockDebtAsset} from "../mocks/MockDebtAsset.sol";
 import {AaveV4Fixture} from "./AaveV4Fixture.sol";
@@ -86,7 +85,7 @@ interface ICoverageHubSpokeCalls {
 /// `drawCap = 0`, holding `HUB_DEFICIT_ELIMINATOR_ROLE`, allowlisting the CDP Spoke and funded by Avana Labs to its
 /// minimum.
 /// @dev Roles live in the Aave DAO's AccessManager: `coverDeficit` maps to `COVERAGE_ROLE` (held by `coverageCaller`)
-/// and the `IAvanaFirstLossReserveAdmin` functions to `RESERVE_ADMIN_ROLE` (held by `aaveGovernanceExecutor`). The role IDs
+/// and the `IAvanaFirstLossReserve` functions to `RESERVE_ADMIN_ROLE` (held by `aaveGovernanceExecutor`). The role IDs
 /// are fixture values in the 500 range, outside Aave's Hub, Spoke and configurator ranges; the DAO's payload fixes
 /// the deployed ones. Deficits are recorded by the real Hub: a drawing Spoke is pranked to `draw` and then
 /// `reportDeficit`, the two calls a liquidation that leaves no collateral makes.
@@ -192,11 +191,11 @@ abstract contract AvanaFirstLossReserveFixture is AaveV4Fixture {
         bytes4[] memory coverage = new bytes4[](1);
         coverage[0] = IAvanaFirstLossReserve.coverDeficit.selector;
         bytes4[] memory admin = new bytes4[](5);
-        admin[0] = IAvanaFirstLossReserveAdmin.setAllowedBorrowSpoke.selector;
-        admin[1] = IAvanaFirstLossReserveAdmin.setFirstLossReserveMinimum.selector;
-        admin[2] = IAvanaFirstLossReserveAdmin.requestWithdrawal.selector;
-        admin[3] = IAvanaFirstLossReserveAdmin.cancelWithdrawal.selector;
-        admin[4] = IAvanaFirstLossReserveAdmin.executeWithdrawal.selector;
+        admin[0] = IAvanaFirstLossReserve.setAllowedBorrowSpoke.selector;
+        admin[1] = IAvanaFirstLossReserve.setFirstLossReserveMinimum.selector;
+        admin[2] = IAvanaFirstLossReserve.requestWithdrawal.selector;
+        admin[3] = IAvanaFirstLossReserve.cancelWithdrawal.selector;
+        admin[4] = IAvanaFirstLossReserve.executeWithdrawal.selector;
         IAccessManager manager = IAccessManager(aave.accessManager);
         vm.startPrank(aaveDao);
         manager.setTargetFunctionRole(cs, coverage, COVERAGE_ROLE);

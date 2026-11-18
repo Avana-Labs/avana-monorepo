@@ -7,14 +7,14 @@ import {IUniswapV3Integration} from "../../../src/amm/uniswap-v3/IUniswapV3Integ
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {AvanaTimelock} from "../../../src/governance/timelock/AvanaTimelock.sol";
-import {GovernedTargets} from "../../../src/governance/timelock/types/GovernedTargets.sol";
-import {SelectorPair} from "../../../src/governance/timelock/types/SelectorPair.sol";
+import {GovernedTargets, SelectorPair} from "../../../src/governance/timelock/IAvanaTimelock.sol";
 import {INonfungiblePositionManager} from "../../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
 import {ILens} from "../../../src/lens/lens/ILens.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {ILPVaultSwapAdmin} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapAdmin.sol";
-import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapImmutables.sol";
-import {LPVaultSwapLogics} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapLogics.sol";
+import {
+    LPVaultSwapImmutables,
+    LPVaultSwapLogics
+} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {Lock} from "../../../src/lock/lock/Lock.sol";
 import {AaveAdapter} from "../../../src/policy/aave-adapter/AaveAdapter.sol";
 import {AaveAdapterCollateralLogic} from "../../../src/policy/aave-adapter/AaveAdapterCollateralLogic.sol";
@@ -22,8 +22,7 @@ import {AaveAdapterExitLogic} from "../../../src/policy/aave-adapter/AaveAdapter
 import {AaveAdapterSettlementLogic} from "../../../src/policy/aave-adapter/AaveAdapterSettlementLogic.sol";
 import {AaveAdapterUserLogic} from "../../../src/policy/aave-adapter/AaveAdapterUserLogic.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterImmutables.sol";
-import {AaveAdapterLogics} from "../../../src/policy/aave-adapter/types/AaveAdapterLogics.sol";
+import {AaveAdapterImmutables, AaveAdapterLogics} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {MarketRegistryActivationLogic} from "../../../src/policy/market-registry/MarketRegistryActivationLogic.sol";
 import {MarketRegistryHubsLogic} from "../../../src/policy/market-registry/MarketRegistryHubsLogic.sol";
@@ -31,18 +30,18 @@ import {MarketRegistryListingLogic} from "../../../src/policy/market-registry/Ma
 import {MarketRegistryRoutesLogic} from "../../../src/policy/market-registry/MarketRegistryRoutesLogic.sol";
 import {MarketRegistrySafetyLogic} from "../../../src/policy/market-registry/MarketRegistrySafetyLogic.sol";
 import {MarketRegistryWindDownLogic} from "../../../src/policy/market-registry/MarketRegistryWindDownLogic.sol";
-import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryImmutables.sol";
-import {MarketRegistryLogics} from "../../../src/policy/market-registry/types/MarketRegistryLogics.sol";
+import {
+    MarketRegistryImmutables,
+    MarketRegistryLogics
+} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
-import {IParameterStoreAdmin} from "../../../src/policy/parameter-store/IParameterStoreAdmin.sol";
 import {ParameterStore} from "../../../src/policy/parameter-store/ParameterStore.sol";
 import {ParameterStoreAdminOracleLogic} from "../../../src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol";
 import {ParameterStoreAdminRiskLogic} from "../../../src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol";
 import {ParameterStoreListingLogic} from "../../../src/policy/parameter-store/ParameterStoreListingLogic.sol";
 import {ParameterStoreLoosenLogic} from "../../../src/policy/parameter-store/ParameterStoreLoosenLogic.sol";
 import {ParameterStoreTightenLogic} from "../../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
-import {GlobalParams} from "../../../src/policy/parameter-store/types/GlobalParams.sol";
-import {ParameterStoreLogics} from "../../../src/policy/parameter-store/types/ParameterStoreLogics.sol";
+import {GlobalParams, ParameterStoreLogics} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {RiskModule} from "../../../src/policy/risk-module/RiskModule.sol";
 import {RiskModuleBorrowLogic} from "../../../src/policy/risk-module/RiskModuleBorrowLogic.sol";
 import {RiskModuleBreakerLogic} from "../../../src/policy/risk-module/RiskModuleBreakerLogic.sol";
@@ -50,8 +49,7 @@ import {RiskModuleDriftLogic} from "../../../src/policy/risk-module/RiskModuleDr
 import {RiskModulePledgeLogic} from "../../../src/policy/risk-module/RiskModulePledgeLogic.sol";
 import {RiskModuleSpeedLogic} from "../../../src/policy/risk-module/RiskModuleSpeedLogic.sol";
 import {RiskModuleStatusLogic} from "../../../src/policy/risk-module/RiskModuleStatusLogic.sol";
-import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleImmutables.sol";
-import {RiskModuleLogics} from "../../../src/policy/risk-module/types/RiskModuleLogics.sol";
+import {RiskModuleImmutables, RiskModuleLogics} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {ProxyManager} from "../../../src/proxy/proxy-manager/ProxyManager.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {AdapterPlaceholder} from "../mocks/AaveAdapterMocks.sol";
@@ -252,7 +250,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         address[] memory keepers = new address[](1);
         keepers[0] = keeper;
         AdapterPlaceholder(lpVaultSwap)
-            .upgradeToAndCall(impl, abi.encodeCall(ILPVaultSwapAdmin.initialize, (address(timelock), keepers)));
+            .upgradeToAndCall(impl, abi.encodeCall(ILPVaultSwap.initialize, (address(timelock), keepers)));
         lvs = ILPVaultSwap(lpVaultSwap);
     }
 
@@ -382,7 +380,7 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         ParameterStore impl = new ParameterStore(tl, registryAddr, BLOCK_TIME, false, l);
         AdapterPlaceholder(storeAddr)
             .upgradeToAndCall(
-                address(impl), abi.encodeCall(IParameterStoreAdmin.initialize, (tl, _globals(), POOL_SHARE_MAX_BPS))
+                address(impl), abi.encodeCall(IParameterStore.initialize, (tl, _globals(), POOL_SHARE_MAX_BPS))
             );
         store = IParameterStore(storeAddr);
     }

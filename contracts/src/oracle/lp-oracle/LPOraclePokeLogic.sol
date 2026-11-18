@@ -3,11 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {PriceState} from "../../types/PriceState.sol";
+import {OracleConfig, PriceState} from "../../types/OracleTypes.sol";
 import {ILPOracleLogic} from "./ILPOracleLogic.sol";
 import {LPOracleLogicBase} from "./LPOracleLogicBase.sol";
-import {InitParams} from "./types/InitParams.sol";
+import {InitParams} from "./LPOracleTypes.sol";
 
 /// @title LPOraclePokeLogic
 /// @notice The LPOracle's writing call, run by delegatecall; the implementation checks `pokeMinGas` first.

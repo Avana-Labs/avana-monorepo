@@ -5,19 +5,15 @@ pragma solidity 0.8.28;
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
-import {ILPOracleErrors} from "../../src/oracle/lp-oracle/ILPOracleErrors.sol";
+import {ILPOracleBase} from "../../src/oracle/lp-oracle/ILPOracleBase.sol";
 import {LPOracleCL} from "../../src/oracle/lp-oracle/LPOracleCL.sol";
 import {LPOracleCLListingLogic} from "../../src/oracle/lp-oracle/LPOracleCLListingLogic.sol";
 import {LPOracleCLModuleLogic} from "../../src/oracle/lp-oracle/LPOracleCLModuleLogic.sol";
 import {LPOracleCLPokeLogic} from "../../src/oracle/lp-oracle/LPOracleCLPokeLogic.sol";
 import {LPOracleCLViewLogic} from "../../src/oracle/lp-oracle/LPOracleCLViewLogic.sol";
-import {ClPriceStateView} from "../../src/oracle/lp-oracle/types/ClPriceStateView.sol";
-import {LPOracleLogicSet} from "../../src/oracle/lp-oracle/types/LPOracleLogicSet.sol";
-import {Market} from "../../src/types/Market.sol";
-import {OracleConfig} from "../../src/types/OracleConfig.sol";
-import {PriceState} from "../../src/types/PriceState.sol";
-import {PriceStateView} from "../../src/types/PriceStateView.sol";
-import {SecondSourceKind} from "../../src/types/SecondSourceKind.sol";
+import {ClPriceStateView, LPOracleLogicSet} from "../../src/oracle/lp-oracle/LPOracleTypes.sol";
+import {Market} from "../../src/types/MarketTypes.sol";
+import {OracleConfig, PriceState, PriceStateView, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {LPOracleCLDeployer, LPOracleCLFixture} from "../utils/fixtures/LPOracleCLFixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -287,7 +283,7 @@ contract LPOracleCLModuleTest is LPOracleCLFixture {
     function _expectInitRevert() internal {
         LPOracleCL impl = LPOracleCLDeployer.deploy(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7);
         bytes memory init = abi.encodeCall(ILPOracle.initialize, (_params()));
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, MARKET));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, MARKET));
         new ERC1967Proxy(address(impl), init);
     }
 
@@ -328,17 +324,17 @@ contract LPOracleCLModuleTest is LPOracleCLFixture {
         address m6 = _module(6);
         address poke = address(new LPOracleCLPokeLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, m7));
         address views = address(new LPOracleCLViewLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 6, m6));
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, 0));
         new LPOracleCL(
             tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, m7, LPOracleLogicSet(poke, poke, poke, views)
         );
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, 0));
         new LPOracleCLModuleLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 5);
         // A logic contract refuses a module of another layout or other chain constants.
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, 0));
         new LPOracleCLPokeLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, m6);
         address otherChain = address(new LPOracleCLModuleLogic(tl, 2, POKE_FLOOR, POKE_CEILING, false, 7));
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, 0));
         new LPOracleCLPokeLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, otherChain);
     }
 
@@ -354,7 +350,7 @@ contract LPOracleCLModuleTest is LPOracleCLFixture {
     /// module refuses direct calls, and nothing writes the address later (an immutable; no setter exists).
     function test_TEST_306_moduleContractCannotBeSwapped() public {
         address m = _module(7);
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, 0));
         new LPOracleCLPokeLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, address(0xBEEF));
         vm.expectRevert();
         new LPOracleCLPokeLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, address(this));
@@ -362,15 +358,15 @@ contract LPOracleCLModuleTest is LPOracleCLFixture {
         address poke = address(new LPOracleCLPokeLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, m));
         address listing = address(new LPOracleCLListingLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, other));
         address views = address(new LPOracleCLViewLogic(tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, m));
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, 0));
         new LPOracleCL(
             tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, m, LPOracleLogicSet(poke, poke, listing, views)
         );
-        vm.expectRevert(abi.encodeWithSelector(ILPOracleErrors.MarketMismatch.selector, 0));
+        vm.expectRevert(abi.encodeWithSelector(ILPOracleBase.MarketMismatch.selector, 0));
         new LPOracleCL(
             tl, BLOCK_TIME, POKE_FLOOR, POKE_CEILING, false, 7, other, LPOracleLogicSet(poke, poke, poke, views)
         );
-        vm.expectRevert(ILPOracleErrors.NotDelegated.selector);
+        vm.expectRevert(ILPOracleBase.NotDelegated.selector);
         LPOracleCLModuleLogic(m).isOwnPool(bytes32(0));
         _deployClMarket(_ethUsdc());
         address fixed_ = implementation.MODULE_LOGIC();

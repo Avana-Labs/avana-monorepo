@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {PositionRef} from "../../../src/types/PositionRef.sol";
+import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {VaultToken} from "../../../src/vault-token/vault-token/VaultToken.sol";
 import {CollPriceSource} from "../../utils/fixtures/CollateralizationFixture.sol";
 import {CollLPVaultMock, CollPoolToken} from "../../utils/mocks/CollateralizationMocks.sol";

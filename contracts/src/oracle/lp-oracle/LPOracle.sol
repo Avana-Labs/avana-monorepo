@@ -4,19 +4,15 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
-import {IMarketRegistryStandby} from "../../policy/market-registry/IMarketRegistryStandby.sol";
-import {OracleConfig} from "../../types/OracleConfig.sol";
-import {PriceState} from "../../types/PriceState.sol";
-import {PriceStateView} from "../../types/PriceStateView.sol";
+import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
+import {OracleConfig, PriceState, PriceStateView} from "../../types/OracleTypes.sol";
 import {ILPOracle} from "./ILPOracle.sol";
 import {ILPOracleLogic} from "./ILPOracleLogic.sol";
-import {ILPOracleRouter} from "./ILPOracleRouter.sol";
 import {LPOracleCalls} from "./LPOracleCalls.sol";
 import {LPOracleListing} from "./LPOracleListing.sol";
 import {LPOracleStorage} from "./LPOracleStorage.sol";
+import {InitParams, LPOracleLogicSet} from "./LPOracleTypes.sol";
 import {LPPriceMath} from "./LPPriceMath.sol";
-import {InitParams} from "./types/InitParams.sol";
-import {LPOracleLogicSet} from "./types/LPOracleLogicSet.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
@@ -27,7 +23,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// @title LPOracle
 /// @notice AMM-neutral price-state core of one market's price feed.
 /// @dev UUPS proxy; only the timelock can upgrade it. Only `initialize` and `poke()` write price state.
-abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeable, UUPSUpgradeable, LPOracleListing {
+abstract contract LPOracle is ILPOracle, AccessControlUpgradeable, UUPSUpgradeable, LPOracleListing {
     address internal immutable _POKE_LOGIC;
     address internal immutable _LISTING_LOGIC;
     address internal immutable _INIT_LOGIC;
@@ -116,10 +112,7 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
         address token
     ) private view returns (uint64 version) {
         (bool ok, bytes memory ret) = LPOracleCalls.staticRead(
-            _s().marketRegistry,
-            CONFIG_CALL_GAS,
-            abi.encodeCall(IMarketRegistryStandby.priceRouteVersion, (token)),
-            WORD
+            _s().marketRegistry, CONFIG_CALL_GAS, abi.encodeCall(IMarketRegistry.priceRouteVersion, (token)), WORD
         );
         uint256 value = 0;
         if (ok) (ok, value) = LPOracleCalls.uintAt(ret, 0, type(uint64).max);
@@ -253,22 +246,22 @@ abstract contract LPOracle is ILPOracle, ILPOracleRouter, AccessControlUpgradeab
         }
     }
 
-    /// @inheritdoc ILPOracleRouter
+    /// @inheritdoc ILPOracle
     function POKE_LOGIC() external view override returns (address logic) {
         logic = _POKE_LOGIC;
     }
 
-    /// @inheritdoc ILPOracleRouter
+    /// @inheritdoc ILPOracle
     function LISTING_LOGIC() external view override returns (address logic) {
         logic = _LISTING_LOGIC;
     }
 
-    /// @inheritdoc ILPOracleRouter
+    /// @inheritdoc ILPOracle
     function INIT_LOGIC() external view override returns (address logic) {
         logic = _INIT_LOGIC;
     }
 
-    /// @inheritdoc ILPOracleRouter
+    /// @inheritdoc ILPOracle
     function VIEW_LOGIC() external view override returns (address logic) {
         logic = _VIEW_LOGIC;
     }
