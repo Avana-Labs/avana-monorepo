@@ -4,9 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
-import {IAvanaTimelockErrors} from "../../src/governance/timelock/IAvanaTimelockErrors.sol";
-import {GovernedTargets} from "../../src/governance/timelock/types/GovernedTargets.sol";
-import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
+import {GovernedTargets, IAvanaTimelock, SelectorPair} from "../../src/governance/timelock/IAvanaTimelock.sol";
 import {AaveAdapter} from "../../src/policy/aave-adapter/AaveAdapter.sol";
 import {AaveAdapterCollateralLogic} from "../../src/policy/aave-adapter/AaveAdapterCollateralLogic.sol";
 import {AaveAdapterExitLogic} from "../../src/policy/aave-adapter/AaveAdapterExitLogic.sol";
@@ -88,9 +86,7 @@ contract AaveAdapterUpgradeRowsUnitTest is AaveAdapterFixture {
     function test_TEST_191_adapterUpgradeLeavesEveryProxyAndDrivesIt() public {
         address impl = _newImplementation();
         bytes memory data = abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (impl, ""));
-        vm.expectRevert(
-            abi.encodeWithSelector(IAvanaTimelockErrors.DelayBelowRequired.selector, 12 hours, NORMAL_DELAY)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.DelayBelowRequired.selector, 12 hours, NORMAL_DELAY));
         vm.prank(governanceMultisig);
         tl.schedule(adapter, 0, data, bytes32(0), bytes32("upgrade"), 12 hours);
 

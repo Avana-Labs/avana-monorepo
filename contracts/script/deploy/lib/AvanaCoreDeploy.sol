@@ -3,8 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {GovernedTargets} from "../../../src/governance/timelock/types/GovernedTargets.sol";
-import {SelectorPair} from "../../../src/governance/timelock/types/SelectorPair.sol";
+import {GovernedTargets, SelectorPair} from "../../../src/governance/timelock/IAvanaTimelock.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";

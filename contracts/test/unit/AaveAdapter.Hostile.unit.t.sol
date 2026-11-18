@@ -5,8 +5,7 @@ pragma solidity 0.8.28;
 
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
-import {GovernedTargets} from "../../src/governance/timelock/types/GovernedTargets.sol";
-import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
+import {GovernedTargets, SelectorPair} from "../../src/governance/timelock/IAvanaTimelock.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";

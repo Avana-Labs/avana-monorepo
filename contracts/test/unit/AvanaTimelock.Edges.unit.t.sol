@@ -4,11 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaTimelock} from "../../src/governance/timelock/AvanaTimelock.sol";
-import {IAvanaTimelockErrors} from "../../src/governance/timelock/IAvanaTimelockErrors.sol";
-import {IAvanaTimelockEvents} from "../../src/governance/timelock/IAvanaTimelockEvents.sol";
-import {IAvanaTimelockGovernance} from "../../src/governance/timelock/IAvanaTimelockGovernance.sol";
-import {GovernedTargets} from "../../src/governance/timelock/types/GovernedTargets.sol";
-import {SelectorPair} from "../../src/governance/timelock/types/SelectorPair.sol";
+import {GovernedTargets, IAvanaTimelock, SelectorPair} from "../../src/governance/timelock/IAvanaTimelock.sol";
 import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../src/policy/market-registry/IMarketRegistryRoutes.sol";
@@ -79,14 +75,11 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         TimelockFixture.Call[] memory revoke = _self(abi.encodeCall(IAccessControl.revokeRole, (EXECUTOR, address(0))));
         bytes32 id = _scheduleAndWait(revoke);
         assertTrue(timelock.isRoleChangeOperation(id), "would be DAO-only to cancel");
-        _execRevert(revoke, abi.encodeWithSelector(IAvanaTimelockErrors.PublicExecutionOnlyByToggle.selector));
+        _execRevert(revoke, abi.encodeWithSelector(IAvanaTimelock.PublicExecutionOnlyByToggle.selector));
         assertTrue(timelock.publicExecution(), "still public");
         // The toggle itself is an ordinary operation: every canceller may stop it.
         bytes32 off = _schedule(
-            governanceMultisig,
-            _self(abi.encodeCall(IAvanaTimelockGovernance.togglePublicExecution, (false))),
-            NORMAL_DELAY,
-            SALT
+            governanceMultisig, _self(abi.encodeCall(IAvanaTimelock.togglePublicExecution, (false))), NORMAL_DELAY, SALT
         );
         assertFalse(timelock.isRoleChangeOperation(off));
         vm.prank(emergencyGuardian);
@@ -95,20 +88,20 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
 
     // TEST-194 verifies: REQ-ACCESS-144, REQ-ACCESS-183
     function test_TEST_194_grantOfOpenExecutorRefused() public {
-        _run(_self(abi.encodeCall(IAvanaTimelockGovernance.togglePublicExecution, (false))), SALT);
+        _run(_self(abi.encodeCall(IAvanaTimelock.togglePublicExecution, (false))), SALT);
         TimelockFixture.Call[] memory grant = _self(abi.encodeCall(IAccessControl.grantRole, (EXECUTOR, address(0))));
         _schedule(governanceMultisig, grant, NORMAL_DELAY, SALT);
         vm.warp(block.timestamp + NORMAL_DELAY);
         (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(grant);
         vm.prank(governanceMultisig);
-        vm.expectRevert(IAvanaTimelockErrors.PublicExecutionOnlyByToggle.selector);
+        vm.expectRevert(IAvanaTimelock.PublicExecutionOnlyByToggle.selector);
         timelock.executeBatch(t, v, p, bytes32(0), SALT);
         assertFalse(timelock.publicExecution());
     }
 
     // TEST-194 verifies: REQ-ACCESS-144
     function test_TEST_194_toggleToSameValueEmitsNothing() public {
-        TimelockFixture.Call[] memory on = _self(abi.encodeCall(IAvanaTimelockGovernance.togglePublicExecution, (true)));
+        TimelockFixture.Call[] memory on = _self(abi.encodeCall(IAvanaTimelock.togglePublicExecution, (true)));
         _schedule(governanceMultisig, on, NORMAL_DELAY, SALT);
         vm.warp(block.timestamp + NORMAL_DELAY);
         vm.recordLogs();
@@ -125,12 +118,12 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         TimelockFixture.Call[] memory revoke =
             _self(abi.encodeCall(IAccessControl.revokeRole, (admin, address(timelock))));
         _scheduleAndWait(revoke);
-        _execRevert(revoke, abi.encodeWithSelector(IAvanaTimelockErrors.TimelockAdminRequired.selector));
+        _execRevert(revoke, abi.encodeWithSelector(IAvanaTimelock.TimelockAdminRequired.selector));
         TimelockFixture.Call[] memory renounce =
             _self(abi.encodeCall(IAccessControl.renounceRole, (admin, address(timelock))));
         _schedule(governanceMultisig, renounce, NORMAL_DELAY, SALT);
         vm.warp(block.timestamp + NORMAL_DELAY);
-        _execRevert(renounce, abi.encodeWithSelector(IAvanaTimelockErrors.TimelockAdminRequired.selector));
+        _execRevert(renounce, abi.encodeWithSelector(IAvanaTimelock.TimelockAdminRequired.selector));
         assertTrue(timelock.hasRole(admin, address(timelock)));
     }
 
@@ -173,7 +166,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         address[] memory exec = _list(governanceMultisig);
         address[] memory canc = _list(emergencyGuardian, aaveGuardian);
         address[] memory dao = _list(aaveGovernanceExecutor);
-        bytes4 err = IAvanaTimelockErrors.InvalidRoleHolders.selector;
+        bytes4 err = IAvanaTimelock.InvalidRoleHolders.selector;
         vm.expectRevert(err);
         _deployWith(_list(governanceMultisig), exec, canc, dao); // one proposer
         vm.expectRevert(err);
@@ -195,9 +188,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
     ) internal {
         SelectorPair[] memory one = new SelectorPair[](1);
         one[0] = SelectorPair(target, selector);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAvanaTimelockErrors.InvalidShortDelaySelector.selector, target, selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.InvalidShortDelaySelector.selector, target, selector));
         _newTimelockWith(NORMAL_DELAY, true, one, new SelectorPair[](0), _targets());
     }
 
@@ -207,9 +198,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
     ) internal {
         SelectorPair[] memory one = new SelectorPair[](1);
         one[0] = SelectorPair(target, selector);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAvanaTimelockErrors.InvalidDaoCancelSelector.selector, target, selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.InvalidDaoCancelSelector.selector, target, selector));
         _newTimelockWith(NORMAL_DELAY, true, new SelectorPair[](0), one, _targets());
     }
 
@@ -270,12 +259,12 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
             GovernedTargets(c, b, c)
         ];
         for (uint256 i = 0; i < bad.length; ++i) {
-            vm.expectRevert(IAvanaTimelockErrors.InvalidGovernedTargets.selector);
+            vm.expectRevert(IAvanaTimelock.InvalidGovernedTargets.selector);
             new AvanaTimelock(proposers, executors, cancellers, dao, NORMAL_DELAY, true, none, none, bad[i]);
         }
         // The timelock's own (predicted) address as a target.
         address self = vm.computeCreateAddress(address(this), vm.getNonce(address(this)));
-        vm.expectRevert(IAvanaTimelockErrors.InvalidGovernedTargets.selector);
+        vm.expectRevert(IAvanaTimelock.InvalidGovernedTargets.selector);
         new AvanaTimelock(
             proposers, executors, cancellers, dao, NORMAL_DELAY, true, none, none, GovernedTargets(a, self, c)
         );
@@ -292,9 +281,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         // A loosening selector at the last index of the short list.
         shortList[shortList.length - 1] = SelectorPair(address(parameterStore), loosen);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IAvanaTimelockErrors.InvalidShortDelaySelector.selector, address(parameterStore), loosen
-            )
+            abi.encodeWithSelector(IAvanaTimelock.InvalidShortDelaySelector.selector, address(parameterStore), loosen)
         );
         _newTimelock(NORMAL_DELAY, true, shortList, dao);
         // A short-list selector that is not one of the four DAO-only selectors, at index 2.
@@ -304,7 +291,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         dao[2] = SelectorPair(address(marketRegistry), IMarketRegistryRoutes.disableRoute.selector);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAvanaTimelockErrors.InvalidDaoCancelSelector.selector,
+                IAvanaTimelock.InvalidDaoCancelSelector.selector,
                 address(marketRegistry),
                 IMarketRegistryRoutes.disableRoute.selector
             )
@@ -313,7 +300,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         dao[2] = SelectorPair(address(marketRegistry), setPriceSource);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAvanaTimelockErrors.InvalidDaoCancelSelector.selector, address(marketRegistry), setPriceSource
+                IAvanaTimelock.InvalidDaoCancelSelector.selector, address(marketRegistry), setPriceSource
             )
         );
         _newTimelock(NORMAL_DELAY, true, shortList, dao);
@@ -346,9 +333,9 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].emitter != emitter || logs[i].topics.length == 0) continue;
             bytes32 topic = logs[i].topics[0];
-            if (topic == IAvanaTimelockEvents.NormalDelayChanged.selector) ++normal;
-            if (topic == IAvanaTimelockEvents.ShortDelaySelectorSet.selector) ++shortSet;
-            if (topic == IAvanaTimelockEvents.PublicExecutionToggled.selector) {
+            if (topic == IAvanaTimelock.NormalDelayChanged.selector) ++normal;
+            if (topic == IAvanaTimelock.ShortDelaySelectorSet.selector) ++shortSet;
+            if (topic == IAvanaTimelock.PublicExecutionToggled.selector) {
                 ++toggled;
                 assertFalse(abi.decode(logs[i].data, (bool)));
             }
@@ -358,13 +345,12 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
     // TEST-244 verifies: REQ-ACCESS-141, REQ-ACCESS-029
     function test_TEST_244_setShortDelaySelectorEmits() public {
         bytes4 cap = IParameterStoreTighten.tightenMarketUsdCap.selector;
-        TimelockFixture.Call[] memory off = _self(
-            abi.encodeCall(IAvanaTimelockGovernance.setShortDelaySelector, (address(parameterStore), cap, false))
-        );
+        TimelockFixture.Call[] memory off =
+            _self(abi.encodeCall(IAvanaTimelock.setShortDelaySelector, (address(parameterStore), cap, false)));
         _schedule(governanceMultisig, off, NORMAL_DELAY, SALT);
         vm.warp(block.timestamp + NORMAL_DELAY);
         vm.expectEmit(true, true, false, true, address(timelock));
-        emit IAvanaTimelockEvents.ShortDelaySelectorSet(address(parameterStore), cap, false);
+        emit IAvanaTimelock.ShortDelaySelectorSet(address(parameterStore), cap, false);
         _execute(attacker, off, SALT);
     }
 
@@ -377,7 +363,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         bytes32 id = _schedule(governanceMultisig, calls, delay, SALT);
         assertEq(timelock.getTimestamp(id), type(uint256).max);
         assertFalse(timelock.isOperationExpired(id), "view never reverts");
-        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.OperationNotExpired.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.OperationNotExpired.selector, id));
         timelock.cleanupExpiredOperation(id);
         vm.prank(emergencyGuardian);
         timelock.cancel(id);
@@ -398,7 +384,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         bytes32 restoreId = timelock.hashOperation(address(marketRegistry), 0, restore, bytes32(0), SALT);
         assertTrue(timelock.isRestoringOperation(restoreId));
         vm.prank(aaveGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.RestoringCancelRestricted.selector, restoreId));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.RestoringCancelRestricted.selector, restoreId));
         timelock.cancel(restoreId);
         vm.prank(aaveGovernanceExecutor);
         timelock.cancel(restoreId);
@@ -412,15 +398,15 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         timelock.schedule(address(other), 0, data, bytes32(0), SALT, NORMAL_DELAY);
         bytes32 id = timelock.hashOperation(address(other), 0, data, bytes32(0), SALT);
         vm.warp(block.timestamp + NORMAL_DELAY + GRACE_PERIOD);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.OperationExpired.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.OperationExpired.selector, id));
         timelock.execute(address(other), 0, data, bytes32(0), SALT);
         timelock.cleanupExpiredOperation(id);
-        _run(_self(abi.encodeCall(IAvanaTimelockGovernance.togglePublicExecution, (false))), SALT);
+        _run(_self(abi.encodeCall(IAvanaTimelock.togglePublicExecution, (false))), SALT);
         vm.prank(governanceMultisig);
         timelock.schedule(address(other), 0, data, bytes32(0), SALT, NORMAL_DELAY);
         vm.warp(block.timestamp + NORMAL_DELAY);
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.ExecutionNotPublic.selector, attacker));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.ExecutionNotPublic.selector, attacker));
         timelock.execute(address(other), 0, data, bytes32(0), SALT);
         vm.prank(governanceMultisig);
         timelock.execute(address(other), 0, data, bytes32(0), SALT);
@@ -458,7 +444,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         TimelockFixture.Call[] memory stale = _one(address(other), hex"0e0e0e0e");
         bytes32 staleId = _schedule(governanceMultisig, stale, NORMAL_DELAY, SALT);
         ReentrantTarget target = new ReentrantTarget();
-        target.arm(timelock, abi.encodeCall(IAvanaTimelockGovernance.cleanupExpiredOperation, (staleId)));
+        target.arm(timelock, abi.encodeCall(IAvanaTimelock.cleanupExpiredOperation, (staleId)));
         TimelockFixture.Call[] memory calls = _one(address(target), hex"02");
         vm.warp(block.timestamp + NORMAL_DELAY + GRACE_PERIOD - NORMAL_DELAY);
         _schedule(governanceMultisig, calls, NORMAL_DELAY, SALT);
@@ -487,7 +473,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         timelock.scheduleBatch(t, v, p, bytes32(0), SALT, NORMAL_DELAY);
         timelock.cleanupExpiredOperation(id);
         // Double clean-up and cancel after clean-up both fail.
-        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.OperationNotExpired.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.OperationNotExpired.selector, id));
         timelock.cleanupExpiredOperation(id);
         vm.prank(aaveGovernanceExecutor);
         vm.expectRevert();
@@ -502,7 +488,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         _schedule(governanceMultisig, role, NORMAL_DELAY, SALT);
         assertTrue(timelock.isRoleChangeOperation(id));
         vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.RoleChangeCancelRestricted.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.RoleChangeCancelRestricted.selector, id));
         timelock.cancel(id);
     }
 
@@ -554,10 +540,8 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         uint256 toggledOn;
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].emitter != address(on) || logs[i].topics.length == 0) continue;
-            if (
-                logs[i].topics[0] == IAvanaTimelockEvents.PublicExecutionToggled.selector
-                    && abi.decode(logs[i].data, (bool))
-            ) ++toggledOn;
+            if (logs[i].topics[0] == IAvanaTimelock.PublicExecutionToggled.selector && abi.decode(logs[i].data, (bool)))
+            ++toggledOn;
         }
         assertEq(toggledOn, 1, "PublicExecutionToggled(true)");
         assertTrue(on.publicExecution());
@@ -598,7 +582,7 @@ contract AvanaTimelockEdgesUnitTest is TimelockFixture {
         (three[0], three[1], three[2]) = (governanceMultisig, aaveGovernanceExecutor, bob);
         AvanaTimelock t = _deployWith(three, exec, canc, dao);
         assertTrue(t.hasRole(t.PROPOSER_ROLE(), bob));
-        vm.expectRevert(IAvanaTimelockErrors.InvalidRoleHolders.selector);
+        vm.expectRevert(IAvanaTimelock.InvalidRoleHolders.selector);
         _deployWith(_list(aaveGovernanceExecutor), exec, canc, dao);
     }
 }

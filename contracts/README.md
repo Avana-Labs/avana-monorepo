@@ -168,7 +168,7 @@ Callers import only the piece they call, for example `IRiskModule` for `checkPle
 | LPVaultSwap | `ILPVaultSwapKeeper`, `ILPVaultSwapPermissionless`, `ILPVaultSwap`, `ILPVaultSwap`, `ILPVaultSwap` |
 | RiskModule | `IRiskModule`, `IRiskModule`, `IRiskModule` |
 | PositionProxy | `IPositionProxy` |
-| AvanaTimelock | `IAvanaTimelockGovernance` (self-call setters, expired-operation clean-up), `IAvanaTimelockViews` |
+| AvanaTimelock | `IAvanaTimelock` (self-call setters, expired-operation clean-up), `IAvanaTimelock` |
 | Lens | `ILensAccount`, `ILensMarket`, `ILensLiquidation`, `ILensPreview`, `ILensRisk`; the dependency getters are declared on `ILens` |
 | LPOracle | `ILPOracle`, `ILPOracleCL` |
 | DebtOracle | `IDebtOracle` |

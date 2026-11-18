@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {IAvanaTimelockErrors} from "../../src/governance/timelock/IAvanaTimelockErrors.sol";
+import {IAvanaTimelock} from "../../src/governance/timelock/IAvanaTimelock.sol";
 import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LPVaultSwap} from "../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
@@ -223,7 +223,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
                 abi.encodeWithSelector(
                     r.short
                         ? TimelockController.TimelockInsufficientDelay.selector
-                        : IAvanaTimelockErrors.DelayBelowRequired.selector,
+                        : IAvanaTimelock.DelayBelowRequired.selector,
                     expected - 1,
                     expected
                 )
@@ -276,11 +276,11 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             assertEq(timelock.isRoleChangeOperation(id), roleChange, "role-change mark");
             assertEq(timelock.isRestoringOperation(id), r.daoOnly, "restoring mark");
             if (roleChange) {
-                vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.RoleChangeCancelRestricted.selector, id));
+                vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.RoleChangeCancelRestricted.selector, id));
                 vm.prank(emergencyGuardian);
                 timelock.cancel(id);
             } else if (r.daoOnly) {
-                vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.RestoringCancelRestricted.selector, id));
+                vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.RestoringCancelRestricted.selector, id));
                 vm.prank(emergencyGuardian);
                 timelock.cancel(id);
             }
@@ -352,8 +352,8 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
                     vm.expectRevert(
                         abi.encodeWithSelector(
                             o == 4
-                                ? IAvanaTimelockErrors.RoleChangeCancelRestricted.selector
-                                : IAvanaTimelockErrors.RestoringCancelRestricted.selector,
+                                ? IAvanaTimelock.RoleChangeCancelRestricted.selector
+                                : IAvanaTimelock.RestoringCancelRestricted.selector,
                             id
                         )
                     );
@@ -392,16 +392,14 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             abi.encodeCall(IAccessControl.revokeRole, (AvanaRoles.APPLICATION_PAUSE_GUARDIAN, emergencyGuardian))
         );
         assertEq(_required(calls), NORMAL_DELAY);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAvanaTimelockErrors.DelayBelowRequired.selector, SHORT_DELAY, NORMAL_DELAY)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.DelayBelowRequired.selector, SHORT_DELAY, NORMAL_DELAY));
         this.scheduleAs(governanceMultisig, calls, SHORT_DELAY, bytes32(0));
         uint256 ts = block.timestamp;
         bytes32 id = _schedule(governanceMultisig, calls, NORMAL_DELAY, bytes32(0));
         assertTrue(timelock.isRoleChangeOperation(id));
         address[2] memory guardians = [emergencyGuardian, aaveGuardian];
         for (uint256 g; g < guardians.length; ++g) {
-            vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.RoleChangeCancelRestricted.selector, id));
+            vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.RoleChangeCancelRestricted.selector, id));
             vm.prank(guardians[g]);
             timelock.cancel(id);
         }
@@ -435,7 +433,7 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         assertEq(_required(calls), NORMAL_DELAY, "never short");
         bytes32 id = _schedule(governanceMultisig, calls, NORMAL_DELAY, bytes32(0));
         assertTrue(timelock.isRoleChangeOperation(id));
-        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.RoleChangeCancelRestricted.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.RoleChangeCancelRestricted.selector, id));
         vm.prank(emergencyGuardian);
         timelock.cancel(id);
         vm.warp(block.timestamp + NORMAL_DELAY);

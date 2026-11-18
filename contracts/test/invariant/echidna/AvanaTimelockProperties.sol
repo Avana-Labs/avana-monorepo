@@ -4,8 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaTimelock} from "../../../src/governance/timelock/AvanaTimelock.sol";
-import {IAvanaTimelockGovernance} from "../../../src/governance/timelock/IAvanaTimelockGovernance.sol";
-import {GovernedTargets} from "../../../src/governance/timelock/types/GovernedTargets.sol";
+import {GovernedTargets, IAvanaTimelock} from "../../../src/governance/timelock/IAvanaTimelock.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {IMarketRegistryRoutes} from "../../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStoreTighten} from "../../../src/policy/parameter-store/IParameterStoreTighten.sol";
@@ -195,9 +194,9 @@ contract AvanaTimelockProperties {
             return (address(SWAP), abi.encodeWithSelector(ILPVaultSwap.addKeeper.selector, address(3)));
         }
         if (kind == 5) {
-            return (address(TL), abi.encodeCall(IAvanaTimelockGovernance.setNormalDelay, (TL.MIN_NORMAL_DELAY())));
+            return (address(TL), abi.encodeCall(IAvanaTimelock.setNormalDelay, (TL.MIN_NORMAL_DELAY())));
         }
-        if (kind == 6) return (address(TL), abi.encodeCall(IAvanaTimelockGovernance.togglePublicExecution, (false)));
+        if (kind == 6) return (address(TL), abi.encodeCall(IAvanaTimelock.togglePublicExecution, (false)));
         return (address(MR), abi.encodeWithSelector(IMarketRegistryRoutes.disableRoute.selector, 7));
     }
 

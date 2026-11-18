@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {AvanaTimelock} from "../../../src/governance/timelock/AvanaTimelock.sol";
-import {IAvanaTimelockGovernance} from "../../../src/governance/timelock/IAvanaTimelockGovernance.sol";
+import {IAvanaTimelock} from "../../../src/governance/timelock/IAvanaTimelock.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {IMarketRegistryRoutes} from "../../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStoreTighten} from "../../../src/policy/parameter-store/IParameterStoreTighten.sol";
@@ -219,14 +219,14 @@ contract TimelockHandler is CommonBase, StdUtils {
         if (kind == 5) return _pack(SWAP, abi.encodeWithSelector(ILPVaultSwap.addKeeper.selector, address(3)));
         if (kind == 6) {
             uint256 d = TL.normalDelay() == TL.MAX_DELAY() ? TL.MIN_NORMAL_DELAY() : TL.MAX_DELAY();
-            return _pack(address(TL), abi.encodeCall(IAvanaTimelockGovernance.setNormalDelay, (d)));
+            return _pack(address(TL), abi.encodeCall(IAvanaTimelock.setNormalDelay, (d)));
         }
         if (kind == 7) return _pack(MR, abi.encodeWithSelector(IMarketRegistryRoutes.disableRoute.selector, 7));
         if (kind == 8) {
-            return _pack(address(TL), abi.encodeCall(IAvanaTimelockGovernance.togglePublicExecution, (false)));
+            return _pack(address(TL), abi.encodeCall(IAvanaTimelock.togglePublicExecution, (false)));
         }
         if (kind == 9) {
-            return _pack(address(TL), abi.encodeCall(IAvanaTimelockGovernance.togglePublicExecution, (true)));
+            return _pack(address(TL), abi.encodeCall(IAvanaTimelock.togglePublicExecution, (true)));
         }
         if (kind == 10) {
             return _pack(address(TL), abi.encodeCall(IAccessControl.revokeRole, (TL.DEFAULT_ADMIN_ROLE(), address(TL))));
@@ -237,8 +237,7 @@ contract TimelockHandler is CommonBase, StdUtils {
         return _pack(
             address(TL),
             abi.encodeCall(
-                IAvanaTimelockGovernance.setShortDelaySelector,
-                (PS, IParameterStoreTighten.tightenMinPledgeUsd.selector, false)
+                IAvanaTimelock.setShortDelaySelector, (PS, IParameterStoreTighten.tightenMinPledgeUsd.selector, false)
             )
         );
     }

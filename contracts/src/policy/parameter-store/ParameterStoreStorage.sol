@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAvanaTimelockViews} from "../../governance/timelock/IAvanaTimelockViews.sol";
+import {IAvanaTimelock} from "../../governance/timelock/IAvanaTimelock.sol";
 import {Market} from "../../types/Market.sol";
 import {SecondSource} from "../../types/SecondSource.sol";
 import {SequencerConfig} from "../../types/SequencerConfig.sol";
@@ -199,7 +199,7 @@ abstract contract ParameterStoreStorage is IParameterStoreBase {
         bytes32 key = keccak256(abi.encode(name, scope));
         uint256 last = _s().lastLoosenedAt[key];
         if (last != 0) {
-            uint256 nextAt = last + IAvanaTimelockViews(_TIMELOCK).normalDelay();
+            uint256 nextAt = last + IAvanaTimelock(_TIMELOCK).normalDelay();
             if (block.timestamp < nextAt) revert LoosenTooSoon(key, nextAt);
         }
         // Block timestamps stay far below 2^64 seconds.

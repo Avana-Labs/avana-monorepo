@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAvanaTimelockErrors} from "../../src/governance/timelock/IAvanaTimelockErrors.sol";
+import {IAvanaTimelock} from "../../src/governance/timelock/IAvanaTimelock.sol";
 import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
@@ -54,9 +54,7 @@ contract ParameterStoreTimelockRowsUnitTest is ParameterStoreFixture {
         Call[] memory down = _one(address(store), abi.encodeCall(store.loosenMinPledgeUsd, (M, 10e8)));
         assertEq(_required(down), NORMAL_DELAY, "loosen needs the normal delay");
         (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(down);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAvanaTimelockErrors.DelayBelowRequired.selector, SHORT_DELAY, NORMAL_DELAY)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.DelayBelowRequired.selector, SHORT_DELAY, NORMAL_DELAY));
         vm.prank(governanceMultisig);
         timelock.scheduleBatch(t, v, p, bytes32(0), bytes32("short"), SHORT_DELAY);
         _run(down, bytes32("down"));

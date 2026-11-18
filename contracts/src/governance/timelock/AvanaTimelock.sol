@@ -4,12 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../roles/AvanaRoles.sol";
-import {IAvanaTimelock} from "./IAvanaTimelock.sol";
-import {IAvanaTimelockGovernance} from "./IAvanaTimelockGovernance.sol";
-import {IAvanaTimelockViews} from "./IAvanaTimelockViews.sol";
+import {GovernedTargets, IAvanaTimelock, SelectorPair} from "./IAvanaTimelock.sol";
 import {TimelockSelectors} from "./TimelockSelectors.sol";
-import {GovernedTargets} from "./types/GovernedTargets.sol";
-import {SelectorPair} from "./types/SelectorPair.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 
 /// @title AvanaTimelock
@@ -17,15 +13,15 @@ import {TimelockController} from "@openzeppelin/contracts/governance/TimelockCon
 /// operation depends on its calldata, with a 14-day execution window.
 /// @dev Not upgradeable; the timelock is its own only `DEFAULT_ADMIN_ROLE` holder.
 contract AvanaTimelock is TimelockController, IAvanaTimelock {
-    /// @inheritdoc IAvanaTimelockViews
+    /// @inheritdoc IAvanaTimelock
     /// @dev 12 hours, or `TEST_NETWORK_DELAY` on a test network.
     uint256 public immutable override SHORT_DELAY;
-    /// @inheritdoc IAvanaTimelockViews
+    /// @inheritdoc IAvanaTimelock
     uint256 public constant override MAX_DELAY = 432_000;
-    /// @inheritdoc IAvanaTimelockViews
+    /// @inheritdoc IAvanaTimelock
     /// @dev 4 days, or `TEST_NETWORK_DELAY` on a test network.
     uint256 public immutable override MIN_NORMAL_DELAY;
-    /// @inheritdoc IAvanaTimelockViews
+    /// @inheritdoc IAvanaTimelock
     uint256 public constant override GRACE_PERIOD = 1_209_600;
     /// @notice `SHORT_DELAY` and `MIN_NORMAL_DELAY` on a test network or development node.
     uint256 internal constant TEST_NETWORK_DELAY = 60;
@@ -198,7 +194,7 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
         _clearMarks(id);
     }
 
-    /// @inheritdoc IAvanaTimelockGovernance
+    /// @inheritdoc IAvanaTimelock
     function cleanupExpiredOperation(
         bytes32 id
     ) external override {
@@ -210,7 +206,7 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
 
     // ─── The timelock's own settings (self-calls) ───
 
-    /// @inheritdoc IAvanaTimelockGovernance
+    /// @inheritdoc IAvanaTimelock
     function setNormalDelay(
         uint256 newDelay
     ) external override onlySelf {
@@ -219,7 +215,7 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
         _normalDelay = newDelay;
     }
 
-    /// @inheritdoc IAvanaTimelockGovernance
+    /// @inheritdoc IAvanaTimelock
     function setShortDelaySelector(
         address target,
         bytes4 selector,
@@ -230,7 +226,7 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
         emit ShortDelaySelectorSet(target, selector, enabled);
     }
 
-    /// @inheritdoc IAvanaTimelockGovernance
+    /// @inheritdoc IAvanaTimelock
     function togglePublicExecution(
         bool enabled
     ) external override onlySelf {
@@ -261,12 +257,12 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
         return _cleaned[id] ? 0 : super.getTimestamp(id);
     }
 
-    /// @inheritdoc IAvanaTimelockViews
+    /// @inheritdoc IAvanaTimelock
     function normalDelay() external view override returns (uint256) {
         return _normalDelay;
     }
 
-    /// @inheritdoc IAvanaTimelockViews
+    /// @inheritdoc IAvanaTimelock
     function isShortDelaySelector(
         address target,
         bytes4 selector
@@ -274,7 +270,7 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
         return _shortDelaySelector[target][selector];
     }
 
-    /// @inheritdoc IAvanaTimelockViews
+    /// @inheritdoc IAvanaTimelock
     function isShortEligible(
         address target,
         bytes4 selector
@@ -282,7 +278,7 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
         return _shortEligible[target][selector];
     }
 
-    /// @inheritdoc IAvanaTimelockViews
+    /// @inheritdoc IAvanaTimelock
     function isDaoOnlyCancelSelector(
         address target,
         bytes4 selector
@@ -290,7 +286,7 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
         return _daoCancelSelector[target][selector];
     }
 
-    /// @inheritdoc IAvanaTimelockViews
+    /// @inheritdoc IAvanaTimelock
     function requiredDelay(
         address[] calldata targets,
         bytes[] calldata payloads
@@ -301,12 +297,12 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
         (delay,,) = _classify(targets, payloads);
     }
 
-    /// @inheritdoc IAvanaTimelockViews
+    /// @inheritdoc IAvanaTimelock
     function publicExecution() public view override returns (bool) {
         return hasRole(EXECUTOR_ROLE, address(0));
     }
 
-    /// @inheritdoc IAvanaTimelockViews
+    /// @inheritdoc IAvanaTimelock
     function isOperationExpired(
         bytes32 id
     ) public view override returns (bool) {
@@ -315,14 +311,14 @@ contract AvanaTimelock is TimelockController, IAvanaTimelock {
         return readyAt > _DONE_TIMESTAMP && block.timestamp >= readyAt && block.timestamp - readyAt >= GRACE_PERIOD;
     }
 
-    /// @inheritdoc IAvanaTimelockViews
+    /// @inheritdoc IAvanaTimelock
     function isRoleChangeOperation(
         bytes32 id
     ) external view override returns (bool) {
         return _roleChangeOperation[id];
     }
 
-    /// @inheritdoc IAvanaTimelockViews
+    /// @inheritdoc IAvanaTimelock
     function isRestoringOperation(
         bytes32 id
     ) external view override returns (bool) {

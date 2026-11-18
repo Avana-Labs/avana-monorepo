@@ -7,8 +7,7 @@ import {IUniswapV3Integration} from "../../../src/amm/uniswap-v3/IUniswapV3Integ
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {AvanaTimelock} from "../../../src/governance/timelock/AvanaTimelock.sol";
-import {GovernedTargets} from "../../../src/governance/timelock/types/GovernedTargets.sol";
-import {SelectorPair} from "../../../src/governance/timelock/types/SelectorPair.sol";
+import {GovernedTargets, SelectorPair} from "../../../src/governance/timelock/IAvanaTimelock.sol";
 import {INonfungiblePositionManager} from "../../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
 import {ILens} from "../../../src/lens/lens/ILens.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";

@@ -5,9 +5,8 @@ pragma solidity 0.8.28;
 
 import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {AvanaTimelock} from "../../../src/governance/timelock/AvanaTimelock.sol";
+import {GovernedTargets, SelectorPair} from "../../../src/governance/timelock/IAvanaTimelock.sol";
 import {TimelockSelectors} from "../../../src/governance/timelock/TimelockSelectors.sol";
-import {GovernedTargets} from "../../../src/governance/timelock/types/GovernedTargets.sol";
-import {SelectorPair} from "../../../src/governance/timelock/types/SelectorPair.sol";
 import {AvanaTest} from "../AvanaTest.sol";
 import {CallRecorder} from "../mocks/CallRecorder.sol";
 import {TimelockShortDelayLists} from "./TimelockShortDelayLists.sol";

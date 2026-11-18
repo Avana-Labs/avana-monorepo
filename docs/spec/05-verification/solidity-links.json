@@ -527,51 +527,45 @@
     "AvanaTimelock._delayOn": ["REQ-ACCESS-187"]
   },
   "contracts/src/governance/timelock/IAvanaTimelock.sol": {
-    "IAvanaTimelock": ["REQ-ACCESS-001", "REQ-ACCESS-013", "REQ-ACCESS-016", "REQ-ACCESS-017", "REQ-ACCESS-018", "REQ-ACCESS-019", "REQ-ACCESS-020", "REQ-ACCESS-021", "REQ-ACCESS-114", "REQ-ACCESS-140", "REQ-ACCESS-141", "REQ-ACCESS-142", "REQ-ACCESS-143", "REQ-ACCESS-144", "REQ-ACCESS-153", "REQ-ACCESS-154", "REQ-ACCESS-155", "REQ-ACCESS-156", "REQ-ACCESS-160", "SPEC-GOV-001", "SPEC-GOV-002", "SPEC-GOV-005", "SPEC-GOV-007", "SPEC-GOV-013", "SPEC-GOV-015", "Q-228", "Q-245", "Q-259", "Q-262", "Q-263"]
-  },
-  "contracts/src/governance/timelock/IAvanaTimelockErrors.sol": {
-    "IAvanaTimelockErrors.DelayBelowRequired": ["SPEC-GOV-001", "REQ-ACCESS-117", "REQ-ACCESS-141"],
-    "IAvanaTimelockErrors.DelayOutOfBounds": ["SPEC-GOV-003", "SPEC-GOV-015", "REQ-ACCESS-125", "REQ-ACCESS-154"],
-    "IAvanaTimelockErrors.OperationExpired": ["SPEC-GOV-002", "SPEC-GOV-013", "REQ-ACCESS-118"],
-    "IAvanaTimelockErrors.OperationNotExpired": ["SPEC-GOV-013", "REQ-ACCESS-126"],
-    "IAvanaTimelockErrors.RoleChangeCancelRestricted": ["SPEC-GOV-005", "REQ-ACCESS-019", "REQ-ACCESS-119"],
-    "IAvanaTimelockErrors.RestoringCancelRestricted": ["SPEC-GOV-005", "REQ-ACCESS-119", "REQ-ACCESS-156"],
-    "IAvanaTimelockErrors.AdminRoleOnlyTimelock": ["REQ-ACCESS-153", "REQ-ACCESS-168"],
-    "IAvanaTimelockErrors.ExecutionNotPublic": ["REQ-ACCESS-118", "REQ-ACCESS-144"],
-    "IAvanaTimelockErrors.UpdateDelayDisabled": ["REQ-ACCESS-030", "REQ-ACCESS-125"],
-    "IAvanaTimelockErrors.InvalidShortDelaySelector": ["REQ-ACCESS-142", "REQ-ACCESS-152", "REQ-ACCESS-155"],
-    "IAvanaTimelockErrors.InvalidDaoCancelSelector": ["REQ-ACCESS-181"],
-    "IAvanaTimelockErrors.PublicExecutionOnlyByToggle": ["REQ-ACCESS-144", "REQ-ACCESS-029"],
-    "IAvanaTimelockErrors.TimelockAdminRequired": ["REQ-ACCESS-182", "REQ-ACCESS-001"],
-    "IAvanaTimelockErrors.InvalidRoleHolders": ["REQ-ACCESS-183", "REQ-ACCESS-160"],
-    "IAvanaTimelockErrors.InvalidGovernedTargets": ["REQ-ACCESS-155", "REQ-ACCESS-156"]
-  },
-  "contracts/src/governance/timelock/IAvanaTimelockEvents.sol": {
-    "IAvanaTimelockEvents.NormalDelayChanged": ["SPEC-GOV-003", "REQ-ACCESS-029"],
-    "IAvanaTimelockEvents.ShortDelaySelectorSet": ["REQ-ACCESS-141"],
-    "IAvanaTimelockEvents.PublicExecutionToggled": ["REQ-ACCESS-144"],
-    "IAvanaTimelockEvents.ExpiredOperationCleaned": ["SPEC-GOV-013", "REQ-ACCESS-108"]
-  },
-  "contracts/src/governance/timelock/IAvanaTimelockGovernance.sol": {
-    "IAvanaTimelockGovernance.setNormalDelay": ["SPEC-GOV-003", "SPEC-GOV-015", "REQ-ACCESS-029", "REQ-ACCESS-125", "REQ-ACCESS-154"],
-    "IAvanaTimelockGovernance.setShortDelaySelector": ["REQ-ACCESS-029", "REQ-ACCESS-141", "REQ-ACCESS-142", "REQ-ACCESS-152", "REQ-ACCESS-155"],
-    "IAvanaTimelockGovernance.togglePublicExecution": ["REQ-ACCESS-029", "REQ-ACCESS-144"],
-    "IAvanaTimelockGovernance.cleanupExpiredOperation": ["SPEC-GOV-013", "REQ-ACCESS-126"]
-  },
-  "contracts/src/governance/timelock/IAvanaTimelockViews.sol": {
-    "IAvanaTimelockViews.SHORT_DELAY": ["REQ-ACCESS-140", "REQ-ACCESS-187", "SPEC-GOV-001"],
-    "IAvanaTimelockViews.MAX_DELAY": ["REQ-ACCESS-140", "SPEC-GOV-003"],
-    "IAvanaTimelockViews.MIN_NORMAL_DELAY": ["REQ-ACCESS-140", "REQ-ACCESS-154", "REQ-ACCESS-187", "SPEC-GOV-003", "SPEC-GOV-015"],
-    "IAvanaTimelockViews.GRACE_PERIOD": ["REQ-ACCESS-140", "SPEC-GOV-002", "SPEC-GOV-013"],
-    "IAvanaTimelockViews.normalDelay": ["REQ-ACCESS-140", "SPEC-GOV-003"],
-    "IAvanaTimelockViews.isShortDelaySelector": ["REQ-ACCESS-141"],
-    "IAvanaTimelockViews.isShortEligible": ["REQ-ACCESS-142", "REQ-ACCESS-155", "Q-398", "Q-399"],
-    "IAvanaTimelockViews.isDaoOnlyCancelSelector": ["REQ-ACCESS-156", "SPEC-GOV-005"],
-    "IAvanaTimelockViews.requiredDelay": ["SPEC-GOV-001", "REQ-ACCESS-141"],
-    "IAvanaTimelockViews.publicExecution": ["REQ-ACCESS-144"],
-    "IAvanaTimelockViews.isOperationExpired": ["SPEC-GOV-013"],
-    "IAvanaTimelockViews.isRoleChangeOperation": ["SPEC-GOV-005", "REQ-ACCESS-143"],
-    "IAvanaTimelockViews.isRestoringOperation": ["SPEC-GOV-005", "REQ-ACCESS-156"]
+    "IAvanaTimelock": ["REQ-ACCESS-001", "REQ-ACCESS-013", "REQ-ACCESS-016", "REQ-ACCESS-017", "REQ-ACCESS-018", "REQ-ACCESS-019", "REQ-ACCESS-020", "REQ-ACCESS-021", "REQ-ACCESS-114", "REQ-ACCESS-140", "REQ-ACCESS-141", "REQ-ACCESS-142", "REQ-ACCESS-143", "REQ-ACCESS-144", "REQ-ACCESS-153", "REQ-ACCESS-154", "REQ-ACCESS-155", "REQ-ACCESS-156", "REQ-ACCESS-160", "SPEC-GOV-001", "SPEC-GOV-002", "SPEC-GOV-005", "SPEC-GOV-007", "SPEC-GOV-013", "SPEC-GOV-015", "Q-228", "Q-245", "Q-259", "Q-262", "Q-263"],
+    "IAvanaTimelock.DelayBelowRequired": ["SPEC-GOV-001", "REQ-ACCESS-117", "REQ-ACCESS-141"],
+    "IAvanaTimelock.DelayOutOfBounds": ["SPEC-GOV-003", "SPEC-GOV-015", "REQ-ACCESS-125", "REQ-ACCESS-154"],
+    "IAvanaTimelock.OperationExpired": ["SPEC-GOV-002", "SPEC-GOV-013", "REQ-ACCESS-118"],
+    "IAvanaTimelock.OperationNotExpired": ["SPEC-GOV-013", "REQ-ACCESS-126"],
+    "IAvanaTimelock.RoleChangeCancelRestricted": ["SPEC-GOV-005", "REQ-ACCESS-019", "REQ-ACCESS-119"],
+    "IAvanaTimelock.RestoringCancelRestricted": ["SPEC-GOV-005", "REQ-ACCESS-119", "REQ-ACCESS-156"],
+    "IAvanaTimelock.AdminRoleOnlyTimelock": ["REQ-ACCESS-153", "REQ-ACCESS-168"],
+    "IAvanaTimelock.ExecutionNotPublic": ["REQ-ACCESS-118", "REQ-ACCESS-144"],
+    "IAvanaTimelock.UpdateDelayDisabled": ["REQ-ACCESS-030", "REQ-ACCESS-125"],
+    "IAvanaTimelock.InvalidShortDelaySelector": ["REQ-ACCESS-142", "REQ-ACCESS-152", "REQ-ACCESS-155"],
+    "IAvanaTimelock.InvalidDaoCancelSelector": ["REQ-ACCESS-181"],
+    "IAvanaTimelock.PublicExecutionOnlyByToggle": ["REQ-ACCESS-144", "REQ-ACCESS-029"],
+    "IAvanaTimelock.TimelockAdminRequired": ["REQ-ACCESS-182", "REQ-ACCESS-001"],
+    "IAvanaTimelock.InvalidRoleHolders": ["REQ-ACCESS-183", "REQ-ACCESS-160"],
+    "IAvanaTimelock.InvalidGovernedTargets": ["REQ-ACCESS-155", "REQ-ACCESS-156"],
+    "IAvanaTimelock.NormalDelayChanged": ["SPEC-GOV-003", "REQ-ACCESS-029"],
+    "IAvanaTimelock.ShortDelaySelectorSet": ["REQ-ACCESS-141"],
+    "IAvanaTimelock.PublicExecutionToggled": ["REQ-ACCESS-144"],
+    "IAvanaTimelock.ExpiredOperationCleaned": ["SPEC-GOV-013", "REQ-ACCESS-108"],
+    "IAvanaTimelock.setNormalDelay": ["SPEC-GOV-003", "SPEC-GOV-015", "REQ-ACCESS-029", "REQ-ACCESS-125", "REQ-ACCESS-154"],
+    "IAvanaTimelock.setShortDelaySelector": ["REQ-ACCESS-029", "REQ-ACCESS-141", "REQ-ACCESS-142", "REQ-ACCESS-152", "REQ-ACCESS-155"],
+    "IAvanaTimelock.togglePublicExecution": ["REQ-ACCESS-029", "REQ-ACCESS-144"],
+    "IAvanaTimelock.cleanupExpiredOperation": ["SPEC-GOV-013", "REQ-ACCESS-126"],
+    "IAvanaTimelock.SHORT_DELAY": ["REQ-ACCESS-140", "REQ-ACCESS-187", "SPEC-GOV-001"],
+    "IAvanaTimelock.MAX_DELAY": ["REQ-ACCESS-140", "SPEC-GOV-003"],
+    "IAvanaTimelock.MIN_NORMAL_DELAY": ["REQ-ACCESS-140", "REQ-ACCESS-154", "REQ-ACCESS-187", "SPEC-GOV-003", "SPEC-GOV-015"],
+    "IAvanaTimelock.GRACE_PERIOD": ["REQ-ACCESS-140", "SPEC-GOV-002", "SPEC-GOV-013"],
+    "IAvanaTimelock.normalDelay": ["REQ-ACCESS-140", "SPEC-GOV-003"],
+    "IAvanaTimelock.isShortDelaySelector": ["REQ-ACCESS-141"],
+    "IAvanaTimelock.isShortEligible": ["REQ-ACCESS-142", "REQ-ACCESS-155", "Q-398", "Q-399"],
+    "IAvanaTimelock.isDaoOnlyCancelSelector": ["REQ-ACCESS-156", "SPEC-GOV-005"],
+    "IAvanaTimelock.requiredDelay": ["SPEC-GOV-001", "REQ-ACCESS-141"],
+    "IAvanaTimelock.publicExecution": ["REQ-ACCESS-144"],
+    "IAvanaTimelock.isOperationExpired": ["SPEC-GOV-013"],
+    "IAvanaTimelock.isRoleChangeOperation": ["SPEC-GOV-005", "REQ-ACCESS-143"],
+    "IAvanaTimelock.isRestoringOperation": ["SPEC-GOV-005", "REQ-ACCESS-156"],
+    "GovernedTargets": ["REQ-ACCESS-155", "REQ-ACCESS-156", "REQ-ACCESS-181"],
+    "SelectorPair": ["REQ-ACCESS-141", "REQ-ACCESS-142", "REQ-ACCESS-155", "REQ-ACCESS-156", "REQ-ACCESS-181"]
   },
   "contracts/src/governance/timelock/TimelockSelectors.sol": {
     "TimelockSelectors": ["REQ-ACCESS-142", "REQ-ACCESS-143", "REQ-ACCESS-155", "REQ-ACCESS-156", "REQ-ACCESS-181", "SPEC-GOV-005"],
@@ -580,12 +574,6 @@
     "TimelockSelectors.isShortDelayListSelector": ["REQ-ACCESS-142", "REQ-ACCESS-155"],
     "TimelockSelectors.isDaoCancelSelector": ["REQ-ACCESS-156", "REQ-ACCESS-181"],
     "TimelockSelectors.ownerKind": ["REQ-ACCESS-155", "REQ-ACCESS-156"]
-  },
-  "contracts/src/governance/timelock/types/GovernedTargets.sol": {
-    "GovernedTargets": ["REQ-ACCESS-155", "REQ-ACCESS-156", "REQ-ACCESS-181"]
-  },
-  "contracts/src/governance/timelock/types/SelectorPair.sol": {
-    "SelectorPair": ["REQ-ACCESS-141", "REQ-ACCESS-142", "REQ-ACCESS-155", "REQ-ACCESS-156", "REQ-ACCESS-181"]
   },
   "contracts/src/interfaces/external/aave/IAaveV4ExtSload.sol": {
     "IAaveV4ExtSload.extSload": ["REQ-HUB-097", "REQ-HUB-098", "REQ-ADAPTER-063", "REQ-CONFIG-074"]

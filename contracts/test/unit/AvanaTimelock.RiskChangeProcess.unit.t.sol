@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAvanaTimelockErrors} from "../../src/governance/timelock/IAvanaTimelockErrors.sol";
+import {IAvanaTimelock} from "../../src/governance/timelock/IAvanaTimelock.sol";
 import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
@@ -37,9 +37,7 @@ contract AvanaTimelockRiskChangeProcessUnitTest is ParameterStoreFixture {
         assertEq(_required(batch), NORMAL_DELAY, "one loosening: the whole batch waits the normal delay");
         (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(batch);
         vm.prank(governanceMultisig);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAvanaTimelockErrors.DelayBelowRequired.selector, SHORT_DELAY, NORMAL_DELAY)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.DelayBelowRequired.selector, SHORT_DELAY, NORMAL_DELAY));
         timelock.scheduleBatch(t, v, p, bytes32(0), bytes32("mixed"), SHORT_DELAY);
         _run(batch, bytes32("mixed"));
         assertEq(store.getMarketParams(M).minPledgeUsd, 20e8, "tightening applied");
@@ -98,7 +96,7 @@ contract AvanaTimelockRiskChangeProcessUnitTest is ParameterStoreFixture {
         assertTrue(timelock.isOperationExpired(idB), "expired");
         (t, v, p) = _arrays(b);
         vm.prank(governanceMultisig);
-        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelockErrors.OperationExpired.selector, idB));
+        vm.expectRevert(abi.encodeWithSelector(IAvanaTimelock.OperationExpired.selector, idB));
         timelock.executeBatch(t, v, p, bytes32(0), bytes32("b"));
         assertEq(store.topUpSliceUsd(M), 500_000e8, "slice unchanged");
     }
@@ -160,7 +158,7 @@ contract AvanaTimelockRiskChangeProcessUnitTest is ParameterStoreFixture {
             (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(calls);
             vm.prank(governanceMultisig);
             vm.expectRevert(
-                abi.encodeWithSelector(IAvanaTimelockErrors.DelayBelowRequired.selector, SHORT_DELAY, NORMAL_DELAY)
+                abi.encodeWithSelector(IAvanaTimelock.DelayBelowRequired.selector, SHORT_DELAY, NORMAL_DELAY)
             );
             timelock.scheduleBatch(t, v, p, bytes32(0), bytes32(i), SHORT_DELAY);
             _run(calls, bytes32(i));
