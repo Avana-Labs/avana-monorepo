@@ -91,12 +91,11 @@ contract BorToken {
 /// the units the harness sets, debt mark) and the RiskModule's borrow-side checks.
 /// @dev The Spoke values a vault token (1e18 units) at `price` (8 decimals) with an 80 % collateral factor and USDC
 /// at $1, and refuses a borrow or a withdrawal that leaves HF below 1, as Aave does. The RiskModule stand-in's
-/// `postHealthCheck` reads that HF and requires `RiskModuleMath.requiredHealthFactor(hardFloor, minHealthFactor)`
-/// (the hard floor is 1.10), as `RiskModuleBorrowLogic.postHealthCheck` does at an accepted price equal to the served
-/// one; its pre-checks admit every call.
+/// `postHealthCheck` reads that HF and requires `RiskModuleMath.requiredHealthFactor(minHealthFactor)`, as
+/// `RiskModuleBorrowLogic.postHealthCheck` does at an accepted price equal to the served one; its pre-checks admit
+/// every call.
 contract BorWorld {
     uint256 internal constant CF = 8000;
-    uint256 public constant HARD_FLOOR = 1.1e18;
 
     BorToken public vt;
     BorToken public usdc;
@@ -463,7 +462,7 @@ contract BorWorld {
         uint256 minHealthFactor
     ) external view returns (uint256 hf) {
         hf = healthFactor(proxy);
-        uint256 required = RiskModuleMath.requiredHealthFactor(HARD_FLOOR, minHealthFactor);
+        uint256 required = RiskModuleMath.requiredHealthFactor(minHealthFactor);
         require(hf >= required, "HealthFactorTooLow");
     }
 }
@@ -506,7 +505,6 @@ abstract contract AaveAdapterPathHarness is AaveAdapterStorage {
     uint256 internal constant DEBT_RESERVE = 1;
     uint32 internal constant INTEGRATION = 7;
     uint256 internal constant MAX_KEYS = 4;
-    uint256 internal constant HARD_FLOOR = 1.1e18;
 
     uint256 internal constant BAD_HEALTH = 1;
     uint256 internal constant BAD_FORWARD = 2;
@@ -624,11 +622,11 @@ abstract contract AaveAdapterPathHarness is AaveAdapterStorage {
         assert(good);
     }
 
-    /// @dev `RiskModuleMath.requiredHealthFactor` with the stand-in's hard floor.
+    /// @dev `RiskModuleMath.requiredHealthFactor` of the caller's minimum.
     function _required(
         uint256 minHf
     ) internal pure returns (uint256) {
-        return RiskModuleMath.requiredHealthFactor(HARD_FLOOR, minHf);
+        return RiskModuleMath.requiredHealthFactor(minHf);
     }
 
     /// @dev `minHealthFactor` 0, 1.2, 1.5 or 1.
@@ -694,7 +692,7 @@ abstract contract AaveAdapterPathHarness is AaveAdapterStorage {
 
     // ─── Common properties ───
 
-    /// @notice INV-025: every borrow and every withdrawal with debt left HF at least max(1, hard floor, minHF).
+    /// @notice INV-025: every borrow and every withdrawal with debt left HF at least max(1, minHF).
     function property_healthAfterEveryGatedAction() external view returns (bool) {
         return violations & BAD_HEALTH == 0;
     }

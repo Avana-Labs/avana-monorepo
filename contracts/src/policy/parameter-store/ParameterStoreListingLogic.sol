@@ -6,11 +6,9 @@ pragma solidity 0.8.28;
 import {IAggregatorProxy} from "../../interfaces/external/chainlink/IAggregatorProxy.sol";
 import {IAggregatorV3} from "../../interfaces/external/chainlink/IAggregatorV3.sol";
 import {IOffchainAggregator} from "../../interfaces/external/chainlink/IOffchainAggregator.sol";
-import {ISequencerUptimeFeed} from "../../interfaces/external/chainlink/ISequencerUptimeFeed.sol";
 import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
-import {IParameterStore} from "./IParameterStore.sol";
 import {IParameterStoreListing} from "./IParameterStoreListing.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
 import {ParameterStoreRisk} from "./ParameterStoreRisk.sol";
@@ -18,7 +16,7 @@ import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";
 import {DebtReserveParams, FeedDef, MarketParams} from "./types/ParameterStoreTypes.sol";
 
 /// @title ParameterStoreListingLogic
-/// @notice Bodies of the listing-batch, Spoke expectation, sequencer and coverage-ratio setters.
+/// @notice Bodies of the listing-batch, Spoke expectation and coverage-ratio setters.
 /// @dev Reached only by delegatecall from the ParameterStore, which checks the caller's role.
 // Bodies of selectors the ParameterStore declares; only fully implemented pieces are inherited.
 // solhint-disable comprehensive-interface
@@ -31,18 +29,17 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
     constructor(
         address timelock,
         address marketRegistry,
-        uint32 chainBlockTime,
-        bool hasSequencer
-    ) ParameterStoreStorage(timelock, marketRegistry, chainBlockTime, hasSequencer) {}
+        uint32 chainBlockTime
+    ) ParameterStoreStorage(timelock, marketRegistry, chainBlockTime) {}
 
     /// @inheritdoc IParameterStoreLogic
     function logicConfig()
         external
         view
         override
-        returns (bytes32 kind, address timelock, address marketRegistry, uint32 chainBlockTime, bool hasSequencer)
+        returns (bytes32 kind, address timelock, address marketRegistry, uint32 chainBlockTime)
     {
-        return (keccak256("ParameterStoreListingLogic"), _TIMELOCK, address(_REGISTRY), _BLOCK_TIME, _HAS_SEQUENCER);
+        return (keccak256("ParameterStoreListingLogic"), _TIMELOCK, address(_REGISTRY), _BLOCK_TIME);
     }
 
     /// @inheritdoc IParameterStoreListing
@@ -53,32 +50,18 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
         _onlyDelegated();
         Market memory m = _REGISTRY.getMarket(marketId);
         if (m.status != MarketStatus.Registered) revert NotInListing();
+        if (params.slippageAllowanceBps < params.slippageAllowanceMinBps) revert LivenessBound();
         if (
-            params.consistencyToleranceBps < CONSISTENCY_MIN_BPS
-                || params.slippageAllowanceBps < params.slippageAllowanceMinBps
-        ) revert LivenessBound();
-        if (
-            params.consistencyToleranceBps > BPS || params.slippageAllowanceBps >= BPS || params.poolRiskFactor == 0
+            params.slippageAllowanceBps >= BPS || params.poolRiskFactor == 0
                 || params.poolRiskFactor > POOL_RISK_FACTOR_MAX || params.minPledgeUsd > MIN_PLEDGE_USD_MAX
-                || (params.hardHealthFloor != 0
-                    && (params.hardHealthFloor < WAD || params.hardHealthFloor > HARD_FLOOR_MAX))
         ) revert OutOfBounds();
-        _checkTwap(marketId, m, params.twapWindow);
         _checkListingMargin(m, params.poolRiskFactor);
-        // The tokens' second sources were recorded before this market existed: none may read its pool.
-        if (!_marketFits(m, params.twapWindow)) revert OutOfBounds();
         MarketParams memory old = _s().market[marketId];
         _s().market[marketId] = params;
-        // Token stability is fixed at `listToken`, so the band choice is recorded once here.
-        _s().unbanded[marketId] = _hasNonStableToken(m.tokens);
-        _checkLpOracle(m.lpOracle);
         bytes32 scope = bytes32(marketId);
-        emit ParameterSet("twapWindow", scope, old.twapWindow, params.twapWindow);
-        emit ParameterSet("consistencyToleranceBps", scope, old.consistencyToleranceBps, params.consistencyToleranceBps);
         emit ParameterSet("slippageAllowanceBps", scope, old.slippageAllowanceBps, params.slippageAllowanceBps);
         emit ParameterSet("slippageAllowanceMinBps", scope, old.slippageAllowanceMinBps, params.slippageAllowanceMinBps);
         emit ParameterSet("poolRiskFactor", scope, old.poolRiskFactor, params.poolRiskFactor);
-        emit ParameterSet("hardHealthFloor", scope, old.hardHealthFloor, params.hardHealthFloor);
         emit MinPledgeUsdSet(marketId, old.minPledgeUsd, params.minPledgeUsd);
     }
 
@@ -165,7 +148,6 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
         // A borrow age a tightening lowered stays lowered; only setBorrowPriceMaxAge raises it again.
         d.borrowPriceMaxAge = borrow != 0 && borrow < age ? borrow : age;
         d.liquidationPriceMaxAge = age;
-        _recheck(SCOPE_FEED, feed, true);
         if (_feedError(d) > oldError) _recheckMargins(SCOPE_FEED, feed);
         _emitFeed(feed, d);
     }
@@ -225,39 +207,6 @@ contract ParameterStoreListingLogic is ParameterStoreRisk, IParameterStoreListin
         _s().minLiquidationBonus[spoke] = minLiquidationBonusBps;
         emit ParameterSet("aaveTargetHealthFactor", _a(spoke), oldTarget, targetHealthFactor);
         emit ParameterSet("minLiquidationBonus", _a(spoke), oldBonus, minLiquidationBonusBps);
-    }
-
-    /// @notice Body of `IParameterStore.setSequencer`.
-    function setSequencer(
-        address feed,
-        uint32 gracePeriod
-    ) external {
-        _onlyDelegated();
-        if (_HAS_SEQUENCER) {
-            if (!_sequencerFeedValid(feed)) revert IParameterStore.InvalidSequencerFeed(feed);
-            if (gracePeriod < SEQUENCER_GRACE_MIN || gracePeriod > SEQUENCER_GRACE_MAX) revert OutOfBounds();
-        } else {
-            if (feed != address(0)) revert IParameterStore.InvalidSequencerFeed(feed);
-            if (gracePeriod != 0) revert OutOfBounds();
-        }
-        _s().sequencer.feed = feed;
-        _s().sequencer.gracePeriod = gracePeriod;
-        // Every market's window and every second-source window of its tokens must fit the new grace period.
-        _recheck(SCOPE_ALL, address(0), false, true);
-        emit IParameterStore.SequencerSet(feed, gracePeriod);
-    }
-
-    function _sequencerFeedValid(
-        address feed
-    ) private view returns (bool) {
-        if (feed.code.length == 0) return false;
-        try ISequencerUptimeFeed(feed).latestRoundData() returns (
-            uint80, int256 answer, uint256 startedAt, uint256, uint80
-        ) {
-            return (answer == 0 || answer == 1) && startedAt != 0;
-        } catch {
-            return false;
-        }
     }
 
     /// @notice Body of `IParameterStore.setCoverageRatioBps`.

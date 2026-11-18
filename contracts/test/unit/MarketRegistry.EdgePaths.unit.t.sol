@@ -72,11 +72,11 @@ contract MarketRegistryEdgePathsUnitTest is MarketRegistryFixture {
         address t = address(new RegistryTokenMock(6));
         RegistryFeedMock big = new RegistryFeedMock(1, int256(2 ** 95));
         ps.setFeed(address(big), 1, 86_400, 25, 25);
-        (, address[] memory a, address[] memory s) = _routes("t");
+        (, address[] memory a) = _routes("t");
         address[] memory p = new address[](1);
         p[0] = address(big);
         vm.prank(address(timelock));
-        registry.listToken(t, _tokenDef(p, a, s));
+        registry.listToken(t, _tokenDef(p, a));
         address[] memory toks = new address[](2);
         (toks[0], toks[1]) = (address(usdc), t);
         lpVault.setPoolTokens(toks, 18);

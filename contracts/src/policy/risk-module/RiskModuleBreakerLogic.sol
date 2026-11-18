@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {RiskStatus} from "../../amm/types/AmmTypes.sol";
-import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {ILPOracle} from "../../oracle/ILPOracle.sol";
@@ -30,6 +29,8 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
     bytes4 internal constant PAUSED_SELECTOR = bytes4(keccak256("paused()"));
     // forge-lint: disable-next-line(unsafe-typecast)
     bytes4 internal constant FEE_RATE_SELECTOR = bytes4(keccak256("basisPointsRate()"));
+    /// @dev Window of the pool's time-weighted depth read by the `POOL_DEPTH` gate, seconds.
+    uint32 internal constant DEPTH_WINDOW = 1800;
 
     address internal immutable _DRIFT;
 
@@ -50,11 +51,9 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
 
     /// @inheritdoc IRiskModuleBreakerLogic
     function marketConditions(
-        uint256 marketId,
-        bool unitsGiven,
-        uint256 poolUnits
+        uint256 marketId
     ) external view override returns (uint32 live) {
-        live = _marketLive(marketId, unitsGiven, poolUnits);
+        live = _marketLive(marketId);
     }
 
     /// @inheritdoc IRiskModuleBreakerLogic
@@ -67,11 +66,9 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
 
     /// @inheritdoc IRiskModuleBreakerLogic
     function marketBreaker(
-        uint256 marketId,
-        bool unitsGiven,
-        uint256 poolUnits
+        uint256 marketId
     ) external view override returns (uint32 reasons, uint64 reopensAt) {
-        uint32 live = _marketLive(marketId, unitsGiven, poolUnits);
+        uint32 live = _marketLive(marketId);
         // Recovery reads the per-reason breach times, not the latest of any reason.
         // forge-lint: disable-next-line(unused-return)
         (uint32 latched,) = _registry().marketBreaker(marketId);
@@ -99,8 +96,8 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
         uint256 recovery = _store().gateRecoverySeconds();
         reasons = live | latched;
         uint256 until = 0;
-        uint32[3] memory temporary = [BreakerReasons.ORACLE, BreakerReasons.POOL_SHARE, BreakerReasons.POOL_DEPTH];
-        for (uint256 i = 0; i < 3; ++i) {
+        uint32[2] memory temporary = [BreakerReasons.ORACLE, BreakerReasons.POOL_DEPTH];
+        for (uint256 i = 0; i < 2; ++i) {
             uint256 at = _registry().lastBreachAt(BreakerReasons.breachKey(key, temporary[i]));
             if (at == 0 || block.timestamp >= at + recovery) continue;
             reasons = reasons | temporary[i];
@@ -114,16 +111,12 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
     }
 
     function _marketLive(
-        uint256 marketId,
-        bool unitsGiven,
-        uint256 poolUnits
+        uint256 marketId
     ) internal view returns (uint32 live) {
         Market memory m = _market(marketId);
         if (!ILPOracle(m.lpOracle).getPriceStatus().borrowFresh) live |= BreakerReasons.ORACLE;
-        RiskStatus memory rs =
-            ILPVault(m.integration).riskStatus(marketId, _store().getMarketParams(marketId).twapWindow);
+        RiskStatus memory rs = ILPVault(m.integration).riskStatus(marketId, DEPTH_WINDOW);
         if (!rs.depthAvailable || rs.depthUnits == 0) live |= BreakerReasons.POOL_DEPTH;
-        if (_concentrated(m, rs, unitsGiven, poolUnits)) live |= BreakerReasons.POOL_SHARE;
         for (uint256 i = 0; i < m.tokens.length; ++i) {
             if (_issuerTripped(m.tokens[i])) {
                 live |= BreakerReasons.ISSUER;
@@ -134,25 +127,6 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
         // forge-lint: disable-next-line(unused-return)
         (, DriftReason drift) = IRiskModuleDriftLogic(_DRIFT).spokeDrift(m.spoke);
         if (drift != DriftReason.None) live |= BreakerReasons.CONFIG_DRIFT;
-    }
-
-    /// @dev The LP at or below its peg and Avana's pool share above the cap (unknown depth counts as above).
-    function _concentrated(
-        Market memory m,
-        RiskStatus memory rs,
-        bool unitsGiven,
-        uint256 poolUnits
-    ) internal view returns (bool tripped) {
-        bytes32 key = _poolKey(m);
-        uint256 cap = _store().poolShareMaxBpsOf(key);
-        if (cap >= NO_POOL_SHARE_CAP) return false;
-        // The time of the prices is not used.
-        // forge-lint: disable-next-line(unused-return)
-        (uint256[] memory quotes,) = ILPOracle(m.lpOracle).getTokenPrices();
-        if (!RiskModuleMath.atOrBelowPeg(quotes)) return false;
-        if (!rs.depthAvailable) return true;
-        uint256 units = unitsGiven ? poolUnits : ICollateralization(_COLLATERALIZATION).poolUnits(key);
-        tripped = RiskModuleMath.poolShareExceeds(units, cap, rs.depthUnits);
     }
 
     function _debtLive(

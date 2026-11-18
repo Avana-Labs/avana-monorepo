@@ -17,9 +17,6 @@ import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 /// @notice Implementation immutables and the reads shared by the RiskModule and its logic contracts.
 /// @dev Holds no state.
 abstract contract RiskModuleBase is IRiskModuleErrors {
-    /// @dev A pool-share cap of 10,000 bps is no limit.
-    uint256 internal constant NO_POOL_SHARE_CAP = 10_000;
-
     address internal immutable _MARKET_REGISTRY;
     address internal immutable _PARAMETER_STORE;
     address internal immutable _COLLATERALIZATION;
@@ -78,13 +75,6 @@ abstract contract RiskModuleBase is IRiskModuleErrors {
         address proxy
     ) internal view returns (IAaveV4Spoke.UserAccountData memory a) {
         a = IAaveV4Spoke(spoke).getUserAccountData(proxy);
-    }
-
-    /// @dev Pool key of the market's pool, as Collateralization keys `poolUnits`.
-    function _poolKey(
-        Market memory m
-    ) internal pure returns (bytes32 key) {
-        key = keccak256(abi.encode(m.integrationId, m.pool, m.poolId));
     }
 
     /// @dev The LPOracle's price, 8 decimals, used for the cap charges.

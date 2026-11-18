@@ -30,14 +30,12 @@ contract LensMarketRiskUnitTest is LensFixture {
     // TEST-247 verifies: REQ-LENS-057, REQ-LENS-045
     function test_TEST_247_marketRiskConfiguration() public {
         _setRisk(1500);
-        store.setHardHealthFloor(MARKET_ID, 1.05e18);
         MarketView memory v = lens.getMarket(MARKET_ID);
         assertEq(v.collateralRiskBps, 1500, "collateral risk");
         assertEq(v.liquidationFeeBps, 0, "the required liquidation fee");
         assertEq(v.targetHealthFactor, 1.1e18, "target health factor");
         assertEq(v.healthFactorForMaxBonus, 0.95e18, "health factor for the maximum bonus");
         assertEq(v.liquidationBonusFactorBps, 5000, "bonus factor");
-        assertEq(v.hardHealthFloor, 1.05e18, "hard floor");
         assertEq(v.marketUsdCap, 1_000_000e8, "market cap");
         assertEq(v.topUpSliceUsd, 100_000e8, "top-up slice");
         assertEq(v.tokenUsdCaps.length, 2, "one cap per pool token");

@@ -7,8 +7,6 @@ import {RiskStatus} from "../../src/amm/types/AmmTypes.sol";
 import {LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
-import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {CapView} from "../../src/types/MarketTypes.sol";
 import {IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -21,24 +19,20 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 /// 0–90 % of their liquidity; both pool tokens fall 3–9 % on every feed (inside the USD band, vault tokens -3 to -9 %);
 /// then rounds in a fuzzed order where each account below HF 1 is liquidated through the real LPVaultSwap with the
 /// Lens's parameters and each other account repays, exits debt-free or removes part of a debt-free record. Asserted:
-/// after the LP removal Avana's pool share the Lens reports is the recomputed `poolUnits / depth` over the pool's real
-/// liquidity (the LPVault's harmonic-mean depth over the TWAP window), and the real RiskModule refuses new borrowing
-/// (`BreakerTripped` with `POOL_SHARE`) exactly when it is above `poolShareMaxBps` (the default 10 %); every account
-/// below HF 1 is liquidated within the run, every settlement meets its floor on `R + shortfall` with `D <= Kf`, an
-/// account solvent at the bonus never loses health (`INV-076`), and no debt-free exit or repay reverts.
-/// @dev Before the run each pool's outside liquidity is burned down to 19 times Avana's units in it, so Avana's share
-/// starts at 5 % and crosses the 10 % cap once outside LPs remove more than about 53 % of what is left. A removal
-/// is followed by the TWAP window (31 minutes) so the depth reads the new liquidity. Accounts hold 500–1,480 vault
-/// tokens ($1,000–$2,960 at $2.00, CF 30 %); a probe account in market A (HF 3) checks the borrow gate. The
-/// exposure-raising pledge half of the concentration gate is the RiskModule suites'. N is 100, not the stand-in suite's
-/// 200: opening 200 accounts with real NFT mints, pledges and borrows exhausts Foundry's gas for one `setUp` call.
+/// after the LP removal the LPVault's depth is the pool's real liquidity over the TWAP window (harmonic mean) and the
+/// real RiskModule keeps new borrowing open (no `POOL_DEPTH` breaker while depth remains); every account below HF 1 is
+/// liquidated within the run, every settlement meets its floor on `R + shortfall` with `D <= Kf`, an account solvent
+/// at the bonus never loses health (`INV-076`), and no debt-free exit or repay reverts.
+/// @dev Before the run each pool's outside liquidity is burned down to 19 times Avana's units in it. A removal is
+/// followed by the TWAP window (31 minutes) so the depth reads the new liquidity. Accounts hold 500–1,480 vault
+/// tokens ($1,000–$2,960 at $2.00, CF 30 %); a probe account in market A (HF 3) checks the borrow gate. N is 100, not
+/// the stand-in suite's 200: opening 200 accounts with real NFT mints, pledges and borrows exhausts Foundry's gas for
+/// one `setUp` call.
 /// forge-config: default.isolate = false
 /// forge-config: default.fuzz.runs = 3
 contract CascadeIntegrationTest is RealStackFlows {
     uint256 internal constant N = 100;
     uint256 internal constant MAX_ROUNDS = 12;
-    /// @dev The default `poolShareMaxBps` (`FullStackDeploy.POOL_SHARE_MAX_BPS`).
-    uint16 internal constant SHARE_CAP_BPS = POOL_SHARE_MAX_BPS;
     /// @dev Aave's maximum liquidation bonus times the collateral factor: 1.05 x 0.30.
     uint256 internal constant SOLVENT_AT_BONUS_HF = 0.315e18;
 
@@ -66,9 +60,9 @@ contract CascadeIntegrationTest is RealStackFlows {
             wallets.push(w);
             keys.push(k);
         }
-        // Outside LPs hold 19 times Avana's units in each pool: Avana's share starts at 5 %.
-        _setOutside(poolA, 19 * coll.poolUnits(_poolKey(mA)));
-        _setOutside(poolB, 19 * coll.poolUnits(_poolKey(mB)));
+        // Outside LPs hold 19 times Avana's units in each pool (one market per pool: its credited units).
+        _setOutside(poolA, 19 * coll.getTotalCredited(mkt[mA].vaultToken));
+        _setOutside(poolB, 19 * coll.getTotalCredited(mkt[mB].vaultToken));
         _waitTwap();
     }
 
@@ -76,12 +70,6 @@ contract CascadeIntegrationTest is RealStackFlows {
         uint256 i
     ) internal view returns (uint256) {
         return i % 2 == 0 ? mA : mB;
-    }
-
-    function _poolKey(
-        uint256 marketId
-    ) internal view returns (bytes32) {
-        return keccak256(abi.encode(V3, address(mkt[marketId].pool), bytes32(0)));
     }
 
     /// @dev The outside LPs' full-range liquidity in `p` (the fixture's pool actor).
@@ -115,27 +103,21 @@ contract CascadeIntegrationTest is RealStackFlows {
         _refreshFeeds();
     }
 
-    /// @dev Outside LPs remove `removalBps` of their liquidity from both pools; the Lens's pool share and the
-    /// RiskModule's borrow gate follow the real pool depth.
+    /// @dev Outside LPs remove `removalBps` of their liquidity from both pools; the LPVault's depth follows the real
+    /// pool liquidity and the RiskModule's borrow gate stays open while depth remains.
     function _removeDepth(
         uint256 removalBps
     ) internal {
         _setOutside(poolA, uint256(_outside(poolA)) * (10_000 - removalBps) / 10_000);
         _setOutside(poolB, uint256(_outside(poolB)) * (10_000 - removalBps) / 10_000);
         _waitTwap();
-        uint256 units = coll.poolUnits(_poolKey(mA));
         RiskStatus memory rs = uniVault.riskStatus(mA, 1800);
         assertTrue(rs.depthAvailable, "depth available");
         assertApproxEqRel(rs.depthUnits, poolA.liquidity(), 1e14, "depth = the pool's liquidity over the window");
-        CapView memory cv = lens.getCapHeadroom(mkt[mA].vaultToken, probe);
-        assertEq(cv.poolShareMaxBps, SHARE_CAP_BPS, "Lens: the pool's cap");
-        assertEq(cv.poolShareBps, (units * 10_000 + rs.depthUnits - 1) / rs.depthUnits, "Lens: share, rounded up");
-        bool over = units * 10_000 > uint256(SHARE_CAP_BPS) * rs.depthUnits;
         (uint32 reasons,) = riskModule.getBreakerStatus(mA);
-        assertEq(reasons & BreakerReasons.POOL_SHARE != 0, over, "POOL_SHARE live exactly above the cap");
+        assertEq(reasons & BreakerReasons.POOL_DEPTH, 0, "no POOL_DEPTH breaker while depth remains");
         address proxy = adapterC.proxyOf(probe, mA);
         uint256 nonce = adapterC.borrowNonce(proxy);
-        if (over) vm.expectPartialRevert(IRiskModuleErrors.BreakerTripped.selector);
         vm.prank(probe);
         adapterC.borrow(mA, ghoReserveId, 1e18, probe, _deadline(), 0, nonce);
     }

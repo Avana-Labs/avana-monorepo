@@ -5,17 +5,9 @@ pragma solidity 0.8.28;
 
 import {DebtReserveDef, MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
-import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
 import {DebtReserveParams, FeedDef, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
-import {
-    MockAggregator,
-    MockAvanaFirstLossReserve,
-    MockPriceSource,
-    OracleConfigReader,
-    OracleConfigSummary
-} from "../utils/mocks/ParameterStoreMocks.sol";
+import {MockAggregator, MockAvanaFirstLossReserve, MockPriceSource} from "../utils/mocks/ParameterStoreMocks.sol";
 
 /// @notice Scope checks of every keyed setter (market, Hub, token, feed, Spoke, debt reserve), the listing-only
 /// setters against every market status, and the zero answers of every view for an unknown key (REQ-PSTORE-011).
@@ -26,7 +18,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
     address internal noFeed = makeAddr("noFeed");
 
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
     }
 
@@ -49,25 +41,18 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
     // TEST-250 verifies: REQ-PSTORE-011
     function test_TEST_250_everyMarketSetterRefusesAnUnassignedId() public {
         bytes memory err = _unknownMarket();
-        bytes[21] memory calls = [
-            abi.encodeCall(store.tightenHardHealthFloor, (UNKNOWN, 1.1e18)),
+        bytes[14] memory calls = [
             abi.encodeCall(store.tightenSlippageAllowanceBps, (UNKNOWN, 1)),
-            abi.encodeCall(store.tightenConsistencyToleranceBps, (UNKNOWN, 10)),
             abi.encodeCall(store.tightenPoolRiskFactor, (UNKNOWN, 1)),
             abi.encodeCall(store.tightenRouteDepthThreshold, (UNKNOWN, usdc, gho, 0, 1)),
             abi.encodeCall(store.tightenMarketUsdCap, (UNKNOWN, 1)),
             abi.encodeCall(store.tightenTopUpSliceUsd, (UNKNOWN, 0)),
             abi.encodeCall(store.tightenMinPledgeUsd, (UNKNOWN, 1)),
-            abi.encodeCall(store.tightenPoolShareMaxBpsOf, (UNKNOWN, 1)),
-            abi.encodeCall(store.loosenHardHealthFloor, (UNKNOWN, 0)),
             abi.encodeCall(store.loosenSlippageAllowanceBps, (UNKNOWN, 1)),
             abi.encodeCall(store.loosenRouteDepthThreshold, (UNKNOWN, usdc, gho, 0, 1)),
             abi.encodeCall(store.loosenMarketUsdCap, (UNKNOWN, 1)),
             abi.encodeCall(store.loosenTopUpSliceUsd, (UNKNOWN, 1)),
             abi.encodeCall(store.loosenMinPledgeUsd, (UNKNOWN, 0)),
-            abi.encodeCall(store.loosenPoolShareMaxBpsOf, (UNKNOWN, 1)),
-            abi.encodeCall(store.setConsistencyToleranceBps, (UNKNOWN, 50)),
-            abi.encodeCall(store.setTwapWindow, (UNKNOWN, 1800)),
             abi.encodeCall(store.setPoolRiskFactor, (UNKNOWN, 100)),
             abi.encodeCall(store.setSlippageAllowanceMinBps, (UNKNOWN, 0)),
             abi.encodeCall(store.setStressFloorUsd, (UNKNOWN, 1))
@@ -78,7 +63,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         // Nothing was written under the unassigned id.
         MarketParams memory p = store.getMarketParams(UNKNOWN);
         assertEq(p.poolRiskFactor, 0);
-        assertEq(p.hardHealthFloor, 0);
+        assertEq(p.minPledgeUsd, 0);
         assertEq(store.marketUsdCap(UNKNOWN), 0);
         assertEq(store.stressFloorUsd(UNKNOWN), 0);
         assertEq(store.routeDepthThreshold(UNKNOWN, usdc, gho, 0), 0);
@@ -171,18 +156,14 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
     // TEST-250 verifies: REQ-CONFIG-019, REQ-PSTORE-028, REQ-PSTORE-020, REQ-CONFIG-050
     function test_TEST_250_everyTokenSetterRefusesAnUnlistedToken() public {
         bytes memory err = abi.encodeWithSelector(IParameterStoreBase.TokenNotListed.selector, unlisted);
-        SecondSource memory none;
         DebtReserveParams memory dp = DebtReserveParams(1);
-        _refuses(abi.encodeCall(store.setFeedAgreementToleranceBps, (unlisted, 500)), err);
         _refuses(abi.encodeCall(store.setTokenCollateralFactorBps, (unlisted, 5000)), err);
-        _refuses(abi.encodeCall(store.setSecondSource, (unlisted, none, none)), err);
         _refuses(abi.encodeCall(store.tightenDebtStressRiseBps, (unlisted, 500)), err);
         _refuses(abi.encodeCall(store.setInitialTokenCap, (address(hub), unlisted, 1)), err);
         // No approved debt reserve uses the asset either.
         _refuses(abi.encodeCall(store.loosenFloorRoundingAllowance, (unlisted, 1)), err);
         _refuses(abi.encodeCall(store.setDebtAssetParams, (unlisted, dp)), err);
         assertEq(store.tokenCollateralFactorBps(unlisted), 0);
-        assertEq(store.feedAgreementToleranceBps(unlisted), 0);
         assertEq(store.debtStressRiseBps(unlisted), 0);
         assertEq(store.floorRoundingAllowance(unlisted), 0);
     }
@@ -279,12 +260,9 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         assertEq(store.topUpSliceUsd(UNKNOWN), 0);
         assertEq(store.stressFloorUsd(UNKNOWN), 0);
         assertEq(store.minPledgeUsd(UNKNOWN), 0);
-        assertEq(store.hardHealthFloor(UNKNOWN), 0);
         assertEq(store.slippageAllowanceMinBps(UNKNOWN), 0);
-        assertEq(store.twapMinObservations(UNKNOWN), 0);
         assertEq(store.tokenUsdCap(stray, unlisted), 0);
         assertEq(store.tokenCollateralFactorBps(unlisted), 0);
-        assertEq(store.feedAgreementToleranceBps(unlisted), 0);
         assertEq(store.borrowPriceMaxAge(noFeed), 0);
         assertEq(store.liquidationPriceMaxAge(noFeed), 0);
         assertEq(store.floorRoundingAllowance(unlisted), 0);
@@ -294,59 +272,7 @@ contract ParameterStoreScopesUnitTest is ParameterStoreFixture {
         assertEq(store.aaveTargetHealthFactor(stray), 0);
         assertEq(store.minLiquidationBonus(stray), 0);
         assertEq(store.lastLoosenedAt(keccak256("unknown")), 0);
-        assertFalse(store.onStandby(unlisted));
-        SecondSource memory s = store.secondSource(unlisted);
-        assertEq(uint8(s.kind), uint8(SecondSourceKind.None));
-        assertEq(s.source, address(0));
-        assertEq(store.standbySecondSource(unlisted).toleranceBps, 0);
-        // An unknown pool key falls back to the chain default; no key can exceed it.
-        assertEq(store.poolShareMaxBpsOf(keccak256("unknown pool")), store.poolShareMaxBps());
-        // The bound of an unlisted token is the bare margin: no route feeds into it.
-        assertEq(store.feedAgreementToleranceMinBps(unlisted), store.feedAgreementMarginBps());
         assertFalse(store.liquidationLivenessHolds(address(spoke), UNKNOWN, 1));
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-011, REQ-CONFIG-072
-    function test_TEST_250_oracleConfigOfAnUnknownOracleIsEmpty() public {
-        OracleConfigReader reader = new OracleConfigReader();
-        (bool ok, bytes memory raw) =
-            address(store).staticcall(abi.encodeCall(store.getOracleConfig, (makeAddr("notAnOracle"))));
-        assertTrue(ok);
-        (bool done, bytes memory ret) = address(reader).staticcall(bytes.concat(reader.summary.selector, raw));
-        assertTrue(done);
-        OracleConfigSummary memory s = abi.decode(ret, (OracleConfigSummary));
-        assertEq(s.marketId, 0);
-        assertEq(s.tokenCount, 0);
-        assertEq(s.maxQuoteChangeBps, 0);
-        assertEq(s.usdBandLow, 0);
-        assertEq(s.cachedWindow, 0);
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-033, REQ-PSTORE-011
-    function test_TEST_250_oracleInputsOfAnUnknownOracleAreZeroWords() public view {
-        address[] memory toks = new address[](3);
-        (toks[0], toks[1], toks[2]) = (usdc, usdt, unlisted);
-        uint256[] memory w = store.getOracleInputs(address(0xdead), toks, true);
-        uint256 stride = OracleInputsLayout.TOKEN_WORDS + OracleInputsLayout.SECOND_WORDS;
-        assertEq(w.length, OracleInputsLayout.HEAD_WORDS + 3 * stride);
-        for (uint256 i = 0; i < w.length; ++i) {
-            assertEq(w[i], 0, "unknown oracle served a word");
-        }
-        uint256[] memory bare = store.getOracleInputs(address(0xdead), new address[](0), false);
-        assertEq(bare.length, OracleInputsLayout.HEAD_WORDS);
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-011, REQ-PSTORE-033
-    function test_TEST_250_oracleInputsServeUnlistedTokensAsZeroLegs() public view {
-        // A token the market does not hold gets its stored values (none) and no legs, never a revert.
-        address[] memory toks = new address[](1);
-        toks[0] = unlisted;
-        uint256[] memory w = store.getOracleInputs(address(lpOracle), toks, true);
-        assertEq(w[0], M);
-        uint256 k = OracleInputsLayout.HEAD_WORDS;
-        for (uint256 i = k; i < w.length; ++i) {
-            assertEq(w[i], 0, "unlisted token served a word");
-        }
     }
 
     // TEST-250 verifies: REQ-CONFIG-022, REQ-PSTORE-011

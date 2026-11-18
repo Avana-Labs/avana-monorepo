@@ -29,7 +29,6 @@ contract CollateralizationLedgerHarness is CollateralizationLedger {
     address public constant VT = address(0x7777);
     address public constant TOKEN0 = address(0x7070);
     address public constant TOKEN1 = address(0x7171);
-    bytes32 public constant POOL_KEY = keccak256("pool");
 
     constructor(
         address adapter,
@@ -40,7 +39,6 @@ contract CollateralizationLedgerHarness is CollateralizationLedger {
     function ctx() public pure returns (Ctx memory c) {
         c.vaultToken = VT;
         c.hub = HUB;
-        c.poolKey = POOL_KEY;
         c.tokens = new address[](2);
         c.tokens[0] = TOKEN0;
         c.tokens[1] = TOKEN1;
@@ -79,7 +77,6 @@ contract CollateralizationLedgerHarness is CollateralizationLedger {
         marketRecordIndex[id] = marketRecords[VT].length;
         accountCredited[proxy][VT] += credited;
         totalCredited[VT] += credited;
-        _poolUnits[POOL_KEY] += credited;
         accountRescueUnits[proxy][VT] += rescue;
         marketUsd[VT][Bucket.Regular] += charge - slice;
         marketUsd[VT][Bucket.Slice] += slice;
@@ -157,10 +154,6 @@ contract CollateralizationLedgerHarness is CollateralizationLedger {
 
     function total() external view returns (uint256) {
         return totalCredited[VT];
-    }
-
-    function pool() external view returns (uint256) {
-        return _poolUnits[POOL_KEY];
     }
 
     function rescueSum(

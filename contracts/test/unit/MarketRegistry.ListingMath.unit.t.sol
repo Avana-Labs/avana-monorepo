@@ -11,8 +11,8 @@ import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol
 import {RegistryFeedMock, RegistryLPOracleMock, RegistryTokenMock} from "../utils/mocks/MarketRegistryMocks.sol";
 
 /// @notice The arithmetic guards of listing and activation: the raw-price bound of a two-token pool against its exact
-/// integer form, the primary-route answer of a two-leg route, the common-mode guard over every pair of alternate and
-/// standby routes, the listing margin and the bonus bound at activation, each at its exact edge.
+/// integer form, the primary-route answer of a two-leg route, the common-mode guard over every pair of alternate
+/// routes, the listing margin and the bonus bound at activation, each at its exact edge.
 contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
     uint256 internal attempts;
 
@@ -33,10 +33,10 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         string memory label
     ) internal returns (address t) {
         t = address(new RegistryTokenMock(decimals));
-        (address[] memory p, address[] memory a, address[] memory s) = _routes(label);
+        (address[] memory p, address[] memory a) = _routes(label);
         RegistryFeedMock(p[0]).setAnswer(answer);
         vm.prank(address(timelock));
-        registry.listToken(t, _tokenDef(p, a, s));
+        registry.listToken(t, _tokenDef(p, a));
     }
 
     function _pool(
@@ -158,11 +158,11 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         RegistryFeedMock legB = new RegistryFeedMock(8, 3000e8);
         ps.setFeed(address(legA), 18, 86_400, 25, 25);
         ps.setFeed(address(legB), 8, 86_400, 25, 25);
-        (, address[] memory a, address[] memory s) = _routes("t0");
+        (, address[] memory a) = _routes("t0");
         address[] memory p = new address[](2);
         (p[0], p[1]) = (address(legA), address(legB));
         vm.prank(address(timelock));
-        registry.listToken(t0, _tokenDef(p, a, s));
+        registry.listToken(t0, _tokenDef(p, a));
         _pool(t0, _tokenWithPrimary(18, 1e8, "t1"));
         // 10^-6 ETH x 3,000 USD = 0.003 USD: 300,000 at 8 decimals.
         (bool ok,) = _tryList();
@@ -194,25 +194,21 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
     // ─── Common-mode guard (REQ-CONFIG-034) ───
 
     // TEST-139 verifies: REQ-CONFIG-034, REQ-CONFIG-021
-    // Two pool tokens may share a primary feed but never an alternate or standby feed in any of the four pairings
-    // (alternate-alternate, alternate-standby, standby-alternate, standby-standby).
+    // Two pool tokens may share a primary feed but never an alternate feed, in either leg of the alternate route.
     function test_TEST_139_commonModeEveryPairing() public {
         address[] memory usdcAlt = registry.getToken(address(usdc)).alternateRoute;
-        address[] memory usdcStandby = registry.getToken(address(usdc)).standbyRoute;
         address[] memory usdcPrimary = registry.getToken(address(usdc)).primaryRoute;
-        for (uint256 k = 0; k < 5; ++k) {
+        for (uint256 k = 0; k < 3; ++k) {
             address t = address(new RegistryTokenMock(6));
-            (address[] memory p, address[] memory a, address[] memory s) = _routes("t");
+            (address[] memory p, address[] memory a) = _routes("t");
             if (k == 0) a[1] = usdcAlt[1];
-            if (k == 1) a[0] = usdcStandby[0];
-            if (k == 2) s[0] = usdcAlt[0];
-            if (k == 3) s[0] = usdcStandby[0];
-            if (k == 4) p[0] = usdcPrimary[0];
+            if (k == 1) a[0] = usdcAlt[0];
+            if (k == 2) p[0] = usdcPrimary[0];
             vm.prank(address(timelock));
-            registry.listToken(t, _tokenDef(p, a, s));
+            registry.listToken(t, _tokenDef(p, a));
             _pool(address(usdc), t);
             (bool ok, bytes memory ret) = _tryList();
-            if (k == 4) {
+            if (k == 2) {
                 assertTrue(ok, "a shared primary feed is allowed");
             } else {
                 assertFalse(ok);
@@ -224,13 +220,14 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
     }
 
     // TEST-139 verifies: REQ-CONFIG-034
-    // The guard covers every pair of a pool, not only neighbours: tokens 0 and 2 of three sharing a standby fail.
+    // The guard covers every pair of a pool, not only neighbours: tokens 0 and 2 of three sharing an alternate feed
+    // fail.
     function test_TEST_139_commonModeNonAdjacentPair() public {
         address t = address(new RegistryTokenMock(6));
-        (address[] memory p, address[] memory a,) = _routes("t");
-        address[] memory s = registry.getToken(address(usdc)).standbyRoute;
+        (address[] memory p, address[] memory a) = _routes("t");
+        a[0] = registry.getToken(address(usdc)).alternateRoute[0];
         vm.prank(address(timelock));
-        registry.listToken(t, _tokenDef(p, a, s));
+        registry.listToken(t, _tokenDef(p, a));
         address[] memory toks = new address[](3);
         (toks[0], toks[1], toks[2]) = (address(usdc), address(usdt), t);
         lpVault.setPoolTokens(toks, 18);
@@ -272,9 +269,9 @@ contract MarketRegistryListingMathUnitTest is MarketRegistryFixture {
         rm.setCfLp(9899);
         _activateExpect(id, bytes32(0));
         vm.revertToState(snap);
-        // Widening one standby leg by a single bp moves the edge down by one.
-        address s = registry.getToken(address(usdt)).standbyRoute[0];
-        ps.setFeed(s, 8, 86_400, 75, 26);
+        // A one-leg primary widened to 75 + 26 = 101 bps, a single bp past the alternate, moves the edge down by one.
+        address f = registry.getToken(address(usdt)).primaryRoute[0];
+        ps.setFeed(f, 8, 86_400, 75, 26);
         rm.setCfLp(9899);
         _activateExpect(id, "listingMargin");
         rm.setCfLp(9898);

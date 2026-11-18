@@ -56,7 +56,7 @@ contract ParameterStoreFeedBoundsUnitTest is ParameterStoreFixture {
     RawBoundsAggregator internal f;
 
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         f = new RawBoundsAggregator();
     }
 

@@ -10,7 +10,6 @@ import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
 import {DriftReason} from "../../src/types/MarketTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
-import {RiskSequencerFeed} from "../utils/mocks/RiskModuleMocks.sol";
 
 /// @title RiskModuleBorrowUnitTest
 /// @notice `preBorrowCheck` and `preWithdrawCheck`: scope, pokes, price gates, Aave pauses and freezes, drift, Hub

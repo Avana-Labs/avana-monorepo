@@ -5,7 +5,6 @@ pragma solidity 0.8.28;
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
 import {MarketDef, PauseReason} from "../../types/MarketTypes.sol";
-import {RouteSlot} from "../../types/OracleTypes.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {IMarketRegistryRoutes} from "./IMarketRegistryRoutes.sol";
@@ -277,7 +276,6 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
     function setPriceSource(
         address,
         address[] calldata,
-        address[] calldata,
         address[] calldata
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
         _forward(_LISTING_LOGIC);
@@ -338,36 +336,6 @@ contract MarketRegistry is UUPSUpgradeable, AccessControlUpgradeable, MarketRegi
         address,
         address,
         uint8,
-        address
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_ROUTES_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function useStandbyRoute(
-        address token,
-        RouteSlot
-    ) external override {
-        _onlyGuardianOrAdmin(AvanaRoles.APPLICATION_PAUSE_GUARDIAN);
-        // A guardian waits out the lock after an Aave DAO cancel; the timelock does not.
-        if (!hasRole(AvanaRoles.APPLICATION_ADMIN, msg.sender)) {
-            uint64 at = _s().standbyCancelledAt[token];
-            uint256 until = uint256(at) + _STANDBY_RESWITCH_COOLDOWN;
-            if (at != 0 && block.timestamp < until) revert StandbySwitchLocked(token, until);
-        }
-        _forward(_ROUTES_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function cancelStandbySwitch(
-        address
-    ) external override {
-        if (msg.sender != _AAVE_GOVERNANCE_EXECUTOR) revert Unauthorized(msg.sender);
-        _forward(_ROUTES_LOGIC);
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function restorePriceRoute(
         address
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
         _forward(_ROUTES_LOGIC);

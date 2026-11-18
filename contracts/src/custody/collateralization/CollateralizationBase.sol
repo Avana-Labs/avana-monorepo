@@ -39,7 +39,6 @@ abstract contract CollateralizationBase is ICollateralizationBase {
         uint256 marketId;
         address hub;
         address spoke;
-        bytes32 poolKey;
         address[] tokens;
         uint256 assetId;
         uint256 reserveId;
@@ -103,7 +102,6 @@ abstract contract CollateralizationBase is ICollateralizationBase {
     mapping(address vaultToken => Pending) internal pending;
     /// @notice Market exposure counter per budget part, USD 8 decimals.
     mapping(address vaultToken => mapping(Bucket => uint256)) internal marketUsd;
-    mapping(bytes32 poolKey => uint256) internal _poolUnits;
     /// @notice Exposure per (Hub, market token), USD 8 decimals.
     mapping(address hub => mapping(address token => uint256)) internal tokenUsd;
     /// @notice Whether an account has had debt since its last `markDebtFree`.
@@ -177,11 +175,10 @@ abstract contract CollateralizationBase is ICollateralizationBase {
         ) revert InvalidVaultToken();
         c.marketId = token.marketId();
         c.hub = token.hub();
-        // The shape is the LPVault's to enforce; the ledger needs the pool keys and tokens only.
+        // The pool and shape are the LPVault's to enforce; the ledger needs the tokens only.
         // forge-lint: disable-next-line(unused-return)
-        (address pool, bytes32 poolId,, address[] memory tokens) = ILPVault(c.lpVault).marketOf(c.marketId);
+        (,,, address[] memory tokens) = ILPVault(c.lpVault).marketOf(c.marketId);
         c.tokens = tokens;
-        c.poolKey = keccak256(abi.encode(c.integrationId, pool, poolId));
     }
 
     function _withReserve(

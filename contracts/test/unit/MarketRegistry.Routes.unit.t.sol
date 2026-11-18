@@ -9,7 +9,6 @@ import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegis
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
 import {TokenDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketDef} from "../../src/types/MarketTypes.sol";
-import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
@@ -18,9 +17,8 @@ import {
     RegistryTetherMock,
     RegistryTokenMock
 } from "../utils/mocks/MarketRegistryMocks.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
-/// @notice Swap routes and the standby price-route switch.
+/// @notice Swap routes: slot checks, peg-module and fee-switch exclusions, disable and restore.
 contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
     uint256 internal id;
 
@@ -117,10 +115,9 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
     /// (not in `exactAmountInputs`) is accepted, and so is a route whose exact-amount inputs carry no fee switch.
     function test_TEST_221_feeSwitchTokenNeverEntersAnExactAmountLeg() public {
         RegistryTetherMock tether = new RegistryTetherMock();
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("tether");
-        TokenDef memory td = _tokenDef(p, a, s);
+        (address[] memory p, address[] memory a) = _routes("tether");
+        TokenDef memory td = _tokenDef(p, a);
         td.issuerProbe = IssuerProbe.UsdtFeeRate;
-        ps.setTolerance(address(tether), 100, 50);
         vm.prank(address(timelock));
         registry.listToken(address(tether), td);
         address usdcIn = address(usdc);
@@ -166,8 +163,8 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
     // TEST-054 verifies: REQ-CONFIG-040, REQ-CONFIG-025, Q-187
     function test_TEST_054_backupAvoidsPegModules() public {
         RegistryTokenMock dai = new RegistryTokenMock(18);
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("dai");
-        TokenDef memory td = _tokenDef(p, a, s);
+        (address[] memory p, address[] memory a) = _routes("dai");
+        TokenDef memory td = _tokenDef(p, a);
         address psm = makeAddr("litePsm");
         td.pegModule = psm;
         vm.prank(address(timelock));
@@ -255,112 +252,6 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         assertTrue(usable);
     }
 
-    // TEST-231 verifies: REQ-MREG-028, REQ-CONFIG-009, REQ-CONFIG-026, Q-248, Q-262, Q-263, REQ-ACCESS-159, REQ-ACCESS-171, REQ-ACCESS-093
-    // Sources: 5.1 TEST-231
-    function test_TEST_231_standbySwitch() public {
-        address t = address(usdc);
-        TokenDef memory def = registry.getToken(t);
-        vm.startPrank(emergencyGuardian);
-        vm.expectRevert(IMarketRegistryBase.InvalidRouteSlot.selector);
-        registry.useStandbyRoute(t, RouteSlot.None);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TokenNotListed.selector, alice));
-        registry.useStandbyRoute(alice, RouteSlot.Primary);
-        vm.expectEmit(address(registry));
-        emit IMarketRegistryBase.StandbyRouteActivated(t, RouteSlot.Primary, emergencyGuardian);
-        registry.useStandbyRoute(t, RouteSlot.Primary);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.StandbyAlreadyActive.selector, t));
-        registry.useStandbyRoute(t, RouteSlot.Alternate);
-        vm.stopPrank();
-        assertEq(registry.priceRouteVersion(t), 1);
-        (address[] memory p, address[] memory a, RouteSlot replaced) = registry.activePriceRoutes(t);
-        assertEq(uint8(replaced), uint8(RouteSlot.Primary));
-        assertEq(p[0], def.standbyRoute[0]);
-        assertEq(a[1], def.alternateRoute[1]);
-        // Only the Aave governance executor cancels at once.
-        vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, address(timelock)));
-        registry.cancelStandbySwitch(t);
-        vm.expectEmit(address(registry));
-        emit IMarketRegistryBase.StandbySwitchCancelled(t, aaveGovernanceExecutor);
-        vm.prank(aaveGovernanceExecutor);
-        registry.cancelStandbySwitch(t);
-        assertEq(registry.priceRouteVersion(t), 2);
-        vm.prank(aaveGovernanceExecutor);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.StandbyNotActive.selector, t));
-        registry.cancelStandbySwitch(t);
-        // The timelock switches the alternate (short delay) and restores at the normal delay.
-        vm.prank(address(timelock));
-        registry.useStandbyRoute(t, RouteSlot.Alternate);
-        (, a,) = registry.activePriceRoutes(t);
-        assertEq(a.length, 1);
-        assertEq(a[0], def.standbyRoute[0]);
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, emergencyGuardian, APP_ADMIN
-            )
-        );
-        registry.restorePriceRoute(t);
-        vm.expectEmit(address(registry));
-        emit IMarketRegistryBase.PriceRouteRestored(t);
-        vm.prank(address(timelock));
-        registry.restorePriceRoute(t);
-        assertEq(registry.priceRouteVersion(t), 4);
-        vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.StandbyNotActive.selector, t));
-        registry.restorePriceRoute(t);
-    }
-
-    // TEST-231 verifies: REQ-MREG-028, Q-248, Q-263
-    // Sources: MarketRegistry review 2026-11-10 finding 7 (the DAO's cancel locks the guardians' re-switch)
-    function test_TEST_231_daoCancelLocksTheGuardianSwitch() public {
-        address t = address(usdc);
-        vm.warp(3_000_000);
-        assertEq(registry.standbySwitchLockedUntil(t), 0);
-        vm.prank(emergencyGuardian);
-        registry.useStandbyRoute(t, RouteSlot.Primary);
-        vm.prank(aaveGovernanceExecutor);
-        registry.cancelStandbySwitch(t);
-        uint256 until = block.timestamp + 5 days;
-        assertEq(registry.standbySwitchLockedUntil(t), until);
-        // Neither guardian can re-apply what the DAO undid, in the same block or before the lock ends.
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.StandbySwitchLocked.selector, t, until));
-        registry.useStandbyRoute(t, RouteSlot.Primary);
-        vm.warp(until - 1);
-        vm.prank(aaveGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.StandbySwitchLocked.selector, t, until));
-        registry.useStandbyRoute(t, RouteSlot.Alternate);
-        // Another token is not locked.
-        vm.prank(emergencyGuardian);
-        registry.useStandbyRoute(address(usdt), RouteSlot.Primary);
-        // From the end of the lock a guardian switches again.
-        vm.warp(until);
-        vm.prank(emergencyGuardian);
-        registry.useStandbyRoute(t, RouteSlot.Primary);
-        assertEq(registry.priceRouteVersion(t), 3);
-        // The timelock's own switch (short delay, DAO-only cancel) is not locked and ends a lock.
-        vm.prank(aaveGovernanceExecutor);
-        registry.cancelStandbySwitch(t);
-        vm.prank(address(timelock));
-        registry.useStandbyRoute(t, RouteSlot.Alternate);
-        assertEq(registry.standbySwitchLockedUntil(t), 0);
-        vm.prank(address(timelock));
-        registry.restorePriceRoute(t);
-        vm.prank(emergencyGuardian);
-        registry.useStandbyRoute(t, RouteSlot.Primary);
-        // A new price source at the normal delay also ends a lock.
-        vm.prank(aaveGovernanceExecutor);
-        registry.cancelStandbySwitch(t);
-        assertGt(registry.standbySwitchLockedUntil(t), block.timestamp);
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("usdc2");
-        vm.prank(address(timelock));
-        registry.setPriceSource(t, p, a, s);
-        assertEq(registry.standbySwitchLockedUntil(t), 0);
-        vm.prank(emergencyGuardian);
-        registry.useStandbyRoute(t, RouteSlot.Primary);
-    }
-
     // TEST-054 verifies: REQ-CONFIG-040, REQ-CONFIG-060, REQ-MREG-035, REQ-ROUTE-004, REQ-ROUTE-030
     // Sources: decisions of 2026-11-11 (a recorded AMM contract is never a route dependency, whatever the keying)
     // A market keyed by pool address refuses a route through any AMM contract recorded for its integration, as an
@@ -381,24 +272,6 @@ contract MarketRegistryRoutesUnitTest is MarketRegistryFixture {
         _set(address(usdc), address(gho), 0, address(elsewhere));
         (address r,) = registry.getRoute(id, address(usdc), address(gho), 0);
         assertEq(r, address(elsewhere));
-    }
-
-    // TEST-231 verifies: REQ-MREG-028, REQ-CONFIG-021, ATTACK-140
-    function test_TEST_231_standbyThatLostItsFeedIsRefused() public {
-        address t = address(usdt);
-        address standbyFeed = registry.getToken(t).standbyRoute[0];
-        ps.setFeed(standbyFeed, 0, 0, 0, 0);
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("feed")));
-        registry.useStandbyRoute(t, RouteSlot.Primary);
-        ps.setFeed(standbyFeed, 8, 0, 25, 25);
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("heartbeat")));
-        registry.useStandbyRoute(t, RouteSlot.Primary);
-        // A long published heartbeat (stablecoin feeds, 86,400 s) is accepted: there is no global ceiling.
-        ps.setFeed(standbyFeed, 8, 86_400, 25, 25);
-        vm.prank(emergencyGuardian);
-        registry.useStandbyRoute(t, RouteSlot.Primary);
     }
 }
 

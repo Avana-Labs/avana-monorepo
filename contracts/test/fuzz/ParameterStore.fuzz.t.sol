@@ -5,10 +5,9 @@ pragma solidity 0.8.28;
 
 import {DebtReserveDef, MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
-import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
 import {FeedDef, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
-import {MockAggregator, OracleConfigReader, OracleConfigSummary} from "../utils/mocks/ParameterStoreMocks.sol";
+import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
 
 /// @notice Fuzz twins of the ParameterStore's rules: each setter's outcome (accepted, or refused with its exact
 /// error) against an independent model of its bounds, step and liveness rules over the whole input range, and the
@@ -17,7 +16,7 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
     uint256 internal constant USD_MAX = type(uint128).max;
 
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
     }
 
@@ -67,20 +66,6 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
 
     // ─── Tighten setters ───
 
-    // TEST-064 verifies: REQ-PSTORE-031, REQ-CONFIG-050, REQ-CONFIG-051, REQ-CONFIG-067
-    function testFuzz_TEST_064_tightenHardFloorModel(
-        uint256 start,
-        uint256 v
-    ) public {
-        start = bound(start, 0, 2);
-        uint256 old = start == 0 ? 0 : (start == 1 ? 1e18 : 1.2e18);
-        if (old != 0) assertTrue(_ok(abi.encodeCall(store.tightenHardHealthFloor, (M, old))));
-        v = bound(v, 0, 2e18);
-        bytes memory err = v <= old ? _notStricter() : (v < 1e18 || v > 1.25e18 ? _oob() : bytes(""));
-        _expect(abi.encodeCall(store.tightenHardHealthFloor, (M, v)), err);
-        assertEq(store.hardHealthFloor(M), err.length == 0 ? v : old);
-    }
-
     // TEST-064 verifies: REQ-CONFIG-052, REQ-PSTORE-015, INV-047
     function testFuzz_TEST_064_tightenSlippageModel(
         uint16 minBps,
@@ -92,25 +77,6 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
         _expect(abi.encodeCall(store.tightenSlippageAllowanceBps, (M, v)), err);
         uint16 stored = store.getMarketParams(M).slippageAllowanceBps;
         assertGe(stored, store.slippageAllowanceMinBps(M), "allowance below its floor");
-    }
-
-    // TEST-064 verifies: REQ-CONFIG-052, SPEC-GOV-009, INV-047
-    function testFuzz_TEST_064_consistencyModel(
-        uint16 v,
-        bool tighten
-    ) public {
-        bytes memory err;
-        if (tighten) {
-            err = v >= 50 ? _notStricter() : (v < 10 ? _live() : bytes(""));
-            _expect(abi.encodeCall(store.tightenConsistencyToleranceBps, (M, v)), err);
-        } else {
-            err = v < 10 ? _live() : (v > 10_000 ? _oob() : bytes(""));
-            _expect(abi.encodeCall(store.setConsistencyToleranceBps, (M, v)), err);
-        }
-        uint16 stored = store.getMarketParams(M).consistencyToleranceBps;
-        assertGe(stored, 10);
-        assertLe(stored, 10_000);
-        assertEq(stored, err.length == 0 ? v : 50);
     }
 
     // TEST-272 verifies: REQ-RISK-042, REQ-RISK-044, PROP-042
@@ -208,21 +174,6 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
         assertTrue(stored == 0 || (stored >= 100 && stored <= 5000), "stress rise out of range");
     }
 
-    // TEST-272 verifies: REQ-RISK-042, SPEC-CAP-005, Q-383
-    function testFuzz_TEST_272_poolShareOfIsMinOfOverrideAndDefault(
-        uint16 dflt,
-        uint16 over
-    ) public {
-        dflt = uint16(bound(dflt, 1, 10_000));
-        over = uint16(bound(over, 1, 10_000));
-        bytes32 key = keccak256(abi.encode(uint32(1), address(pool), bytes32(0)));
-        if (over < 10_000) assertTrue(_ok(abi.encodeCall(store.tightenPoolShareMaxBpsOf, (M, over))));
-        if (dflt < 10_000) assertTrue(_ok(abi.encodeCall(store.tightenPoolShareMaxBps, (dflt))));
-        uint256 expected = over < 10_000 && over < dflt ? over : dflt;
-        assertEq(store.poolShareMaxBpsOf(key), expected);
-        assertLe(store.poolShareMaxBpsOf(key), store.poolShareMaxBps(), "pool above the default");
-    }
-
     // ─── Loosen setters: step, ceiling ───
 
     // TEST-225 verifies: REQ-PSTORE-017, REQ-RISK-043, REQ-RISK-044
@@ -283,30 +234,6 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
         assertLe(store.topUpSliceUsd(M), store.marketUsdCap(M));
     }
 
-    // TEST-225 verifies: REQ-PSTORE-017, REQ-PSTORE-031, Q-398
-    function testFuzz_TEST_225_hardFloorLoosenModel(
-        uint256 old,
-        uint256 v
-    ) public {
-        old = bound(old, 1e18, 1.25e18);
-        assertTrue(_ok(abi.encodeCall(store.tightenHardHealthFloor, (M, old))));
-        v = bound(v, 0, 1.3e18);
-        uint256 stored = v < 1e18 ? 0 : v;
-        uint256 effective = stored == 0 ? 1e18 : stored;
-        bytes memory err;
-        if (v >= old) {
-            err = _notLooser();
-        } else if (old - effective > 0.03e18) {
-            err = abi.encodeWithSelector(
-                IParameterStoreBase.LoosenStepTooLarge.selector, _key("hardHealthFloor", bytes32(M))
-            );
-        }
-        _expect(abi.encodeCall(store.loosenHardHealthFloor, (M, v)), err);
-        uint256 got = store.hardHealthFloor(M);
-        assertEq(got, err.length == 0 ? stored : old);
-        assertTrue(got == 0 || (got >= 1e18 && got <= 1.25e18), "floor out of range");
-    }
-
     // TEST-225 verifies: REQ-PSTORE-017, REQ-CONFIG-071
     function testFuzz_TEST_225_slippageLoosenModel(
         uint16 v
@@ -326,32 +253,12 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
 
     // ─── Structural setters ───
 
-    // TEST-064 verifies: REQ-CONFIG-052, REQ-CONFIG-055, PROP-042
-    function testFuzz_TEST_064_graceBandWindowsModel(
-        uint256 hf,
-        uint32 duration,
-        uint32 pause,
-        uint256 low,
-        uint256 high
-    ) public {
-        _expect(abi.encodeCall(store.setGraceHealthFactor, (hf)), hf < 0.9e18 || hf >= 1e18 ? _live() : bytes(""));
-        _expect(abi.encodeCall(store.setGraceDuration, (duration)), duration > 7200 ? _live() : bytes(""));
-        _expect(abi.encodeCall(store.setDisagreementPauseMax, (pause)), pause > 3600 ? _live() : bytes(""));
-        _expect(abi.encodeCall(store.setUsdBand, (low, high)), low >= 1e8 || high <= 1e8 ? _oob() : bytes(""));
-        assertGe(store.graceHealthFactor(), 0.9e18);
-        assertLt(store.graceHealthFactor(), 1e18);
-        assertLe(store.graceDuration(), 7200);
-        assertLe(store.disagreementPauseMax(), 3600);
-        assertLt(store.usdBandLow(), 1e8);
-        assertGt(store.usdBandHigh(), 1e8);
-    }
-
     // TEST-064 verifies: REQ-CONFIG-015, REQ-CONFIG-019, REQ-PSTORE-010, REQ-PSTORE-032
     function testFuzz_TEST_064_bpsSettersModel(
         uint16 v,
         uint8 which
     ) public {
-        which = uint8(bound(which, 0, 4));
+        which = uint8(bound(which, 0, 3));
         bytes memory err;
         if (which == 0) {
             err = v > 5000 ? _oob() : bytes("");
@@ -365,14 +272,9 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
             // Lowering never re-runs the margin; a raise keeps a wide margin with these routes (sum 50 bps).
             err = v == 0 || v > 9000 ? _oob() : bytes("");
             _expect(abi.encodeCall(store.setPoolRiskFactor, (M, v)), err);
-        } else if (which == 3) {
+        } else {
             err = v == 0 || v > 9999 ? _oob() : bytes("");
             _expect(abi.encodeCall(store.setTokenCollateralFactorBps, (usdc, v)), err);
-        } else {
-            uint256 min = store.feedAgreementToleranceMinBps(usdc);
-            err = v < min ? _live() : (v > 10_000 ? _oob() : bytes(""));
-            _expect(abi.encodeCall(store.setFeedAgreementToleranceBps, (usdc, v)), err);
-            assertGe(store.feedAgreementToleranceBps(usdc), min);
         }
     }
 
@@ -515,74 +417,12 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
 
     // ─── Views against their definitions ───
 
-    // TEST-250 verifies: REQ-PSTORE-027, SPEC-ORC-022
-    function testFuzz_TEST_250_twapMinObservationsFormula(
-        uint32 window
-    ) public {
-        window = uint32(bound(window, 1, 786_408));
-        pool.setCardinality(type(uint16).max);
-        assertTrue(_ok(abi.encodeCall(store.setTwapWindow, (M, window))));
-        uint256 expected = (uint256(window) + 11) / 12 + 1;
-        assertEq(store.twapMinObservations(M), expected);
-        // The pool must hold exactly that many: one fewer is refused.
-        pool.setCardinality(uint16(expected - 1));
-        _expect(abi.encodeCall(store.setTwapWindow, (M, window)), _oob());
-    }
-
-    // TEST-250 verifies: REQ-CONFIG-024, REQ-MREG-027
-    function testFuzz_TEST_250_toleranceMinFormula(
-        uint16 p,
-        uint16 a,
-        uint16 s,
-        uint16 margin
-    ) public {
-        p = uint16(bound(p, 1, 3000));
-        a = uint16(bound(a, 1, 3000));
-        s = uint16(bound(s, 1, 3000));
-        margin = uint16(bound(margin, 0, 1000));
-        MockAggregator fp = new MockAggregator(8, 1e6, 1e12);
-        MockAggregator fa = new MockAggregator(8, 1e6, 1e12);
-        MockAggregator fs = new MockAggregator(8, 1e6, 1e12);
-        address tok = makeAddr("fuzzToken");
-        registry.setToken(tok, _one(address(fp)), _one(address(fa)), _one(address(fs)));
-        vm.startPrank(address(timelock));
-        store.setFeedAgreementToleranceBps(tok, 10_000);
-        // The market's own tokens keep their bound under any margin up to 1,000.
-        store.setFeedAgreementToleranceBps(usdc, 10_000);
-        store.setFeedAgreementToleranceBps(usdt, 10_000);
-        store.setFeedAgreementMarginBps(margin);
-        store.setFeed(address(fp), _dev(p));
-        store.setFeed(address(fa), _dev(a));
-        store.setFeed(address(fs), _dev(s));
-        vm.stopPrank();
-        uint256 pair = uint256(p) + a;
-        if (uint256(s) + a > pair) pair = uint256(s) + a;
-        if (uint256(p) + s > pair) pair = uint256(p) + s;
-        assertEq(store.feedAgreementToleranceMinBps(tok), pair + margin);
-    }
-
     function _dev(
         uint16 dev
     ) internal pure returns (FeedDef memory d) {
         d = _feedDef(86_400, 1800);
         d.feedDeviationThresholdBps = dev;
         d.heartbeatDriftBps = 0;
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-033
-    function testFuzz_TEST_250_oracleInputsLength(
-        uint8 n,
-        bool withSecond
-    ) public view {
-        n = uint8(bound(n, 0, 8));
-        address[] memory toks = new address[](n);
-        for (uint256 i = 0; i < n; ++i) {
-            toks[i] = i % 2 == 0 ? usdc : usdt;
-        }
-        uint256[] memory w = store.getOracleInputs(address(lpOracle), toks, withSecond);
-        assertEq(w.length, 10 + uint256(n) * (37 + (withSecond ? 9 : 0)));
-        assertEq(OracleInputsLayout.TOKEN_WORDS, 37);
-        if (n > 0) assertEq(w[OracleInputsLayout.HEAD_WORDS], 150);
     }
 
     // TEST-250 verifies: REQ-CONFIG-022, REQ-CONFIG-072, REQ-ORACLE-049
@@ -598,19 +438,6 @@ contract ParameterStoreFuzzTest is ParameterStoreFixture {
         assertTrue(_ok(abi.encodeCall(store.setFeed, (address(fUsdc), d))));
         int256 pinned = cap < aggMax ? cap : int256(aggMax);
         assertEq(store.getFeed(address(fUsdc)).maxAnswer, pinned);
-        // The OracleConfig leg saturates into int128; the inputs word keeps the full value.
-        OracleConfigReader reader = new OracleConfigReader();
-        (bool ok, bytes memory raw) =
-            address(store).staticcall(abi.encodeCall(store.getOracleConfig, (address(lpOracle))));
-        assertTrue(ok);
-        (bool done, bytes memory out) = address(reader).staticcall(bytes.concat(reader.summary.selector, raw));
-        assertTrue(done);
-        OracleConfigSummary memory s = abi.decode(out, (OracleConfigSummary));
-        assertEq(int256(s.maxAnswer00), pinned > type(int128).max ? int256(type(int128).max) : pinned);
-        address[] memory toks = new address[](1);
-        toks[0] = usdc;
-        uint256[] memory w = store.getOracleInputs(address(lpOracle), toks, false);
-        assertEq(int256(w[OracleInputsLayout.HEAD_WORDS + 5 + 3]), pinned);
     }
 
     // TEST-250 verifies: REQ-CONFIG-022, Q-191

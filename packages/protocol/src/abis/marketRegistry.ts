@@ -232,35 +232,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "activePriceRoutes",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "primary",
-        "type": "address[]",
-        "internalType": "address[]"
-      },
-      {
-        "name": "alternate",
-        "type": "address[]",
-        "internalType": "address[]"
-      },
-      {
-        "name": "replaced",
-        "type": "uint8",
-        "internalType": "enum RouteSlot"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "approveSpokeCodeHash",
     "inputs": [
       {
@@ -280,19 +251,6 @@ export const marketRegistryAbi = [
         "name": "marketId",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "cancelStandbySwitch",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -1015,16 +973,6 @@ export const marketRegistryAbi = [
             "internalType": "address[]"
           },
           {
-            "name": "standbyRoute",
-            "type": "address[]",
-            "internalType": "address[]"
-          },
-          {
-            "name": "replacedSlot",
-            "type": "uint8",
-            "internalType": "enum RouteSlot"
-          },
-          {
             "name": "issuerProbe",
             "type": "uint8",
             "internalType": "enum IssuerProbe"
@@ -1417,16 +1365,6 @@ export const marketRegistryAbi = [
             "internalType": "address[]"
           },
           {
-            "name": "standbyRoute",
-            "type": "address[]",
-            "internalType": "address[]"
-          },
-          {
-            "name": "replacedSlot",
-            "type": "uint8",
-            "internalType": "enum RouteSlot"
-          },
-          {
             "name": "issuerProbe",
             "type": "uint8",
             "internalType": "enum IssuerProbe"
@@ -1674,25 +1612,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "priceRouteVersion",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "version",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "recordBreach",
     "inputs": [
       {
@@ -1837,19 +1756,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "restorePriceRoute",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "restoreRoute",
     "inputs": [
       {
@@ -1964,11 +1870,6 @@ export const marketRegistryAbi = [
       },
       {
         "name": "alternateRoute",
-        "type": "address[]",
-        "internalType": "address[]"
-      },
-      {
-        "name": "standbyRoute",
         "type": "address[]",
         "internalType": "address[]"
       }
@@ -2101,25 +2002,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "standbySwitchLockedUntil",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "until",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "tripDebtBreaker",
     "inputs": [
       {
@@ -2183,24 +2065,6 @@ export const marketRegistryAbi = [
         "name": "hub",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "useStandbyRoute",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "slot",
-        "type": "uint8",
-        "internalType": "enum RouteSlot"
       }
     ],
     "outputs": [],
@@ -2761,19 +2625,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "event",
-    "name": "PriceRouteRestored",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "PriceSourceSet",
     "inputs": [
       {
@@ -2790,12 +2641,6 @@ export const marketRegistryAbi = [
       },
       {
         "name": "alternateRoute",
-        "type": "address[]",
-        "indexed": false,
-        "internalType": "address[]"
-      },
-      {
-        "name": "standbyRoute",
         "type": "address[]",
         "indexed": false,
         "internalType": "address[]"
@@ -3054,50 +2899,6 @@ export const marketRegistryAbi = [
         "type": "bytes32",
         "indexed": true,
         "internalType": "bytes32"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "StandbyRouteActivated",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "slot",
-        "type": "uint8",
-        "indexed": false,
-        "internalType": "enum RouteSlot"
-      },
-      {
-        "name": "caller",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "StandbySwitchCancelled",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "caller",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -3396,11 +3197,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "error",
-    "name": "InvalidRouteSlot",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "InvalidSpoke",
     "inputs": [
       {
@@ -3510,17 +3306,6 @@ export const marketRegistryAbi = [
   },
   {
     "type": "error",
-    "name": "NoStandbyRoute",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "NotFrozen",
     "inputs": []
   },
@@ -3563,44 +3348,6 @@ export const marketRegistryAbi = [
         "name": "account",
         "type": "address",
         "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "StandbyAlreadyActive",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "StandbyNotActive",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "StandbySwitchLocked",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "until",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ]
   },

@@ -34,7 +34,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// @notice The real AaveAdapter and the real LPVaultSwap wired to each other on the real local Aave V4, with the real
 /// Lock, Collateralization, VaultTokenFactory, vault tokens, ProxyManager, PositionProxies, PayoutEscrow and
 /// AaveV3FlashSource (over a mocked Aave V3 Pool). The MarketRegistry and RiskModule are the Adapter suites' stand-ins;
-/// the ParameterStore is LPVaultSwap's stand-in, which also answers the Adapter's `sequencer()`; the LPOracle LPVaultSwap
+/// the ParameterStore is LPVaultSwap's stand-in; the LPOracle LPVaultSwap
 /// reads for market 4 is `LVSLPOracleMock` at $2.00 with USDC $1.00 and USDT $1.00; each pool token swaps into GHO
 /// through an `LVSLyingRoute` whose output each test sets (a sandwiched leg is a lower output).
 /// @dev Both proxies are deployed first behind a placeholder, so every immutable contract is built with their final

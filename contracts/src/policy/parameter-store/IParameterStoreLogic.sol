@@ -12,5 +12,5 @@ interface IParameterStoreLogic {
     function logicConfig()
         external
         view
-        returns (bytes32 kind, address timelock, address marketRegistry, uint32 chainBlockTime, bool hasSequencer);
+        returns (bytes32 kind, address timelock, address marketRegistry, uint32 chainBlockTime);
 }

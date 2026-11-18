@@ -124,7 +124,6 @@ abstract contract CollateralizationLedger is CollateralizationBase {
         if (emptied != 0) _dropHead(list, emptied);
         accountCredited[proxy][vt] -= units;
         totalCredited[vt] -= units;
-        _poolUnits[c.poolKey] -= units;
     }
 
     /// @notice Removes the first `k` entries of a list (the records a debit emptied, always a prefix).
@@ -170,7 +169,6 @@ abstract contract CollateralizationLedger is CollateralizationBase {
         _capRescue(r, proxy, vt);
         accountCredited[proxy][vt] -= units;
         totalCredited[vt] -= units;
-        _poolUnits[c.poolKey] -= units;
     }
 
     /// @dev The caller returns the position afterwards.
@@ -277,8 +275,6 @@ abstract contract CollateralizationLedger is CollateralizationBase {
         counters.hub = c.hub;
         counters.regularUsed = SafeCast.toUint128(marketUsd[c.vaultToken][Bucket.Regular]);
         counters.sliceUsed = SafeCast.toUint128(marketUsd[c.vaultToken][Bucket.Slice]);
-        counters.poolKey = c.poolKey;
-        counters.poolUnits = _poolUnits[c.poolKey];
         uint256 n = c.tokens.length;
         counters.tokenUsed = new uint256[](n);
         for (uint256 i = 0; i < n; ++i) {

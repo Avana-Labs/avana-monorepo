@@ -86,9 +86,9 @@ contract FullStackPolicyIntegrationTest is FullStackMarkets {
     // ─── TEST-013: exposure caps read from the ParameterStore ───
 
     /// @notice Each pledge is charged at the LPOracle price (at least `stressFloorUsd`), rounded up, and Collateralization
-    /// books exactly the charge in its counters; each cap the RiskModule reads from the ParameterStore (market, token,
-    /// pool share), tightened through the timelock at the short delay, refuses the next pledge it would break with
-    /// `CapExceeded`, and a refused pledge leaves every counter as it was.
+    /// books exactly the charge in its counters; each cap the RiskModule reads from the ParameterStore (market, token),
+    /// tightened through the timelock at the short delay, refuses the next pledge it would break with `CapExceeded`,
+    /// and a refused pledge leaves every counter as it was.
     // TEST-013 verifies: REQ-RISK-021, REQ-RISK-022, REQ-RISK-024, REQ-RISK-051, SPEC-CAP-002, SPEC-CAP-003, INV-028
     function test_TEST_013_capsReadFromTheParameterStore() public {
         PledgeCounters memory k = coll.getCounters(vtA, bob);
@@ -102,23 +102,20 @@ contract FullStackPolicyIntegrationTest is FullStackMarkets {
             SHORT_DELAY,
             "a cap tightening is short-delay"
         );
-        bytes[3] memory tighten = [
+        bytes[2] memory tighten = [
             abi.encodeCall(IParameterStoreTighten.tightenMarketUsdCap, (mA, used + 10_000e8)),
-            abi.encodeCall(IParameterStoreTighten.tightenTokenUsdCap, (aave.hub, address(usdt), 20_000e8)),
-            abi.encodeCall(IParameterStoreTighten.tightenPoolShareMaxBps, (uint16(1)))
+            abi.encodeCall(IParameterStoreTighten.tightenTokenUsdCap, (aave.hub, address(usdt), 20_000e8))
         ];
-        bytes32[3] memory kinds = [bytes32("MARKET"), bytes32("TOKEN"), bytes32(0)];
-        for (uint256 i = 0; i < 3; ++i) {
+        bytes32[2] memory kinds = [bytes32("MARKET"), bytes32("TOKEN")];
+        for (uint256 i = 0; i < 2; ++i) {
             uint256 snap = vm.snapshotState();
             // `marketUsdCap` never goes below `topUpSliceUsd`: the slice is tightened first.
             if (i == 0) _govern(address(store), _sliceTo(1e8));
             _govern(address(store), tighten[i]);
-            if (i == 2) lpVault.setMarketDepth(mA, 100_000e6);
             PledgeCounters memory before = coll.getCounters(vtA, bob);
             (bool ok, bytes memory ret,) = _tryPledge(bob, UNITS);
             assertFalse(ok, string.concat("the tightened cap refuses the pledge ", vm.toString(i)));
-            if (i < 2) assertEq(ret, _capError(kinds[i]), "CapExceeded of that cap");
-            else assertEq(bytes4(ret), IRiskModuleErrors.PoolShareExceeded.selector, "pool share above the cap");
+            assertEq(ret, _capError(kinds[i]), "CapExceeded of that cap");
             PledgeCounters memory afterK = coll.getCounters(vtA, bob);
             assertEq(afterK.regularUsed, before.regularUsed, "regular budget unchanged");
             assertEq(afterK.sliceUsed, before.sliceUsed, "slice unchanged");

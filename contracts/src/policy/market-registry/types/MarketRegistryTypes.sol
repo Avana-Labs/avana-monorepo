@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RouteSlot} from "../../../types/OracleTypes.sol";
 import {IssuerProbe} from "./IssuerProbe.sol";
 
 /// @notice Enabled debt reserve of a CDP Spoke.
@@ -32,7 +31,7 @@ struct DebtReserveDef {
 struct MarketRegistryImmutables {
     // The chain's AvanaTimelock, the only holder of `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN`.
     address timelock;
-    // The Aave governance executor: the only caller of `cancelStandbySwitch`.
+    // The Aave governance executor, protected from the address freeze.
     address aaveGovernanceExecutor;
     address vaultTokenFactory;
     // The AaveAdapter fixed proxy.
@@ -64,7 +63,7 @@ struct MarketRegistryLogics {
     address listing;
     // Market activation, cancellation and offboarding.
     address activation;
-    // Swap routes and the standby switch.
+    // Swap routes and the AMM integration contract record.
     address routes;
     // Pause state and reason, address freeze and breakers.
     address safety;
@@ -109,7 +108,7 @@ struct SpokeDef {
 }
 
 /// @notice Listed token definition (pool token or debt asset).
-/// @dev Empty alternate and standby routes mark a monitoring-only listing (a fixed-price debt asset).
+/// @dev An empty alternate route marks a monitoring-only listing (a fixed-price debt asset).
 struct TokenDef {
     bool listed;
     uint8 decimals;
@@ -119,10 +118,6 @@ struct TokenDef {
     address[] primaryRoute;
     // Chainlink aggregator proxies of the alternate route.
     address[] alternateRoute;
-    // Chainlink aggregator proxies of the pre-approved standby route.
-    address[] standbyRoute;
-    // Slot the standby currently replaces; None at listing.
-    RouteSlot replacedSlot;
     // Issuer-action probe the RiskModule runs for this token (`UsdtFeeRateAndPaused` runs both reads).
     IssuerProbe issuerProbe;
     // Peg module (GSM or PSM) of the token that a backup swap route must avoid, or address(0).

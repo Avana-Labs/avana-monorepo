@@ -45,27 +45,19 @@
     },
     "USDC": {
       "deviationBps": 25,
-      "collateralFactorBps": 9000,
-      "agreementToleranceBps": 150,
-      "secondToleranceBps": 150
+      "collateralFactorBps": 9000
     },
     "USDT": {
       "deviationBps": 25,
-      "collateralFactorBps": 9000,
-      "agreementToleranceBps": 150,
-      "secondToleranceBps": 150
+      "collateralFactorBps": 9000
     },
     "WETH": {
       "deviationBps": 50,
-      "collateralFactorBps": 8500,
-      "agreementToleranceBps": 200,
-      "secondToleranceBps": 200
+      "collateralFactorBps": 8500
     },
     "wstETH": {
       "deviationBps": 50,
-      "collateralFactorBps": 8500,
-      "agreementToleranceBps": 200,
-      "secondToleranceBps": 200
+      "collateralFactorBps": 8500
     },
     "LINK": {
       "deviationBps": 50,
@@ -74,51 +66,35 @@
     },
     "DAI": {
       "deviationBps": 25,
-      "collateralFactorBps": 9000,
-      "agreementToleranceBps": 150,
-      "secondToleranceBps": 150
+      "collateralFactorBps": 9000
     },
     "USDS": {
       "deviationBps": 25,
-      "collateralFactorBps": 9000,
-      "agreementToleranceBps": 150,
-      "secondToleranceBps": 150
+      "collateralFactorBps": 9000
     },
     "USDe": {
       "deviationBps": 25,
-      "collateralFactorBps": 9000,
-      "agreementToleranceBps": 150,
-      "secondToleranceBps": 150
+      "collateralFactorBps": 9000
     },
     "cbETH": {
       "deviationBps": 50,
-      "collateralFactorBps": 8500,
-      "agreementToleranceBps": 200,
-      "secondToleranceBps": 200
+      "collateralFactorBps": 8500
     },
     "rETH": {
       "deviationBps": 50,
-      "collateralFactorBps": 8500,
-      "agreementToleranceBps": 200,
-      "secondToleranceBps": 200
+      "collateralFactorBps": 8500
     },
     "WBTC": {
       "deviationBps": 50,
-      "collateralFactorBps": 8400,
-      "agreementToleranceBps": 200,
-      "secondToleranceBps": 200
+      "collateralFactorBps": 8400
     },
     "cbBTC": {
       "deviationBps": 50,
-      "collateralFactorBps": 8400,
-      "agreementToleranceBps": 200,
-      "secondToleranceBps": 200
+      "collateralFactorBps": 8400
     },
     "tBTC": {
       "deviationBps": 50,
-      "collateralFactorBps": 8000,
-      "agreementToleranceBps": 200,
-      "secondToleranceBps": 200
+      "collateralFactorBps": 8000
     },
     "AAVE": {
       "deviationBps": 100,
@@ -207,7 +183,6 @@
   "markets": {
     "default": {
       "poolRiskFactorBps": 4000,
-      "consistencyToleranceBps": 100,
       "maxLiquidationBonus": 10800,
       "slippageAllowanceMinBps": 50,
       "minPledgeUsd": "10",
@@ -217,13 +192,11 @@
     },
     "uni-USDC-USDT-100": {
       "poolRiskFactorBps": 8889,
-      "collateralFactorBps": 8000,
-      "consistencyToleranceBps": 50
+      "collateralFactorBps": 8000
     },
     "uni-WETH-USDC-500": {
       "poolRiskFactorBps": 8471,
       "collateralFactorBps": 7200,
-      "consistencyToleranceBps": 100,
       "riskFactorBps": {
         "pairVolatility": 150,
         "liquidityDepth": 50
@@ -231,24 +204,20 @@
     },
     "uni-wstETH-WETH-100": {
       "poolRiskFactorBps": 8824,
-      "collateralFactorBps": 7500,
-      "consistencyToleranceBps": 50
+      "collateralFactorBps": 7500
     },
     "slip-USDC-USDT-cl1": {
       "collateralFactorBps": 3500,
       "maxLiquidationBonus": 10500,
-      "consistencyToleranceBps": 50,
       "slippageAllowanceBps": 195
     },
     "slip-WETH-USDC-cl100": {
       "poolRiskFactorBps": 8471,
-      "collateralFactorBps": 7200,
-      "consistencyToleranceBps": 100
+      "collateralFactorBps": 7200
     },
     "slip-wstETH-WETH-cl1": {
       "collateralFactorBps": 3400,
       "maxLiquidationBonus": 10600,
-      "consistencyToleranceBps": 50,
       "slippageAllowanceBps": 230
     },
     "slip-cbBTC-USDC-cl100": {

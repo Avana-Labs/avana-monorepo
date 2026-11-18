@@ -69,7 +69,7 @@ contract ParameterStoreFeeRecipientGasUnitTest is ParameterStoreFixture {
     uint256 internal constant PROBES = 7;
 
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
     }
 
     function _cost(

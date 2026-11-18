@@ -6,12 +6,6 @@ pragma solidity 0.8.28;
 /// @title IParameterStoreBase
 /// @notice Errors and events of ParameterStore, shared with its contracts.
 interface IParameterStoreBase {
-    /// @notice `useStandbySecondSource` found no recorded standby for the token.
-    error NoStandby(address token);
-
-    /// @notice `useStandbySecondSource` found the standby already in force.
-    error StandbyActive(address token);
-
     /// @notice A tighten value is not strictly safer than the current value.
     error NotStricter();
 
@@ -51,10 +45,6 @@ interface IParameterStoreBase {
     /// @notice The stress floor can be raised only while the market's vault-token supply is 0.
     error SupplyNotZero(uint256 marketId);
 
-    /// @notice The market's LPOracle rejected a new oracle configuration.
-    /// @param failedChecks Bitmap returned by `LPOracle.checkConfig`.
-    error OracleConfigRejected(address lpOracle, uint256 failedChecks);
-
     /// @notice A loosening moves its parameter further than one step.
     /// @param key `keccak256(abi.encode(name, scope))` of the parameter.
     error LoosenStepTooLarge(bytes32 key);
@@ -75,11 +65,6 @@ interface IParameterStoreBase {
 
     /// @notice A logic contract was called directly instead of by the ParameterStore's delegatecall.
     error NotDelegated();
-
-    /// @notice A token's second source in force changed between the recorded source and the standby.
-    /// @param standby True when the standby is now in force.
-    /// @param by The caller (a guardian, or the timelock when restoring).
-    event SecondSourceSwitched(address indexed token, bool standby, address by);
 
     /// @notice A tighten setter succeeded.
     /// @param scope marketId, token, feed, `keccak256(spoke, debtReserveId)` or zero for a global parameter.

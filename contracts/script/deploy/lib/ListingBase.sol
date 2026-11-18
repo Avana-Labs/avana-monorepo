@@ -6,7 +6,6 @@ pragma solidity 0.8.28;
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {OracleLeg, OracleRoute, SecondSource, SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {DeployBase} from "./DeployBase.sol";
 import {TimelockOperations} from "./TimelockOperations.sol";
 
@@ -31,12 +30,12 @@ interface IHubAssetIds {
 
 /// @title ListingBase
 /// @notice Shared reads of the listing steps (`09_ListMarkets`, `10_AaveListingPayload`): the network config's
-/// `listing` section, Avana's deploy output and the feed, route and second-source definitions every listed token gets.
+/// `listing` section, Avana's deploy output and the feed and route definitions every listed token gets.
 /// Every token, feed, pool, Hub and Spoke address comes from the config, as a literal on a network where the Aave DAO
 /// deployed Aave V4 itself or as a `$aave:` / `$world:` reference to the test-network deployment, so the Avana
 /// listing never depends on how Aave's side was deployed.
-/// @dev Feed roles in `world.json`: `primary`, `alternate` and `standby` are the token's three price routes (one feed
-/// each, no feed shared, `REQ-CONFIG-018`); `second` is its oracle-network second source, a feed in none of its routes.
+/// @dev Feed roles in `world.json`: `primary` and `alternate` are the token's two price routes (one feed each, no feed
+/// shared, `REQ-CONFIG-018`).
 abstract contract ListingBase is TimelockOperations, DeployBase {
     string internal cfg;
     string internal avanaJson;
@@ -181,7 +180,7 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
         revert(string.concat("no listing entry for ", symbol));
     }
 
-    /// @notice A listed token's Chainlink feed of `role` (`primary`, `alternate`, `standby`, `second`).
+    /// @notice A listed token's Chainlink feed of `role` (`primary`, `alternate`).
     function _feed(
         string memory symbol,
         string memory role
@@ -291,39 +290,6 @@ abstract contract ListingBase is TimelockOperations, DeployBase {
         d.borrowPriceMaxAge = _maxAge();
         d.liquidationPriceMaxAge = _maxAge();
         d.maxAnswerCap = int256(vm.parseUint(_str(".listing.feed.maxAnswerCap")));
-    }
-
-    /// @notice A one-leg LPOracle route over `feed`, matching its ParameterStore definition.
-    function _route(
-        address feed,
-        uint16 deviationBps
-    ) internal view returns (OracleRoute memory r) {
-        r.legCount = 1;
-        r.legs[0] = OracleLeg({
-            aggregator: feed,
-            decimals: 8,
-            heartbeat: uint32(_uint(".listing.feed.heartbeat")),
-            heartbeatMargin: uint16(_uint(".listing.feed.heartbeatMargin")),
-            feedDeviationThresholdBps: deviationBps,
-            minAnswer: 1,
-            maxAnswer: 1e18,
-            borrowPriceMaxAge: _maxAge(),
-            liquidationPriceMaxAge: _maxAge()
-        });
-    }
-
-    /// @notice The oracle-network second source of a pool token: its `second` feed.
-    function _secondSource(
-        string memory key
-    ) internal view returns (SecondSource memory s) {
-        s = SecondSource({
-            kind: SecondSourceKind.OracleNetwork,
-            source: _feed(_str(string.concat(key, ".symbol")), "second"),
-            poolRef: bytes32(0),
-            maxAge: _maxAge(),
-            twapWindow: 0,
-            toleranceBps: uint16(_uint(string.concat(key, ".secondToleranceBps")))
-        });
     }
 
     function _one(

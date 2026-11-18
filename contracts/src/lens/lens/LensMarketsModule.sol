@@ -131,20 +131,18 @@ contract LensMarketsModule is LensBase, ILensMarkets, ILensFees {
         v.pauseState = _registry().pauseState(m.hub);
         // forge-lint: disable-next-line(unused-return)
         (v.breakerReasons,) = IRiskModule(_RISK_MODULE).getBreakerStatus(marketId);
-        _riskConfig(v, m, marketId);
+        _riskConfig(v, m);
     }
 
     function _riskConfig(
         MarketView memory v,
-        Market memory m,
-        uint256 marketId
+        Market memory m
     ) internal view {
         IAaveV4Spoke spoke = IAaveV4Spoke(m.spoke);
         v.collateralRiskBps = spoke.getReserveConfig(m.reserveId).collateralRisk;
         IAaveV4Spoke.LiquidationConfig memory lc = spoke.getLiquidationConfig();
         (v.targetHealthFactor, v.healthFactorForMaxBonus, v.liquidationBonusFactorBps) =
         (lc.targetHealthFactor, lc.healthFactorForMaxBonus, lc.liquidationBonusFactor);
-        v.hardHealthFloor = _store().hardHealthFloor(marketId);
         v.tokenUsdCaps = new uint256[](m.tokens.length);
         for (uint256 i = 0; i < m.tokens.length; ++i) {
             v.tokenUsdCaps[i] = _store().tokenUsdCap(m.hub, m.tokens[i]);

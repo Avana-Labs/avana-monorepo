@@ -74,35 +74,6 @@ contract RiskModuleViewsUnitTest is RiskModuleFixture {
         assertEq(p.reason, IRiskModuleErrors.CapExceeded.selector);
     }
 
-    // TEST-034 verifies: REQ-RISK-031, SPEC-CAP-005, REQ-RISK-023
-    // Sources: 2.7 SPEC-CAP-005 example (cap 1,000 bps, depth 2e13, U = 1.5e12)
-    function test_TEST_034_previewPoolShareRoom() public {
-        store.setPoolShare(poolKey, 1000);
-        store.setMinPledge(mid, 0);
-        PledgeCounters memory k = _counters();
-        k.poolUnits = 1.5e12;
-        coll.setCounters(k);
-        // floor(1,000 x 2e13 / 1e4) - 1.5e12 = 5e11 units.
-        PledgePreview memory p = riskModule.previewPledge(wallet, mid, KEY);
-        assertEq(p.poolShareRoomUnits, 5e11);
-        rVault.setPosition(KEY, wallet, 4e11);
-        assertTrue(riskModule.previewPledge(wallet, mid, KEY).eligible);
-        rVault.setPosition(KEY, wallet, 6e11);
-        p = riskModule.previewPledge(wallet, mid, KEY);
-        assertEq(p.reason, IRiskModuleErrors.PoolShareExceeded.selector);
-        // At or above the cap: no room.
-        k.poolUnits = 3e12;
-        coll.setCounters(k);
-        assertEq(riskModule.previewPledge(wallet, mid, KEY).poolShareRoomUnits, 0);
-        // Depth unavailable: no room, and the pledge reports PoolShareUnavailable.
-        k.poolUnits = 0;
-        coll.setCounters(k);
-        rVault.setDepth(0, false);
-        p = riskModule.previewPledge(wallet, mid, KEY);
-        assertEq(p.poolShareRoomUnits, 0);
-        assertEq(p.reason, IRiskModuleErrors.PoolShareUnavailable.selector);
-    }
-
     // TEST-034 verifies: REQ-RISK-031, REQ-RISK-010, REQ-RISK-011
     function test_TEST_034_previewIntegrationRevertWithoutSelector() public {
         coll.setCounters(_counters());

@@ -342,7 +342,7 @@ contract AaveAdapterBorrowUnitTest is AaveAdapterFixture {
     function test_TEST_028_riskModuleErrorPropagates() public {
         risk.setRefuse(true);
         _expectBorrowRevert(
-            abi.encodeWithSelector(IRiskModuleErrors.SequencerDown.selector), debtReserveId, 1, alice, 0
+            abi.encodeWithSelector(IRiskModuleErrors.AaveReserveUnavailable.selector), debtReserveId, 1, alice, 0
         );
         assertEq(adapterC.borrowNonce(aliceProxy), 0, "nonce unchanged");
     }

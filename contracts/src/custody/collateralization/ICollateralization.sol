@@ -157,11 +157,6 @@ interface ICollateralization is ICollateralizationBase {
         address vaultToken
     ) external view returns (uint256 totalCredited);
 
-    /// @notice Returns the credited units summed over every market of one pool on the chain.
-    function poolUnits(
-        bytes32 poolKey
-    ) external view returns (uint256 units);
-
     /// @notice Returns the market's pending-settlement balance.
     /// @return pending Unsettled units and the pool tokens backing them, pool order.
     function getPending(

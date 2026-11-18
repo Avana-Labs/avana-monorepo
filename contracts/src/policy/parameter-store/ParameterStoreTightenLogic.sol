@@ -3,8 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {Market} from "../../types/MarketTypes.sol";
-import {SecondSourceKind} from "../../types/OracleTypes.sol";
 import {IParameterStore} from "./IParameterStore.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
 import {IParameterStoreTighten} from "./IParameterStoreTighten.sol";
@@ -25,33 +23,17 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     constructor(
         address timelock,
         address marketRegistry,
-        uint32 chainBlockTime,
-        bool hasSequencer
-    ) ParameterStoreStorage(timelock, marketRegistry, chainBlockTime, hasSequencer) {}
+        uint32 chainBlockTime
+    ) ParameterStoreStorage(timelock, marketRegistry, chainBlockTime) {}
 
     /// @inheritdoc IParameterStoreLogic
     function logicConfig()
         external
         view
         override
-        returns (bytes32 kind, address timelock, address marketRegistry, uint32 chainBlockTime, bool hasSequencer)
+        returns (bytes32 kind, address timelock, address marketRegistry, uint32 chainBlockTime)
     {
-        return (keccak256("ParameterStoreTightenLogic"), _TIMELOCK, address(_REGISTRY), _BLOCK_TIME, _HAS_SEQUENCER);
-    }
-
-    /// @inheritdoc IParameterStoreTighten
-    function tightenHardHealthFloor(
-        uint256 marketId,
-        uint256 value
-    ) external override {
-        _onlyDelegated();
-        _requireMarket(marketId);
-        MarketParams storage p = _s().market[marketId];
-        uint256 old = p.hardHealthFloor;
-        if (value <= old) revert NotStricter();
-        if (value < WAD || value > HARD_FLOOR_MAX) revert OutOfBounds();
-        p.hardHealthFloor = value;
-        emit ParameterTightened("hardHealthFloor", bytes32(marketId), old, value, msg.sender);
+        return (keccak256("ParameterStoreTightenLogic"), _TIMELOCK, address(_REGISTRY), _BLOCK_TIME);
     }
 
     /// @inheritdoc IParameterStoreTighten
@@ -91,51 +73,8 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         FeedDef storage d = _feed(feed);
         if (value >= d.borrowPriceMaxAge) revert NotStricter();
         if (value == 0) revert OutOfBounds();
-        // The second value (a tolerance bound) is not computed here.
-        // forge-lint: disable-next-line(unused-return)
-        (address[] memory oracles,,) = _affected(SCOPE_FEED, feed, false, false);
-        uint256[] memory before = _failures(oracles);
         d.borrowPriceMaxAge = value;
-        _requireNoNewFailures(oracles, before);
         _emitFeed(feed, d);
-    }
-
-    /// @inheritdoc IParameterStoreTighten
-    function tightenConsistencyToleranceBps(
-        uint256 marketId,
-        uint16 value
-    ) external override {
-        _onlyDelegated();
-        Market memory m = _market(marketId);
-        MarketParams storage p = _s().market[marketId];
-        uint16 old = p.consistencyToleranceBps;
-        if (value >= old) revert NotStricter();
-        if (value < CONSISTENCY_MIN_BPS) revert LivenessBound();
-        // One slot per market identifier, as `_affected` lays them out; only this market's is set.
-        address[] memory oracles = new address[](marketId);
-        if (_configured(m.status)) oracles[marketId - 1] = m.lpOracle;
-        uint256[] memory before = _failures(oracles);
-        p.consistencyToleranceBps = value;
-        _requireNoNewFailures(oracles, before);
-        emit ParameterTightened("consistencyToleranceBps", bytes32(marketId), old, value, msg.sender);
-    }
-
-    /// @inheritdoc IParameterStoreTighten
-    function tightenFeedAgreementToleranceBps(
-        address token,
-        uint16 value
-    ) external override {
-        _onlyDelegated();
-        uint16 old = _s().feedAgreementToleranceBps[token];
-        if (value >= old) revert NotStricter();
-        if (value < _toleranceMin(token)) revert LivenessBound();
-        // The second value (a tolerance bound) is not computed here; the line above checks against it.
-        // forge-lint: disable-next-line(unused-return)
-        (address[] memory oracles,,) = _affected(SCOPE_TOKEN, token, false, false);
-        uint256[] memory before = _failures(oracles);
-        _s().feedAgreementToleranceBps[token] = value;
-        _requireNoNewFailures(oracles, before);
-        emit ParameterTightened("feedAgreementToleranceBps", _a(token), old, value, msg.sender);
     }
 
     /// @inheritdoc IParameterStoreTighten
@@ -212,18 +151,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
     }
 
     /// @inheritdoc IParameterStoreTighten
-    function tightenPoolShareMaxBps(
-        uint16 value
-    ) external override {
-        _onlyDelegated();
-        uint16 old = _s().poolShareMaxBps;
-        if (value >= old) revert NotStricter();
-        if (value == 0) revert OutOfBounds();
-        _s().poolShareMaxBps = value;
-        emit CapTightened("poolShareMaxBps", bytes32(0), old, value, msg.sender);
-    }
-
-    /// @inheritdoc IParameterStoreTighten
     function tightenMinPledgeUsd(
         uint256 marketId,
         uint256 value
@@ -236,20 +163,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         if (value > MIN_PLEDGE_USD_MAX) revert OutOfBounds();
         p.minPledgeUsd = value;
         emit MinPledgeUsdSet(marketId, old, value);
-    }
-
-    /// @inheritdoc IParameterStoreTighten
-    function tightenPoolShareMaxBpsOf(
-        uint256 marketId,
-        uint16 value
-    ) external override {
-        _onlyDelegated();
-        bytes32 poolKey = _poolKey(_market(marketId));
-        uint16 old = _poolShareOf(poolKey);
-        if (value >= old) revert NotStricter();
-        if (value == 0) revert OutOfBounds();
-        _s().poolShareOverride[poolKey] = value;
-        emit CapTightened("poolShareMaxBpsOf", poolKey, old, value, msg.sender);
     }
 
     /// @notice Body of `IParameterStore.tightenMaxShortfallBps`.
@@ -273,8 +186,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         uint16 old = _s().debtStressRiseBps[asset];
         if (value <= old) revert NotStricter();
         if (value < STRESS_RISE_MIN_BPS || value > STRESS_RISE_MAX_BPS) revert OutOfBounds();
-        // The first write marks the asset as one with a DebtOracle, which reads only an oracle-network second source.
-        if (old == 0 && _hasPoolTwap(asset)) revert OutOfBounds();
         _s().debtStressRiseBps[asset] = value;
         emit ParameterTightened("debtStressRiseBps", _a(asset), old, value, msg.sender);
     }
@@ -303,13 +214,6 @@ contract ParameterStoreTightenLogic is ParameterStoreRisk, IParameterStoreTighte
         if (value >= old) revert NotStricter();
         _s().breakerDeficitMax[hub][asset] = value;
         emit ParameterTightened("breakerDeficitMax", _pair(hub, asset), old, value, msg.sender);
-    }
-
-    function _hasPoolTwap(
-        address token
-    ) private view returns (bool) {
-        return _s().secondSource[token].kind == SecondSourceKind.PoolTwap
-            || _s().standby[token].kind == SecondSourceKind.PoolTwap;
     }
 
     /// @notice Body of `IParameterStore.tightenMaxFlashFeeBps`.

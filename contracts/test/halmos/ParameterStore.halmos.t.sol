@@ -29,10 +29,10 @@ import {Test} from "forge-std/Test.sol";
 /// @notice Symbolic checks of PROP-042: for every value, each tighten setter succeeds exactly when the value is
 /// strictly safer and inside its hard and liveness bounds, stores it, and otherwise leaves the parameter unchanged;
 /// `minPledgeUsd` only rises through `tightenMinPledgeUsd` and only falls through `loosenMinPledgeUsd`, within
-/// `[0, 100_000e8]`; the grace setters stay inside the global liveness bounds.
+/// `[0, 100_000e8]`; the chain scalars move only in their safer direction within their bounds.
 /// @dev The store runs behind its proxy with its five logic contracts; the timelock is a fixed address (no loosening
-/// under test reads `normalDelay`). Market 1 is written in `setUp` with the default values of 1.5 (twapWindow 0 on an
-/// integration without a time-weighted price, so no feed is needed). Each check is one symbolic value per setter.
+/// under test reads `normalDelay`). Market 1 is written in `setUp` with the default values of 1.5 (tokens without
+/// routes, so no feed is needed). Each check is one symbolic value per setter.
 contract ParameterStoreHalmosTest is Test {
     address internal constant TIMELOCK = address(0x7173);
     address internal constant RECIPIENT = address(0xFEE);
@@ -42,40 +42,31 @@ contract ParameterStoreHalmosTest is Test {
     uint256 internal constant M = 1;
 
     IParameterStore internal store;
-    address internal poolAddr;
 
     function setUp() public {
         MockMarketRegistry registry = new MockMarketRegistry();
         ParameterStoreLogics memory l = ParameterStoreLogics({
-            tighten: address(new ParameterStoreTightenLogic(TIMELOCK, address(registry), 12, false)),
-            loosen: address(new ParameterStoreLoosenLogic(TIMELOCK, address(registry), 12, false)),
-            listing: address(new ParameterStoreListingLogic(TIMELOCK, address(registry), 12, false)),
-            adminOracle: address(new ParameterStoreAdminOracleLogic(TIMELOCK, address(registry), 12, false)),
-            adminRisk: address(new ParameterStoreAdminRiskLogic(TIMELOCK, address(registry), 12, false))
+            tighten: address(new ParameterStoreTightenLogic(TIMELOCK, address(registry), 12)),
+            loosen: address(new ParameterStoreLoosenLogic(TIMELOCK, address(registry), 12)),
+            listing: address(new ParameterStoreListingLogic(TIMELOCK, address(registry), 12)),
+            adminOracle: address(new ParameterStoreAdminOracleLogic(TIMELOCK, address(registry), 12)),
+            adminRisk: address(new ParameterStoreAdminRiskLogic(TIMELOCK, address(registry), 12))
         });
-        ParameterStore impl = new ParameterStore(TIMELOCK, address(registry), 12, false, l);
+        ParameterStore impl = new ParameterStore(TIMELOCK, address(registry), 12, l);
         GlobalParams memory g;
-        g.cachedWindow = 3600;
-        g.disagreementPauseMax = 3600;
-        g.usdBandLow = 0.9e8;
-        g.usdBandHigh = 1.02e8;
-        g.graceDuration = 1800;
-        g.graceHealthFactor = 0.95e18;
         g.maxFlashFeeBps = 10;
         g.avanaFeeShareBps = 2000;
         g.feeRecipient = RECIPIENT;
-        g.feedAgreementMarginBps = 50;
         g.gateRecoverySeconds = 1800;
         g.maxShortfallBps = 1000;
         store = IParameterStore(
-            address(new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStore.initialize, (TIMELOCK, g, 10_000))))
+            address(new ERC1967Proxy(address(impl), abi.encodeCall(IParameterStore.initialize, (TIMELOCK, g))))
         );
         MockIntegration integration = new MockIntegration();
         integration.set(false, true, false, ShapeKind.FullPool);
         Market memory m;
         m.integration = address(integration);
         m.pool = address(new MockPool());
-        poolAddr = m.pool;
         m.tokens = new address[](2);
         (m.tokens[0], m.tokens[1]) = (TOKEN_A, TOKEN_B);
         m.tokenDecimals = new uint8[](2);
@@ -83,14 +74,13 @@ contract ParameterStoreHalmosTest is Test {
         m.status = MarketStatus.Registered;
         registry.setMarket(M, m);
         address[] memory none = new address[](0);
-        registry.setToken(TOKEN_A, none, none, none);
-        registry.setToken(TOKEN_B, none, none, none);
+        registry.setToken(TOKEN_A, none, none);
+        registry.setToken(TOKEN_B, none, none);
         registry.setHub(HUB, true);
         vm.startPrank(TIMELOCK);
         store.setTokenCollateralFactorBps(TOKEN_A, 7800);
         store.setTokenCollateralFactorBps(TOKEN_B, 7500);
         MarketParams memory p;
-        p.consistencyToleranceBps = 50;
         p.slippageAllowanceBps = 100;
         p.slippageAllowanceMinBps = 30;
         p.poolRiskFactor = 4000;
@@ -129,15 +119,6 @@ contract ParameterStoreHalmosTest is Test {
         assert(store.minPledgeUsd(M) <= 100_000e8);
     }
 
-    // PROP-042 verifies: REQ-PSTORE-031, REQ-CONFIG-050, REQ-CONFIG-051, Q-398
-    function check_PROP_042_tightenHardHealthFloor(
-        uint256 value
-    ) public {
-        bool ok = _asTimelock(abi.encodeCall(IParameterStoreTighten.tightenHardHealthFloor, (M, value)));
-        assert(ok == (value >= 1e18 && value <= 1.25e18));
-        assert(store.hardHealthFloor(M) == (ok ? value : 0));
-    }
-
     // PROP-042 verifies: REQ-CONFIG-052, REQ-PSTORE-015, INV-047
     function check_PROP_042_tightenSlippageStaysAboveFloor(
         uint16 value
@@ -147,15 +128,6 @@ contract ParameterStoreHalmosTest is Test {
         uint16 stored = store.getMarketParams(M).slippageAllowanceBps;
         assert(stored == (ok ? value : 100));
         assert(stored >= store.slippageAllowanceMinBps(M));
-    }
-
-    // PROP-042 verifies: REQ-CONFIG-052, SPEC-GOV-009, INV-047
-    function check_PROP_042_tightenConsistencyStaysAboveMinimum(
-        uint16 value
-    ) public {
-        bool ok = _asTimelock(abi.encodeCall(IParameterStoreTighten.tightenConsistencyToleranceBps, (M, value)));
-        assert(ok == (value < 50 && value >= 10));
-        assert(store.getMarketParams(M).consistencyToleranceBps >= store.consistencyToleranceMinBps());
     }
 
     // PROP-042 verifies: REQ-RISK-042, REQ-RISK-044
@@ -175,8 +147,7 @@ contract ParameterStoreHalmosTest is Test {
     function check_PROP_042_tightenChainScalars(
         uint64 gate,
         uint16 shortfall,
-        uint16 flash,
-        uint16 share
+        uint16 flash
     ) public {
         assert(
             _asTimelock(abi.encodeCall(IParameterStore.tightenGateRecoverySeconds, (gate)))
@@ -185,24 +156,6 @@ contract ParameterStoreHalmosTest is Test {
         assert(store.gateRecoverySeconds() >= 600 && store.gateRecoverySeconds() <= 7200);
         assert(_asTimelock(abi.encodeCall(IParameterStore.tightenMaxShortfallBps, (shortfall))) == (shortfall < 1000));
         assert(_asTimelock(abi.encodeCall(IParameterStore.tightenMaxFlashFeeBps, (flash))) == (flash < 10));
-        assert(
-            _asTimelock(abi.encodeCall(IParameterStoreTighten.tightenPoolShareMaxBps, (share)))
-                == (share < 10_000 && share != 0)
-        );
-        assert(store.poolShareMaxBps() > 0 && store.poolShareMaxBps() <= 10_000);
-    }
-
-    // PROP-042 verifies: REQ-CONFIG-052, SPEC-GOV-012, INV-047
-    function check_PROP_042_graceStaysInsideLivenessBounds(
-        uint32 duration,
-        uint256 hf
-    ) public {
-        bool okD = _asTimelock(abi.encodeCall(IParameterStore.setGraceDuration, (duration)));
-        assert(okD == (duration <= 7200));
-        bool okH = _asTimelock(abi.encodeCall(IParameterStore.setGraceHealthFactor, (hf)));
-        assert(okH == (hf >= 0.9e18 && hf < 1e18));
-        assert(store.graceDuration() <= store.graceDurationMax());
-        assert(store.graceHealthFactor() >= store.graceHealthFactorMin() && store.graceHealthFactor() < 1e18);
     }
 
     // PROP-042 verifies: REQ-RISK-042, REQ-RISK-044, REQ-PSTORE-026
@@ -212,22 +165,6 @@ contract ParameterStoreHalmosTest is Test {
         bool okToken = _asTimelock(abi.encodeCall(IParameterStoreTighten.tightenTokenUsdCap, (HUB, TOKEN_A, tokenCap)));
         assert(okToken == (tokenCap < 20_000_000e8));
         assert(store.tokenUsdCap(HUB, TOKEN_A) == (okToken ? tokenCap : 20_000_000e8));
-    }
-
-    // PROP-042 verifies: REQ-RISK-042, SPEC-CAP-005, Q-383
-    function check_PROP_042_tightenPoolShareOfStaysUnderTheDefault(
-        uint16 dflt,
-        uint16 over
-    ) public {
-        bool okDefault = _asTimelock(abi.encodeCall(IParameterStoreTighten.tightenPoolShareMaxBps, (dflt)));
-        assert(okDefault == (dflt < 10_000 && dflt != 0));
-        uint16 d = store.poolShareMaxBps();
-        bool okOver = _asTimelock(abi.encodeCall(IParameterStoreTighten.tightenPoolShareMaxBpsOf, (M, over)));
-        assert(okOver == (over < d && over != 0));
-        bytes32 key = keccak256(abi.encode(uint32(0), poolAddr, bytes32(0)));
-        uint16 served = store.poolShareMaxBpsOf(key);
-        assert(served <= store.poolShareMaxBps());
-        assert(served == (okOver ? over : d));
     }
 
     // PROP-042 verifies: REQ-PSTORE-020, REQ-CONFIG-050, REQ-CONFIG-051

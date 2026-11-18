@@ -164,7 +164,6 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
         uint256 supply;
         uint128 regularUsed;
         uint128 sliceUsed;
-        uint256 poolUnits;
         uint256 token0Used;
         uint256 token1Used;
     }
@@ -183,7 +182,6 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
             supply: token2.totalSupply(),
             regularUsed: c.regularUsed,
             sliceUsed: c.sliceUsed,
-            poolUnits: c.poolUnits,
             token0Used: c.tokenUsed[0],
             token1Used: c.tokenUsed[1]
         });
@@ -200,7 +198,6 @@ contract UniswapV3IntegrationCollateralizationIntegrationTest is Collateralizati
         assertEq(a.supply, b.supply, "vault-token supply (mint)");
         assertEq(a.regularUsed, b.regularUsed, "regular cap counter");
         assertEq(a.sliceUsed, b.sliceUsed, "slice counter");
-        assertEq(a.poolUnits, b.poolUnits, "pool-share counter");
         assertEq(a.token0Used, b.token0Used, "token0 cap counter");
         assertEq(a.token1Used, b.token1Used, "token1 cap counter");
     }

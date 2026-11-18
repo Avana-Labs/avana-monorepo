@@ -19,15 +19,15 @@ import {RealStackFlows} from "../utils/fixtures/RealStackFlows.sol";
 /// standard fee tiers (each further market a narrower tick range of one of them), listed, routed and activated as the
 /// listing payloads do it. At 1, 16, 32 and 64 markets the suite measures, each as its own transaction
 /// (`isolate = true`, `GasCalibration._txGas`: intrinsic gas included, every account and slot cold), every operation
-/// whose cost grows with the market count: the ParameterStore's chain-wide re-check through its costliest setter
-/// (`setFeedAgreementMarginBps`, the sizing operation of `REQ-MREG-034`), the registry's re-check of a shared token's
-/// routes (`setPriceSource` of USDC, held by every market), the permissionless `RiskModule.pokeConfig` of the CDP Spoke,
-/// a user's `pledge` and `borrow` (whose market breaker walks the Spoke's markets for configuration drift), the
-/// registry's `spokeSettingsDrift`, the Lens's `getTailCoverage` and one `getMarkets` page of up to 16 markets. The
-/// figures are recorded with `vm.snapshotValue` (group `MarketCount`) and checked against the per-transaction gas
-/// limit and the 50 % sizing budget of `REQ-MREG-034`.
+/// whose cost grows with the market count: the ParameterStore's listing-margin re-check of every market holding a
+/// token (`setTokenCollateralFactorBps` raising USDC's factor, the sizing operation of `REQ-MREG-034`), the registry's
+/// re-check of a shared token's routes (`setPriceSource` of USDC, held by every market), the permissionless
+/// `RiskModule.pokeConfig` of the CDP Spoke, a user's `pledge` and `borrow` (whose market breaker walks the Spoke's
+/// markets for configuration drift), the registry's `spokeSettingsDrift`, the Lens's `getTailCoverage` and one
+/// `getMarkets` page of up to 16 markets. The figures are recorded with `vm.snapshotValue` (group `MarketCount`) and
+/// checked against the per-transaction gas limit and the 50 % sizing budget of `REQ-MREG-034`.
 /// @dev Every market here shares USDC and USDT and their one-leg routes, and every four markets share a pool, so a
-/// token's routes, feeds and second source are cold only for the first market the walk reaches: the figures are a lower
+/// token's routes and feeds are cold only for the first market the walk reaches: the figures are a lower
 /// bound for markets of distinct tokens on two-leg routes, which the per-chain fork sizing of `REQ-MREG-034` covers.
 /// forge-config: default.isolate = true
 contract MarketCountGasTest is RealStackFlows, GasCalibration {
@@ -37,7 +37,7 @@ contract MarketCountGasTest is RealStackFlows, GasCalibration {
     uint256 internal constant PAGE = 16;
 
     IClPool[] internal pools;
-    uint16 internal margin;
+    uint16 internal usdcFactor;
     /// @dev Tick spacings by which `_fullRange` narrows the range of the market being listed (0: the full range).
     int24 internal inset;
 
@@ -55,7 +55,7 @@ contract MarketCountGasTest is RealStackFlows, GasCalibration {
         vm.warp(block.timestamp + 7200);
         vm.roll(block.number + 7200 / BLOCK_TIME);
         _refreshFeeds();
-        margin = store.feedAgreementMarginBps();
+        usdcFactor = store.tokenCollateralFactorBps(address(usdc));
     }
 
     /// @dev Market `i` (from 0) is pool `i % 4` on its full range narrowed by `i / 4` tick spacings at each end, so
@@ -82,18 +82,18 @@ contract MarketCountGasTest is RealStackFlows, GasCalibration {
     function _measure(
         uint256 n
     ) internal returns (Row memory r) {
-        // Alternate the margin so every re-check writes.
-        margin = margin == 0 ? 1 : margin - 1;
+        // Raise USDC's factor by one bp: only a raise re-runs the listing margin of every market holding the token.
+        ++usdcFactor;
         r.recheck = _txGas(
-            address(timelock), address(store), abi.encodeCall(IParameterStore.setFeedAgreementMarginBps, (margin))
+            address(timelock),
+            address(store),
+            abi.encodeCall(IParameterStore.setTokenCollateralFactorBps, (address(usdc), usdcFactor))
         );
         TokenDef memory t = registry.getToken(address(usdc));
         r.priceSource = _txGas(
             address(timelock),
             address(registry),
-            abi.encodeCall(
-                IMarketRegistry.setPriceSource, (address(usdc), t.primaryRoute, t.alternateRoute, t.standbyRoute)
-            )
+            abi.encodeCall(IMarketRegistry.setPriceSource, (address(usdc), t.primaryRoute, t.alternateRoute))
         );
         r.pokeConfig = _txGas(keeper, address(riskModule), abi.encodeCall(IRiskModule.pokeConfig, (aave.cdpSpoke)));
         r.drift = _txGas(keeper, address(registry), abi.encodeCall(IMarketRegistry.spokeSettingsDrift, (aave.cdpSpoke)));
@@ -121,13 +121,13 @@ contract MarketCountGasTest is RealStackFlows, GasCalibration {
         vm.snapshotValue("MarketCount", string.concat("borrow_", k), r.borrow);
         emit log_named_uint(string.concat("markets ", k, ": pledge (new wallet)"), r.pledge);
         emit log_named_uint(string.concat("markets ", k, ": borrow (first)"), r.borrow);
-        vm.snapshotValue("MarketCount", string.concat("setFeedAgreementMarginBps_", k), r.recheck);
+        vm.snapshotValue("MarketCount", string.concat("setTokenCollateralFactorBps_", k), r.recheck);
         vm.snapshotValue("MarketCount", string.concat("setPriceSource_USDC_", k), r.priceSource);
         vm.snapshotValue("MarketCount", string.concat("pokeConfig_", k), r.pokeConfig);
         vm.snapshotValue("MarketCount", string.concat("spokeSettingsDrift_", k), r.drift);
         vm.snapshotValue("MarketCount", string.concat("getTailCoverage_", k), r.tailCoverage);
         vm.snapshotValue("MarketCount", string.concat("getMarkets_page16_", k), r.marketsPage);
-        emit log_named_uint(string.concat("markets ", k, ": setFeedAgreementMarginBps"), r.recheck);
+        emit log_named_uint(string.concat("markets ", k, ": setTokenCollateralFactorBps"), r.recheck);
         emit log_named_uint(string.concat("markets ", k, ": setPriceSource(USDC)"), r.priceSource);
         emit log_named_uint(string.concat("markets ", k, ": pokeConfig(CDP Spoke)"), r.pokeConfig);
         emit log_named_uint(string.concat("markets ", k, ": spokeSettingsDrift"), r.drift);
@@ -160,14 +160,14 @@ contract MarketCountGasTest is RealStackFlows, GasCalibration {
         // Per-market slopes from 1 to 64 markets and the largest count each governance re-check fits in the budget.
         uint256 recheckSlope = (rows[3].recheck - rows[0].recheck) / 63;
         uint256 priceSourceSlope = (rows[3].priceSource - rows[0].priceSource) / 63;
-        emit log_named_uint("setFeedAgreementMarginBps: gas per market", recheckSlope);
+        emit log_named_uint("setTokenCollateralFactorBps: gas per market", recheckSlope);
         emit log_named_uint("setPriceSource(USDC): gas per market", priceSourceSlope);
         emit log_named_uint("pokeConfig: gas per market", (rows[3].pokeConfig - rows[0].pokeConfig) / 63);
         emit log_named_uint("getTailCoverage: gas per market", (rows[3].tailCoverage - rows[0].tailCoverage) / 63);
         emit log_named_uint("pledge: gas per market", (rows[3].pledge - rows[0].pledge) / 63);
         emit log_named_uint("borrow: gas per market", (rows[3].borrow - rows[0].borrow) / 63);
         emit log_named_uint(
-            "largest count with setFeedAgreementMarginBps within the budget",
+            "largest count with setTokenCollateralFactorBps within the budget",
             1 + (RECHECK_BUDGET - rows[0].recheck) / recheckSlope
         );
         emit log_named_uint(
@@ -176,7 +176,7 @@ contract MarketCountGasTest is RealStackFlows, GasCalibration {
         );
         // At 16 markets every governance re-check is within the 50 % budget of REQ-MREG-034 and every permissionless
         // path within half the per-transaction limit.
-        assertLe(rows[1].recheck, RECHECK_BUDGET, "setFeedAgreementMarginBps at 16 markets");
+        assertLe(rows[1].recheck, RECHECK_BUDGET, "setTokenCollateralFactorBps at 16 markets");
         assertLe(rows[1].priceSource, RECHECK_BUDGET, "setPriceSource at 16 markets");
         assertLe(rows[1].pokeConfig, TX_GAS_CAP / 2, "pokeConfig at 16 markets");
         assertLe(rows[1].tailCoverage, TX_GAS_CAP / 2, "getTailCoverage at 16 markets");

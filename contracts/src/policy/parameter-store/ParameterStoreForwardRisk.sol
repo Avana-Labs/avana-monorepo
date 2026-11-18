@@ -11,7 +11,7 @@ import {ParameterStoreRouter} from "./ParameterStoreRouter.sol";
 import {MarketSpeedLimits, SpeedLimit} from "./types/ParameterStoreTypes.sol";
 
 /// @title ParameterStoreForwardRisk
-/// @notice The tighten and loosen setters of the market, Hub, cap, feed, tolerance and route parameters.
+/// @notice The tighten and loosen setters of the market, Hub, cap, feed and route parameters.
 abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterStore {
     /// @inheritdoc IParameterStore
     function marketSpeedLimits(
@@ -63,14 +63,6 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     }
 
     /// @inheritdoc IParameterStoreTighten
-    function tightenHardHealthFloor(
-        uint256,
-        uint256
-    ) external override onlyAdminOrSteward {
-        _forward(_TIGHTEN_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStoreTighten
     function tightenSlippageAllowanceBps(
         uint256,
         uint16
@@ -90,22 +82,6 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     function tightenBorrowPriceMaxAge(
         address,
         uint32
-    ) external override onlyAdminOrSteward {
-        _forward(_TIGHTEN_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStoreTighten
-    function tightenConsistencyToleranceBps(
-        uint256,
-        uint16
-    ) external override onlyAdminOrSteward {
-        _forward(_TIGHTEN_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStoreTighten
-    function tightenFeedAgreementToleranceBps(
-        address,
-        uint16
     ) external override onlyAdminOrSteward {
         _forward(_TIGHTEN_LOGIC);
     }
@@ -155,34 +131,11 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     }
 
     /// @inheritdoc IParameterStoreTighten
-    function tightenPoolShareMaxBps(
-        uint16
-    ) external override onlyAdminOrSteward {
-        _forward(_TIGHTEN_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStoreTighten
     function tightenMinPledgeUsd(
         uint256,
         uint256
     ) external override onlyAdminOrSteward {
         _forward(_TIGHTEN_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStoreTighten
-    function tightenPoolShareMaxBpsOf(
-        uint256,
-        uint16
-    ) external override onlyAdminOrSteward {
-        _forward(_TIGHTEN_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStoreLoosen
-    function loosenHardHealthFloor(
-        uint256,
-        uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_LOOSEN_LOGIC);
     }
 
     /// @inheritdoc IParameterStoreLoosen
@@ -238,24 +191,9 @@ abstract contract ParameterStoreForwardRisk is ParameterStoreRouter, IParameterS
     }
 
     /// @inheritdoc IParameterStoreLoosen
-    function loosenPoolShareMaxBps(
-        uint16
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_LOOSEN_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStoreLoosen
     function loosenMinPledgeUsd(
         uint256,
         uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_LOOSEN_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStoreLoosen
-    function loosenPoolShareMaxBpsOf(
-        uint256,
-        uint16
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
         _forward(_LOOSEN_LOGIC);
     }

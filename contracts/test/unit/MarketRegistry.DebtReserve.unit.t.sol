@@ -181,8 +181,8 @@ contract MarketRegistryDebtReserveUnitTest is MarketRegistryFixture {
     // TEST-287 verifies: REQ-MREG-006, REQ-SWAP-123, ATTACK-197, Q-390
     function test_TEST_287_transferFeeRefusedAtEnablement() public {
         RegistryTetherMock usdtLike = new RegistryTetherMock();
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("usdt2");
-        TokenDef memory td = _tokenDef(p, a, s);
+        (address[] memory p, address[] memory a) = _routes("usdt2");
+        TokenDef memory td = _tokenDef(p, a);
         td.issuerProbe = IssuerProbe.UsdtFeeRate;
         vm.prank(address(timelock));
         registry.listToken(address(usdtLike), td);

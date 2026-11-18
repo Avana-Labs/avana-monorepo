@@ -60,7 +60,6 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         _pause(PauseState.Paused, PauseReason.MintPathSuspect);
         registry.setBroken(true);
         risk.setBroken(true);
-        pstore.setSequencer(address(0xdead), 0);
     }
 
     // ─── Debt-free withdrawal ───
@@ -203,8 +202,8 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     }
 
     // TEST-019 verifies: REQ-PROXY-036, REQ-PROXY-067, SPEC-PROXY-001
-    /// @notice A with-debt withdrawal ending below the caller's minimum, or below a market's hard floor, reverts with
-    /// the RiskModule's `HealthFactorTooLow`, undoing the Spoke withdrawal, the burn and the release.
+    /// @notice A with-debt withdrawal ending below the caller's minimum reverts with the RiskModule's
+    /// `HealthFactorTooLow`, undoing the Spoke withdrawal, the burn and the release.
     function test_TEST_019_healthFloorAfterWithdraw() public {
         _borrowAs(alice, MARKET_ID, debtReserveId, 10_000e18);
         // After withdrawing k2: $16,000 × 1e18 / 10,000 = 1.6.
@@ -213,13 +212,8 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.HealthFactorTooLow.selector, hf, 2e18));
         vm.prank(alice);
         adapterC.withdraw(MARKET_ID, _ref(k2), UNITS / 2, d, 2e18);
-        risk.setHardFloor(1.7e18);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.HealthFactorTooLow.selector, hf, 1.7e18));
-        vm.prank(alice);
-        adapterC.withdraw(MARKET_ID, _ref(k2), UNITS / 2, d, 0);
         assertEq(lpVault.depositorOf(k2), alice, "still in custody");
         assertEq(token.totalSupply(), UNITS + UNITS / 2, "nothing burned");
-        risk.setHardFloor(0);
         _withdraw(k2, UNITS / 2, 1.6e18);
     }
 
@@ -238,7 +232,7 @@ contract AaveAdapterWithdrawUnitTest is AaveAdapterFixture {
     function test_TEST_019_preWithdrawErrorPropagates() public {
         _borrowAs(alice, MARKET_ID, debtReserveId, 100e18);
         risk.setRefuse(true);
-        _expectWithdrawRevert(abi.encodeWithSelector(IRiskModuleErrors.SequencerDown.selector), k2, UNITS / 2);
+        _expectWithdrawRevert(abi.encodeWithSelector(IRiskModuleErrors.AaveReserveUnavailable.selector), k2, UNITS / 2);
     }
 
     // TEST-203 verifies: REQ-PROXY-034, SPEC-PROXY-006

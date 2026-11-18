@@ -12,7 +12,6 @@ import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.
 import {DriftReason, PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
-import {RiskSequencerFeed} from "../utils/mocks/RiskModuleMocks.sol";
 
 /// @title AaveAdapterRiskModuleScenariosIntegrationTest
 /// @notice Account scope, gate precedence and the repay with collateral against the reviewed RiskModule on the real
@@ -57,9 +56,6 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
         usdcOracle.setReport(PriceState.Expired, uint64(block.timestamp), false);
         registry.setLatched(bytes32(MARKET_ID), BreakerReasons.MANUAL, 0);
         swap.setActiveKeeperCount(0);
-        RiskSequencerFeed feed = new RiskSequencerFeed();
-        feed.set(1, block.timestamp - 1, false);
-        rstore.setSequencer(address(feed), 3600);
     }
 
     // ─── Precedence: the Adapter's bounds before the RiskModule ───
@@ -180,18 +176,6 @@ contract AaveAdapterRiskModuleScenariosIntegrationTest is AaveAdapterRiskFixture
         );
         vm.prank(alice);
         adapterC.borrow(MARKET_ID, debtReserveId, 1000e18, alice, d, 2.3e18, 3);
-    }
-
-    // TEST-019 verifies: SPEC-PROXY-001, REQ-PROXY-036
-    /// @notice A per-market hard floor above the caller's minimum is the binding requirement.
-    function test_TEST_019_hardFloorBinds() public {
-        rstore.setHardFloor(MARKET_ID, 5e18);
-        // After k2 leaves: $16,000 against $6,000: 2.666….
-        uint256 hf = uint256(16_000e18) * 1e18 / 6000e18;
-        _withdrawExpect(abi.encodeWithSelector(IRiskModuleErrors.HealthFactorTooLow.selector, hf, 5e18));
-        rstore.setHardFloor(MARKET_ID, 2e18);
-        vm.prank(alice);
-        adapterC.withdraw(MARKET_ID, _ref(k2), UNITS / 2, _deadline(), 0);
     }
 
     // TEST-028 verifies: REQ-ADAPTER-094, REQ-PROXY-018, REQ-ADAPTER-049

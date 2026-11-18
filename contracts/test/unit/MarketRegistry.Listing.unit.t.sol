@@ -14,7 +14,6 @@ import {
     TokenDef
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market, MarketDef} from "../../src/types/MarketTypes.sol";
-import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryAaveOracleMock, RegistryHubMock, RegistrySpokeMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
@@ -46,8 +45,8 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
     /// test runs with no code at the registry's address, where no token is refused.)
     function test_TEST_250_listTokenRefusesErc777() public {
         RegistryTokenMock dai = new RegistryTokenMock(18);
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("dai777");
-        TokenDef memory d = _tokenDef(p, a, s);
+        (address[] memory p, address[] memory a) = _routes("dai777");
+        TokenDef memory d = _tokenDef(p, a);
         address erc1820 = 0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24;
         vm.etch(erc1820, address(new RegistryErc1820Mock()).code);
         RegistryErc1820Mock reg = RegistryErc1820Mock(erc1820);
@@ -67,14 +66,13 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
     // Sources: 5.1 TEST-250, TEST-139
     function test_TEST_250_listTokenRouteChecks() public {
         RegistryTokenMock dai = new RegistryTokenMock(18);
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("dai");
-        TokenDef memory d = _tokenDef(p, a, s);
+        (address[] memory p, address[] memory a) = _routes("dai");
+        TokenDef memory d = _tokenDef(p, a);
         vm.startPrank(address(timelock));
         // A route of zero or three feeds.
-        d.standbyRoute = new address[](0);
+        d.primaryRoute = new address[](0);
         _expectListing("routeLength");
         registry.listToken(address(dai), d);
-        d.standbyRoute = s;
         // A feed with no ParameterStore definition, or no heartbeat.
         d.primaryRoute = _one(address(new RegistryFeedMock(8, 1e8)));
         _expectListing("feed");
@@ -89,10 +87,6 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         _expectListing("sharedFeed");
         registry.listToken(address(dai), d);
         d.primaryRoute = p;
-        d.replacedSlot = RouteSlot.Primary;
-        _expectListing("replacedSlot");
-        registry.listToken(address(dai), d);
-        d.replacedSlot = RouteSlot.None;
         d.pegModule = makeAddr("litePsm");
         vm.expectEmit(address(registry));
         emit IMarketRegistryBase.TokenListed(address(dai), 18, p, a, d.pegModule);
@@ -103,9 +97,8 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         TokenDef memory rec = registry.getToken(address(dai));
         assertTrue(rec.listed);
         assertEq(rec.decimals, 18);
-        assertEq(rec.standbyRoute[0], s[0]);
+        assertEq(rec.alternateRoute[1], a[1]);
         assertEq(rec.pegModule, d.pegModule);
-        assertEq(registry.priceRouteVersion(address(dai)), 0);
     }
 
     // TEST-138 verifies: REQ-CONFIG-078, REQ-CONFIG-006, REQ-CONFIG-007, REQ-CONFIG-008, REQ-CONFIG-028, REQ-CONFIG-037, REQ-MREG-033, Q-312, REQ-ACCESS-033
@@ -270,8 +263,8 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TokenNotListed.selector, address(dai)));
         registry.listCollateralMarket(d);
         // DAI listed as a non-stable token on a Stable-tier Spoke.
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("dai");
-        TokenDef memory td = _tokenDef(p, a, s);
+        (address[] memory p, address[] memory a) = _routes("dai");
+        TokenDef memory td = _tokenDef(p, a);
         td.isUsdStable = false;
         vm.prank(address(timelock));
         registry.listToken(address(dai), td);
@@ -281,10 +274,10 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         // WETH-like token whose alternate route shares ETH/USD with USDC's alternate.
         RegistryTokenMock weth = new RegistryTokenMock(18);
         address[] memory usdcAlt = registry.getToken(address(usdc)).alternateRoute;
-        (p, a, s) = _routes("weth");
+        (p, a) = _routes("weth");
         a[1] = usdcAlt[1];
         vm.prank(address(timelock));
-        registry.listToken(address(weth), _tokenDef(p, a, s));
+        registry.listToken(address(weth), _tokenDef(p, a));
         (toks[0], toks[1]) = (address(usdc), address(weth));
         lpVault.setPoolTokens(toks, 18);
         vm.prank(address(timelock));
@@ -392,7 +385,7 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         registry.listCollateralMarket(_marketDef(vt, address(o)));
         (route,) = registry.getRoute(id, address(usdc), address(gho), 0);
         assertEq(route, address(0));
-        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(id), 48))), 2, "routeEpoch");
+        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(id), 46))), 2, "routeEpoch");
     }
 
     /// @dev Slot of `mapping[key]` at field `field` of the ERC-7201 layout.
@@ -416,31 +409,24 @@ contract MarketRegistryListingUnitTest is MarketRegistryFixture {
         // Field 0 marketCount, 20 flashSource: unchanged positions.
         assertEq(uint256(vm.load(address(registry), LAYOUT)), id);
         assertEq(address(uint160(uint256(vm.load(address(registry), bytes32(uint256(LAYOUT) + 20))))), address(flash));
-        // Field 41 frozen, 42 freezeBuckets.
+        // Field 40 frozen, 41 freezeBuckets.
         vm.warp(7200);
         vm.prank(emergencyGuardian);
         registry.freezeAddress(alice);
-        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(alice))), 41))), 1);
-        bytes32 inner = _mapSlot(bytes32(uint256(uint160(emergencyGuardian))), 42);
+        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(alice))), 40))), 1);
+        bytes32 inner = _mapSlot(bytes32(uint256(uint160(emergencyGuardian))), 41);
         assertEq(uint256(vm.load(address(registry), keccak256(abi.encode(uint256(2), inner)))), 1);
-        // Appended: 43 approvedSpokeCodeHash, 44 spokeCodeHash, 46 knownIntegrationContract, 47 standbyCancelledAt.
+        // Appended: 42 approvedSpokeCodeHash, 43 spokeCodeHash, 45 knownIntegrationContract.
         bytes32 h = keccak256("some implementation");
         vm.prank(address(timelock));
         registry.approveSpokeCodeHash(h);
-        assertEq(uint256(vm.load(address(registry), _mapSlot(h, 43))), 1);
-        bytes32 spokeHash = vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(address(spoke)))), 44));
+        assertEq(uint256(vm.load(address(registry), _mapSlot(h, 42))), 1);
+        bytes32 spokeHash = vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(address(spoke)))), 43));
         assertEq(spokeHash, address(spokeImpl).codehash);
         address[] memory amm = new address[](1);
         amm[0] = address(usdc);
         vm.prank(address(timelock));
         registry.recordIntegrationContracts(V3, amm);
-        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(address(usdc)))), 46))), 1);
-        vm.prank(emergencyGuardian);
-        registry.useStandbyRoute(address(usdt), RouteSlot.Primary);
-        vm.prank(aaveGovernanceExecutor);
-        registry.cancelStandbySwitch(address(usdt));
-        assertEq(
-            uint256(vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(address(usdt)))), 47))), block.timestamp
-        );
+        assertEq(uint256(vm.load(address(registry), _mapSlot(bytes32(uint256(uint160(address(usdc)))), 45))), 1);
     }
 }

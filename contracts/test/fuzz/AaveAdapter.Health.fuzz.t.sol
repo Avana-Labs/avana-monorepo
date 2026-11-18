@@ -12,11 +12,11 @@ import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.s
 /// @title AaveAdapterHealthFuzzTest
 /// @notice Boundaries of the gates the Adapter runs with the reviewed RiskModule on the real Aave V4 Spoke: the
 /// post-action health gate of SPEC-PROXY-001 at a withdrawal, a removal and a borrow that leave debt (passes exactly
-/// when the Spoke's health factor reaches `max(1.00, hardHealthFloor, minHealthFactor)`), the feed-age and debt-price
+/// when the Spoke's health factor reaches `max(1.00, minHealthFactor)`), the feed-age and debt-price
 /// boundaries of SPEC-PROXY-002, the remaining-record minimum of a removal with debt, and the health-factor direction
 /// of a repay with collateral (SPEC-PROXY-009).
 /// @dev Each case first measures the Spoke's own health factor after the action in a snapshot with no Avana floor,
-/// then replays the action with the fuzzed floor and minimum and checks the outcome against that measurement, so the
+/// then replays the action with the fuzzed minimum and checks the outcome against that measurement, so the
 /// expectation is Aave's own floored value, never a recomputation.
 /// forge-config: default.isolate = false
 contract AaveAdapterHealthFuzzTest is AaveAdapterRiskFixture {
@@ -31,12 +31,9 @@ contract AaveAdapterHealthFuzzTest is AaveAdapterRiskFixture {
     }
 
     function _required(
-        uint256 floor,
         uint256 minHf
     ) internal pure returns (uint256 r) {
-        r = 1e18;
-        if (floor > r) r = floor;
-        if (minHf > r) r = minHf;
+        r = minHf > 1e18 ? minHf : 1e18;
     }
 
     // ─── SPEC-PROXY-001 at a withdrawal with debt ───
@@ -44,14 +41,12 @@ contract AaveAdapterHealthFuzzTest is AaveAdapterRiskFixture {
     // TEST-019 verifies: SPEC-PROXY-001, REQ-PROXY-036, REQ-PROXY-067, REQ-PROXY-022
     // Sources: MATH-AR-03, MATH-AR-06, HYP-13, HYP-20
     /// @notice A withdrawal that leaves debt passes exactly when the health factor after the release reaches
-    /// `max(1, floor, minHealthFactor)`; otherwise it reverts `HealthFactorTooLow(hf, required)` and changes nothing.
+    /// `max(1, minHealthFactor)`; otherwise it reverts `HealthFactorTooLow(hf, required)` and changes nothing.
     function testFuzz_TEST_019_withdrawHealthBoundary(
         uint256 borrowed,
-        uint256 floor,
         uint256 minHf
     ) public {
         borrowed = bound(borrowed, 1e18, 23_000e18);
-        floor = bound(floor, 0, 4e18);
         minHf = bound(minHf, 0, 4e18);
         _borrowAs(alice, MARKET_ID, debtReserveId, borrowed);
         uint256 d = _deadline();
@@ -60,8 +55,7 @@ contract AaveAdapterHealthFuzzTest is AaveAdapterRiskFixture {
         (bool ok,) = adapter.call(abi.encodeCall(adapterC.withdraw, (MARKET_ID, _ref(k2), UNITS / 2, d, 0)));
         uint256 hfAfter = ok ? _hf(p) : 0;
         vm.revertToState(snap);
-        rstore.setHardFloor(MARKET_ID, floor);
-        uint256 required = _required(floor, minHf);
+        uint256 required = _required(minHf);
         if (!ok) {
             // Aave itself refuses a withdrawal that ends below 1.00.
             vm.expectRevert();
@@ -96,7 +90,7 @@ contract AaveAdapterHealthFuzzTest is AaveAdapterRiskFixture {
         (bool ok,) = adapter.call(abi.encodeCall(adapterC.removeLiquidity, (MARKET_ID, _ref(k1), units, mins, d, 0)));
         uint256 hfAfter = ok ? _hf(p) : 0;
         vm.revertToState(snap);
-        uint256 required = _required(0, minHf);
+        uint256 required = _required(minHf);
         if (!ok) {
             vm.expectRevert();
         } else if (hfAfter < required) {
@@ -108,15 +102,13 @@ contract AaveAdapterHealthFuzzTest is AaveAdapterRiskFixture {
     }
 
     // TEST-027 verifies: SPEC-PROXY-001, REQ-PROXY-022, REQ-PROXY-067, INV-025
-    /// @notice A borrow passes exactly when the health factor after it reaches `max(1, floor, minHealthFactor)`; a
-    /// refused borrow leaves the nonce, the debt and the receiver's balance unchanged.
+    /// @notice A borrow passes exactly when the health factor after it reaches `max(1, minHealthFactor)`; a refused
+    /// borrow leaves the nonce, the debt and the receiver's balance unchanged.
     function testFuzz_TEST_027_borrowHealthBoundary(
         uint256 amount,
-        uint256 floor,
         uint256 minHf
     ) public {
         amount = bound(amount, 1e18, 25_000e18);
-        floor = bound(floor, 0, 4e18);
         minHf = bound(minHf, 0, 4e18);
         uint256 d = _deadline();
         uint256 snap = vm.snapshotState();
@@ -124,8 +116,7 @@ contract AaveAdapterHealthFuzzTest is AaveAdapterRiskFixture {
         (bool ok,) = adapter.call(abi.encodeCall(adapterC.borrow, (MARKET_ID, debtReserveId, amount, bob, d, 0, 0)));
         uint256 hfAfter = ok ? _hf(p) : 0;
         vm.revertToState(snap);
-        rstore.setHardFloor(MARKET_ID, floor);
-        uint256 required = _required(floor, minHf);
+        uint256 required = _required(minHf);
         if (!ok) {
             vm.expectRevert();
         } else if (hfAfter < required) {

@@ -28,7 +28,7 @@ contract RiskModuleBreakerRecoveryUnitTest is RiskModuleFixture {
 
     // TEST-228 verifies: SPEC-BRK-007, REQ-RISK-017, REQ-RISK-066, REQ-MREG-026
     /// @dev A recorded `ORACLE` breach recovers `ORACLE` alone: a top-up of a healthy account, which masks `ORACLE`,
-    /// passes inside the recovery instead of meeting `POOL_SHARE | POOL_DEPTH`.
+    /// passes inside the recovery instead of meeting `POOL_DEPTH`.
     function test_TEST_228_oracleBreachRecoversOracleAlone() public {
         oracle.setState(PriceState.Drifting, 1 << 3, false);
         assertEq(riskModule.pokeBreakers(mid), BreakerReasons.ORACLE);
@@ -61,7 +61,6 @@ contract RiskModuleBreakerRecoveryUnitTest is RiskModuleFixture {
         bytes32 key = bytes32(mid);
         assertEq(registry.lastBreachAt(BreakerReasons.breachKey(key, BreakerReasons.POOL_DEPTH)), start);
         assertEq(registry.lastBreachAt(BreakerReasons.breachKey(key, BreakerReasons.ORACLE)), start + 1000);
-        assertEq(registry.lastBreachAt(BreakerReasons.breachKey(key, BreakerReasons.POOL_SHARE)), 0);
         assertEq(registry.lastBreachAt(key), start + 1000, "the latest of any reason");
         (uint32 reasons, uint64 reopensAt) = riskModule.getBreakerStatus(mid);
         assertEq(reasons, BreakerReasons.ORACLE | BreakerReasons.POOL_DEPTH);

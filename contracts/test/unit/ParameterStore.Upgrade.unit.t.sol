@@ -26,7 +26,7 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
     bytes32 internal constant IMPL_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
     }
 
@@ -34,11 +34,11 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
         address tl = address(timelock);
         address reg = address(registry);
         l = ParameterStoreLogics({
-            tighten: address(new ParameterStoreTightenLogic(tl, reg, BLOCK_TIME, false)),
-            loosen: address(new ParameterStoreLoosenLogic(tl, reg, BLOCK_TIME, false)),
-            listing: address(new ParameterStoreListingLogic(tl, reg, BLOCK_TIME, false)),
-            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, reg, BLOCK_TIME, false)),
-            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, reg, BLOCK_TIME, false))
+            tighten: address(new ParameterStoreTightenLogic(tl, reg, BLOCK_TIME)),
+            loosen: address(new ParameterStoreLoosenLogic(tl, reg, BLOCK_TIME)),
+            listing: address(new ParameterStoreListingLogic(tl, reg, BLOCK_TIME)),
+            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, reg, BLOCK_TIME)),
+            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, reg, BLOCK_TIME))
         });
     }
 
@@ -54,7 +54,6 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
     // TEST-062 verifies: REQ-PSTORE-001, INV-065
     function test_TEST_062_upgradeKeepsEveryValueAndRole() public {
         vm.startPrank(address(timelock));
-        store.tightenHardHealthFloor(M, 1.1e18);
         store.tightenRouteDepthThreshold(M, usdc, gho, 1, 7e8);
         store.setCoverageRatioBps(1500);
         store.grantRole(AvanaRoles.APPLICATION_RISK_STEWARD, alice);
@@ -62,16 +61,14 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
         vm.stopPrank();
         bytes32 key = keccak256(abi.encode(bytes32("marketUsdCap"), bytes32(M)));
         uint64 stamped = store.lastLoosenedAt(key);
-        ParameterStore next =
-            new ParameterStore(address(timelock), address(registry), BLOCK_TIME, false, _freshLogics());
+        ParameterStore next = new ParameterStore(address(timelock), address(registry), BLOCK_TIME, _freshLogics());
         _upgrade(address(next));
         assertEq(address(uint160(uint256(vm.load(address(store), IMPL_SLOT)))), address(next));
-        assertEq(store.hardHealthFloor(M), 1.1e18);
         assertEq(store.routeDepthThreshold(M, usdc, gho, 1), 7e8);
         assertEq(store.coverageRatioBps(), 1500);
         assertEq(store.marketUsdCap(M), 6_000_000e8);
         assertEq(store.lastLoosenedAt(key), stamped);
-        assertEq(store.feedAgreementToleranceBps(usdc), 150);
+        assertEq(store.tokenCollateralFactorBps(usdc), 7800);
         assertEq(store.getFeed(address(fUsdc)).feedMaxAge, 88_200);
         assertTrue(store.hasRole(AvanaRoles.APPLICATION_RISK_STEWARD, alice));
         assertTrue(store.hasRole(AvanaRoles.APPLICATION_ADMIN, address(timelock)));
@@ -90,7 +87,7 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
     // TEST-062 verifies: REQ-PSTORE-001
     function test_TEST_062_newLogicsServeTheSettersAfterUpgrade() public {
         ParameterStoreLogics memory fresh = _freshLogics();
-        ParameterStore next = new ParameterStore(address(timelock), address(registry), BLOCK_TIME, false, fresh);
+        ParameterStore next = new ParameterStore(address(timelock), address(registry), BLOCK_TIME, fresh);
         _upgrade(address(next));
         // The setter now runs in the new tighten logic: the state is the proxy's, the call the new logic's.
         vm.startStateDiffRecording();
@@ -113,7 +110,7 @@ contract ParameterStoreUpgradeUnitTest is ParameterStoreFixture {
 
     // TEST-062 verifies: REQ-PSTORE-001, REQ-PSTORE-002, INV-065, REQ-ACCESS-015, REQ-ACCESS-031
     function test_TEST_062_onlyTheAdminUpgrades() public {
-        ParameterStore next = new ParameterStore(address(timelock), address(registry), BLOCK_TIME, false, logics);
+        ParameterStore next = new ParameterStore(address(timelock), address(registry), BLOCK_TIME, logics);
         address safe = makeAddr("jointConfigurationSafe");
         vm.startPrank(address(timelock));
         store.grantRole(AvanaRoles.APPLICATION_RISK_STEWARD, safe);

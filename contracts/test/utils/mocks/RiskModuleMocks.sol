@@ -7,7 +7,7 @@ import {RiskStatus} from "../../../src/amm/types/AmmTypes.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPOracle} from "../../../src/oracle/ILPOracle.sol";
 import {MarketSpeedLimits, SpeedLimit} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {OracleConfig, PriceState, PriceStateView, TokenPriceView} from "../../../src/types/OracleTypes.sol";
+import {PriceState} from "../../../src/types/OracleTypes.sol";
 import {PledgeCounters} from "../../../src/types/PositionTypes.sol";
 import {DebtPriceView} from "./DebtPriceView.sol";
 import {RegistryHubMock, RegistrySpokeMock} from "./MarketRegistryAaveMocks.sol";
@@ -282,13 +282,9 @@ contract RiskTokenMock is RegistryTokenMock {
 contract RiskStoreMock is RegistryParameterStoreMock {
     mapping(address => uint16) public tokenCollateralFactorBps;
     mapping(address => mapping(address => uint256)) public tokenUsdCap;
-    mapping(bytes32 => uint16) internal _poolShare;
-    mapping(bytes32 => bool) internal _poolShareSet;
     mapping(address => uint32) public borrowPriceMaxAge;
     mapping(address => mapping(address => uint256)) public breakerDeficitMax;
     uint64 public gateRecoverySeconds = 1800;
-    address internal _seqFeed;
-    uint32 internal _seqGrace;
 
     function setTokenCf(
         address token,
@@ -303,14 +299,6 @@ contract RiskStoreMock is RegistryParameterStoreMock {
         uint256 cap
     ) external {
         tokenUsdCap[hub][token] = cap;
-    }
-
-    function setPoolShare(
-        bytes32 key,
-        uint16 bps
-    ) external {
-        _poolShare[key] = bps;
-        _poolShareSet[key] = true;
     }
 
     function setBorrowAge(
@@ -334,33 +322,11 @@ contract RiskStoreMock is RegistryParameterStoreMock {
         gateRecoverySeconds = v;
     }
 
-    function setSequencer(
-        address feed,
-        uint32 grace
-    ) external {
-        _seqFeed = feed;
-        _seqGrace = grace;
-    }
-
-    function setTwap(
-        uint256 id,
-        uint32 window
-    ) external {
-        _params[id].twapWindow = window;
-    }
-
     function setMinPledge(
         uint256 id,
         uint256 v
     ) external {
         _params[id].minPledgeUsd = v;
-    }
-
-    function setHardFloor(
-        uint256 id,
-        uint256 v
-    ) external {
-        _params[id].hardHealthFloor = v;
     }
 
     function setCaps(
@@ -374,26 +340,10 @@ contract RiskStoreMock is RegistryParameterStoreMock {
         stressFloorUsd[id] = floorUsd;
     }
 
-    function poolShareMaxBpsOf(
-        bytes32 key
-    ) external view returns (uint16) {
-        return _poolShareSet[key] ? _poolShare[key] : 10_000;
-    }
-
     function minPledgeUsd(
         uint256 id
     ) external view returns (uint256) {
         return _params[id].minPledgeUsd;
-    }
-
-    function hardHealthFloor(
-        uint256 id
-    ) external view returns (uint256) {
-        return _params[id].hardHealthFloor;
-    }
-
-    function sequencer() external view returns (address, uint32) {
-        return (_seqFeed, _seqGrace);
     }
 
     // Speed limits (Q-411): unset scopes read as open (one-hour window, 100 %, no bound) so tests of other gates are not
@@ -449,27 +399,23 @@ contract RiskSwapMock {
     }
 }
 
-/// @title RiskSequencerFeed
-/// @notice A Chainlink L2 sequencer-uptime feed: answer 0 up, 1 down, and the time of the last status change.
-contract RiskSequencerFeed {
-    int256 public answer;
-    uint256 public startedAt;
-    bool public reverts;
+/// @notice Per-token part of a `RiskLPOracleMock` report.
+struct RiskTokenReport {
+    address token;
+    uint32 reasons;
+    uint256 quote;
+    address[2] legFeeds;
+    uint64[2] legUpdatedAt;
+}
 
-    function set(
-        int256 a,
-        uint256 s,
-        bool r
-    ) external {
-        answer = a;
-        startedAt = s;
-        reverts = r;
-    }
-
-    function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
-        require(!reverts, "down");
-        return (1, answer, startedAt, startedAt, 1);
-    }
+/// @notice The price report a `RiskLPOracleMock` serves its stateless views from.
+struct RiskPriceReport {
+    PriceState state;
+    uint256 reasons;
+    int256 answer;
+    int256 freshAnswer;
+    bool borrowAllowed;
+    RiskTokenReport[] tokens;
 }
 
 /// @title RiskLPOracleMock
@@ -484,7 +430,7 @@ contract RiskLPOracleMock {
     bool public pokeReverts;
     /// @notice The legs' borrow age limit; 0 leaves the legs' ages out of `borrowFresh`.
     uint64 public legMaxAge;
-    PriceStateView internal _pv;
+    RiskPriceReport internal _pv;
 
     constructor(
         uint256 id,
@@ -546,7 +492,7 @@ contract RiskLPOracleMock {
     ) external {
         delete _pv.tokens;
         for (uint256 i = 0; i < tokens.length; ++i) {
-            TokenPriceView storage t = _pv.tokens.push();
+            RiskTokenReport storage t = _pv.tokens.push();
             t.token = tokens[i];
             t.legFeeds[0] = feeds[i];
             t.legUpdatedAt[0] = updatedAt[i];
@@ -561,16 +507,6 @@ contract RiskLPOracleMock {
 
     function lastAcceptedPrice() external view returns (uint256, uint64) {
         return (accepted, uint64(block.timestamp));
-    }
-
-    function getPriceState() external view returns (PriceStateView memory) {
-        return _pv;
-    }
-
-    function checkConfig(
-        OracleConfig calldata
-    ) external pure returns (uint256) {
-        return 0;
     }
 
     function poke() public virtual returns (PriceState) {
@@ -729,7 +665,6 @@ contract RiskLPVaultMock is RegistryLPVaultMock {
 /// @notice Collateralization views the RiskModule reads: rescue units, pool units, counters and record counts.
 contract RiskCollateralizationMock is RegistryCollateralizationMock {
     mapping(address => uint256) public rescueOf;
-    mapping(bytes32 => uint256) public poolUnits;
     mapping(address => uint256) public openRecords;
     PledgeCounters internal _counters;
 
@@ -742,13 +677,6 @@ contract RiskCollateralizationMock is RegistryCollateralizationMock {
         uint256 units
     ) external {
         rescueOf[proxy] = units;
-    }
-
-    function setPoolUnits(
-        bytes32 key,
-        uint256 units
-    ) external {
-        poolUnits[key] = units;
     }
 
     function setOpenRecords(

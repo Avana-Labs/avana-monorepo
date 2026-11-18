@@ -224,7 +224,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
     ) external override returns (uint32 reasons) {
         Market memory m = _market(marketId);
         IRiskModuleBreakerLogic b = IRiskModuleBreakerLogic(_BREAKER_LOGIC);
-        uint32 live = b.marketConditions(marketId, false, 0);
+        uint32 live = b.marketConditions(marketId);
         if (live != 0) _registry().recordBreach(bytes32(marketId), live);
         reasons = live;
         uint256[] memory ids = _registry().getDebtReserveIds(m.spoke);
@@ -321,7 +321,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
     function getBreakerStatus(
         uint256 marketId
     ) external view override returns (uint32 reasons, uint64 reopensAt) {
-        try IRiskModuleBreakerLogic(_BREAKER_LOGIC).marketBreaker(marketId, false, 0) returns (uint32 r, uint64 t) {
+        try IRiskModuleBreakerLogic(_BREAKER_LOGIC).marketBreaker(marketId) returns (uint32 r, uint64 t) {
             (reasons, reopensAt) = (r, t);
         } catch {
             reasons = BreakerReasons.TEMPORARY | BreakerReasons.SECURITY;
@@ -345,7 +345,7 @@ contract RiskModule is UUPSUpgradeable, AccessControlUpgradeable, RiskModuleBase
     function liveBreakerReasons(
         uint256 marketId
     ) external view override returns (uint32 reasons) {
-        try IRiskModuleBreakerLogic(_BREAKER_LOGIC).marketConditions(marketId, false, 0) returns (uint32 r) {
+        try IRiskModuleBreakerLogic(_BREAKER_LOGIC).marketConditions(marketId) returns (uint32 r) {
             reasons = r & BreakerReasons.SECURITY;
         } catch {
             reasons = BreakerReasons.SECURITY;

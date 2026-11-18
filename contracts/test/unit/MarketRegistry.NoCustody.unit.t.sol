@@ -7,7 +7,6 @@ import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {MarketDef, PauseReason} from "../../src/types/MarketTypes.sol";
-import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryLPOracleMock, RegistryLPVaultMock} from "../utils/mocks/MarketRegistryMocks.sol";
@@ -60,7 +59,7 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
     // TEST-168 verifies: REQ-CONFIG-003, REQ-CONFIG-004, REQ-MREG-028, Q-067, Q-104, Q-124, Q-248
     // Sources: 5.1 TEST-168
     // Every kind of write in one recorded sequence: listing (one bindMarket), routes, activation, the debt-reserve
-    // record, the pause state, the address freeze, breakers, the standby switch, offboarding, the
+    // record, the pause state, the address freeze, breakers, offboarding, the
     // wind-down and the close.
     function test_TEST_168_onlyBindMarketChangesAnotherContract() public {
         vm.startStateDiffRecording();
@@ -78,12 +77,9 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
         registry.freezeAddress(bob);
         registry.tripMarketBreaker(id);
         registry.tripDebtBreaker(address(spoke), GHO_RESERVE);
-        registry.useStandbyRoute(address(usdc), RouteSlot.Primary);
         vm.stopPrank();
         vm.prank(address(rm));
         registry.recordBreach(bytes32(id), BreakerReasons.ORACLE | BreakerReasons.ISSUER);
-        vm.prank(aaveGovernanceExecutor);
-        registry.cancelStandbySwitch(address(usdc));
         vm.startPrank(address(timelock));
         registry.unfreezeAddress(bob);
         registry.resetMarketBreaker(id);

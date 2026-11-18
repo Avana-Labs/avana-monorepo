@@ -13,7 +13,6 @@ import {RepayWithCollateralParams} from "../../../src/policy/aave-adapter/types/
 import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
 import {DebtReserveDef, TokenDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
-import {RouteSlot, SecondSource, SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {OracleFeedMock} from "../mocks/LPOracleMocks.sol";
 import {ClTestToken, IClPool} from "./ClPoolFixture.sol";
 import {FullStackMarkets} from "./FullStackMarkets.sol";
@@ -86,17 +85,9 @@ abstract contract RealStackFlows is FullStackMarkets {
         d.isUsdStable = usdStable;
         d.primaryRoute = _list(address(p));
         d.alternateRoute = _list(address(a));
-        d.standbyRoute = _list(address(st));
-        d.replacedSlot = RouteSlot.None;
         d.issuerProbe = probe;
-        SecondSource memory none;
-        vm.startPrank(address(timelock));
+        vm.prank(address(timelock));
         registry.listToken(address(token), d);
-        store.setFeedAgreementToleranceBps(address(token), TOLERANCE_BPS);
-        store.setSecondSource(
-            address(token), SecondSource(SecondSourceKind.OracleNetwork, address(n), bytes32(0), FEED_AGE, 0, 100), none
-        );
-        vm.stopPrank();
     }
 
     /// @notice WETH as a DebtOracle-priced debt reserve of the CDP Spoke, as the fixture enables USDC: WETH listed with

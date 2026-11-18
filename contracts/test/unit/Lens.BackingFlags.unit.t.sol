@@ -98,16 +98,12 @@ contract LensBackingFlagsUnitTest is LensFixture {
     }
 
     // TEST-247 verifies: REQ-LENS-049, Q-398
-    function test_TEST_247_withdrawPreviewHardFloorAndOversizedUnits() public {
+    function test_TEST_247_withdrawPreviewOversizedUnits() public {
         _pledge(alice, aliceProxy, _key(2), 6000e6);
         _borrow(aliceProxy, 10_000e18);
-        assertTrue(lens.previewWithdraw(alice, MARKET_ID, _key(2), 0).allowed, "1.60 >= 1.00");
-        store.setHardHealthFloor(MARKET_ID, 1.7e18);
         WithdrawPreview memory w = lens.previewWithdraw(alice, MARKET_ID, _key(2), 0);
         assertEq(w.healthFactorAfter, 1.6e18, "16,000 / 10,000");
-        assertFalse(w.allowed, "below the market's hard floor");
-        store.setHardHealthFloor(MARKET_ID, 1.6e18);
-        assertTrue(lens.previewWithdraw(alice, MARKET_ID, _key(2), 0).allowed, "exactly at the floor");
+        assertTrue(w.allowed, "1.60 >= 1.00");
         w = lens.previewWithdraw(alice, MARKET_ID, _key(2), 6000e6 + 1);
         assertFalse(w.allowed, "more than the record's credited units");
         assertEq(w.units, 6000e6 + 1, "the units asked");

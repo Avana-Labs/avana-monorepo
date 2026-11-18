@@ -19,8 +19,7 @@
         "utils/mocks/RiskModuleMocks.sol:RiskDebtOracleMock",
         "utils/mocks/LPVaultSwapMocks.sol:LVSDebtOracleMock",
         "utils/mocks/LensMocks.sol:LensDebtOracleMock",
-        "utils/mocks/LensMocks.sol:LensFeedEcho",
-        "unit/ParameterStore.Feeds.unit.t.sol:RevertingRoundFeed"
+        "utils/mocks/LensMocks.sol:LensFeedEcho"
       ]
     },
     "uniswap-v3": {
@@ -104,8 +103,6 @@
     }
   },
   "not_external": {
-    "utils/mocks/LPVaultSwapMocks.sol:LVSFlashSourceMock": "stands in for Avana's own IFlashSource (evidence.STAND_INS), not the Aave V3 Pool",
-    "utils/mocks/AaveAdapterMocks.sol:AdapterSequencerFeed": "answers the ParameterStore's sequencer setting, which no gate reads since the stateless oracles",
-    "utils/mocks/RiskModuleMocks.sol:RiskSequencerFeed": "answers the ParameterStore's sequencer setting, which no gate reads since the stateless oracles"
+    "utils/mocks/LPVaultSwapMocks.sol:LVSFlashSourceMock": "stands in for Avana's own IFlashSource (evidence.STAND_INS), not the Aave V3 Pool"
   }
 }

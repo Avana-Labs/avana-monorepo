@@ -221,8 +221,7 @@ contract RiskModuleHostileIntegrationTest is RealStackFlows {
         (bytes32 kC,) = _pledgeAs(carol, mA, 1000e6);
         (address pB,) = _account(bob, UNITS, 5880e6);
         _install(address(new RevertingRiskModule()));
-        // After five days without a feed round (the timelock delay) the market's LPOracle opens its grace window on
-        // its next poke, where `liquidate` needs HF below `graceHealthFactor`; the depeg's TWAP wait outlasts it.
+        // Five days pass without a feed round (the timelock delay); the depeg's TWAP wait outlasts any grace window.
         _depegUsdt(93_000_000);
         assertFalse(lens.previewLiquidation(pB, usdcReserveId, block.timestamp + 120).inGrace, "past the grace window");
 

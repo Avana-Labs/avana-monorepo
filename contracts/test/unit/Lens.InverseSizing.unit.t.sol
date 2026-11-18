@@ -70,17 +70,16 @@ contract LensInverseSizingUnitTest is LensFixture {
     }
 
     // TEST-247 verifies: REQ-LENS-054
-    function test_TEST_247_maxWithdrawTargetRaisedToTheFloorAndOne() public {
+    function test_TEST_247_maxWithdrawTargetRaisedToOne() public {
         _borrow(aliceProxy, 8000e18);
         RemovalSizing memory s = lens.previewMaxWithdraw(alice, MARKET_ID, 0.5e18);
         assertEq(s.target, 1e18, "never below 1.00 with debt");
         assertEq(s.maxUnits, 5000e6, "(16,000 - 8,000) / 1.6");
         assertFalse(s.records[0].fits, "the only record does not fit");
         assertEq(s.bestIndex, type(uint256).max, "none fits");
-        store.setHardHealthFloor(MARKET_ID, 1.6e18);
         s = lens.previewMaxWithdraw(alice, MARKET_ID, 1.2e18);
-        assertEq(s.target, 1.6e18, "the market's hard floor");
-        assertEq(s.maxUnits, 2000e6, "(16,000 - 12,800) / 1.6");
+        assertEq(s.target, 1.2e18, "the caller's target above 1.00");
+        assertEq(s.maxUnits, 4000e6, "(16,000 - 9,600) / 1.6");
         assertEq(lens.previewMaxWithdraw(alice, MARKET_ID, 2e18).maxUnits, 0, "already at the target");
     }
 

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PriceState, RouteSlot} from "../../../src/types/OracleTypes.sol";
+import {PriceState} from "../../../src/types/OracleTypes.sol";
 
 /// @notice Full price-state report of one DebtOracle, returned by `getPriceState()`.
 /// @dev Unreadable route values are 0 and unreadable ages `type(uint64).max`.
@@ -17,7 +17,6 @@ struct DebtPriceView {
     uint64 servedAge;
     uint256 acceptedAnswer;
     uint64 acceptedUpdatedAt;
-    RouteSlot routeUsed;
     // Uncapped quote (0 when failed).
     uint256 quote;
     uint256 primaryValue;
@@ -25,10 +24,6 @@ struct DebtPriceView {
     uint256 alternateValue;
     uint64 alternateAge;
     uint256 deviationBps;
-    uint16 feedAgreementToleranceBps;
-    // Slot the standby route replaces (None when not switched).
-    RouteSlot replaced;
-    uint64 routeVersion;
     // Aggregator proxies of the served route; address(0) for an unused slot.
     address[2] legFeeds;
     uint64[2] legUpdatedAt;
@@ -42,7 +37,7 @@ struct DebtPriceView {
     uint64 disagreeSince;
     bool disagreementPauseActive;
     bool disagreementExpired;
-    // True when not Live, a serving alternate is past its borrow age, or the sequencer is down.
+    // True when not Live or a serving alternate is past its borrow age.
     bool liquidationPaused;
     // Source timestamp of the first fresh update after the last Expired outage (0 if none).
     uint64 recoveredAt;
@@ -56,6 +51,6 @@ struct DebtPriceView {
     uint16 debtStressRiseBps;
     // Price served once Expired, rounded up.
     uint256 stressAnswer;
-    // Live, sequencer ready, second source confirmed and the served price within borrowPriceMaxAge.
+    // Live and the served price within borrowPriceMaxAge.
     bool borrowAllowed;
 }

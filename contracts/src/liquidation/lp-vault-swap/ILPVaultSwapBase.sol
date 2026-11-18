@@ -33,9 +33,6 @@ interface ILPVaultSwapBase {
     /// @notice The repaid debt reserve is not priced by its recorded DebtOracle, or that price is not Live and fresh.
     error DebtPriceStale(uint256 debtReserveId);
 
-    /// @notice A collateral market of the account is in its grace window and `HF >= graceHealthFactor`.
-    error GraceHealthFactor();
-
     /// @notice A measured funding, shortfall or First-Loss Reserve transfer moved the wrong amount.
     error FundingMismatch();
 

@@ -8,7 +8,6 @@ pragma solidity 0.8.28;
 /// @dev Safe under STATICCALL: makes no call to Collateralization or the LPVault.
 // View calls in loops over the market's pool tokens and the Spoke's reserves, bounded by listings.
 
-import {RiskStatus} from "../../amm/types/AmmTypes.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
@@ -140,15 +139,6 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         uint256 open = k.accountRecords;
         uint256 max = AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET;
         p.recordRoom = open < max ? max - open : 0;
-        uint256 cap = ps.poolShareMaxBpsOf(_poolKey(m));
-        if (cap >= NO_POOL_SHARE_CAP) {
-            p.poolShareRoomUnits = type(uint256).max;
-        } else {
-            RiskStatus memory rs = ILPVault(m.integration).riskStatus(marketId, ps.getMarketParams(marketId).twapWindow);
-            if (rs.depthAvailable) {
-                p.poolShareRoomUnits = RiskModuleMath.poolShareRoom(k.poolUnits, cap, rs.depthUnits);
-            }
-        }
     }
 
     function _room(
@@ -197,7 +187,7 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         _hubRoom(c);
         charge.usdCharge = c.charge;
         charge.sliceUsd = _caps(c, counters);
-        RiskModuleMath.Outcome o = _exemption(c, counters, requireRescue);
+        RiskModuleMath.Outcome o = _exemption(c, requireRescue);
         if (o == RiskModuleMath.Outcome.Rescue) {
             charge.rescue = true;
             charge.rescueUnits = units;
@@ -377,21 +367,13 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
 
     function _exemption(
         Ctx memory c,
-        PledgeCounters calldata k,
         bool requireRescue
     ) internal view returns (RiskModuleMath.Outcome o) {
         RiskModuleMath.Exemption memory x;
         x.requireRescue = requireRescue;
-        uint256 cap = _store().poolShareMaxBpsOf(_poolKey(c.m));
-        if (cap < NO_POOL_SHARE_CAP) {
-            RiskStatus memory rs =
-                ILPVault(c.m.integration).riskStatus(c.marketId, _store().getMarketParams(c.marketId).twapWindow);
-            x.depthUnavailable = !rs.depthAvailable;
-            x.capFail = rs.depthAvailable && RiskModuleMath.poolShareExceeds(k.poolUnits + c.units, cap, rs.depthUnits);
-        }
         // Only the reasons decide the pledge; the reopening time is not used.
         // forge-lint: disable-next-line(unused-return)
-        (uint32 brk,) = IRiskModuleBreakerLogic(_BREAKER).marketBreaker(c.marketId, true, k.poolUnits);
+        (uint32 brk,) = IRiskModuleBreakerLogic(_BREAKER).marketBreaker(c.marketId);
         // `ORACLE` is the price-state rule's own gate; `CONFIG_DRIFT` never stops a top-up.
         brk &= ~BreakerReasons.ORACLE;
         if (c.topUp) brk &= ~BreakerReasons.CONFIG_DRIFT;
@@ -403,8 +385,6 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         o = RiskModuleMath.exemption(x);
         if (o == RiskModuleMath.Outcome.BelowMinimum) revert BelowMinPledge(c.pledgeUsd, c.minPledge);
         if (o == RiskModuleMath.Outcome.NotRescue) revert NotRescueTopUp(c.hf, c.charge, c.restore);
-        if (o == RiskModuleMath.Outcome.PoolShareUnavailable) revert PoolShareUnavailable();
-        if (o == RiskModuleMath.Outcome.PoolShareExceeded) revert PoolShareExceeded();
         if (o == RiskModuleMath.Outcome.Breaker) revert BreakerTripped(c.marketId, x.brk);
     }
 }

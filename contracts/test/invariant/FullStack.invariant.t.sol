@@ -261,6 +261,6 @@ contract FullStackInvariantTest is FullStackMarkets, HandlerReach {
         handler.borrow(19_603, 12_035, 7412, 21_160);
         assertEq(handler.borrows(), before + 1, "the borrow of the room left completed");
         assertEq(IAaveV4Hub(aave.hub).getSpokeTotalOwed(ghoAssetId, aave.cdpSpoke), 160e18 + 1, "owed after the draw");
-        invariant_TEST_274_drawGateAndCapSum();
+        invariant_TEST_274_drawGate();
     }
 }

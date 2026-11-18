@@ -9,7 +9,7 @@ import {RiskModuleMath} from "../../../src/policy/risk-module/RiskModuleMath.sol
 /// @notice Echidna and Medusa properties of the RiskModule's formulas (`RiskModuleMath`), in the units of 2.7: the
 /// worked examples of SPEC-CAP-001, SPEC-CAP-003, SPEC-CF-001, SPEC-CF-005 and REQ-RISK-089 hold, and for every bounded
 /// input the charge rounds up and the value down, the cap split keeps the regular part within its room, the rescue
-/// exclusion never raises the health factor, the required level is the maximum of its three terms and the exemption
+/// exclusion never raises the health factor, the required level is the maximum of its two terms and the exemption
 /// step admits a pledge below its minimum only as a rescue top-up.
 /// @dev `property_` functions run in property mode; every other public function but the `fuzz` ones is an assertion
 /// entry point whose inputs are reduced by `%` into the listing bounds, with no loop, so hevm can prove each one. The
@@ -194,14 +194,13 @@ contract RiskModuleProperties {
         ++checks;
     }
 
-    /// @notice The required level is the maximum of 1.00, the hard floor and the caller's minimum.
+    /// @notice The required level is the maximum of 1.00 and the caller's minimum.
     function required(
-        uint256 hardFloor,
         uint256 minHf
     ) public {
-        uint256 r = RiskModuleMath.requiredHealthFactor(hardFloor, minHf);
-        assert(r >= 1e18 && r >= hardFloor && r >= minHf);
-        assert(r == 1e18 || r == hardFloor || r == minHf);
+        uint256 r = RiskModuleMath.requiredHealthFactor(minHf);
+        assert(r >= 1e18 && r >= minHf);
+        assert(r == 1e18 || r == minHf);
         ++checks;
     }
 
@@ -209,19 +208,16 @@ contract RiskModuleProperties {
     /// alone gives `BelowMinimum`; `requireRescue` gives `NotRescue`.
     function exemption(
         bool requireRescue,
-        bool capFail,
-        bool depthUnavailable,
         uint32 brk,
         bool belowMinimum,
         bool eligible,
         uint256 chargeUsd,
         uint256 restore
     ) public {
-        RiskModuleMath.Exemption memory x = RiskModuleMath.Exemption(
-            requireRescue, depthUnavailable, capFail, brk, belowMinimum, eligible, chargeUsd, restore
-        );
+        RiskModuleMath.Exemption memory x =
+            RiskModuleMath.Exemption(requireRescue, brk, belowMinimum, eligible, chargeUsd, restore);
         RiskModuleMath.Outcome o = RiskModuleMath.exemption(x);
-        bool needs = requireRescue || capFail || depthUnavailable || brk != 0 || belowMinimum;
+        bool needs = requireRescue || brk != 0 || belowMinimum;
         bool admit = eligible && chargeUsd <= restore;
         if (!needs) assert(o == RiskModuleMath.Outcome.Pass);
         if (needs && admit) assert(o == RiskModuleMath.Outcome.Rescue);

@@ -60,28 +60,13 @@ contract LensPreviewCollateralUnitTest is LensFixture {
         reg.setFrozen(alice, true);
         assertTrue(_rescueOnly(), "frozen depositor");
         reg.setFrozen(alice, false);
-        rm.setMarketBreaker(MARKET_ID, 4, uint64(block.timestamp + 60));
-        assertTrue(_rescueOnly(), "POOL_SHARE breaker");
+        rm.setMarketBreaker(MARKET_ID, 1 << 11, uint64(block.timestamp + 60));
+        assertTrue(_rescueOnly(), "POOL_DEPTH breaker");
         rm.setMarketBreaker(MARKET_ID, 1 | (1 << 10), uint64(block.timestamp + 60));
         assertFalse(_rescueOnly(), "ORACLE and CONFIG_DRIFT never stop a top-up");
         rm.setMarketBreaker(MARKET_ID, 0, 0);
         store.setMinPledgeUsd(MARKET_ID, 5001e8);
         assertTrue(_rescueOnly(), "charge below minPledgeUsd");
-    }
-
-    // TEST-238 verifies: REQ-LENS-038, SPEC-CAP-005
-    function test_TEST_238_recreditPoolShareGate() public {
-        vault.addUnits(_key(1), 2500e6);
-        bytes32 key = keccak256(abi.encode(INTEGRATION, pool, bytes32(0)));
-        store.setPoolShareMax(key, 1000);
-        vault.setDepth(125_000e6, true);
-        assertFalse(_rescueOnly(), "12,500 of 125,000 = 10 %: at the cap");
-        vault.setDepth(124_999e6, true);
-        assertTrue(_rescueOnly(), "above the cap");
-        vault.setDepth(1e15, false);
-        assertTrue(_rescueOnly(), "depth unavailable");
-        store.setPoolShareMax(key, 10_000);
-        assertFalse(_rescueOnly(), "no cap");
     }
 
     // TEST-238 verifies: REQ-LENS-038

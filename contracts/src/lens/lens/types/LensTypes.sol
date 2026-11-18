@@ -363,7 +363,6 @@ struct LiquidationPreview {
     bool debtPriceFresh;
     bool stressValued;
     bool inGrace;
-    bool belowGraceHealthFactor;
     bool sharesEqualAssets;
     RouteStatus[] routeUsable;
     uint256 activeKeeperCount;
@@ -441,7 +440,6 @@ struct MarketView {
     uint256 targetHealthFactor;
     uint256 healthFactorForMaxBonus;
     uint256 liquidationBonusFactorBps;
-    uint256 hardHealthFloor;
     uint256 marketUsdCap;
     uint256 topUpSliceUsd;
     uint256[] tokenUsdCaps;

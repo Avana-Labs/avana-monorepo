@@ -56,7 +56,6 @@ abstract contract LPVaultLedgerFixture is AaveV4Fixture {
         uint256 nextRecordId;
         uint128 regularUsed;
         uint128 sliceUsed;
-        uint256 poolUnits;
         uint256 token0Used;
         uint256 token1Used;
         uint256 supply;
@@ -195,7 +194,6 @@ abstract contract LPVaultLedgerFixture is AaveV4Fixture {
         s.nextRecordId = ledger.nextRecordId();
         s.regularUsed = c.regularUsed;
         s.sliceUsed = c.sliceUsed;
-        s.poolUnits = c.poolUnits;
         s.token0Used = c.tokenUsed[0];
         s.token1Used = c.tokenUsed[1];
         s.supply = ledgerToken.totalSupply();
@@ -220,7 +218,6 @@ abstract contract LPVaultLedgerFixture is AaveV4Fixture {
         assertEq(b.nextRecordId, a.nextRecordId, "no new record");
         assertEq(b.regularUsed, a.regularUsed, "regular cap use");
         assertEq(b.sliceUsed, a.sliceUsed, "slice cap use");
-        assertEq(b.poolUnits, a.poolUnits, "pool-share cap use");
         assertEq(b.token0Used, a.token0Used, "token0 cap use");
         assertEq(b.token1Used, a.token1Used, "token1 cap use");
         assertEq(b.supply, a.supply, "vault-token supply: no mint");

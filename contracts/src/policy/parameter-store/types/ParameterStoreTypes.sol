@@ -35,25 +35,11 @@ struct FeedDef {
 
 /// @notice Chain-wide parameters written by `initialize`.
 struct GlobalParams {
-    // Cached-state length, seconds.
-    uint32 cachedWindow;
-    // Maximum disagreement liquidation pause, seconds.
-    uint32 disagreementPauseMax;
-    // Lower USD band level, 8 decimals per 1 USD at peg.
-    uint256 usdBandLow;
-    // Upper USD band level, 8 decimals per 1 USD at peg.
-    uint256 usdBandHigh;
-    // Recovery grace length, seconds.
-    uint32 graceDuration;
-    // HF below which liquidation is allowed during grace, WAD (< 1e18).
-    uint256 graceHealthFactor;
     // Most flash premium the IFlashSource may charge, bps of the amount lent.
     uint16 maxFlashFeeBps;
     // Avana share of realized liquidation surplus, bps.
     uint16 avanaFeeShareBps;
     address feeRecipient;
-    // Margin added to the feed-agreement lower bound, bps.
-    uint16 feedAgreementMarginBps;
     // Healthy-observation window before a temporary gate reopens, seconds.
     uint64 gateRecoverySeconds;
     // Largest per-leg slippage raise a caller shortfall top-up can buy, bps.
@@ -62,10 +48,6 @@ struct GlobalParams {
 
 /// @notice Per-market parameters, first written by `setInitialMarketParams` in the listing batch.
 struct MarketParams {
-    // Pool TWAP window, seconds.
-    uint32 twapWindow;
-    // Consistency-check tolerance, bps of the fair price.
-    uint16 consistencyToleranceBps;
     // Slippage allowance, bps.
     uint16 slippageAllowanceBps;
     // Liveness floor of the slippage allowance, bps.
@@ -74,8 +56,6 @@ struct MarketParams {
     uint16 poolRiskFactor;
     // Minimum value of one pledge, 8-decimal USD.
     uint256 minPledgeUsd;
-    // Optional hard health-factor floor, WAD; 0 = off.
-    uint256 hardHealthFloor;
 }
 
 /// @notice Borrow-speed and pledge-speed limits of one market, sharing one window length.
@@ -104,9 +84,9 @@ struct ParameterStoreLogics {
     address loosen;
     // Listing, chain, Spoke and coverage setters.
     address listing;
-    // Structural oracle setters and liveness-checked setters.
+    // Structural feed setters and liveness-checked setters.
     address adminOracle;
-    // Structural risk setters, second sources and the initial parameter write.
+    // Structural risk setters and the initial parameter write.
     address adminRisk;
 }
 

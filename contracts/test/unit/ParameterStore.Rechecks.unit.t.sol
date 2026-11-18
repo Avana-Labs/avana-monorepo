@@ -11,20 +11,12 @@ import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol
 import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
 import {Vm} from "forge-std/Vm.sol";
 
-/// @notice The re-checks a change runs at execution: the tolerance bound over every route the standby can replace,
-/// tighten setters that revert only on checks their own write breaks, the SPEC-CF-004 margin re-run, the feed bound
-/// cap and a kept borrow age.
+/// @notice The re-checks a change runs at execution: the SPEC-CF-004 margin re-run, the feed bound cap and a kept
+/// borrow age.
 contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
-    MockAggregator internal fStandby;
-
     function setUp() public {
-        _deployStore(false);
-        fStandby = new MockAggregator(8, 1e6, 1e12);
-        // USDC's routes: primary fUsdc, alternate fUsdcAlt, standby fStandby (each 25 bps deviation once defined).
-        registry.setToken(usdc, _one(address(fUsdc)), _one(address(fUsdcAlt)), _one(address(fStandby)));
+        _deployStore();
         _listMarket();
-        _tl();
-        store.setFeed(address(fStandby), _feedDef(86_400, 1800));
     }
 
     function _withDeviation(
@@ -34,56 +26,6 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         d = _feedDef(86_400, 1800);
         d.feedDeviationThresholdBps = deviation;
         d.heartbeatDriftBps = drift;
-    }
-
-    // TEST-250 verifies: REQ-CONFIG-024, REQ-CONFIG-052, REQ-PSTORE-009, REQ-MREG-027
-    function test_TEST_250_standbyFeedChangeKeepsToleranceBound() public {
-        // max(25 + 25, 25 + 25, 25 + 25) + 50 = 100 with every route at 25 bps.
-        assertEq(store.feedAgreementToleranceMinBps(usdc), 100);
-        // A standby feed of 120 bps would need max(50, 145, 145) + 50 = 195 once a guardian puts it in either slot:
-        // the change is refused although the standby is not in force, so no switch can leave USDC below its bound.
-        _tl();
-        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
-        store.setFeed(address(fStandby), _withDeviation(120, 25));
-        _tl();
-        store.setFeedAgreementToleranceBps(usdc, 195);
-        _tl();
-        store.setFeed(address(fStandby), _withDeviation(120, 25));
-        assertEq(store.feedAgreementToleranceMinBps(usdc), 195);
-        // With the standby in place of the primary, the short-delay setters still run.
-        registry.setActiveRoutes(usdc, _one(address(fStandby)), _one(address(fUsdcAlt)));
-        _tl();
-        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
-        store.tightenFeedAgreementToleranceBps(usdc, 194);
-        _tl();
-        store.tightenBorrowPriceMaxAge(address(fStandby), 80_000);
-        _tl();
-        store.tightenConsistencyToleranceBps(M, 40);
-        assertEq(store.getFeed(address(fStandby)).borrowPriceMaxAge, 80_000);
-    }
-
-    // TEST-064 verifies: REQ-CONFIG-051, REQ-CONFIG-024, REQ-PSTORE-009, SPEC-GOV-011
-    function test_TEST_064_tighteningIgnoresABoundItDidNotBreak() public {
-        // A wide feed is defined while no token uses it, then recorded as USDC's standby: USDC's tolerance (150) is now
-        // below its bound, max(50, 425, 425) + 50 = 475, through no ParameterStore change.
-        MockAggregator wide = new MockAggregator(8, 1e6, 1e12);
-        _tl();
-        store.setFeed(address(wide), _withDeviation(400, 25));
-        registry.setToken(usdc, _one(address(fUsdc)), _one(address(fUsdcAlt)), _one(address(wide)));
-        assertEq(store.feedAgreementToleranceMinBps(usdc), 475);
-        // Tightenings that cannot move the bound still run.
-        _tl();
-        store.tightenBorrowPriceMaxAge(address(fUsdc), 80_000);
-        _tl();
-        store.tightenConsistencyToleranceBps(M, 40);
-        // A tolerance tightening below the bound is refused: the lower value is its own doing.
-        _tl();
-        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
-        store.tightenFeedAgreementToleranceBps(usdc, 140);
-        // A structural feed change keeps the full check.
-        _tl();
-        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
-        store.setFeed(address(fUsdc), _feedDef(86_400, 1800));
     }
 
     // TEST-064 verifies: SPEC-CF-004, REQ-CONFIG-019, REQ-CONFIG-020, REQ-PSTORE-004
@@ -107,16 +49,14 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
 
     // TEST-064 verifies: SPEC-CF-004, REQ-PSTORE-009, REQ-PSTORE-004
     function test_TEST_064_feedChangeRerunsListingMarginOnEveryRoute() public {
-        // Margin 7,000 (CF_LP 3,000). A standby feed at 25 + 6,975 = 7,000 is refused, though the standby is not in
-        // force: a guardian can put it in either slot at once.
-        _tl();
-        store.setFeedAgreementToleranceBps(usdc, 150);
+        // Margin 7,000 (CF_LP 3,000). An alternate feed at 25 + 6,975 = 7,000 is refused, though the alternate is not
+        // the route the LPOracle values with.
         _tl();
         vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.setFeed(address(fStandby), _withDeviation(25, 6975));
+        store.setFeed(address(fUsdcAlt), _withDeviation(25, 6975));
         _tl();
-        store.setFeed(address(fStandby), _withDeviation(25, 6974));
-        assertEq(store.getFeed(address(fStandby)).heartbeatDriftBps, 6974);
+        store.setFeed(address(fUsdcAlt), _withDeviation(25, 6974));
+        assertEq(store.getFeed(address(fUsdcAlt)).heartbeatDriftBps, 6974);
     }
 
     // TEST-250 verifies: REQ-CONFIG-023, SPEC-ORC-019, Q-182
@@ -201,41 +141,6 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
         store.setInitialMarketCaps(M, 6_000_000e8, 500_000e8, 1e8);
     }
 
-    // TEST-250 verifies: REQ-CONFIG-024, REQ-CONFIG-052, REQ-MREG-027
-    function testFuzz_TEST_250_toleranceBoundCoversEveryStandbySwitch(
-        uint16 p,
-        uint16 a,
-        uint16 sb
-    ) public {
-        p = uint16(bound(p, 1, 3000));
-        a = uint16(bound(a, 1, 3000));
-        sb = uint16(bound(sb, 1, 3000));
-        _tl();
-        store.setFeedAgreementToleranceBps(usdc, 10_000);
-        _tl();
-        store.setFeed(address(fUsdc), _withDeviation(p, 25));
-        _tl();
-        store.setFeed(address(fUsdcAlt), _withDeviation(a, 25));
-        _tl();
-        store.setFeed(address(fStandby), _withDeviation(sb, 25));
-        uint256 pair = uint256(p) + a;
-        if (uint256(sb) + a > pair) pair = uint256(sb) + a;
-        if (uint256(p) + sb > pair) pair = uint256(p) + sb;
-        assertEq(store.feedAgreementToleranceMinBps(usdc), pair + 50);
-    }
-
-    // TEST-250 verifies: REQ-CONFIG-024, REQ-MREG-027
-    function test_TEST_250_toleranceBoundWithStandbyInPlaceOfAlternate() public {
-        // Primary 40, alternate 25, standby 120: the standby replacing the alternate is the widest pair, 40 + 120.
-        _tl();
-        store.setFeedAgreementToleranceBps(usdc, 300);
-        _tl();
-        store.setFeed(address(fUsdc), _withDeviation(40, 25));
-        _tl();
-        store.setFeed(address(fStandby), _withDeviation(120, 25));
-        assertEq(store.feedAgreementToleranceMinBps(usdc), 40 + 120 + 50);
-    }
-
     // TEST-064 verifies: SPEC-CF-004, REQ-CONFIG-015, REQ-PSTORE-004
     function test_TEST_064_poolRiskFactorRaiseRerunsListingMargin() public {
         _tl();
@@ -268,7 +173,7 @@ contract ParameterStoreRechecksUnitTest is ParameterStoreFixture {
     // TEST-250 verifies: REQ-PSTORE-004, SPEC-CF-004, REQ-CONFIG-019
     function test_TEST_250_initialParamsNeedEveryCollateralFactor() public {
         address dai = makeAddr("DAI");
-        registry.setToken(dai, _one(address(fUsdt)), _one(address(fUsdtAlt)), new address[](0));
+        registry.setToken(dai, _one(address(fUsdt)), _one(address(fUsdtAlt)));
         Market memory m = registry.getMarket(M);
         m.tokens[1] = dai;
         m.lpOracle = makeAddr("lpOracle2");

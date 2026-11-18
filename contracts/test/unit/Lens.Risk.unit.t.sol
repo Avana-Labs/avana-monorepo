@@ -29,13 +29,13 @@ contract LensRiskUnitTest is LensFixture {
     // TEST-228 verifies: REQ-LENS-037, Q-241, Q-399
     function test_TEST_228_breakerStatusPassThrough() public {
         assertEq(_marketReasons(), 0, "nothing blocks");
-        rm.setMarketBreaker(MARKET_ID, 4, uint64(block.timestamp + 1800));
+        rm.setMarketBreaker(MARKET_ID, 1 << 11, uint64(block.timestamp + 1800));
         (uint32 reasons, uint64 reopensAt) = lens.getBreakerStatus(MARKET_ID);
-        assertEq(reasons, 4, "POOL_SHARE recovering");
+        assertEq(reasons, 1 << 11, "POOL_DEPTH recovering");
         assertEq(reopensAt, block.timestamp + 1800, "lastBreachAt + gateRecoverySeconds");
-        rm.setMarketBreaker(MARKET_ID, 4 | 512, type(uint64).max);
+        rm.setMarketBreaker(MARKET_ID, (1 << 11) | 512, type(uint64).max);
         (reasons, reopensAt) = lens.getBreakerStatus(MARKET_ID);
-        assertEq(reasons, 516, "MANUAL latched too");
+        assertEq(reasons, 2560, "MANUAL latched too");
         assertEq(reopensAt, type(uint64).max, "a security freeze reopens only by reset");
     }
 

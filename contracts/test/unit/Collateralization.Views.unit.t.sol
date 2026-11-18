@@ -68,30 +68,24 @@ contract CollateralizationViewsUnitTest is CollateralizationFixture {
 
     // TEST-236 verifies: REQ-COLL-018, REQ-LOCK-016, SPEC-BACK-014, Q-253
     // Sources: 2.3 REQ-COLL-018 example
-    /// @notice `getAccountRescueUnits` and `poolUnits` answer any caller while the Lock is free or held by the
-    /// AaveAdapter (the RiskModule reads them inside a borrow) and revert `Locked` while LPVaultSwap holds it, for
-    /// LPVaultSwap itself too.
+    /// @notice `getAccountRescueUnits` answers any caller while the Lock is free or held by the AaveAdapter (the
+    /// RiskModule reads it inside a borrow) and reverts `Locked` while LPVaultSwap holds it, for LPVaultSwap itself too.
     function test_TEST_236_rescueUnitsReadableUnderAdapter() public {
         riskModule.setRescue(true);
         _pledge(alice, aliceProxy, KEY42, 1_000_000_000);
-        bytes32 key = keccak256(abi.encode(INTEGRATION, pool, bytes32(0)));
         assertEq(coll.getAccountRescueUnits(aliceProxy, vt), 1_000_000_000);
-        assertEq(coll.poolUnits(key), 1_000_000_000);
         vm.prank(adapter);
         lock.acquire();
         assertEq(coll.getAccountRescueUnits(aliceProxy, vt), 1_000_000_000, "readable under the Adapter");
-        assertEq(coll.poolUnits(key), 1_000_000_000, "pool units readable under the Adapter");
         vm.prank(adapter);
         lock.release();
         vm.prank(lpVaultSwap);
         lock.acquire();
         vm.expectRevert(ICollateralizationBase.Locked.selector);
         coll.getAccountRescueUnits(aliceProxy, vt);
-        vm.expectRevert(ICollateralizationBase.Locked.selector);
-        coll.poolUnits(key);
         vm.prank(lpVaultSwap);
         vm.expectRevert(ICollateralizationBase.Locked.selector);
-        coll.poolUnits(key);
+        coll.getAccountRescueUnits(aliceProxy, vt);
         vm.prank(lpVaultSwap);
         lock.release();
     }

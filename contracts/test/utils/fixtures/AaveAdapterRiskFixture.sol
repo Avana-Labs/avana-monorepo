@@ -76,8 +76,6 @@ abstract contract AaveAdapterRiskFixture is AaveAdapterFixture {
         rstore.setTokenCf(address(usdt), 8000);
         rstore.setMarket(MARKET_ID, 10_000, 0, 1e30, 0, 0);
         rstore.setMarket(MARKET_B, 10_000, 0, 1e30, 0, 0);
-        rstore.setTwap(MARKET_ID, 1800);
-        rstore.setTwap(MARKET_B, 1800);
         rstore.setBorrowAge(feedUsdc, FEED_AGE);
         rstore.setBorrowAge(feedUsdt, FEED_AGE);
 

@@ -311,16 +311,6 @@ export const collateralizationAbi = [
             "internalType": "uint128"
           },
           {
-            "name": "poolKey",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "poolUnits",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
             "name": "accountRecords",
             "type": "uint256",
             "internalType": "uint256"
@@ -745,25 +735,6 @@ export const collateralizationAbi = [
       }
     ],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "poolUnits",
-    "inputs": [
-      {
-        "name": "poolKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "units",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",

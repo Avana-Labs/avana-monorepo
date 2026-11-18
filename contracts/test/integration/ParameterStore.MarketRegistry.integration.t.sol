@@ -9,15 +9,11 @@ import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol"
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
-import {IPoolObservations} from "../../src/policy/parameter-store/IPoolObservations.sol";
-import {OracleInputsLayout} from "../../src/policy/parameter-store/types/OracleInputsLayout.sol";
-import {FeedDef, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketDef} from "../../src/types/MarketTypes.sol";
-import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {PledgeCounters, PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {ParameterStoreRegistryFixture} from "../utils/fixtures/ParameterStoreRegistryFixture.sol";
 import {RegistryLPOracleMock, RegistryRouteMock} from "../utils/mocks/MarketRegistryMocks.sol";
-import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
 
 /// @notice The real ParameterStore against the real MarketRegistry: every scope check, route read, debt-reserve scan
 /// and liveness evaluation of the store reads the registry's own records, and the registry's listing and
@@ -115,52 +111,6 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         );
     }
 
-    // ─── Routes: the tolerance bound reads the registry's three routes ───
-
-    // TEST-250 verifies: REQ-CONFIG-024, REQ-MREG-027, REQ-CONFIG-052
-    function test_TEST_250_toleranceBoundFromTheRegistryRoutes() public {
-        // Primary 25, alternate 25 + 25 = 50, standby 25: max(75, 75, 50) + 50 = 125.
-        assertEq(store.feedAgreementToleranceMinBps(address(usdc)), 125);
-        _refuses(
-            abi.encodeCall(store.setFeedAgreementToleranceBps, (address(usdc), 124)),
-            abi.encodeWithSelector(IParameterStoreBase.LivenessBound.selector)
-        );
-        vm.prank(address(timelock));
-        store.setFeedAgreementToleranceBps(address(usdc), 125);
-        assertEq(store.feedAgreementToleranceBps(address(usdc)), 125);
-    }
-
-    // TEST-250 verifies: REQ-CONFIG-024, REQ-MREG-027, REQ-CONFIG-027
-    // TEST-139 verifies: REQ-CONFIG-024, REQ-CONFIG-027; shared: TEST-139's tolerance guard on the real registry and store, a route the store's feedAgreementToleranceBps cannot cover is refused
-    function test_TEST_250_registryRefusesRoutesTheStoreToleranceCannotCover() public {
-        // A new standby of 100 bps raises USDC's bound to max(75, 150, 125) + 50 = 200 > 150.
-        address wide = address(new MockAggregator(8, 1e6, 1e12));
-        vm.prank(address(timelock));
-        store.setFeed(wide, _wideFeed());
-        address[] memory p = new address[](1);
-        address[] memory a = new address[](2);
-        address[] memory s = new address[](1);
-        p[0] = routeFeeds[address(usdc)][0];
-        (a[0], a[1]) = (routeFeeds[address(usdc)][1], routeFeeds[address(usdc)][2]);
-        s[0] = wide;
-        vm.prank(address(timelock));
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("tolerance")));
-        registry.setPriceSource(address(usdc), p, a, s);
-        // Raising the store's tolerance first lets the same route change through.
-        vm.prank(address(timelock));
-        store.setFeedAgreementToleranceBps(address(usdc), 200);
-        uint64 version = registry.priceRouteVersion(address(usdc));
-        vm.prank(address(timelock));
-        registry.setPriceSource(address(usdc), p, a, s);
-        assertEq(registry.priceRouteVersion(address(usdc)), version + 1);
-        assertEq(store.feedAgreementToleranceMinBps(address(usdc)), 200);
-    }
-
-    function _wideFeed() internal pure returns (FeedDef memory d) {
-        d = _feedDef();
-        d.feedDeviationThresholdBps = 100;
-    }
-
     // ─── Debt reserves: the allowance and the deficit threshold read the registry ───
 
     // TEST-246 verifies: REQ-CONFIG-050, REQ-PSTORE-006, Q-397
@@ -236,18 +186,12 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         uint256 id,
         address vaultToken
     ) internal {
-        vm.mockCall(
-            pool,
-            abi.encodeWithSelector(IPoolObservations.slot0.selector),
-            abi.encode(uint160(2 ** 96), int24(0), uint16(0), uint16(1000), uint16(1000), uint8(0), true)
-        );
         RiskStatus memory st;
         st.depthAvailable = true;
         st.depthUnits = 1;
         vm.mockCall(address(lpVault), abi.encodeWithSignature("riskStatus(uint256,uint32)"), abi.encode(st));
         MarketParams memory p;
-        (p.twapWindow, p.consistencyToleranceBps, p.slippageAllowanceBps, p.slippageAllowanceMinBps) =
-        (1800, 50, 195, 30);
+        (p.slippageAllowanceBps, p.slippageAllowanceMinBps) = (195, 30);
         (p.poolRiskFactor, p.minPledgeUsd) = (4000, 10e8);
         vm.startPrank(address(timelock));
         store.setTokenCollateralFactorBps(address(usdc), 7800);
@@ -297,7 +241,6 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Registered));
         _storeListing(id, vaultToken);
         assertEq(store.getMarketParams(id).poolRiskFactor, 4000);
-        assertEq(store.twapMinObservations(id), 151);
         vm.prank(address(timelock));
         registry.activateMarket(id);
         assertEq(uint8(registry.getMarket(id).status), uint8(MarketStatus.Active));
@@ -374,30 +317,6 @@ contract ParameterStoreMarketRegistryIntegrationTest is ParameterStoreRegistryFi
         vm.prank(address(timelock));
         store.loosenMarketUsdCap(id, 2_250_000e8);
         assertEq(store.marketUsdCap(id), 2_250_000e8);
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-033, REQ-CONFIG-072, REQ-MREG-027, REQ-ORACLE-100
-    function test_TEST_250_inputsFollowTheRegistryRoutesInForce() public {
-        (uint256 id,, RegistryLPOracleMock lpOracle) = _activeMarket();
-        address[] memory toks = new address[](1);
-        toks[0] = address(usdc);
-        uint256[] memory w = store.getOracleInputs(address(lpOracle), toks, false);
-        uint256 k = OracleInputsLayout.HEAD_WORDS;
-        assertEq(w[0], id);
-        assertEq(w[k], 150, "tolerance");
-        assertEq(w[k + 1], registry.priceRouteVersion(address(usdc)), "route version");
-        assertEq(w[k + 2], uint256(RouteSlot.None));
-        assertEq(w[k + 3], 1, "primary legs");
-        assertEq(w[k + 4], 2, "alternate legs");
-        assertEq(w[k + 5], uint160(routeFeeds[address(usdc)][0]), "primary feed");
-        // A guardian puts the standby in place of the primary: the store serves it in that slot at once.
-        vm.prank(emergencyGuardian);
-        registry.useStandbyRoute(address(usdc), RouteSlot.Primary);
-        w = store.getOracleInputs(address(lpOracle), toks, false);
-        assertEq(w[k + 1], registry.priceRouteVersion(address(usdc)));
-        assertEq(w[k + 2], uint256(RouteSlot.Primary));
-        assertEq(w[k + 3], 1);
-        assertEq(w[k + 5], uint160(routeFeeds[address(usdc)][3]), "standby served as primary");
     }
 
     // TEST-138 verifies: REQ-PSTORE-004, REQ-PSTORE-012, REQ-CONFIG-046

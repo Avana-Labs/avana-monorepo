@@ -11,7 +11,6 @@ import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.
 import {DriftReason} from "../../src/types/MarketTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
-import {RiskSequencerFeed} from "../utils/mocks/RiskModuleMocks.sol";
 
 interface IGateSpokeConfigurator {
     function updatePaused(

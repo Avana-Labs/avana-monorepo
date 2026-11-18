@@ -11,7 +11,6 @@ import {
     MarketRegistryLogics
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {PauseReason} from "../../src/types/MarketTypes.sol";
-import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryTokenMock} from "../utils/mocks/MarketRegistryMocks.sol";
 
@@ -35,10 +34,9 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
     // from the ready time through the public executor, and takes effect only then.
     function test_TEST_063_adminWriteRunsAtTheNormalDelay() public {
         RegistryTokenMock dai = new RegistryTokenMock(18);
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("dai");
-        ps.setTolerance(address(dai), 100, 50);
+        (address[] memory p, address[] memory a) = _routes("dai");
         Call[] memory calls =
-            _one(address(registry), abi.encodeCall(registry.listToken, (address(dai), _tokenDef(p, a, s))));
+            _one(address(registry), abi.encodeCall(registry.listToken, (address(dai), _tokenDef(p, a))));
         assertEq(_required(calls), NORMAL_DELAY, "listToken is a normal-delay write");
         bytes32 salt = keccak256("listDai");
         _schedule(governanceMultisig, calls, NORMAL_DELAY, salt);
@@ -126,8 +124,7 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
 
     function _windDownDigest() internal view returns (bytes32) {
         bytes memory a = abi.encode(
-            registry.priceRouteVersion(address(usdc)),
-            registry.standbySwitchLockedUntil(address(usdc)),
+            registry.getToken(address(usdc)).alternateRoute,
             registry.windDownState(marketId),
             registry.settlementReserve(marketId)
         );
@@ -142,16 +139,13 @@ contract MarketRegistryGovernanceUnitTest is MarketRegistryFixture {
     }
 
     /// @dev Fills every family of records: pause and reason, a frozen address, latches and breach times, a disabled
-    /// route, a standby switch cancelled by the DAO, an approved Spoke code hash, an offboarding market with one ramp step.
+    /// route, an approved Spoke code hash, an offboarding market with one ramp step.
     function _fill() internal {
         vm.startPrank(emergencyGuardian);
         registry.pause(address(hub), PauseReason.MintPathSuspect);
         registry.freezeAddress(bob);
         registry.tripDebtBreaker(address(spoke), GHO_RESERVE);
-        registry.useStandbyRoute(address(usdc), RouteSlot.Alternate);
         vm.stopPrank();
-        vm.prank(aaveGovernanceExecutor);
-        registry.cancelStandbySwitch(address(usdc));
         vm.prank(address(rm));
         registry.recordBreach(bytes32(marketId), BreakerReasons.ISSUER | BreakerReasons.ORACLE);
         vm.startPrank(address(timelock));

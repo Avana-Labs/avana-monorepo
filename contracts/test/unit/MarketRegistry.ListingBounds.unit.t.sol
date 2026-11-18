@@ -10,7 +10,6 @@ import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegis
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
 import {MarketStatus, TokenDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market, MarketDef} from "../../src/types/MarketTypes.sol";
-import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryLPOracleMock, RegistryTokenMock} from "../utils/mocks/MarketRegistryMocks.sol";
@@ -250,25 +249,22 @@ contract MarketRegistryListingBoundsUnitTest is MarketRegistryFixture {
     // ─── Tokens and price routes ───
 
     // TEST-250 verifies: REQ-CONFIG-021, REQ-MREG-027
-    // No two of the three routes may share a feed: each of the three pairs alone is refused.
+    // The two routes may not share a feed, and a two-leg route may not repeat its own feed.
     function test_TEST_250_eachRoutePairMayNotShareAFeed() public {
         address t = address(new RegistryTokenMock(6));
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("t");
-        TokenDef memory d = _tokenDef(p, a, _one(p[0]));
+        (address[] memory p, address[] memory a) = _routes("t");
+        TokenDef memory d = _tokenDef(_one(a[1]), a);
         vm.startPrank(address(timelock));
         _expectListing("sharedFeed");
         registry.listToken(t, d);
-        d = _tokenDef(p, a, _one(a[1]));
-        _expectListing("sharedFeed");
-        registry.listToken(t, d);
-        d = _tokenDef(_two(a[0], p[0]), a, s);
+        d = _tokenDef(_two(a[0], p[0]), a);
         _expectListing("sharedFeed");
         registry.listToken(t, d);
         // A two-leg route repeating its own feed.
-        d = _tokenDef(_two(p[0], p[0]), a, s);
+        d = _tokenDef(_two(p[0], p[0]), a);
         _expectListing("sharedFeed");
         registry.listToken(t, d);
-        registry.listToken(t, _tokenDef(p, a, s));
+        registry.listToken(t, _tokenDef(p, a));
         vm.stopPrank();
     }
 
@@ -276,21 +272,19 @@ contract MarketRegistryListingBoundsUnitTest is MarketRegistryFixture {
     // Each route takes one or two feeds: zero and three are refused in each slot; a zero feed is refused.
     function test_TEST_250_routeLengthInEverySlot() public {
         address t = address(new RegistryTokenMock(6));
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("t");
+        (address[] memory p, address[] memory a) = _routes("t");
         address extra = _newFeed("extra");
         address[] memory three = new address[](3);
         (three[0], three[1], three[2]) = (a[0], a[1], extra);
         vm.startPrank(address(timelock));
         _expectListing("routeLength");
-        registry.listToken(t, _tokenDef(new address[](0), a, s));
+        registry.listToken(t, _tokenDef(new address[](0), a));
         _expectListing("routeLength");
-        registry.listToken(t, _tokenDef(p, three, s));
-        _expectListing("routeLength");
-        registry.listToken(t, _tokenDef(p, a, new address[](0)));
+        registry.listToken(t, _tokenDef(p, three));
         _expectListing("feed");
-        registry.listToken(t, _tokenDef(p, a, new address[](1)));
+        registry.listToken(t, _tokenDef(new address[](1), a));
         _expectListing("feed");
-        registry.listToken(t, _tokenDef(p, _two(a[0], address(0)), s));
+        registry.listToken(t, _tokenDef(p, _two(a[0], address(0))));
         vm.stopPrank();
         assertFalse(registry.getToken(t).listed);
     }
@@ -300,8 +294,8 @@ contract MarketRegistryListingBoundsUnitTest is MarketRegistryFixture {
     // are recorded as given; the zero address is never listed.
     function test_TEST_250_listTokenRecordsWhatItReads() public {
         address t = address(new RegistryTokenMock(8));
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("t");
-        TokenDef memory d = _tokenDef(p, a, s);
+        (address[] memory p, address[] memory a) = _routes("t");
+        TokenDef memory d = _tokenDef(p, a);
         d.decimals = 18;
         d.listed = false;
         d.isUsdStable = false;
@@ -315,7 +309,6 @@ contract MarketRegistryListingBoundsUnitTest is MarketRegistryFixture {
         assertFalse(rec.isUsdStable);
         assertEq(uint8(rec.issuerProbe), uint8(IssuerProbe.UsdtFeeRate));
         assertEq(rec.pegModule, d.pegModule);
-        assertEq(uint8(rec.replacedSlot), uint8(RouteSlot.None));
         assertEq(rec.primaryRoute.length, 1);
         assertEq(rec.alternateRoute.length, 2);
         assertEq(rec.alternateRoute[1], a[1]);
@@ -324,51 +317,19 @@ contract MarketRegistryListingBoundsUnitTest is MarketRegistryFixture {
         registry.listToken(address(0), d);
     }
 
-    // TEST-231 verifies: REQ-CONFIG-026, REQ-CONFIG-027, REQ-MREG-027, REQ-MREG-028, REQ-ACCESS-045
-    // setPriceSource accepts a tolerance equal to its lower bound and refuses one below it; it writes the three
-    // routes, resets the replaced slot, clears a DAO-cancel lock and bumps the version by exactly one.
-    function test_TEST_231_setPriceSourceToleranceBoundAndEffects() public {
-        address t = address(usdt);
-        vm.prank(emergencyGuardian);
-        registry.useStandbyRoute(t, RouteSlot.Alternate);
-        vm.prank(aaveGovernanceExecutor);
-        registry.cancelStandbySwitch(t);
-        assertGt(registry.standbySwitchLockedUntil(t), 0);
-        uint64 v = registry.priceRouteVersion(t);
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("usdt2");
-        ps.setTolerance(t, 49, 50);
-        vm.prank(address(timelock));
-        _expectListing("tolerance");
-        registry.setPriceSource(t, p, a, s);
-        ps.setTolerance(t, 50, 50);
-        vm.prank(address(timelock));
-        registry.setPriceSource(t, p, a, s);
-        assertEq(registry.priceRouteVersion(t), v + 1);
-        assertEq(registry.standbySwitchLockedUntil(t), 0, "a new price source ends the lock");
-        TokenDef memory rec = registry.getToken(t);
-        assertEq(rec.primaryRoute[0], p[0]);
-        assertEq(rec.alternateRoute[0], a[0]);
-        assertEq(rec.standbyRoute[0], s[0]);
-        assertEq(uint8(rec.replacedSlot), uint8(RouteSlot.None));
-        // The guardian may switch again at once.
-        vm.prank(emergencyGuardian);
-        registry.useStandbyRoute(t, RouteSlot.Primary);
-    }
-
-    /// @dev `setPriceSource(t, p, a, s)` as the timelock is refused with `ListingCheckFailed(check)` and leaves the
-    /// token's route version unchanged.
+    /// @dev `setPriceSource(t, p, a)` as the timelock is refused with `ListingCheckFailed(check)` and leaves the
+    /// token's routes unchanged.
     function _expectPriceSourceRefused(
         address t,
         address[] memory p,
         address[] memory a,
-        address[] memory s,
         bytes32 check
     ) internal {
-        uint64 v = registry.priceRouteVersion(t);
+        address primary = registry.getToken(t).primaryRoute[0];
         vm.prank(address(timelock));
         _expectListing(check);
-        registry.setPriceSource(t, p, a, s);
-        assertEq(registry.priceRouteVersion(t), v, "version unchanged");
+        registry.setPriceSource(t, p, a);
+        assertEq(registry.getToken(t).primaryRoute[0], primary, "routes unchanged");
     }
 
     // TEST-231 verifies: REQ-CONFIG-021, REQ-MREG-027
@@ -376,48 +337,46 @@ contract MarketRegistryListingBoundsUnitTest is MarketRegistryFixture {
     // each slot.
     function test_TEST_231_setPriceSourceRouteLengthInEverySlot() public {
         address t = _newListedToken("t");
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("t2");
+        (address[] memory p, address[] memory a) = _routes("t2");
         address[] memory three = new address[](3);
         (three[0], three[1], three[2]) = (a[0], a[1], _newFeed("extra"));
-        _expectPriceSourceRefused(t, new address[](0), a, s, "routeLength");
-        _expectPriceSourceRefused(t, p, three, s, "routeLength");
-        _expectPriceSourceRefused(t, p, a, new address[](0), "routeLength");
+        _expectPriceSourceRefused(t, new address[](0), a, "routeLength");
+        _expectPriceSourceRefused(t, p, three, "routeLength");
+        _expectPriceSourceRefused(t, p, new address[](0), "routeLength");
     }
 
     // TEST-231 verifies: REQ-CONFIG-021, REQ-MREG-027
     // setPriceSource refuses a zero feed and a feed with no ParameterStore definition.
     function test_TEST_231_setPriceSourceRefusesAnUndefinedFeed() public {
         address t = _newListedToken("t");
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("t2");
-        _expectPriceSourceRefused(t, p, a, new address[](1), "feed");
-        _expectPriceSourceRefused(t, p, _two(a[0], address(0)), s, "feed");
-        _expectPriceSourceRefused(t, _one(makeAddr("undefinedFeed")), a, s, "feed");
+        (address[] memory p, address[] memory a) = _routes("t2");
+        _expectPriceSourceRefused(t, new address[](1), a, "feed");
+        _expectPriceSourceRefused(t, p, _two(a[0], address(0)), "feed");
+        _expectPriceSourceRefused(t, _one(makeAddr("undefinedFeed")), a, "feed");
     }
 
     // TEST-231 verifies: REQ-CONFIG-021, REQ-MREG-027
     // setPriceSource refuses a feed whose ParameterStore definition has no heartbeat.
     function test_TEST_231_setPriceSourceRefusesAFeedWithoutHeartbeat() public {
         address t = _newListedToken("t");
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("t2");
+        (address[] memory p, address[] memory a) = _routes("t2");
         address noBeat = makeAddr("noHeartbeatFeed");
         ps.setFeed(noBeat, 8, 0, 25, 25);
-        _expectPriceSourceRefused(t, _one(noBeat), a, s, "heartbeat");
-        // The same token accepts three well-formed routes.
+        _expectPriceSourceRefused(t, _one(noBeat), a, "heartbeat");
+        // The same token accepts two well-formed routes.
         vm.prank(address(timelock));
-        registry.setPriceSource(t, p, a, s);
+        registry.setPriceSource(t, p, a);
         assertEq(registry.getToken(t).primaryRoute[0], p[0], "routes written");
     }
 
     // TEST-231 verifies: REQ-CONFIG-021, REQ-MREG-027
-    // setPriceSource refuses routes that share a feed: each of the three pairs alone, and a two-leg route repeating its
-    // own feed.
+    // setPriceSource refuses routes that share a feed, and a two-leg route repeating its own feed.
     function test_TEST_231_setPriceSourceRoutesMayNotShareAFeed() public {
         address t = _newListedToken("t");
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("t2");
-        _expectPriceSourceRefused(t, p, a, _one(p[0]), "sharedFeed");
-        _expectPriceSourceRefused(t, p, a, _one(a[1]), "sharedFeed");
-        _expectPriceSourceRefused(t, _two(a[0], p[0]), a, s, "sharedFeed");
-        _expectPriceSourceRefused(t, _two(p[0], p[0]), a, s, "sharedFeed");
+        (address[] memory p, address[] memory a) = _routes("t2");
+        _expectPriceSourceRefused(t, _one(a[1]), a, "sharedFeed");
+        _expectPriceSourceRefused(t, _two(a[0], p[0]), a, "sharedFeed");
+        _expectPriceSourceRefused(t, _two(p[0], p[0]), a, "sharedFeed");
     }
 
     function _one(

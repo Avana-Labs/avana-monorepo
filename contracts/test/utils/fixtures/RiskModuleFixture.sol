@@ -83,7 +83,6 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
     address internal feeReceiver = makeAddr("hubFeeReceiver");
     address internal feedUsdc = makeAddr("feed USDC/USD");
     address internal feedUsdt = makeAddr("feed USDT/USD");
-    bytes32 internal poolKey;
     RiskDebtOracleMock internal usdcOracle;
     uint256 internal constant USDC_RESERVE = 5;
     uint256 internal constant USDC_ASSET = 2;
@@ -264,7 +263,6 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
             "avUSDC-USDT"
         );
         store.setMarket(mid, 4000, 10e8, 1_000_000e8, 100_000e8, 1e8);
-        store.setTwap(mid, 1800);
         vm.prank(address(timelock));
         registry.listCollateralMarket(_marketDef(vaultToken, address(oracle)));
         hub.setAsset(vaultToken, VT_ASSET);
@@ -286,7 +284,6 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         _setRoutesInto(mid, address(gho));
         vm.prank(address(timelock));
         registry.activateMarket(mid);
-        poolKey = keccak256(abi.encode(V3, pool, bytes32(0)));
         store.setTokenCap(address(hub), address(usdc), 10_000_000e8);
         store.setTokenCap(address(hub), address(usdt), 10_000_000e8);
         store.setBorrowAge(feedUsdc, FEED_AGE);
@@ -425,7 +422,6 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
             "avUSDC-USDT-w"
         );
         store.setMarket(id, 4000, 10e8, 1_000_000e8, 100_000e8, 1e8);
-        store.setTwap(id, 1800);
         MarketDef memory d = _marketDef(vt, address(o));
         d.shape = shape;
         vm.prank(address(timelock));
@@ -435,7 +431,6 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
     /// @dev Counters of an empty market: two token counters.
     function _counters() internal view returns (PledgeCounters memory k) {
         k.hub = address(hub);
-        k.poolKey = poolKey;
         k.tokenUsed = new uint256[](2);
     }
 

@@ -19,13 +19,11 @@ import {
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {
     DebtReserveParams,
-    GlobalParams,
     MarketParams,
     MarketSpeedLimits,
     SpeedLimit
 } from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketDef} from "../../src/types/MarketTypes.sol";
-import {OracleConfig, RouteSlot, SecondSource, TokenOracleConfig} from "../../src/types/OracleTypes.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {ChainInputs} from "./lib/DeployTypes.sol";
@@ -59,9 +57,9 @@ interface IRelistedToken {
 /// steps the contracts require, each a timelock operation the governance Safe schedules (with `AVANA_SCHEDULE=1` on
 /// anvil) and `05_ExecuteOperations` executes once ready. `AVANA_LISTING_STEP` picks the step:
 /// - `setup` (normal delay): each integration's AMM contracts recorded and finalized; the Hubs' depositor caps; every
-///   feed of the listed tokens (`setFeed`); the pool tokens and debt assets (`listToken`: three routes and the issuer
-///   probe, GHO as a fixed-price monitoring-only listing), then their collateral factor, feed-agreement tolerance,
-///   second source and Hub token caps, USDC's debt stress rise; each CDP Spoke (`approveSpokeCodeHash`,
+///   feed of the listed tokens (`setFeed`); the pool tokens and debt assets (`listToken`: two routes and the issuer
+///   probe, GHO as a fixed-price monitoring-only listing), then their collateral factor and Hub token caps, USDC's
+///   debt stress rise; each CDP Spoke (`approveSpokeCodeHash`,
 ///   `deployCdpSpoke`, `setLiquidationExpectations`), whose debt reserves the Aave payload left not borrowable; each
 ///   (Hub, debt asset)'s First-Loss Reserve and credit line.
 /// - `oracles` (Avana operators): GHO's fixed price source (a test-network stand-in) and the DebtOracle proxy of each
@@ -89,8 +87,6 @@ interface IRelistedToken {
 contract ListMarkets is ListingBase {
     // From the network inputs (`ChainInputs` holds arrays of structs, which the legacy pipeline cannot copy to storage).
     address internal safe;
-    uint32 internal blockTime;
-    GlobalParams internal globals;
     uint32[] internal integrationIds;
     mapping(uint32 => bool) internal isSlipstream;
     mapping(uint32 => bool) internal isUniswapV4;
@@ -98,7 +94,7 @@ contract ListMarkets is ListingBase {
     function run() external {
         _loadListing();
         ChainInputs memory c = _loadInputs(_network());
-        (safe, blockTime, globals) = (c.gov.governanceSafe, c.blockTime, c.globals);
+        safe = c.gov.governanceSafe;
         for (uint256 i = 0; i < c.integrations.length; ++i) {
             integrationIds.push(c.integrations[i].integrationId);
             isSlipstream[c.integrations[i].integrationId] = _eq(c.integrations[i].kind, "slipstream");
@@ -191,14 +187,14 @@ contract ListMarkets is ListingBase {
         Operation memory op
     ) private {
         uint256 n = _cfgCount(".listing.tokens");
-        string[4] memory roles = ["primary", "alternate", "standby", "second"];
+        string[2] memory roles = ["primary", "alternate"];
         for (uint256 i = 0; i < n; ++i) {
             string memory k = _at("tokens", i);
             string memory sym = _str(string.concat(k, ".symbol"));
             if (registry.getToken(_token(sym)).listed) continue;
             _checkTokenBehaviour(_token(sym), sym);
             uint16 dev = uint16(_uint(string.concat(k, ".deviationBps")));
-            for (uint256 r = 0; r < 4; ++r) {
+            for (uint256 r = 0; r < 2; ++r) {
                 _add(
                     op,
                     address(store),
@@ -212,8 +208,6 @@ contract ListMarkets is ListingBase {
             d.isUsdStable = _bool(string.concat(k, ".isUsdStable"));
             d.primaryRoute = _one(_feed(sym, "primary"));
             d.alternateRoute = _one(_feed(sym, "alternate"));
-            d.standbyRoute = _one(_feed(sym, "standby"));
-            d.replacedSlot = RouteSlot.None;
             d.issuerProbe = _issuerProbe(k);
             _add(
                 op,
@@ -239,31 +233,17 @@ contract ListMarkets is ListingBase {
             }
             if (listed) continue;
             uint16 cf = uint16(_uint(string.concat(k, ".collateralFactorBps")));
-            uint16 tol = uint16(_uint(string.concat(k, ".agreementToleranceBps")));
-            SecondSource memory none;
             _add(
                 op,
                 address(store),
                 abi.encodeCall(store.setTokenCollateralFactorBps, (t, cf)),
                 "PS.setTokenCollateralFactorBps"
             );
-            _add(
-                op,
-                address(store),
-                abi.encodeCall(store.setFeedAgreementToleranceBps, (t, tol)),
-                "PS.setFeedAgreementToleranceBps"
-            );
-            _add(
-                op,
-                address(store),
-                abi.encodeCall(store.setSecondSource, (t, _secondSource(k), none)),
-                "PS.setSecondSource"
-            );
         }
     }
 
     /// @notice Debt assets that are no pool token are listed here: a fixed-price asset monitoring-only (its primary feed),
-    /// any other with its three routes. A non-fixed asset gets its debt stress rise (`MKT-044`).
+    /// any other with its two routes. A non-fixed asset gets its debt stress rise (`MKT-044`).
     function _listDebtAssets(
         Operation memory op
     ) private view {
@@ -287,7 +267,6 @@ contract ListMarkets is ListingBase {
                 d.isUsdStable = true;
                 d.primaryRoute = _one(_feed(sym, "primary"));
                 d.alternateRoute = new address[](0);
-                d.standbyRoute = new address[](0);
                 _add(
                     op,
                     address(registry),
@@ -449,7 +428,7 @@ contract ListMarkets is ListingBase {
                 );
             } else {
                 // Aave reads the asset's own Chainlink USD feed: its one-leg primary route in the registry.
-                (address[] memory primary,,) = registry.activePriceRoutes(_token(sym));
+                address[] memory primary = registry.getToken(_token(sym)).primaryRoute;
                 require(primary.length == 1, string.concat(sym, ": a debt asset needs a one-leg USD feed"));
                 source = primary[0];
             }
@@ -929,7 +908,7 @@ contract ListMarkets is ListingBase {
         address[2] memory toks = [m.token0, m.token1];
         ILPOracle.TokenRoute[] memory routes = new ILPOracle.TokenRoute[](2);
         for (uint256 i = 0; i < 2; ++i) {
-            (address[] memory primary,,) = registry.activePriceRoutes(toks[i]);
+            address[] memory primary = registry.getToken(toks[i]).primaryRoute;
             routes[i] = ILPOracle.TokenRoute({
                 token: toks[i], isUsdStable: _bool(string.concat(_tokenKey(toks[i]), ".isUsdStable")), feeds: primary
             });
@@ -968,38 +947,6 @@ contract ListMarkets is ListingBase {
             uint256(m.unitExp),
             _v4ReferencePool(name)
         );
-    }
-
-    function _oracleConfig(
-        Mkt memory m,
-        bool allStable
-    ) private view returns (OracleConfig memory o) {
-        o.marketId = m.marketId;
-        o.tokens = new TokenOracleConfig[](2);
-        o.tokens[0] = _tokenOracleConfig(m.token0);
-        o.tokens[1] = _tokenOracleConfig(m.token1);
-        o.twapWindow = 1800;
-        o.twapMinObservations = uint16((1800 + blockTime - 1) / blockTime + 1);
-        o.consistencyToleranceBps = uint16(_uint(string.concat(m.key, ".consistencyToleranceBps")));
-        o.maxQuoteChangeBps = 100;
-        o.usdBandLow = allStable ? globals.usdBandLow : 0;
-        o.usdBandHigh = allStable ? globals.usdBandHigh : type(uint256).max;
-        o.cachedWindow = globals.cachedWindow;
-        o.disagreementPauseMax = globals.disagreementPauseMax;
-        o.graceDuration = globals.graceDuration;
-    }
-
-    function _tokenOracleConfig(
-        address token
-    ) private view returns (TokenOracleConfig memory t) {
-        string memory k = _tokenKey(token);
-        string memory sym = _str(string.concat(k, ".symbol"));
-        uint16 dev = uint16(_uint(string.concat(k, ".deviationBps")));
-        t.token = token;
-        t.routes[0] = _route(_feed(sym, "primary"), dev);
-        t.routes[1] = _route(_feed(sym, "alternate"), dev);
-        t.feedAgreementToleranceBps = uint16(_uint(string.concat(k, ".agreementToleranceBps")));
-        t.secondSource = _secondSource(k);
     }
 
     /// @notice `enableDebtReserve` for each configured reserve, the asset's settlement parameters and, on the first
@@ -1184,8 +1131,6 @@ contract ListMarkets is ListingBase {
     function _marketParams(
         string memory k
     ) private view returns (MarketParams memory p) {
-        p.twapWindow = 1800;
-        p.consistencyToleranceBps = uint16(_uint(string.concat(k, ".consistencyToleranceBps")));
         p.slippageAllowanceBps = uint16(_uint(string.concat(k, ".slippageAllowanceBps")));
         p.slippageAllowanceMinBps = uint16(_uint(string.concat(k, ".slippageAllowanceMinBps")));
         p.poolRiskFactor = uint16(_uint(string.concat(k, ".poolRiskFactorBps")));

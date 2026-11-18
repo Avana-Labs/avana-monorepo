@@ -11,7 +11,6 @@ import {DriftReason} from "../../src/types/MarketTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
-import {RiskSequencerFeed} from "../utils/mocks/RiskModuleMocks.sol";
 
 /// @title RiskModulePledgeUnitTest
 /// @notice `checkPledge`: eligibility, price state, new-account checks, the minimum value, the Aave pre-checks, the caps
@@ -350,26 +349,6 @@ contract RiskModulePledgeUnitTest is RiskModuleFixture {
         rSpoke.setAccount(address(proxy), 0, 0, 0);
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.CapExceeded.selector, bytes32("TOKEN")));
         _pledge(1000e18, k, false);
-    }
-
-    // TEST-034 verifies: REQ-RISK-023, SPEC-CAP-005, REQ-RISK-052
-    // Sources: 2.7 SPEC-CAP-005 example (cap 1,000 bps, depth 2e13, U = 1.5e12)
-    function test_TEST_034_poolShareCap() public {
-        store.setPoolShare(poolKey, 1000);
-        store.setMinPledge(mid, 0);
-        store.setCaps(mid, 100_000_000_000e8, 100_000e8, 1e8);
-        store.setTokenCap(address(hub), address(usdc), 100_000_000_000e8);
-        store.setTokenCap(address(hub), address(usdt), 100_000_000_000e8);
-        rHub.setSpokeConfig(VT_ASSET, address(spoke), type(uint40).max, 0);
-        PledgeCounters memory k = _counters();
-        k.poolUnits = 1.5e12;
-        coll.setPoolUnits(poolKey, 1.5e12);
-        _pledge(4e11, k, false);
-        vm.expectRevert(IRiskModuleErrors.PoolShareExceeded.selector);
-        _pledge(6e11, k, false);
-        rVault.setDepth(0, false);
-        vm.expectRevert(IRiskModuleErrors.PoolShareUnavailable.selector);
-        _pledge(4e11, k, false);
     }
 
     // TEST-228 verifies: REQ-RISK-065, REQ-RISK-073, SPEC-BRK-008, INV-081, REQ-ACCESS-166, REQ-ACCESS-084, REQ-ACCESS-081

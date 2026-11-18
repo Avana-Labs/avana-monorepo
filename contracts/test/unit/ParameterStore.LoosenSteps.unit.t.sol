@@ -17,7 +17,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
     address internal hub2 = makeAddr("hub2");
 
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
         registry.setHub(hub2, true);
         Market memory m = registry.getMarket(M);
@@ -81,38 +81,6 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
     }
 
     // ─── Step edges, exact integers ───
-
-    // TEST-225 verifies: REQ-PSTORE-017, REQ-PSTORE-031
-    function test_TEST_225_hardFloorStepFromTheTop() public {
-        _accepts(abi.encodeCall(store.tightenHardHealthFloor, (M, 1.25e18)));
-        bytes32 key = _key("hardHealthFloor", bytes32(M));
-        _refuses(abi.encodeCall(store.loosenHardHealthFloor, (M, 1.22e18 - 1)), _tooLarge(key));
-        _accepts(abi.encodeCall(store.loosenHardHealthFloor, (M, 1.22e18)));
-        assertEq(store.hardHealthFloor(M), 1.22e18);
-    }
-
-    // TEST-225 verifies: REQ-PSTORE-017, REQ-PSTORE-031, Q-398
-    function test_TEST_225_hardFloorDisableEdges() public {
-        bytes32 key = _key("hardHealthFloor", bytes32(M));
-        // From 1.03 + 1 wei, off counts as 1.00 and is one wei past the step.
-        _accepts(abi.encodeCall(store.tightenHardHealthFloor, (M, 1.03e18 + 1)));
-        _refuses(abi.encodeCall(store.loosenHardHealthFloor, (M, 0)), _tooLarge(key));
-        _refuses(abi.encodeCall(store.loosenHardHealthFloor, (M, 1e18 - 1)), _tooLarge(key));
-        _refuses(abi.encodeCall(store.loosenHardHealthFloor, (M, 1e18)), _tooLarge(key));
-        _accepts(abi.encodeCall(store.loosenHardHealthFloor, (M, 1e18 + 1)));
-        assertEq(store.hardHealthFloor(M), 1e18 + 1);
-        vm.warp(block.timestamp + NORMAL_DELAY);
-        // Lowering to exactly 1.00 keeps the floor on at 1.00.
-        _accepts(abi.encodeCall(store.loosenHardHealthFloor, (M, 1e18)));
-        assertEq(store.hardHealthFloor(M), 1e18);
-        vm.warp(block.timestamp + NORMAL_DELAY);
-        // From 1.00, any value below it switches the floor off, and the event carries the stored 0.
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterLoosened("hardHealthFloor", bytes32(M), 1e18, 0, address(timelock));
-        store.loosenHardHealthFloor(M, 1e18 - 1);
-        assertEq(store.hardHealthFloor(M), 0);
-    }
 
     // TEST-225 verifies: REQ-PSTORE-017, REQ-CONFIG-052
     function test_TEST_225_slippageStepFromZero() public {
@@ -195,24 +163,20 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
 
     // TEST-225 verifies: REQ-PSTORE-017, SPEC-GOV-011, Q-246, REQ-ACCESS-049
     function test_TEST_225_everyStepLimitedSetterIsSpaced() public {
-        _accepts(abi.encodeCall(store.tightenHardHealthFloor, (M, 1.2e18)));
         uint256 t = block.timestamp;
-        bytes[5] memory first = [
-            abi.encodeCall(store.loosenHardHealthFloor, (M, 1.18e18)),
+        bytes[4] memory first = [
             abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 110)),
             abi.encodeCall(store.loosenMarketUsdCap, (M, 6_000_000e8)),
             abi.encodeCall(store.loosenTopUpSliceUsd, (M, 600_000e8)),
             abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 21_000_000e8))
         ];
-        bytes[5] memory second = [
-            abi.encodeCall(store.loosenHardHealthFloor, (M, 1.16e18)),
+        bytes[4] memory second = [
             abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 120)),
             abi.encodeCall(store.loosenMarketUsdCap, (M, 7_000_000e8)),
             abi.encodeCall(store.loosenTopUpSliceUsd, (M, 700_000e8)),
             abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 22_000_000e8))
         ];
-        bytes32[5] memory keys = [
-            _key("hardHealthFloor", bytes32(M)),
+        bytes32[4] memory keys = [
             _key("slippageAllowanceBps", bytes32(M)),
             _key("marketUsdCap", bytes32(M)),
             _key("topUpSliceUsd", bytes32(M)),
@@ -302,8 +266,6 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
     // TEST-225 verifies: REQ-PSTORE-017, REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-030
     function test_TEST_225_unsteppedLooseningsRunBackToBack() public {
         vm.startPrank(address(timelock));
-        store.tightenPoolShareMaxBps(5000);
-        store.tightenPoolShareMaxBpsOf(M, 1000);
         store.tightenMaxShortfallBps(100);
         store.tightenDebtStressRiseBps(usdc, 3000);
         store.tightenGateRecoverySeconds(7200);
@@ -311,10 +273,6 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         store.setDebtAssetParams(gho, DebtReserveParams(1e18));
         store.tightenFloorRoundingAllowance(gho, 1);
         // Each of these loosens twice in the same block, far beyond any step.
-        store.loosenPoolShareMaxBps(6000);
-        store.loosenPoolShareMaxBps(10_000);
-        store.loosenPoolShareMaxBpsOf(M, 2000);
-        store.loosenPoolShareMaxBpsOf(M, 10_000);
         store.loosenMinPledgeUsd(M, 5e8);
         store.loosenMinPledgeUsd(M, 0);
         store.loosenMaxShortfallBps(1000);
@@ -330,12 +288,10 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         store.loosenFloorRoundingAllowance(gho, 2);
         store.loosenFloorRoundingAllowance(gho, 1e18);
         vm.stopPrank();
-        assertEq(store.poolShareMaxBps(), 10_000);
         assertEq(store.maxShortfallBps(), 5000);
         assertEq(store.gateRecoverySeconds(), 600);
         assertEq(store.breakerDeficitMax(address(hub), gho), 100_000e18);
         assertEq(store.floorRoundingAllowance(gho), 1e18);
-        assertEq(store.lastLoosenedAt(_key("poolShareMaxBps", bytes32(0))), 0);
         assertEq(store.lastLoosenedAt(_key("maxShortfallBps", bytes32(0))), 0);
     }
 
@@ -433,25 +389,20 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
     // TEST-225 verifies: REQ-RISK-043, REQ-CONFIG-051, REQ-CONFIG-067
     function test_TEST_225_everyLoosenSetterRefusesTheCurrentValue() public {
         vm.startPrank(address(timelock));
-        store.tightenHardHealthFloor(M, 1.1e18);
         store.tightenDebtStressRiseBps(usdc, 500);
         store.tightenRouteDepthThreshold(M, usdc, gho, 0, 5e8);
         store.setDebtAssetParams(gho, DebtReserveParams(1e17));
         store.loosenBreakerDeficitMax(address(hub), gho, 1e18);
         vm.stopPrank();
-        bytes32 key = keccak256(abi.encode(uint32(1), address(pool), bytes32(0)));
         bytes memory notLooser = abi.encodeWithSelector(IParameterStoreBase.NotLooser.selector);
-        bytes[14] memory same = [
-            abi.encodeCall(store.loosenHardHealthFloor, (M, 1.1e18)),
+        bytes[11] memory same = [
             abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 100)),
             abi.encodeCall(store.loosenFloorRoundingAllowance, (gho, 1e17)),
             abi.encodeCall(store.loosenRouteDepthThreshold, (M, usdc, gho, 0, 5e8)),
             abi.encodeCall(store.loosenMarketUsdCap, (M, 5_000_000e8)),
             abi.encodeCall(store.loosenTopUpSliceUsd, (M, 500_000e8)),
             abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 20_000_000e8)),
-            abi.encodeCall(store.loosenPoolShareMaxBps, (10_000)),
             abi.encodeCall(store.loosenMinPledgeUsd, (M, 10e8)),
-            abi.encodeCall(store.loosenPoolShareMaxBpsOf, (M, store.poolShareMaxBpsOf(key))),
             abi.encodeCall(store.loosenMaxShortfallBps, (1000)),
             abi.encodeCall(store.loosenDebtStressRiseBps, (usdc, 500)),
             abi.encodeCall(store.loosenGateRecoverySeconds, (1800)),
@@ -462,7 +413,7 @@ contract ParameterStoreLoosenStepsUnitTest is ParameterStoreFixture {
         }
         // Nothing was stamped by the refusals.
         assertEq(store.lastLoosenedAt(_key("marketUsdCap", bytes32(M))), 0);
-        assertEq(store.lastLoosenedAt(_key("hardHealthFloor", bytes32(M))), 0);
+        assertEq(store.lastLoosenedAt(_key("slippageAllowanceBps", bytes32(M))), 0);
     }
 }
 

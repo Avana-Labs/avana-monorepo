@@ -20,7 +20,6 @@ import {
     RiskTier
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {DriftReason, PauseReason} from "../../src/types/MarketTypes.sol";
-import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
@@ -41,7 +40,7 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
     function _bodies() internal view returns (Body[] memory b) {
         address[] memory one = new address[](1);
         one[0] = address(gho);
-        b = new Body[](34);
+        b = new Body[](31);
         uint256 k = 0;
         // Hubs logic.
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.recordHub, (alice, RiskTier.Stable)));
@@ -56,12 +55,10 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
             Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.enableDebtReserve, (address(spoke), _ghoDef())));
         b[k++] = Body(logics.hubs, abi.encodeCall(MarketRegistryHubsLogic.removeDebtReserve, (address(spoke), 0)));
         // Listing logic.
-        b[k++] = Body(
-            logics.listing, abi.encodeCall(MarketRegistryListingLogic.listToken, (alice, _tokenDef(one, one, one)))
-        );
-        b[k++] = Body(
-            logics.listing, abi.encodeCall(MarketRegistryListingLogic.setPriceSource, (address(usdc), one, one, one))
-        );
+        b[k++] =
+            Body(logics.listing, abi.encodeCall(MarketRegistryListingLogic.listToken, (alice, _tokenDef(one, one))));
+        b[k++] =
+            Body(logics.listing, abi.encodeCall(MarketRegistryListingLogic.setPriceSource, (address(usdc), one, one)));
         b[k++] = Body(
             logics.listing, abi.encodeCall(MarketRegistryListingLogic.listCollateralMarket, (_marketDef(alice, bob)))
         );
@@ -80,11 +77,6 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
             logics.routes,
             abi.encodeCall(MarketRegistryRoutesLogic.restoreRoute, (1, address(usdc), address(gho), 0, bob))
         );
-        b[k++] = Body(
-            logics.routes, abi.encodeCall(MarketRegistryRoutesLogic.useStandbyRoute, (address(usdc), RouteSlot.Primary))
-        );
-        b[k++] = Body(logics.routes, abi.encodeCall(MarketRegistryRoutesLogic.cancelStandbySwitch, (address(usdc))));
-        b[k++] = Body(logics.routes, abi.encodeCall(MarketRegistryRoutesLogic.restorePriceRoute, (address(usdc))));
         b[k++] = Body(logics.routes, abi.encodeCall(MarketRegistryRoutesLogic.recordIntegrationContracts, (V3, one)));
         b[k++] = Body(logics.routes, abi.encodeCall(MarketRegistryRoutesLogic.finalizeIntegrationContracts, (V3)));
         // Safety logic.

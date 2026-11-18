@@ -329,10 +329,7 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
     function test_TEST_252_relistReclaimsTheIdAndIndexes() public {
         // A breach of the cancelled registration (a security latch and a temporary gate time) does not carry over.
         vm.prank(address(rm));
-        registry.recordBreach(
-            bytes32(id),
-            BreakerReasons.ISSUER | BreakerReasons.ORACLE | BreakerReasons.POOL_SHARE | BreakerReasons.POOL_DEPTH
-        );
+        registry.recordBreach(bytes32(id), BreakerReasons.ISSUER | BreakerReasons.ORACLE | BreakerReasons.POOL_DEPTH);
         (uint32 latchedBefore, uint64 breachBefore) = registry.marketBreaker(id);
         assertEq(latchedBefore, BreakerReasons.ISSUER);
         assertEq(breachBefore, block.timestamp);
@@ -354,8 +351,8 @@ contract MarketRegistryLifecycleUnitTest is MarketRegistryFixture {
         assertEq(registry.lastBreachAt(bytes32(id)), 0);
         // Each temporary reason's own breach time is cleared too, so the RiskModule reopens no gate of the cancelled
         // registration on the relisted market.
-        uint32[3] memory temporary = [BreakerReasons.ORACLE, BreakerReasons.POOL_SHARE, BreakerReasons.POOL_DEPTH];
-        for (uint256 i = 0; i < 3; ++i) {
+        uint32[2] memory temporary = [BreakerReasons.ORACLE, BreakerReasons.POOL_DEPTH];
+        for (uint256 i = 0; i < 2; ++i) {
             assertEq(registry.lastBreachAt(BreakerReasons.breachKey(bytes32(id), temporary[i])), 0, "reason time");
         }
         assertEq(registry.marketCount(), 1);

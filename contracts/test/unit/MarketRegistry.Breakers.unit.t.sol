@@ -25,9 +25,9 @@ contract MarketRegistryBreakersUnitTest is MarketRegistryFixture {
     function test_TEST_228_recordBreachLatchesSecurityAndTimesTemporary() public {
         vm.warp(1000);
         vm.expectEmit(address(registry));
-        emit IMarketRegistryBase.GateBreached(mKey, BreakerReasons.POOL_SHARE, 1000);
+        emit IMarketRegistryBase.GateBreached(mKey, BreakerReasons.POOL_DEPTH, 1000);
         vm.prank(address(rm));
-        registry.recordBreach(mKey, BreakerReasons.POOL_SHARE);
+        registry.recordBreach(mKey, BreakerReasons.POOL_DEPTH);
         (uint32 latched, uint64 last) = registry.marketBreaker(marketId);
         assertEq(latched, 0);
         assertEq(last, 1000);
@@ -55,13 +55,13 @@ contract MarketRegistryBreakersUnitTest is MarketRegistryFixture {
     /// @dev Each temporary reason keeps its own breach time: a breach reporting one reason sets that reason's time and
     /// the breaker's latest, and leaves the other reasons' times as they were.
     function test_TEST_228_eachTemporaryReasonKeepsItsOwnBreachTime() public {
-        uint32[3] memory reasons = [BreakerReasons.ORACLE, BreakerReasons.POOL_SHARE, BreakerReasons.POOL_DEPTH];
-        for (uint256 i = 0; i < 3; ++i) {
+        uint32[2] memory reasons = [BreakerReasons.ORACLE, BreakerReasons.POOL_DEPTH];
+        for (uint256 i = 0; i < 2; ++i) {
             vm.warp(1000 * (i + 1));
             vm.prank(address(rm));
             registry.recordBreach(mKey, reasons[i]);
             assertEq(registry.lastBreachAt(mKey), 1000 * (i + 1), "latest of any reason");
-            for (uint256 j = 0; j < 3; ++j) {
+            for (uint256 j = 0; j < 2; ++j) {
                 uint64 want = j <= i ? uint64(1000 * (j + 1)) : 0;
                 assertEq(registry.lastBreachAt(BreakerReasons.breachKey(mKey, reasons[j])), want, "own reason time");
             }

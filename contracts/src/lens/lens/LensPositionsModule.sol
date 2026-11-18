@@ -49,9 +49,7 @@ contract LensPositionsModule is ILensPositions, ILensActions, LensAccountMath {
                 v.maxUnits += v.records[i].units;
             }
         } else {
-            uint256 h0 = _store().hardHealthFloor(marketId);
-            if (h0 < WAD_) h0 = WAD_;
-            if (v.target < h0) v.target = h0;
+            if (v.target < WAD_) v.target = WAD_;
             if (_withdrawWithDebtOpen(wallet, v.proxy)) v.maxUnits = _maxRemoval(m, v.proxy, v.target, debtRay);
         }
         uint256 best = 0;
@@ -168,7 +166,7 @@ contract LensPositionsModule is ILensPositions, ILensActions, LensAccountMath {
             v.allowed = true;
             return v;
         }
-        v.allowed = _withdrawGate(m, marketId, proxy, left, cf, a.totalDebtValueRay);
+        v.allowed = _withdrawGate(m, proxy, left, cf, a.totalDebtValueRay);
     }
 
     /// @dev `⌊totalCollateralValue × CF / 10⁴⌋ − ⌈units × Pc × 10^(18 − d) × CF / 10⁴⌉`, floored at 0.
@@ -186,7 +184,6 @@ contract LensPositionsModule is ILensPositions, ILensActions, LensAccountMath {
     /// @dev The withdraw-with-debt gate, with the rescue-excluded health factor at or above the floor.
     function _withdrawGate(
         Market memory m,
-        uint256 marketId,
         address proxy,
         uint256 left,
         uint256 cf,
@@ -194,9 +191,8 @@ contract LensPositionsModule is ILensPositions, ILensActions, LensAccountMath {
     ) internal view returns (bool) {
         AccountGateStatus memory st = IRiskModule(_RISK_MODULE).getAccountGateStatus(proxy);
         uint256 e = _rescueAt(m, proxy, cf);
-        uint256 h0 = Math.max(_store().hardHealthFloor(marketId), WAD_);
         return st.withdrawWithDebtAllowed && st.pauseState != PauseState.Paused
-            && _hf(left - Math.min(left, e), debtRay) >= h0;
+            && _hf(left - Math.min(left, e), debtRay) >= WAD_;
     }
     // forge-lint: disable-end(calls-loop)
 

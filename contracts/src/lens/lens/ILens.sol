@@ -95,7 +95,7 @@ interface ILens is
     ) external view returns (LiquidationPreview memory preview);
 
     /// @notice Returns the most units the account can withdraw and keep a target health factor.
-    /// @param targetHealthFactor Target, WAD; raised to `max(1e18, hardHealthFloor)` with debt.
+    /// @param targetHealthFactor Target, WAD; raised to 1e18 with debt.
     function previewMaxWithdraw(
         address wallet,
         uint256 marketId,

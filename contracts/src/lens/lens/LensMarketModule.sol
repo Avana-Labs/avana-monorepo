@@ -3,13 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RiskStatus} from "../../amm/types/AmmTypes.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {BackingRecord, Pending} from "../../custody/collateralization/types/CollateralizationTypes.sol";
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {SettlementMath} from "../../liquidation/lp-vault-swap/SettlementMath.sol";
 import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {CapView, Market} from "../../types/MarketTypes.sol";
@@ -114,8 +112,6 @@ contract LensMarketModule is LensBase, ILensMarket {
             uint256 used = i < k.tokenUsed.length ? k.tokenUsed[i] : 0;
             c.tokenHeadroomUsd[i] = _room(_store().tokenUsdCap(m.hub, m.tokens[i]), used);
         }
-        c.poolShareMaxBps = _store().poolShareMaxBpsOf(k.poolKey);
-        c.poolShareBps = _poolShareBps(marketId, m.integration, k.poolUnits);
         // The oracle serves at least 1.
         // forge-lint: disable-next-line(unsafe-typecast)
         uint256 accepted = uint256(ILPOracle(m.lpOracle).latestAnswer());
@@ -173,18 +169,6 @@ contract LensMarketModule is LensBase, ILensMarket {
         v.inCustody = ILPVault(integration).depositorOf(r.positionKey) != address(0);
         if (v.inCustody) v.liveUnits = ILPVault(integration).unitsOf(r.positionKey);
         v.backed = v.inCustody && v.liveUnits >= v.credited;
-    }
-
-    /// @dev Avana's share of the pool's TWAP depth, bps rounded up; max when units are credited and depth is 0.
-    function _poolShareBps(
-        uint256 marketId,
-        address integration,
-        uint256 poolUnits
-    ) internal view returns (uint256 bps) {
-        if (poolUnits == 0) return 0;
-        RiskStatus memory rs = ILPVault(integration).riskStatus(marketId, _store().getMarketParams(marketId).twapWindow);
-        if (!rs.depthAvailable || rs.depthUnits == 0) return type(uint256).max;
-        bps = Math.mulDiv(poolUnits, SettlementMath.BPS, rs.depthUnits, Math.Rounding.Ceil);
     }
 
     /// @dev One `drawCap` headroom per enabled debt reserve of the Spoke; unlimited for Aave's maximum cap.

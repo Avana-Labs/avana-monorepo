@@ -211,14 +211,12 @@ contract LensFuzzTest is LensFixture {
     // TEST-247 verifies: REQ-LENS-044, REQ-LENS-035
     function testFuzz_TEST_247_recommendedBelowMaximum(
         uint256 units,
-        uint256 debtBps,
-        uint256 floor
+        uint256 debtBps
     ) public {
         units = bound(units, 10e6, 200_000e6);
         debtBps = bound(debtBps, 0, 7900);
         _open(alice, aliceProxy, 1, uint128(units));
         if (debtBps > 0) _borrow(aliceProxy, units * 2e12 * debtBps / 1e4);
-        store.setHardHealthFloor(MARKET_ID, bound(floor, 0, 2e18));
         (uint256 rec, uint256 max) = lens.previewBorrowRecommended(alice, MARKET_ID, debtReserveId, block.timestamp);
         assertLe(rec, max, "recommended <= maximum");
         assertEq(max, lens.previewBorrowMax(alice, MARKET_ID, debtReserveId, block.timestamp), "the same maximum");

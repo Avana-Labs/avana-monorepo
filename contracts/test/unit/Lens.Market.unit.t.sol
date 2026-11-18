@@ -330,8 +330,6 @@ contract LensMarketUnitTest is LensFixture {
         assertEq(c.sliceHeadroomUsd, 100_000e8, "slice untouched");
         assertEq(c.tokens.length, 2, "two tokens");
         assertEq(c.tokens[0], address(usdc), "pool order");
-        assertEq(c.poolShareMaxBps, 10_000, "no pool-share cap");
-        assertEq(c.poolShareBps, 1, "14,000e6 of 1e15 units, rounded up");
         assertEq(c.chargePricePerWholeToken, 2e8, "accepted price above the stress floor");
         assertEq(c.vaultTokenAddHeadroom, 5_500_000e6 - 14_000e6, "add cap minus added");
         assertEq(c.drawHeadroom.length, 2, "one per enabled debt reserve");
@@ -375,21 +373,6 @@ contract LensMarketUnitTest is LensFixture {
         _borrow(aliceProxy, 4000e18);
         _setDrawCap(ghoAssetId, aave.cdpSpoke, 1000);
         assertEq(lens.getCapHeadroom(vt, alice).drawHeadroom[0].headroom, 0, "owed above the cap: 0");
-    }
-
-    // TEST-247 verifies: REQ-LENS-018, SPEC-CAP-005
-    function test_TEST_247_poolShareCases() public {
-        store.setPoolShareMax(keccak256(abi.encode(INTEGRATION, pool, bytes32(0))), 1000);
-        vault.setDepth(140_000e6, true);
-        CapView memory c = lens.getCapHeadroom(vt, alice);
-        assertEq(c.poolShareMaxBps, 1000, "cap of the pool");
-        assertEq(c.poolShareBps, 1000, "14,000 of 140,000");
-        vault.setDepth(140_001e6, true);
-        assertEq(lens.getCapHeadroom(vt, alice).poolShareBps, 1000, "rounded up");
-        vault.setDepth(0, true);
-        assertEq(lens.getCapHeadroom(vt, alice).poolShareBps, type(uint256).max, "no depth");
-        vault.setDepth(140_000e6, false);
-        assertEq(lens.getCapHeadroom(vt, alice).poolShareBps, type(uint256).max, "depth unavailable");
     }
 
     // TEST-247 verifies: REQ-LENS-018

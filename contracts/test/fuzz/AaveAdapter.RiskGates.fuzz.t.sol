@@ -6,7 +6,6 @@ pragma solidity 0.8.28;
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.sol";
-import {RiskSequencerFeed} from "../utils/mocks/RiskModuleMocks.sol";
 
 /// @title AaveAdapterRiskGatesFuzzTest
 /// @notice The reviewed RiskModule's gates reached through the Adapter on the real Aave V4 Spoke, over random inputs:
@@ -63,35 +62,6 @@ contract AaveAdapterRiskGatesFuzzTest is AaveAdapterRiskFixture {
             assertTrue(ok, "recovered");
         }
         _repayOne();
-    }
-
-    // TEST-060 verifies: REQ-COLL-018, REQ-LOCK-016, REQ-RISK-065, SPEC-BRK-002
-    // Sources: 5.1 TEST-060 (poolUnits answers the RiskModule while the AaveAdapter holds the Lock)
-    /// @notice The concentration breaker reads Avana's pool units from the real Collateralization inside the Adapter's
-    /// Lock: a borrow trips `POOL_SHARE` exactly when `units × 10,000 > cap × depth`.
-    function testFuzz_TEST_060_poolShareBreaker(
-        uint16 capBps,
-        uint64 depth
-    ) public {
-        capBps = uint16(bound(capBps, 1, 9999));
-        depth = uint64(bound(depth, 1, 1e15));
-        bytes32 key = keccak256(abi.encode(INTEGRATION, pool, bytes32(0)));
-        rstore.setPoolShare(key, capBps);
-        riskVault.setDepth(depth, true);
-        uint256 units = coll.poolUnits(key);
-        assertEq(units, UNITS, "Avana's units in the pool");
-        bool trips = units * 10_000 > uint256(capBps) * depth;
-        (bool ok, bytes memory err) = _tryBorrow(1e18);
-        if (trips) {
-            assertFalse(ok, "concentration refuses");
-            assertEq(
-                err,
-                abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, MARKET_ID, BreakerReasons.POOL_SHARE),
-                "POOL_SHARE"
-            );
-        } else {
-            assertTrue(ok, "below the cap");
-        }
     }
 
     // TEST-236 verifies: REQ-PROXY-022, SPEC-PROXY-001, REQ-RISK-068, INV-025

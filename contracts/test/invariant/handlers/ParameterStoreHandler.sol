@@ -6,21 +6,19 @@ pragma solidity 0.8.28;
 import {IAvanaTimelock} from "../../../src/governance/timelock/IAvanaTimelock.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {SecondSource, SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {CommonBase} from "forge-std/Base.sol";
 import {StdUtils} from "forge-std/StdUtils.sol";
 
 /// @title ParameterStoreHandler
 /// @notice Actor handler of the ParameterStore governance-drift suite (TEST-225): the timelock tightens, loosens and
-/// sets market, cap, tolerance, feed-age and chain values; the Joint Configuration Safe tightens; a guardian switches
-/// the second source to its standby and the timelock restores it; strangers try every class; time moves. Inputs are
+/// sets market, cap, feed-age and chain values; the Joint Configuration Safe tightens; strangers try every class;
+/// time moves. Inputs are
 /// bounded around the interesting edges and every call may revert. Ghosts count each success that broke its rule
 /// (direction, step, spacing, caller), so the invariants also see what a single call did, not only the end state.
 contract ParameterStoreHandler is CommonBase, StdUtils {
     IParameterStore public immutable STORE;
     address public immutable TIMELOCK;
     address public immutable STEWARD;
-    address public immutable GUARDIAN;
     address public immutable HUB;
     address public immutable USDC;
     address public immutable USDT;
@@ -40,14 +38,13 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
         IParameterStore store,
         address timelock,
         address steward,
-        address guardian,
         address hub,
         address usdc,
         address usdt,
         address feed,
         uint256 marketId
     ) {
-        (STORE, TIMELOCK, STEWARD, GUARDIAN, HUB) = (store, timelock, steward, guardian, hub);
+        (STORE, TIMELOCK, STEWARD, HUB) = (store, timelock, steward, hub);
         (USDC, USDT, FEED, M) = (usdc, usdt, feed, marketId);
     }
 
@@ -205,51 +202,6 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
         _as(TIMELOCK, abi.encodeCall(STORE.setSlippageAllowanceMinBps, (M, uint16(bound(v, 0, 200)))));
     }
 
-    function tightenHardFloor(
-        uint256 v,
-        bool steward
-    ) external {
-        uint256 old = STORE.hardHealthFloor(M);
-        v = bound(v, 0.99e18, 1.26e18);
-        if (_as(_tightener(steward), abi.encodeCall(STORE.tightenHardHealthFloor, (M, v))) && v <= old) {
-            ++wrongDirection;
-        }
-    }
-
-    function loosenHardFloor(
-        uint256 v
-    ) external {
-        uint256 old = STORE.hardHealthFloor(M);
-        // Steered: three calls in four pick a value within one 0.03 step below the current floor (inside the same
-        // 0.95–1.26 range), the only values a loosening accepts; the rest keep the whole range for the refusals.
-        uint256 lo = old > 0.98e18 ? old - 0.03e18 : 0.95e18;
-        if ((v >> 128) % 4 != 0 && old > lo && old <= 1.26e18) v = bound(v, lo, old - 1);
-        else v = bound(v, 0.95e18, 1.26e18);
-        if (_as(TIMELOCK, abi.encodeCall(STORE.loosenHardHealthFloor, (M, v)))) {
-            uint256 stored = STORE.hardHealthFloor(M);
-            if (stored >= old) ++wrongDirection;
-            if (old - (stored == 0 ? 1e18 : stored) > 0.03e18) ++stepEscaped;
-            _spaced(_key("hardHealthFloor", bytes32(M)));
-        }
-    }
-
-    function tightenConsistency(
-        uint16 v,
-        bool steward
-    ) external {
-        uint16 old = STORE.getMarketParams(M).consistencyToleranceBps;
-        v = uint16(bound(v, 0, uint256(old) + 1));
-        if (_as(_tightener(steward), abi.encodeCall(STORE.tightenConsistencyToleranceBps, (M, v))) && v >= old) {
-            ++wrongDirection;
-        }
-    }
-
-    function setConsistency(
-        uint16 v
-    ) external {
-        _as(TIMELOCK, abi.encodeCall(STORE.setConsistencyToleranceBps, (M, uint16(bound(v, 0, 300)))));
-    }
-
     function tightenPledge(
         uint256 v,
         bool steward
@@ -269,36 +221,7 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
         if (_as(TIMELOCK, abi.encodeCall(STORE.loosenMinPledgeUsd, (M, v))) && v >= old) ++wrongDirection;
     }
 
-    // ─── Tolerances and feed ages ───
-
-    function tightenTolerance(
-        uint16 v,
-        bool steward,
-        bool usdt
-    ) external {
-        address token = usdt ? USDT : USDC;
-        uint16 old = STORE.feedAgreementToleranceBps(token);
-        v = uint16(bound(v, 50, uint256(old) + 1));
-        if (_as(_tightener(steward), abi.encodeCall(STORE.tightenFeedAgreementToleranceBps, (token, v))) && v >= old) {
-            ++wrongDirection;
-        }
-    }
-
-    function setTolerance(
-        uint16 v,
-        bool usdt
-    ) external {
-        _as(
-            TIMELOCK,
-            abi.encodeCall(STORE.setFeedAgreementToleranceBps, (usdt ? USDT : USDC, uint16(bound(v, 50, 400))))
-        );
-    }
-
-    function setMargin(
-        uint16 v
-    ) external {
-        _as(TIMELOCK, abi.encodeCall(STORE.setFeedAgreementMarginBps, (uint16(bound(v, 0, 300)))));
-    }
+    // ─── Feed ages ───
 
     function tightenBorrowAge(
         uint32 v,
@@ -334,14 +257,6 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
         if (_as(_tightener(steward), abi.encodeCall(STORE.tightenMaxFlashFeeBps, (v))) && v >= old) ++wrongDirection;
     }
 
-    function setGrace(
-        uint256 hf,
-        uint32 duration
-    ) external {
-        _as(TIMELOCK, abi.encodeCall(STORE.setGraceHealthFactor, (bound(hf, 0.85e18, 1.01e18))));
-        _as(TIMELOCK, abi.encodeCall(STORE.setGraceDuration, (uint32(bound(duration, 0, 8000)))));
-    }
-
     function gateRecovery(
         uint64 v,
         bool tighten,
@@ -374,39 +289,6 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
         }
     }
 
-    function poolShare(
-        uint16 v,
-        bool tighten,
-        bool ofPool
-    ) external {
-        v = uint16(bound(v, 0, 10_100));
-        if (tighten) {
-            _as(
-                STEWARD,
-                ofPool
-                    ? abi.encodeCall(STORE.tightenPoolShareMaxBpsOf, (M, v))
-                    : abi.encodeCall(STORE.tightenPoolShareMaxBps, (v))
-            );
-        } else {
-            _as(
-                TIMELOCK,
-                ofPool
-                    ? abi.encodeCall(STORE.loosenPoolShareMaxBpsOf, (M, v))
-                    : abi.encodeCall(STORE.loosenPoolShareMaxBps, (v))
-            );
-        }
-    }
-
-    // ─── Second source ───
-
-    function switchToStandby() external {
-        _as(GUARDIAN, abi.encodeCall(STORE.useStandbySecondSource, (USDC)));
-    }
-
-    function restoreSource() external {
-        _as(TIMELOCK, abi.encodeCall(STORE.restoreSecondSource, (USDC)));
-    }
-
     // ─── Strangers and the steward outside its lane ───
 
     function strangerCalls(
@@ -417,8 +299,8 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
         bytes[6] memory calls = [
             abi.encodeCall(STORE.tightenMarketUsdCap, (M, bound(v, 1, 1e20))),
             abi.encodeCall(STORE.loosenMarketUsdCap, (M, bound(v, 1, 1e20))),
-            abi.encodeCall(STORE.setGraceDuration, (uint32(bound(v, 0, 7200)))),
-            abi.encodeCall(STORE.useStandbySecondSource, (USDC)),
+            abi.encodeCall(STORE.setBorrowPriceMaxAge, (FEED, uint32(bound(v, 1, 88_200)))),
+            abi.encodeCall(STORE.setPoolRiskFactor, (M, uint16(bound(v, 1, 9000)))),
             abi.encodeCall(STORE.setAvanaFeeShareBps, (uint16(bound(v, 0, 5000)))),
             abi.encodeCall(STORE.grantRole, (bytes32(0), who))
         ];
@@ -442,10 +324,5 @@ contract ParameterStoreHandler is CommonBase, StdUtils {
 
     function params() external view returns (MarketParams memory) {
         return STORE.getMarketParams(M);
-    }
-
-    function standbyKind() external view returns (SecondSourceKind) {
-        SecondSource memory s = STORE.standbySecondSource(USDC);
-        return s.kind;
     }
 }

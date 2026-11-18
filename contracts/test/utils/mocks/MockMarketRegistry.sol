@@ -10,7 +10,6 @@ import {
     TokenDef
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../../src/types/MarketTypes.sol";
-import {RouteSlot} from "../../../src/types/OracleTypes.sol";
 
 /// @title MockMarketRegistry
 /// @notice The MarketRegistry views the ParameterStore reads, backed by settable storage: a stand-in for the
@@ -25,8 +24,6 @@ contract MockMarketRegistry {
     mapping(address => bool) internal _hubs;
     mapping(address => uint256[]) internal _reserveIds;
     mapping(address => mapping(uint256 => DebtReserveDef)) internal _reserves;
-    mapping(address => address[]) internal _primary;
-    mapping(address => address[]) internal _alternate;
     mapping(address => uint32) internal _integrationIds;
     address[] internal _spokeList;
     uint256 public marketCount;
@@ -45,8 +42,6 @@ contract MockMarketRegistry {
     /// @dev `getRoute` answers only once a suite turns it on (the flash helper's suites); every other suite keeps the
     /// registry without route reads, so a contract that tries the read takes its failure path as before.
     bool public routeReads;
-    /// @dev `priceRouteVersion` per token; 0 unless a suite sets one.
-    mapping(address => uint64) internal _priceRouteVersion;
 
     function setRouteReads(
         bool on
@@ -127,8 +122,7 @@ contract MockMarketRegistry {
     function setToken(
         address token,
         address[] memory primary,
-        address[] memory alternate,
-        address[] memory standby
+        address[] memory alternate
     ) external {
         TokenDef storage t = _tokens[token];
         t.listed = true;
@@ -136,9 +130,6 @@ contract MockMarketRegistry {
         t.isUsdStable = true;
         t.primaryRoute = primary;
         t.alternateRoute = alternate;
-        t.standbyRoute = standby;
-        _primary[token] = primary;
-        _alternate[token] = alternate;
     }
 
     function setUsdStable(
@@ -146,15 +137,6 @@ contract MockMarketRegistry {
         bool stable
     ) external {
         _tokens[token].isUsdStable = stable;
-    }
-
-    function setActiveRoutes(
-        address token,
-        address[] memory primary,
-        address[] memory alternate
-    ) external {
-        _primary[token] = primary;
-        _alternate[token] = alternate;
     }
 
     function setHub(
@@ -258,26 +240,5 @@ contract MockMarketRegistry {
         uint256 id
     ) external view returns (bool) {
         return _reserves[spoke][id].approved;
-    }
-
-    function activePriceRoutes(
-        address token
-    ) external view virtual returns (address[] memory, address[] memory, RouteSlot) {
-        return (_primary[token], _alternate[token], RouteSlot.None);
-    }
-
-    /// @notice Route version read by the LPOracle on every evaluation; this mock never changes routes after setup, so
-    /// the version stays 0 unless a test sets one (to tell it apart from the words next to it in a view).
-    function priceRouteVersion(
-        address token
-    ) external view virtual returns (uint64) {
-        return _priceRouteVersion[token];
-    }
-
-    function setPriceRouteVersion(
-        address token,
-        uint64 version
-    ) external {
-        _priceRouteVersion[token] = version;
     }
 }

@@ -111,7 +111,6 @@ contract AdapterRegistryMock {
         lastBreachAt[key] = at;
         // A breach set here stands for every temporary reason, each with its own breach time.
         lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.ORACLE)] = at;
-        lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_SHARE)] = at;
         lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_DEPTH)] = at;
     }
 
@@ -221,9 +220,6 @@ contract AdapterRegistryMock {
         uint64 at = uint64(block.timestamp);
         lastBreachAt[key] = at;
         if (temp & BreakerReasons.ORACLE != 0) lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.ORACLE)] = at;
-        if (temp & BreakerReasons.POOL_SHARE != 0) {
-            lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_SHARE)] = at;
-        }
         if (temp & BreakerReasons.POOL_DEPTH != 0) {
             lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_DEPTH)] = at;
         }
@@ -410,7 +406,7 @@ contract AdapterRegistryMock {
 
 /// @notice The RiskModule surface the AaveAdapter calls. `postHealthCheck` reads the real Spoke's health factor (and,
 /// like the reviewed RiskModule, Collateralization's `getAccountRescueUnits`, which answers the Adapter's Lock) and
-/// requires `hf >= max(1e18, hardFloor, minHealthFactor)`; `setBroken(true)` makes every function revert (a faulty or
+/// requires `hf >= max(1e18, minHealthFactor)`; `setBroken(true)` makes every function revert (a faulty or
 /// hostile RiskModule); `refuse` makes the pre-checks revert with a RiskModule error. Every call is counted.
 contract AdapterRiskModuleMock {
     error RiskModuleBroken();
@@ -421,7 +417,6 @@ contract AdapterRiskModuleMock {
     bool public broken;
     bool public refuse;
     bool public approveAll;
-    uint256 public hardFloor;
     uint256 public preBorrowCalls;
     uint256 public preWithdrawCalls;
     address public lastProxy;
@@ -461,12 +456,6 @@ contract AdapterRiskModuleMock {
         approveAll = on;
     }
 
-    function setHardFloor(
-        uint256 floor
-    ) external {
-        hardFloor = floor;
-    }
-
     function setMinRemaining(
         uint256 units
     ) external {
@@ -479,7 +468,7 @@ contract AdapterRiskModuleMock {
         uint256 amount
     ) external {
         if (broken) revert RiskModuleBroken();
-        if (refuse) revert IRiskModuleErrors.SequencerDown();
+        if (refuse) revert IRiskModuleErrors.AaveReserveUnavailable();
         ++preBorrowCalls;
         lastProxy = proxy;
         lastDebtReserveId = debtReserveId;
@@ -490,7 +479,7 @@ contract AdapterRiskModuleMock {
         address proxy
     ) external {
         if (broken) revert RiskModuleBroken();
-        if (refuse) revert IRiskModuleErrors.SequencerDown();
+        if (refuse) revert IRiskModuleErrors.AaveReserveUnavailable();
         ++preWithdrawCalls;
         lastProxy = proxy;
     }
@@ -507,7 +496,6 @@ contract AdapterRiskModuleMock {
         healthFactor = IAaveV4Spoke(SPOKE).getUserAccountData(proxy).healthFactor;
         if (approveAll) return healthFactor;
         uint256 required = 1e18;
-        if (hardFloor > required) required = hardFloor;
         if (minHealthFactor > required) required = minHealthFactor;
         if (healthFactor < required) revert IRiskModuleErrors.HealthFactorTooLow(healthFactor, required);
     }
@@ -523,64 +511,8 @@ contract AdapterRiskModuleMock {
     }
 }
 
-/// @notice The ParameterStore's sequencer read.
-contract AdapterParameterStoreMock {
-    address public feed;
-    uint32 public grace;
-
-    function setSequencer(
-        address f,
-        uint32 g
-    ) external {
-        feed = f;
-        grace = g;
-    }
-
-    function sequencer() external view returns (address, uint32) {
-        return (feed, grace);
-    }
-}
-
-/// @notice Chainlink L2 sequencer-uptime feed: `answer` 0 up, 1 down; `mode` 1 reverts, 2 answers a short buffer,
-/// 3 answers a long one.
-contract AdapterSequencerFeed {
-    int256 public answer;
-    uint256 public startedAt;
-    uint8 public mode;
-
-    function set(
-        int256 a,
-        uint256 s
-    ) external {
-        answer = a;
-        startedAt = s;
-    }
-
-    function setMode(
-        uint8 m
-    ) external {
-        mode = m;
-    }
-
-    function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
-        if (mode == 1) revert("feed down");
-        if (mode == 2) {
-            // solhint-disable-next-line no-inline-assembly
-            assembly {
-                mstore(0, 0)
-                return(0, 64)
-            }
-        }
-        if (mode == 3) {
-            // solhint-disable-next-line no-inline-assembly
-            assembly {
-                mstore(0, 1)
-                return(0, 192)
-            }
-        }
-        return (1, answer, startedAt, startedAt, 1);
-    }
-}
+/// @notice The ParameterStore address the AaveAdapter is built with; the AaveAdapter reads none of its values.
+contract AdapterParameterStoreMock {}
 
 /// @notice Code placed at a proxy's predicted address before it exists (reachable only through the address collision
 /// REQ-PROXY-055 assumes away): it borrows or supplies on the Spoke as that address, then is removed.

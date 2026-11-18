@@ -31,9 +31,8 @@ abstract contract ParameterStoreRouter is AccessControlUpgradeable, ParameterSto
         address timelock,
         address marketRegistry,
         uint32 chainBlockTime,
-        bool hasSequencer,
         ParameterStoreLogics memory logics
-    ) ParameterStoreStorage(timelock, marketRegistry, chainBlockTime, hasSequencer) {
+    ) ParameterStoreStorage(timelock, marketRegistry, chainBlockTime) {
         _requireLogic(logics.tighten, keccak256("ParameterStoreTightenLogic"));
         _requireLogic(logics.loosen, keccak256("ParameterStoreLoosenLogic"));
         _requireLogic(logics.listing, keccak256("ParameterStoreListingLogic"));
@@ -110,14 +109,12 @@ abstract contract ParameterStoreRouter is AccessControlUpgradeable, ParameterSto
         }
     }
 
-    /// @dev Reverts `OutOfBounds` unless `logic` reports `kind` and the same four implementation immutables.
+    /// @dev Reverts `OutOfBounds` unless `logic` reports `kind` and the same three implementation immutables.
     function _requireLogic(
         address logic,
         bytes32 kind
     ) private view {
-        (bytes32 k, address t, address r, uint32 b, bool h) = IParameterStoreLogic(logic).logicConfig();
-        if (k != kind || t != _TIMELOCK || r != address(_REGISTRY) || b != _BLOCK_TIME || h != _HAS_SEQUENCER) {
-            revert OutOfBounds();
-        }
+        (bytes32 k, address t, address r, uint32 b) = IParameterStoreLogic(logic).logicConfig();
+        if (k != kind || t != _TIMELOCK || r != address(_REGISTRY) || b != _BLOCK_TIME) revert OutOfBounds();
     }
 }

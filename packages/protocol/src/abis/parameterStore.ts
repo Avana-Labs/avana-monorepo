@@ -31,19 +31,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "LOOSEN_HEALTH_FACTOR_STEP",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "pure"
-  },
-  {
-    "type": "function",
     "name": "LOOSEN_SLIPPAGE_STEP_BPS",
     "inputs": [],
     "outputs": [
@@ -171,32 +158,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "cachedWindow",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "consistencyToleranceMinBps",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "coverageRatioBps",
     "inputs": [],
     "outputs": [
@@ -301,19 +262,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "disagreementPauseMax",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "feeRecipient",
     "inputs": [],
     "outputs": [
@@ -321,57 +269,6 @@ export const parameterStoreAbi = [
         "name": "recipient",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "feedAgreementMarginBps",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "feedAgreementToleranceBps",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "bps",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "feedAgreementToleranceMinBps",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "bps",
-        "type": "uint16",
-        "internalType": "uint16"
       }
     ],
     "stateMutability": "view"
@@ -501,16 +398,6 @@ export const parameterStoreAbi = [
         "internalType": "struct MarketParams",
         "components": [
           {
-            "name": "twapWindow",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "consistencyToleranceBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
             "name": "slippageAllowanceBps",
             "type": "uint16",
             "internalType": "uint16"
@@ -529,248 +416,8 @@ export const parameterStoreAbi = [
             "name": "minPledgeUsd",
             "type": "uint256",
             "internalType": "uint256"
-          },
-          {
-            "name": "hardHealthFloor",
-            "type": "uint256",
-            "internalType": "uint256"
           }
         ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getOracleConfig",
-    "inputs": [
-      {
-        "name": "lpOracle",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "config",
-        "type": "tuple",
-        "internalType": "struct OracleConfig",
-        "components": [
-          {
-            "name": "marketId",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "tokens",
-            "type": "tuple[]",
-            "internalType": "struct TokenOracleConfig[]",
-            "components": [
-              {
-                "name": "token",
-                "type": "address",
-                "internalType": "address"
-              },
-              {
-                "name": "routes",
-                "type": "tuple[2]",
-                "internalType": "struct OracleRoute[2]",
-                "components": [
-                  {
-                    "name": "legCount",
-                    "type": "uint8",
-                    "internalType": "uint8"
-                  },
-                  {
-                    "name": "legs",
-                    "type": "tuple[2]",
-                    "internalType": "struct OracleLeg[2]",
-                    "components": [
-                      {
-                        "name": "aggregator",
-                        "type": "address",
-                        "internalType": "address"
-                      },
-                      {
-                        "name": "decimals",
-                        "type": "uint8",
-                        "internalType": "uint8"
-                      },
-                      {
-                        "name": "heartbeat",
-                        "type": "uint32",
-                        "internalType": "uint32"
-                      },
-                      {
-                        "name": "heartbeatMargin",
-                        "type": "uint16",
-                        "internalType": "uint16"
-                      },
-                      {
-                        "name": "feedDeviationThresholdBps",
-                        "type": "uint16",
-                        "internalType": "uint16"
-                      },
-                      {
-                        "name": "minAnswer",
-                        "type": "int128",
-                        "internalType": "int128"
-                      },
-                      {
-                        "name": "maxAnswer",
-                        "type": "int128",
-                        "internalType": "int128"
-                      },
-                      {
-                        "name": "borrowPriceMaxAge",
-                        "type": "uint32",
-                        "internalType": "uint32"
-                      },
-                      {
-                        "name": "liquidationPriceMaxAge",
-                        "type": "uint32",
-                        "internalType": "uint32"
-                      }
-                    ]
-                  }
-                ]
-              },
-              {
-                "name": "feedAgreementToleranceBps",
-                "type": "uint16",
-                "internalType": "uint16"
-              },
-              {
-                "name": "secondSource",
-                "type": "tuple",
-                "internalType": "struct SecondSource",
-                "components": [
-                  {
-                    "name": "kind",
-                    "type": "uint8",
-                    "internalType": "enum SecondSourceKind"
-                  },
-                  {
-                    "name": "source",
-                    "type": "address",
-                    "internalType": "address"
-                  },
-                  {
-                    "name": "poolRef",
-                    "type": "bytes32",
-                    "internalType": "bytes32"
-                  },
-                  {
-                    "name": "maxAge",
-                    "type": "uint32",
-                    "internalType": "uint32"
-                  },
-                  {
-                    "name": "twapWindow",
-                    "type": "uint32",
-                    "internalType": "uint32"
-                  },
-                  {
-                    "name": "toleranceBps",
-                    "type": "uint16",
-                    "internalType": "uint16"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "name": "twapWindow",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "twapMinObservations",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "consistencyToleranceBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "maxQuoteChangeBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "usdBandLow",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "usdBandHigh",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "cachedWindow",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "disagreementPauseMax",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "graceDuration",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "sequencer",
-            "type": "tuple",
-            "internalType": "struct SequencerConfig",
-            "components": [
-              {
-                "name": "feed",
-                "type": "address",
-                "internalType": "address"
-              },
-              {
-                "name": "gracePeriod",
-                "type": "uint32",
-                "internalType": "uint32"
-              }
-            ]
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getOracleInputs",
-    "inputs": [
-      {
-        "name": "lpOracle",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "tokens",
-        "type": "address[]",
-        "internalType": "address[]"
-      },
-      {
-        "name": "withSecondSources",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "words",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
       }
     ],
     "stateMutability": "view"
@@ -796,58 +443,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "graceDuration",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "graceDurationMax",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "graceHealthFactor",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "graceHealthFactorMin",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "grantRole",
     "inputs": [
       {
@@ -863,25 +458,6 @@ export const parameterStoreAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "hardHealthFloor",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -941,36 +517,6 @@ export const parameterStoreAbi = [
         "internalType": "struct GlobalParams",
         "components": [
           {
-            "name": "cachedWindow",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "disagreementPauseMax",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "usdBandLow",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "usdBandHigh",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "graceDuration",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "graceHealthFactor",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
             "name": "maxFlashFeeBps",
             "type": "uint16",
             "internalType": "uint16"
@@ -986,11 +532,6 @@ export const parameterStoreAbi = [
             "internalType": "address"
           },
           {
-            "name": "feedAgreementMarginBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
             "name": "gateRecoverySeconds",
             "type": "uint64",
             "internalType": "uint64"
@@ -1001,11 +542,6 @@ export const parameterStoreAbi = [
             "internalType": "uint16"
           }
         ]
-      },
-      {
-        "name": "initialPoolShareMaxBps",
-        "type": "uint16",
-        "internalType": "uint16"
       }
     ],
     "outputs": [],
@@ -1197,24 +733,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "loosenHardHealthFloor",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "loosenMarketSpeedLimits",
     "inputs": [
       {
@@ -1312,37 +830,6 @@ export const parameterStoreAbi = [
         "name": "value",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "loosenPoolShareMaxBps",
-    "inputs": [
-      {
-        "name": "value",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "loosenPoolShareMaxBpsOf",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "value",
-        "type": "uint16",
-        "internalType": "uint16"
       }
     ],
     "outputs": [],
@@ -1581,57 +1068,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "onStandby",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "active",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "poolShareMaxBps",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "poolShareMaxBpsOf",
-    "inputs": [
-      {
-        "name": "poolKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "renounceRole",
     "inputs": [
       {
@@ -1641,19 +1077,6 @@ export const parameterStoreAbi = [
       },
       {
         "name": "callerConfirmation",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "restoreSecondSource",
-    "inputs": [
-      {
-        "name": "token",
         "type": "address",
         "internalType": "address"
       }
@@ -1715,75 +1138,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "secondSource",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "source",
-        "type": "tuple",
-        "internalType": "struct SecondSource",
-        "components": [
-          {
-            "name": "kind",
-            "type": "uint8",
-            "internalType": "enum SecondSourceKind"
-          },
-          {
-            "name": "source",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "poolRef",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "maxAge",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "twapWindow",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "toleranceBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "sequencer",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "feed",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "gracePeriod",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "setAvanaFeeShareBps",
     "inputs": [
       {
@@ -1808,37 +1162,6 @@ export const parameterStoreAbi = [
         "name": "value",
         "type": "uint32",
         "internalType": "uint32"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setCachedWindow",
-    "inputs": [
-      {
-        "name": "value",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setConsistencyToleranceBps",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "value",
-        "type": "uint16",
-        "internalType": "uint16"
       }
     ],
     "outputs": [],
@@ -1877,19 +1200,6 @@ export const parameterStoreAbi = [
             "internalType": "uint256"
           }
         ]
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setDisagreementPauseMax",
-    "inputs": [
-      {
-        "name": "value",
-        "type": "uint32",
-        "internalType": "uint32"
       }
     ],
     "outputs": [],
@@ -1985,37 +1295,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "setFeedAgreementMarginBps",
-    "inputs": [
-      {
-        "name": "value",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setFeedAgreementToleranceBps",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "value",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "setFeedMaxAge",
     "inputs": [
       {
@@ -2027,32 +1306,6 @@ export const parameterStoreAbi = [
         "name": "value",
         "type": "uint32",
         "internalType": "uint32"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setGraceDuration",
-    "inputs": [
-      {
-        "name": "value",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setGraceHealthFactor",
-    "inputs": [
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -2101,16 +1354,6 @@ export const parameterStoreAbi = [
         "internalType": "struct MarketParams",
         "components": [
           {
-            "name": "twapWindow",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "consistencyToleranceBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
             "name": "slippageAllowanceBps",
             "type": "uint16",
             "internalType": "uint16"
@@ -2127,11 +1370,6 @@ export const parameterStoreAbi = [
           },
           {
             "name": "minPledgeUsd",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "hardHealthFloor",
             "type": "uint256",
             "internalType": "uint256"
           }
@@ -2238,111 +1476,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "setSecondSource",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "src",
-        "type": "tuple",
-        "internalType": "struct SecondSource",
-        "components": [
-          {
-            "name": "kind",
-            "type": "uint8",
-            "internalType": "enum SecondSourceKind"
-          },
-          {
-            "name": "source",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "poolRef",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "maxAge",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "twapWindow",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "toleranceBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          }
-        ]
-      },
-      {
-        "name": "standby",
-        "type": "tuple",
-        "internalType": "struct SecondSource",
-        "components": [
-          {
-            "name": "kind",
-            "type": "uint8",
-            "internalType": "enum SecondSourceKind"
-          },
-          {
-            "name": "source",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "poolRef",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "maxAge",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "twapWindow",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "toleranceBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          }
-        ]
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setSequencer",
-    "inputs": [
-      {
-        "name": "feed",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "gracePeriod",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "setSlippageAllowanceMinBps",
     "inputs": [
       {
@@ -2397,42 +1530,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "setTwapWindow",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "value",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setUsdBand",
-    "inputs": [
-      {
-        "name": "low",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "high",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "slippageAllowanceMinBps",
     "inputs": [
       {
@@ -2446,57 +1543,6 @@ export const parameterStoreAbi = [
         "name": "bps",
         "type": "uint16",
         "internalType": "uint16"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "standbySecondSource",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "source",
-        "type": "tuple",
-        "internalType": "struct SecondSource",
-        "components": [
-          {
-            "name": "kind",
-            "type": "uint8",
-            "internalType": "enum SecondSourceKind"
-          },
-          {
-            "name": "source",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "poolRef",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "maxAge",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "twapWindow",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "toleranceBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          }
-        ]
       }
     ],
     "stateMutability": "view"
@@ -2556,24 +1602,6 @@ export const parameterStoreAbi = [
         "name": "value",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "tightenConsistencyToleranceBps",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "value",
-        "type": "uint16",
-        "internalType": "uint16"
       }
     ],
     "outputs": [],
@@ -2644,24 +1672,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "function",
-    "name": "tightenFeedAgreementToleranceBps",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "value",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "tightenFloorRoundingAllowance",
     "inputs": [
       {
@@ -2686,24 +1696,6 @@ export const parameterStoreAbi = [
         "name": "value",
         "type": "uint64",
         "internalType": "uint64"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "tightenHardHealthFloor",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -2829,37 +1821,6 @@ export const parameterStoreAbi = [
   {
     "type": "function",
     "name": "tightenPoolRiskFactor",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "value",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "tightenPoolShareMaxBps",
-    "inputs": [
-      {
-        "name": "value",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "tightenPoolShareMaxBpsOf",
     "inputs": [
       {
         "name": "marketId",
@@ -3028,64 +1989,6 @@ export const parameterStoreAbi = [
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "twapMinObservations",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "count",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "usdBandHigh",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "usdBandLow",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "value",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "useStandbySecondSource",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "event",
@@ -3689,50 +2592,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "event",
-    "name": "SecondSourceSwitched",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "standby",
-        "type": "bool",
-        "indexed": false,
-        "internalType": "bool"
-      },
-      {
-        "name": "by",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "SequencerSet",
-    "inputs": [
-      {
-        "name": "feed",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      },
-      {
-        "name": "gracePeriod",
-        "type": "uint32",
-        "indexed": false,
-        "internalType": "uint32"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "StressFloorSet",
     "inputs": [
       {
@@ -3827,17 +2686,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "error",
-    "name": "InvalidSequencerFeed",
-    "inputs": [
-      {
-        "name": "feed",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "LivenessBound",
     "inputs": []
   },
@@ -3870,17 +2718,6 @@ export const parameterStoreAbi = [
   },
   {
     "type": "error",
-    "name": "NoStandby",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "NotDelegated",
     "inputs": []
   },
@@ -3901,35 +2738,8 @@ export const parameterStoreAbi = [
   },
   {
     "type": "error",
-    "name": "OracleConfigRejected",
-    "inputs": [
-      {
-        "name": "lpOracle",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "failedChecks",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "OutOfBounds",
     "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "StandbyActive",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
   },
   {
     "type": "error",

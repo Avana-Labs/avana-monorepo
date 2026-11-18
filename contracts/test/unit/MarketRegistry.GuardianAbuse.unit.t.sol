@@ -6,12 +6,11 @@ pragma solidity 0.8.28;
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
-import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 /// @notice A compromised guardian against the MarketRegistry: what it can do is bounded to stops (pause, freeze,
-/// at most 20 address freezes per caller per 24 hour buckets, breaker trips, a standby switch), it cannot loosen
+/// at most 20 address freezes per caller per 24 hour buckets, breaker trips), it cannot loosen
 /// anything governance tightened, and the timelock can always undo its stops and remove it.
 contract MarketRegistryGuardianAbuseUnitTest is MarketRegistryFixture {
     uint256 internal marketId;
@@ -158,8 +157,6 @@ contract MarketRegistryGuardianAbuseUnitTest is MarketRegistryFixture {
         registry.freezeAddress(bob);
         vm.expectRevert(unauthorized);
         registry.tripMarketBreaker(marketId);
-        vm.expectRevert(unauthorized);
-        registry.useStandbyRoute(address(usdc), RouteSlot.Primary);
         vm.stopPrank();
         assertEq(uint8(registry.pauseState(h)), uint8(PauseState.None));
         // The other guardian keeps its powers.
@@ -233,26 +230,5 @@ contract MarketRegistryGuardianAbuseUnitTest is MarketRegistryFixture {
         (d,) = registry.debtBreaker(address(spoke), GHO_RESERVE);
         assertEq(m, 0);
         assertEq(d, 0);
-    }
-
-    // TEST-231 verifies: REQ-MREG-028, REQ-CONFIG-009, ATTACK-139, ATTACK-140
-    // A guardian's standby switch can only pick the token's pre-approved standby route, never a new feed, and the
-    // Aave executor's cancel returns the recorded routes at once.
-    function test_TEST_231_switchPicksOnlyThePreApprovedStandby() public {
-        address t = address(usdc);
-        address[] memory standby = registry.getToken(t).standbyRoute;
-        address[] memory alternate = registry.getToken(t).alternateRoute;
-        vm.prank(emergencyGuardian);
-        registry.useStandbyRoute(t, RouteSlot.Alternate);
-        (address[] memory p, address[] memory a,) = registry.activePriceRoutes(t);
-        assertEq(a.length, standby.length);
-        assertEq(a[0], standby[0]);
-        assertEq(p[0], registry.getToken(t).primaryRoute[0]);
-        vm.prank(aaveGovernanceExecutor);
-        registry.cancelStandbySwitch(t);
-        (, a,) = registry.activePriceRoutes(t);
-        assertEq(a.length, alternate.length);
-        assertEq(a[0], alternate[0]);
-        assertEq(a[1], alternate[1]);
     }
 }

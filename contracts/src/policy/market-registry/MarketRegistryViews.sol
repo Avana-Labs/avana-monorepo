@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {DriftReason, Market, PauseReason, PauseState} from "../../types/MarketTypes.sol";
-import {RouteSlot} from "../../types/OracleTypes.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryDriftLogic} from "./IMarketRegistryDriftLogic.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
@@ -296,31 +295,6 @@ abstract contract MarketRegistryViews is MarketRegistryStorage, IMarketRegistry 
         for (uint256 i = 0; i < ids.length; ++i) {
             if (_liquidatable(_s().markets[ids[i]].status)) ++count;
         }
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function activePriceRoutes(
-        address token
-    ) external view override returns (address[] memory primary, address[] memory alternate, RouteSlot replaced) {
-        TokenDef storage t = _s().tokens[token];
-        replaced = t.replacedSlot;
-        primary = replaced == RouteSlot.Primary ? t.standbyRoute : t.primaryRoute;
-        alternate = replaced == RouteSlot.Alternate ? t.standbyRoute : t.alternateRoute;
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function standbySwitchLockedUntil(
-        address token
-    ) external view override returns (uint256 until) {
-        uint64 at = _s().standbyCancelledAt[token];
-        until = at == 0 ? 0 : uint256(at) + _STANDBY_RESWITCH_COOLDOWN;
-    }
-
-    /// @inheritdoc IMarketRegistry
-    function priceRouteVersion(
-        address token
-    ) external view override returns (uint64 version) {
-        version = _s().priceRouteVersion[token];
     }
 
     /// @inheritdoc IMarketRegistry

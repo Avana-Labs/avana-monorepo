@@ -65,7 +65,6 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
         s.borrowed = NO_RESERVE;
         _accountReserves(st, s);
         st.noApprovedKeeper = ILPVaultSwap(_LP_VAULT_SWAP).activeKeeperCount() == 0;
-        st.hardHealthFloor = _store().hardHealthFloor(marketId);
         (st.healthFactor, st.healthFactorExcludingRescue) = IRiskModuleBorrowLogic(_BORROW).healthFactors(proxy);
         uint256[] memory one = new uint256[](1);
         one[0] = marketId;
@@ -129,8 +128,7 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
         g.hubSharesEqualAssets = IRiskModuleDriftLogic(_DRIFT).isHubSharesEqualAssets(s.marketId);
         (g.noSettlementPath,) = _routeHalt(s);
         g.liquidationHalted = noKeeper || g.noSettlementPath;
-        (g.breakerReasons, g.breakerLatchedUntil) =
-            IRiskModuleBreakerLogic(_BREAKER).marketBreaker(s.marketId, false, 0);
+        (g.breakerReasons, g.breakerLatchedUntil) = IRiskModuleBreakerLogic(_BREAKER).marketBreaker(s.marketId);
     }
 
     function _debtStatus(

@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {DriftReason, Market, MarketDef, PauseReason, PauseState} from "../../types/MarketTypes.sol";
-import {RouteSlot} from "../../types/OracleTypes.sol";
 import {IMarketRegistryBase} from "./IMarketRegistryBase.sol";
 import {IMarketRegistryRoutes} from "./IMarketRegistryRoutes.sol";
 import {DebtReserveDef, RiskTier, SpokeDef, TokenDef, WindDownState} from "./types/MarketRegistryTypes.sol";
@@ -41,19 +40,18 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
     ) external;
 
     /// @notice Lists a pool token or debt asset with its Chainlink routes and issuer probe.
-    /// @dev Empty alternate and standby routes make a monitoring-only listing. ERC-777 tokens are refused.
+    /// @dev An empty alternate route makes a monitoring-only listing. ERC-777 tokens are refused.
     function listToken(
         address token,
         TokenDef calldata def
     ) external;
 
-    /// @notice Replaces a token's three Chainlink routes and clears any standby switch.
+    /// @notice Replaces a token's two Chainlink routes.
     /// @dev Re-runs the route checks for every market using the token.
     function setPriceSource(
         address token,
         address[] calldata primaryRoute,
-        address[] calldata alternateRoute,
-        address[] calldata standbyRoute
+        address[] calldata alternateRoute
     ) external;
 
     /// @notice Registers a collateral market on a CDP Spoke in `Registered` status, or re-registers a cancelled one.
@@ -304,47 +302,6 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
         address spoke
     ) external view returns (uint256 count);
 
-    /// @notice A guardian's `useStandbyRoute` while the Aave DAO's cancel of the token's last switch holds.
-    /// @param until First timestamp at which a guardian may switch again.
-    error StandbySwitchLocked(address token, uint256 until);
-
-    /// @notice Puts the token's standby route in place of its primary or alternate route.
-    /// @dev `APPLICATION_PAUSE_GUARDIAN` or `APPLICATION_ADMIN`; a guardian is locked out after a DAO cancel.
-    function useStandbyRoute(
-        address token,
-        RouteSlot slot
-    ) external;
-
-    /// @notice Undoes a standby switch at once.
-    /// @dev Only `AAVE_GOVERNANCE_EXECUTOR`. Starts the lock on the guardians' `useStandbyRoute` of the token.
-    function cancelStandbySwitch(
-        address token
-    ) external;
-
-    /// @notice Returns the replaced slot to its recorded route.
-    /// @dev `APPLICATION_ADMIN` only.
-    function restorePriceRoute(
-        address token
-    ) external;
-
-    /// @notice The token's routes in force, with the standby substituted into the replaced slot.
-    /// @dev Never reverts; empty arrays and `None` for an unlisted token.
-    function activePriceRoutes(
-        address token
-    ) external view returns (address[] memory primary, address[] memory alternate, RouteSlot replaced);
-
-    /// @notice The end of the lock on the guardians' `useStandbyRoute` of the token after a DAO cancel.
-    /// @dev 0 when no lock holds or ever held; a time in the past once the lock has lapsed. Never reverts.
-    function standbySwitchLockedUntil(
-        address token
-    ) external view returns (uint256 until);
-
-    /// @notice Counter incremented by every change of the token's routes in force.
-    /// @dev An oracle that sees a new version restarts its disagreement timer.
-    function priceRouteVersion(
-        address token
-    ) external view returns (uint64 version);
-
     /// @notice The First-Loss Reserve of `(hub, asset)` is below the coverage ratio for the summed draw caps.
     error CoverageBelowRatio(address hub, address asset, uint256 required, uint256 funded);
 
@@ -485,7 +442,7 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
         address vaultToken
     ) external view returns (uint256 marketId);
 
-    /// @notice Market identifier of an LPOracle feed; the ParameterStore resolves `getOracleConfig` through it.
+    /// @notice Market identifier of an LPOracle feed.
     function marketOfLpOracle(
         address lpOracle
     ) external view returns (uint256 marketId);
@@ -533,7 +490,7 @@ interface IMarketRegistry is IAccessControl, IMarketRegistryBase, IMarketRegistr
     /// @notice The Avana timelock, the only holder of `DEFAULT_ADMIN_ROLE` and `APPLICATION_ADMIN`.
     function TIMELOCK() external view returns (address timelock);
 
-    /// @notice The Aave governance executor: protected from the freeze and the only caller of `cancelStandbySwitch`.
+    /// @notice The Aave governance executor, protected from the address freeze.
     function AAVE_GOVERNANCE_EXECUTOR() external view returns (address executor);
 
     /// @notice The chain's IFlashSource implementation, replaceable through the timelock (protected from the freeze).

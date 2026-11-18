@@ -6,17 +6,16 @@ pragma solidity 0.8.28;
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {ISettlementRoute} from "../../liquidation/settlement-routes/ISettlementRoute.sol";
 import {Market} from "../../types/MarketTypes.sol";
-import {RouteSlot} from "../../types/OracleTypes.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {IMarketRegistryRoutes} from "./IMarketRegistryRoutes.sol";
 import {MarketRegistryRouteChecks} from "./MarketRegistryRouteChecks.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
 import {IssuerProbes} from "./types/IssuerProbe.sol";
-import {MarketRegistryImmutables, MarketStatus, TokenDef} from "./types/MarketRegistryTypes.sol";
+import {MarketRegistryImmutables, MarketStatus} from "./types/MarketRegistryTypes.sol";
 
 /// @title MarketRegistryRoutesLogic
-/// @notice Bodies of the swap-route writes, the AMM integration contract record and the standby switch.
+/// @notice Bodies of the swap-route writes and the AMM integration contract record.
 /// @dev Runs only by delegatecall from the MarketRegistry, which checks the caller first.
 // Bodies of IMarketRegistry selectors; inherits only `IMarketRegistryRoutes`, the one piece it serves in full.
 // solhint-disable comprehensive-interface
@@ -136,56 +135,6 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
         _checkRoute(marketId, token, debtAsset, kind, route);
         l.routes[key] = RouteRecord({route: route, active: true});
         emit RouteRestored(marketId, token, debtAsset, kind, route);
-    }
-
-    function useStandbyRoute(
-        address token,
-        RouteSlot slot
-    ) external {
-        _onlyDelegated();
-        Layout storage l = _s();
-        if (slot != RouteSlot.Primary && slot != RouteSlot.Alternate) revert InvalidRouteSlot();
-        TokenDef storage t = l.tokens[token];
-        if (!t.listed) revert TokenNotListed(token);
-        if (t.standbyRoute.length == 0) revert NoStandbyRoute(token);
-        if (t.replacedSlot != RouteSlot.None) revert StandbyAlreadyActive(token);
-        address[] memory standby = t.standbyRoute;
-        bytes32 bad = _routeLegsCheck(standby);
-        if (bad != 0) revert ListingCheckFailed(bad);
-        // The router refused a guardian while a DAO cancel's lock holds; a switch that runs ends any lock.
-        delete l.standbyCancelledAt[token];
-        t.replacedSlot = slot;
-        ++l.priceRouteVersion[token];
-        emit StandbyRouteActivated(token, slot, msg.sender);
-    }
-
-    function cancelStandbySwitch(
-        address token
-    ) external {
-        _onlyDelegated();
-        _clearStandby(token);
-        // Block timestamps and chain identifiers fit 64 bits.
-        // forge-lint: disable-next-line(unsafe-typecast)
-        _s().standbyCancelledAt[token] = uint64(block.timestamp);
-        emit StandbySwitchCancelled(token, msg.sender);
-    }
-
-    function restorePriceRoute(
-        address token
-    ) external {
-        _onlyDelegated();
-        _clearStandby(token);
-        emit PriceRouteRestored(token);
-    }
-
-    function _clearStandby(
-        address token
-    ) private {
-        Layout storage l = _s();
-        TokenDef storage t = l.tokens[token];
-        if (t.replacedSlot == RouteSlot.None) revert StandbyNotActive(token);
-        t.replacedSlot = RouteSlot.None;
-        ++l.priceRouteVersion[token];
     }
 
     function _checkRoute(

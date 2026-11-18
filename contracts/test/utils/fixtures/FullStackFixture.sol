@@ -19,7 +19,6 @@ import {
     FeedDef,
     SpeedLimit
 } from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {RouteSlot, SecondSource, SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {FullStackAvanaFirstLossReserveMock} from "../mocks/FullStackLPVaultMock.sol";
 import {OracleFeedMock} from "../mocks/LPOracleMocks.sol";
 import {RegistryFlashSourceMock} from "../mocks/MarketRegistryMocks.sol";
@@ -40,9 +39,9 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// @title FullStackFixture
 /// @notice `FullStackDeploy` with the chain's listings done through the real contracts, as the listing payloads run
 /// them: the Stable LP Hub recorded, integration 1 (Uniswap v3) registered and its contracts finalized, the standard CDP
-/// Spoke recorded with its liquidation expectations, USDC and USDT listed with a one-leg primary, alternate and standby
-/// route and an oracle-network second source each (8-decimal feeds at $1.00, heartbeat 86,400 s, margin 1,800 s, 25
-/// bps deviation and drift), GHO listed for monitoring and enabled as a fixed-price debt reserve, and USDC enabled as a
+/// Spoke recorded with its liquidation expectations, USDC and USDT listed with a one-leg primary and alternate route
+/// each (8-decimal feeds at $1.00, heartbeat 86,400 s, margin 1,800 s, 25 bps deviation and drift; two spare feeds
+/// each are kept beside them), GHO listed for monitoring and enabled as a fixed-price debt reserve, and USDC enabled as a
 /// debt reserve priced by its real DebtOracle (`debtStressRiseBps = 500`). Both debt assets are funded by the Hub
 /// through the Lend Spoke (1,000,000 each, draw caps 1,000,000, credit lines 2,000,000).
 /// @dev Markets come from `FullStackMarkets`. Stand-ins beyond `FullStackDeploy`, each named: the First-Loss Reserves
@@ -55,7 +54,6 @@ abstract contract FullStackFixture is FullStackDeploy {
     uint32 internal constant FEED_AGE = 88_200;
     uint40 internal constant DEBT_DRAW_CAP = 1_000_000;
     uint256 internal constant CREDIT_LINE = 2_000_000;
-    uint16 internal constant TOLERANCE_BPS = 150;
     uint16 internal constant USDC_CF = 7800;
     uint16 internal constant USDT_CF = 7500;
 
@@ -77,7 +75,7 @@ abstract contract FullStackFixture is FullStackDeploy {
     uint256 internal usdcAssetId;
     uint256 internal ghoReserveId;
     uint256 internal usdcReserveId;
-    /// @dev Per pool token: primary, alternate, standby, second source.
+    /// @dev Per pool token: primary, alternate and two spare feeds (republished with the others).
     mapping(address token => OracleFeedMock[4] feeds) internal feedsOf;
     /// @dev Every token with four feeds in `feedsOf`, in listing order (`_refreshFeeds` republishes them all).
     address[] internal pricedTokens;
@@ -202,16 +200,9 @@ abstract contract FullStackFixture is FullStackDeploy {
         d.isUsdStable = true;
         d.primaryRoute = _list(address(p));
         d.alternateRoute = _list(address(a));
-        d.standbyRoute = _list(address(s));
-        d.replacedSlot = RouteSlot.None;
         d.issuerProbe = IssuerProbe.None;
-        SecondSource memory none;
         vm.startPrank(address(timelock));
         registry.listToken(address(token), d);
-        store.setFeedAgreementToleranceBps(address(token), TOLERANCE_BPS);
-        store.setSecondSource(
-            address(token), SecondSource(SecondSourceKind.OracleNetwork, address(n), bytes32(0), FEED_AGE, 0, 100), none
-        );
         store.setTokenCollateralFactorBps(address(token), address(token) == address(usdc) ? USDC_CF : USDT_CF);
         vm.stopPrank();
     }

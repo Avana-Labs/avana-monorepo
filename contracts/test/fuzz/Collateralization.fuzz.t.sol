@@ -101,7 +101,6 @@ contract CollateralizationFuzzTest is Test {
         h.debit(PROXY, u);
         assertEq(h.credit(PROXY), sum - u, "account credit");
         assertEq(h.total(), sum - u, "market credit");
-        assertEq(h.pool(), sum - u, "pool units");
         uint256 rem = u;
         uint256 emptied = 0;
         for (uint256 i = 0; i < before.length; ++i) {

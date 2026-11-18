@@ -148,10 +148,7 @@ contract LensPositionsUnitTest is LensFixture {
         rm.setGate(aliceProxy, true, false, PauseState.Paused);
         assertFalse(_allowed(1000e6), "Paused");
         rm.setGate(aliceProxy, true, false, PauseState.None);
-        store.setHardHealthFloor(MARKET_ID, 3.7e18);
-        assertFalse(_allowed(1000e6), "HF 4.0 falls to 3.6, below the market's 3.7 hard floor");
-        store.setHardHealthFloor(MARKET_ID, 0);
-        assertTrue(_allowed(1000e6), "floor off");
+        assertTrue(_allowed(1000e6), "gates open again");
     }
 
     // TEST-247 verifies: REQ-LENS-049, SPEC-CF-005, Q-253

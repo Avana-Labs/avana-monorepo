@@ -15,11 +15,10 @@ import {TimelockController} from "@openzeppelin/contracts/governance/TimelockCon
 /// @notice The on-chain steps of the risk-parameter change process of REQ-ACCESS-161, through the real AvanaTimelock
 /// and the real ParameterStore: the batch delay set by its loosest call, the `CallScheduled` announcement and the
 /// cancel window, public execution from the ready time until `GRACE_PERIOD` later, the setters' step, spacing and
-/// liveness checks at execution, the band and grace values at the normal delay in both directions, and the
-/// `poolRiskFactor` cut at the short delay that precedes an Aave collateral-factor cut.
+/// liveness checks at execution, and the `poolRiskFactor` cut at the short delay that precedes an Aave collateral-factor cut.
 contract AvanaTimelockRiskChangeProcessUnitTest is ParameterStoreFixture {
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
     }
 
@@ -140,33 +139,6 @@ contract AvanaTimelockRiskChangeProcessUnitTest is ParameterStoreFixture {
         vm.prank(attacker);
         vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         timelock.executeBatch(t, v, p, bytes32(0), bytes32("to19"));
-    }
-
-    // TEST-225 verifies: REQ-ACCESS-161, Q-246
-    function test_TEST_225_bandAndGraceWaitTheNormalDelayBothWays() public {
-        bytes[6] memory data = [
-            abi.encodeCall(IParameterStore.setUsdBand, (0.95e8, 1.01e8)),
-            abi.encodeCall(IParameterStore.setUsdBand, (0.85e8, 1.05e8)),
-            abi.encodeCall(IParameterStore.setGraceDuration, (900)),
-            abi.encodeCall(IParameterStore.setGraceDuration, (3600)),
-            abi.encodeCall(IParameterStore.setGraceHealthFactor, (0.97e18)),
-            abi.encodeCall(IParameterStore.setGraceHealthFactor, (0.92e18))
-        ];
-        for (uint256 i = 0; i < data.length; ++i) {
-            Call[] memory calls = _one(address(store), data[i]);
-            assertEq(_required(calls), NORMAL_DELAY, "normal delay in either direction");
-            (address[] memory t, uint256[] memory v, bytes[] memory p) = _arrays(calls);
-            vm.prank(governanceMultisig);
-            vm.expectRevert(
-                abi.encodeWithSelector(IAvanaTimelock.DelayBelowRequired.selector, SHORT_DELAY, NORMAL_DELAY)
-            );
-            timelock.scheduleBatch(t, v, p, bytes32(0), bytes32(i), SHORT_DELAY);
-            _run(calls, bytes32(i));
-        }
-        assertEq(store.usdBandLow(), 0.85e8, "band low");
-        assertEq(store.usdBandHigh(), 1.05e8, "band high");
-        assertEq(store.graceDuration(), 3600, "grace duration");
-        assertEq(store.graceHealthFactor(), 0.92e18, "grace health factor");
     }
 
     // TEST-225 verifies: REQ-ACCESS-161, REQ-CONFIG-054

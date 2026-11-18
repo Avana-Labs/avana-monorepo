@@ -27,8 +27,8 @@ import {StdStorage, stdStorage} from "forge-std/StdStorage.sol";
 
 /// @title RiskModuleCollateralizationIntegrationTest
 /// @notice The RiskModule's borrow-side checks against the real Collateralization and the real Lock, with the
-/// AaveAdapter holding the Lock as it does in every borrow and withdrawal with debt: the market breaker reads
-/// `poolUnits` and the health check reads `getAccountRescueUnits` from the ledger inside that Lock session. The rest of
+/// AaveAdapter holding the Lock as it does in every borrow and withdrawal with debt: the health check reads
+/// `getAccountRescueUnits` from the ledger inside that Lock session. The rest of
 /// the RiskModule world (Aave reads, ParameterStore views, LPOracle, LPVault, LPVaultSwap's keeper count) is the
 /// RiskModuleFixture's; the MarketRegistry, VaultTokenFactory, vault token and PositionProxy are real.
 /// forge-config: default.isolate = false
@@ -45,18 +45,13 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
         _market();
         _account();
         _debt(1.5e18, 1000);
-        // Concentration gate armed: a 10 % pool-share cap, quotes at or below the peg, depth 2e13 (the cap is 2e12).
-        store.setPoolShare(poolKey, 1000);
-        _report(uint64(block.timestamp), 97_000_000, 100_000_000);
     }
 
     // TEST-028 verifies: REQ-VAULT-091, REQ-COLL-018, REQ-LOCK-016, REQ-RISK-065, SPEC-BRK-002
     // Sources: 2.3 REQ-COLL-018 (ledger views the RiskModule reads under the Adapter's Lock)
-    /// @notice With the Adapter holding the Lock, `preBorrowCheck`, `preWithdrawCheck` and `postHealthCheck` read the
-    /// real ledger: Avana's pool units at the cap pass, one unit above trips `POOL_SHARE`, and the rescue units are
-    /// read for the health check.
+    /// @notice With the Adapter holding the Lock, `preBorrowCheck`, `preWithdrawCheck` and `postHealthCheck` run
+    /// against the real ledger, the health check reading the rescue units.
     function test_TEST_028_borrowChecksReadLedgerUnderAdapterLock() public {
-        _setPoolUnits(2e12);
         _acquire(address(adapter));
         vm.startPrank(address(adapter));
         riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
@@ -64,36 +59,19 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
         assertEq(riskModule.postHealthCheck(address(proxy), 0), 1.5e18);
         vm.stopPrank();
         _release(address(adapter));
-
-        _setPoolUnits(2e12 + 1);
-        _acquire(address(adapter));
-        assertEq(ICollateralization(address(ledger)).poolUnits(poolKey), 2e12 + 1, "settled value read");
-        vm.expectRevert(
-            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.POOL_SHARE)
-        );
-        vm.prank(address(adapter));
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        vm.expectRevert(
-            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.POOL_SHARE)
-        );
-        vm.prank(address(adapter));
-        riskModule.preWithdrawCheck(address(proxy));
-        _release(address(adapter));
     }
 
     // TEST-060 verifies: REQ-VAULT-091, REQ-COLL-018, REQ-LOCK-016
-    /// @notice With LPVaultSwap holding the Lock, the same ledger reads revert `Locked`, so the borrow-side checks
-    /// cannot run inside a liquidation's call tree.
+    /// @notice With LPVaultSwap holding the Lock, the health check's ledger read reverts `Locked`, so the post-action
+    /// check cannot run inside a liquidation's call tree.
     function test_TEST_060_ledgerReadsRefusedUnderLPVaultSwapLock() public {
         address swapMember = address(lpVaultSwap);
         _acquire(swapMember);
         vm.expectRevert(ICollateralizationBase.Locked.selector);
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        vm.expectRevert(ICollateralizationBase.Locked.selector);
         riskModule.postHealthCheck(address(proxy), 0);
         _release(swapMember);
-        // Free again: the same checks pass.
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
+        // Free again: the same check passes.
+        assertEq(riskModule.postHealthCheck(address(proxy), 0), 1.5e18);
     }
 
     // TEST-322 verifies: REQ-RISK-097, REQ-RISK-093
@@ -145,16 +123,6 @@ contract RiskModuleCollateralizationIntegrationTest is RiskModuleFixture {
     ) internal {
         vm.prank(member);
         realLock.release();
-    }
-
-    /// @dev Writes `_poolUnits[poolKey]` in the real ledger's storage (no pledge runs in this world).
-    function _setPoolUnits(
-        uint256 units
-    ) internal {
-        stdstore.target(address(ledger))
-            .sig(ICollateralization.poolUnits.selector)
-            .with_key(poolKey)
-            .checked_write(units);
     }
 
     /// @dev `RiskModuleFixture._deployContracts` with the real Lock (members: the Adapter and LPVaultSwap) and the real

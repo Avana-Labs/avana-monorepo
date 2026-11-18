@@ -28,12 +28,11 @@ contract ParameterStoreProperties is ParameterStoreStorage {
     /// @notice Number of setter calls attempted in assertion mode; written so each call is a transaction.
     uint256 public calls;
 
-    constructor() ParameterStoreStorage(address(this), address(new HarnessMarketRegistry()), 12, false) {
-        TIGHTEN = address(new ParameterStoreTightenLogic(address(this), address(_REGISTRY), 12, false));
-        LOOSEN = address(new ParameterStoreLoosenLogic(address(this), address(_REGISTRY), 12, false));
+    constructor() ParameterStoreStorage(address(this), address(new HarnessMarketRegistry()), 12) {
+        TIGHTEN = address(new ParameterStoreTightenLogic(address(this), address(_REGISTRY), 12));
+        LOOSEN = address(new ParameterStoreLoosenLogic(address(this), address(_REGISTRY), 12));
         Layout storage $ = _s();
         MarketParams storage p = $.market[M];
-        p.consistencyToleranceBps = 50;
         p.slippageAllowanceBps = 100;
         p.slippageAllowanceMinBps = 30;
         p.poolRiskFactor = 4000;
@@ -44,7 +43,6 @@ contract ParameterStoreProperties is ParameterStoreStorage {
         $.g.gateRecoverySeconds = 1800;
         $.g.maxShortfallBps = 1000;
         $.g.maxFlashFeeBps = 10;
-        $.poolShareMaxBps = 10_000;
     }
 
     /// @notice The timelock's normal delay, read by the loosen logic to space loosenings.
@@ -57,11 +55,6 @@ contract ParameterStoreProperties is ParameterStoreStorage {
     function property_slippageAboveFloor() external view returns (bool) {
         MarketParams storage p = _s().market[M];
         return p.slippageAllowanceBps >= p.slippageAllowanceMinBps && p.slippageAllowanceBps < 10_000;
-    }
-
-    function property_hardFloorOffOrInRange() external view returns (bool) {
-        uint256 f = _s().market[M].hardHealthFloor;
-        return f == 0 || (f >= 1e18 && f <= 1.25e18);
     }
 
     function property_minPledgeInRange() external view returns (bool) {
@@ -84,8 +77,7 @@ contract ParameterStoreProperties is ParameterStoreStorage {
 
     function property_chainValuesInRange() external view returns (bool) {
         Layout storage $ = _s();
-        return $.g.gateRecoverySeconds >= 600 && $.g.gateRecoverySeconds <= 7200 && $.g.maxShortfallBps <= 5000
-            && $.poolShareMaxBps > 0 && $.poolShareMaxBps <= 10_000;
+        return $.g.gateRecoverySeconds >= 600 && $.g.gateRecoverySeconds <= 7200 && $.g.maxShortfallBps <= 5000;
     }
 
     // ─── Assertion entry points ───
@@ -105,26 +97,6 @@ contract ParameterStoreProperties is ParameterStoreStorage {
         uint16 before = _s().market[M].slippageAllowanceBps;
         bool ok = _call(LOOSEN, abi.encodeCall(ParameterStoreLoosenLogic.loosenSlippageAllowanceBps, (M, value)));
         if (ok) assert(value > before && value <= before + 25 && value < 10_000);
-    }
-
-    function tightenHardFloor(
-        uint256 value
-    ) external {
-        uint256 before = _s().market[M].hardHealthFloor;
-        bool ok = _call(TIGHTEN, abi.encodeCall(ParameterStoreTightenLogic.tightenHardHealthFloor, (M, value)));
-        assert(ok == (value > before && value >= 1e18 && value <= 1.25e18));
-    }
-
-    function loosenHardFloor(
-        uint256 value
-    ) external {
-        uint256 before = _s().market[M].hardHealthFloor;
-        bool ok = _call(LOOSEN, abi.encodeCall(ParameterStoreLoosenLogic.loosenHardHealthFloor, (M, value)));
-        if (ok) {
-            uint256 stored = value < 1e18 ? 0 : value;
-            assert(value < before && before - (stored == 0 ? 1e18 : stored) <= 0.03e18);
-            assert(_s().market[M].hardHealthFloor == stored);
-        }
     }
 
     function tightenMinPledge(
@@ -206,22 +178,6 @@ contract ParameterStoreProperties is ParameterStoreStorage {
         uint16 before = _s().g.maxShortfallBps;
         bool ok = _call(LOOSEN, abi.encodeCall(ParameterStoreLoosenLogic.loosenMaxShortfallBps, (value)));
         assert(ok == (value > before && value <= 5000));
-    }
-
-    function tightenPoolShare(
-        uint16 value
-    ) external {
-        uint16 before = _s().poolShareMaxBps;
-        bool ok = _call(TIGHTEN, abi.encodeCall(ParameterStoreTightenLogic.tightenPoolShareMaxBps, (value)));
-        assert(ok == (value < before && value != 0));
-    }
-
-    function loosenPoolShare(
-        uint16 value
-    ) external {
-        uint16 before = _s().poolShareMaxBps;
-        bool ok = _call(LOOSEN, abi.encodeCall(ParameterStoreLoosenLogic.loosenPoolShareMaxBps, (value)));
-        assert(ok == (value > before && value <= 10_000));
     }
 
     function tightenFlashFee(

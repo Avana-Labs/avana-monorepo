@@ -1136,11 +1136,6 @@ export const lpVaultSwapAbi = [
   },
   {
     "type": "error",
-    "name": "GraceHealthFactor",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "InsufficientGas",
     "inputs": [
       {

@@ -9,13 +9,8 @@ import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.s
 import {INonfungiblePositionManager} from "../../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
 import {DexHop, HopKind, RouteConfig} from "../../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {LPOracle} from "../../../src/oracle/LPOracle.sol";
-import {
-    FeedDef,
-    MarketParams,
-    MarketSpeedLimits
-} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+import {MarketParams, MarketSpeedLimits} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketDef, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
-import {OracleConfig, OracleRoute, TokenOracleConfig} from "../../../src/types/OracleTypes.sol";
 import {PositionRef, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {RegistryRouteMock} from "../mocks/MarketRegistryMocks.sol";
 import {ClTestToken, IClFactory, IClPool} from "./ClPoolFixture.sol";
@@ -37,8 +32,7 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 /// ParameterStore, each priced by its own real concentrated-liquidity LPOracle (also the AaveOracle source of its
 /// vault-token reserve), and the borrower flows through the real AaveAdapter.
 /// @dev `_addMarket(pool)` lists the full range of a USDC/USDT pool as market `marketCount + 1`: 6-decimal vault tokens
-/// at $2.00 (one raw unit of each token per unit of liquidity), twapWindow 1,800 s, consistency tolerance 50 bps,
-/// slippage 250 / 30 bps, pool risk factor 4,000, `minPledgeUsd` $10, caps $1,000,000 / slice $100,000 / floor $1.00,
+/// at $2.00 (one raw unit of each token per unit of liquidity), slippage 250 / 30 bps, pool risk factor 4,000, `minPledgeUsd` $10, caps $1,000,000 / slice $100,000 / floor $1.00,
 /// Aave CF 3,000 (the expected `min(7,800, 7,500) × 40 %`), bonus 10,500, Hub add cap 2,000,000 vault tokens, and a
 /// primary and a backup route (`RegistryRouteMock`, a stand-in for the swap routes) from each pool token into each
 /// debt asset it is not. On the real stack (`_realStack()`) the market is bound by the real Uniswap v3 LPVault (listing
@@ -149,66 +143,13 @@ abstract contract FullStackMarkets is FullStackFixture {
         p;
     }
 
-    /// @dev The configuration the ParameterStore serves the market's LPOracle (`getOracleConfig`), built from the
-    /// store's feed definitions, tolerances and second sources and the registry's routes in force.
-    function _oracleConfig(
-        uint256 id
-    ) internal view returns (OracleConfig memory c) {
-        c = _oracleConfigFor(id, _poolTokens());
-    }
-
-    /// @dev `_oracleConfig` for a market of the pool tokens `toks` (pool order).
-    function _oracleConfigFor(
-        uint256 id,
-        address[] memory toks
-    ) internal view returns (OracleConfig memory c) {
-        c.marketId = id;
-        c.tokens = new TokenOracleConfig[](2);
-        for (uint256 i = 0; i < 2; ++i) {
-            TokenOracleConfig memory t = c.tokens[i];
-            t.token = toks[i];
-            (address[] memory primary, address[] memory alternate,) = registry.activePriceRoutes(toks[i]);
-            t.routes[0] = _route(primary);
-            t.routes[1] = _route(alternate);
-            t.feedAgreementToleranceBps = store.feedAgreementToleranceBps(toks[i]);
-            t.secondSource = store.secondSource(toks[i]);
-        }
-        c.twapWindow = 1800;
-        c.twapMinObservations = 151;
-        c.consistencyToleranceBps = 50;
-        c.maxQuoteChangeBps = 100;
-        (c.usdBandLow, c.usdBandHigh) = (store.usdBandLow(), store.usdBandHigh());
-        c.cachedWindow = store.cachedWindow();
-        c.disagreementPauseMax = store.disagreementPauseMax();
-        c.graceDuration = store.graceDuration();
-    }
-
-    function _route(
-        address[] memory feeds
-    ) internal view returns (OracleRoute memory r) {
-        r.legCount = uint8(feeds.length);
-        for (uint256 i = 0; i < feeds.length; ++i) {
-            FeedDef memory f = store.getFeed(feeds[i]);
-            r.legs[i].aggregator = feeds[i];
-            r.legs[i].decimals = f.decimals;
-            r.legs[i].heartbeat = f.feedHeartbeat;
-            r.legs[i].heartbeatMargin = uint16(f.heartbeatMargin);
-            r.legs[i].feedDeviationThresholdBps = f.feedDeviationThresholdBps;
-            r.legs[i].minAnswer = int128(f.minAnswer);
-            r.legs[i].maxAnswer = f.maxAnswer > type(int128).max ? type(int128).max : int128(f.maxAnswer);
-            r.legs[i].borrowPriceMaxAge = f.borrowPriceMaxAge;
-            r.legs[i].liquidationPriceMaxAge = f.liquidationPriceMaxAge;
-        }
-    }
-
     /// @dev The ParameterStore's listing writes of a registered market.
     function _storeListing(
         uint256 id
     ) private {
         MarketParams memory p;
         // Slippage allowance 195: the largest the LIQ-I1 fee bound admits at minLB = 10,250 and a 20 % fee share.
-        (p.twapWindow, p.consistencyToleranceBps, p.slippageAllowanceBps, p.slippageAllowanceMinBps) =
-        (1800, 50, 195, 30);
+        (p.slippageAllowanceBps, p.slippageAllowanceMinBps) = (195, 30);
         (p.poolRiskFactor, p.minPledgeUsd) = (4000, MIN_PLEDGE_USD);
         vm.startPrank(address(timelock));
         store.setInitialMarketParams(id, p);

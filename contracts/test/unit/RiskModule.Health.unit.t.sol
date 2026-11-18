@@ -39,12 +39,7 @@ contract RiskModuleHealthUnitTest is RiskModuleFixture {
         _rescueAccount(1.12e18);
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.HealthFactorTooLow.selector, 1.0888e18, 1.1e18));
         riskModule.postHealthCheck(address(proxy), 1.1e18);
-        // With the market's hard floor at 1.10 the same.
-        store.setHardFloor(mid, 1.1e18);
-        vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.HealthFactorTooLow.selector, 1.0888e18, 1.1e18));
-        riskModule.postHealthCheck(address(proxy), 0);
-        // With both off, HF 1.02 reverts at hfEx 0.9888 against Aave's 1.00.
-        store.setHardFloor(mid, 0);
+        // With no minimum, HF 1.02 reverts at hfEx 0.9888 against Aave's 1.00.
         _rescueAccount(1.02e18);
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.HealthFactorTooLow.selector, 0.9888e18, 1e18));
         riskModule.postHealthCheck(address(proxy), 0);
@@ -93,7 +88,6 @@ contract RiskModuleHealthUnitTest is RiskModuleFixture {
         assertEq(p.sliceRoomUsd, 100_000e8);
         assertEq(p.tokenRoomUsd.length, 2);
         assertEq(p.recordRoom, 16);
-        assertEq(p.poolShareRoomUnits, type(uint256).max);
         // Not the owner.
         p = riskModule.previewPledge(makeAddr("stranger"), mid, key);
         assertFalse(p.eligible);

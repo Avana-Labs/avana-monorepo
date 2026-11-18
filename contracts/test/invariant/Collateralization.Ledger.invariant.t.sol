@@ -110,7 +110,6 @@ contract CollateralizationLedgerInvariantTest is CollateralizationFixture, Handl
         uint256 total = coll.getTotalCredited(vt);
         Pending memory p = coll.getPending(vt);
         assertEq(token.totalSupply(), total + p.units, "INV-001");
-        assertEq(coll.getCounters(vt, alice).poolUnits, total, "one market: pool units are its credit");
         if (p.amounts.length != 0) {
             assertGe(usdc.balanceOf(address(coll)), p.amounts[0], "pending USDC held");
             assertGe(usdt.balanceOf(address(coll)), p.amounts[1], "pending USDT held");

@@ -3,32 +3,19 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {DebtReserveParams, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
+import {DebtReserveParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {BytecodeInspector} from "../utils/BytecodeInspector.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
 import {VmSafe} from "forge-std/Vm.sol";
 
-/// @notice The blast radius of the ParameterStore (REQ-PSTORE-001, REQ-PSTORE-003): no setter, view or guardian
-/// switch writes any storage but the store's own, makes a state-changing call, moves value or creates a contract;
-/// the store and its logic contracts refuse ETH; and the parameters the specification removed have no selector in
-/// any of their bytecodes (REQ-PSTORE-007, REQ-PSTORE-008, REQ-PSTORE-019, REQ-PSTORE-025, REQ-CONFIG-057).
+/// @notice The blast radius of the ParameterStore (REQ-PSTORE-001, REQ-PSTORE-003): no setter or view writes any
+/// storage but the store's own, makes a state-changing call, moves value or creates a contract; the store and its
+/// logic contracts refuse ETH; and the parameters the specification removed have no selector in any of their bytecodes (REQ-PSTORE-007, REQ-PSTORE-008, REQ-PSTORE-019, REQ-PSTORE-025, REQ-CONFIG-057).
 contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
-    MockAggregator internal netA;
-    MockAggregator internal netB;
-
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
-        netA = new MockAggregator(8, 1e6, 1e12);
-        netB = new MockAggregator(8, 1e6, 1e12);
-        vm.startPrank(address(timelock));
-        store.setFeed(address(netA), _feedDef(86_400, 1800));
-        store.setFeed(address(netB), _feedDef(86_400, 1800));
-        store.grantRole(AvanaRoles.APPLICATION_PAUSE_GUARDIAN, emergencyGuardian);
-        vm.stopPrank();
     }
 
     function _isLogic(
@@ -79,18 +66,13 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
     // TEST-133 verifies: REQ-PSTORE-001, REQ-PSTORE-003, INV-018
     function test_TEST_133_tighteningsTouchOnlyTheStore() public {
         address tl = address(timelock);
-        _contained(tl, abi.encodeCall(store.tightenHardHealthFloor, (M, 1.1e18)));
         _contained(tl, abi.encodeCall(store.tightenSlippageAllowanceBps, (M, 50)));
         _contained(tl, abi.encodeCall(store.tightenBorrowPriceMaxAge, (address(fUsdc), 4200)));
-        _contained(tl, abi.encodeCall(store.tightenConsistencyToleranceBps, (M, 40)));
-        _contained(tl, abi.encodeCall(store.tightenFeedAgreementToleranceBps, (usdc, 120)));
         _contained(tl, abi.encodeCall(store.tightenPoolRiskFactor, (M, 3000)));
         _contained(tl, abi.encodeCall(store.tightenRouteDepthThreshold, (M, usdc, gho, 0, 1)));
         _contained(tl, abi.encodeCall(store.tightenMarketUsdCap, (M, 4_000_000e8)));
         _contained(tl, abi.encodeCall(store.tightenTopUpSliceUsd, (M, 400_000e8)));
         _contained(tl, abi.encodeCall(store.tightenTokenUsdCap, (address(hub), usdc, 10_000e8)));
-        _contained(tl, abi.encodeCall(store.tightenPoolShareMaxBps, (5000)));
-        _contained(tl, abi.encodeCall(store.tightenPoolShareMaxBpsOf, (M, 100)));
         _contained(tl, abi.encodeCall(store.tightenMinPledgeUsd, (M, 20e8)));
         _contained(tl, abi.encodeCall(store.tightenMaxFlashFeeBps, (5)));
         _contained(tl, abi.encodeCall(store.tightenGateRecoverySeconds, (3600)));
@@ -115,7 +97,6 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
         _contained(tl, abi.encodeCall(store.setInitialTokenCap, (address(hub), usdt, 1e8)));
         _contained(tl, abi.encodeCall(store.setFeed, (address(fUsdc), _feedDef(86_400, 1800))));
         _contained(tl, abi.encodeCall(store.setLiquidationExpectations, (address(spoke), 1.1e18, 200)));
-        _contained(tl, abi.encodeCall(store.setSequencer, (address(0), 0)));
         _contained(tl, abi.encodeCall(store.setCoverageRatioBps, (2000)));
     }
 
@@ -123,46 +104,24 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
     function test_TEST_133_structuralSettersTouchOnlyTheStore() public {
         address tl = address(timelock);
         _contained(tl, abi.encodeCall(store.setBorrowPriceMaxAge, (address(fUsdc), 5000)));
-        _contained(tl, abi.encodeCall(store.setConsistencyToleranceBps, (M, 60)));
-        _contained(tl, abi.encodeCall(store.setFeedAgreementToleranceBps, (usdc, 200)));
         _contained(tl, abi.encodeCall(store.setPoolRiskFactor, (M, 3000)));
         _contained(tl, abi.encodeCall(store.setAvanaFeeShareBps, (1000)));
         // The recipient check probes the candidate and the registry with views only.
         _contained(tl, abi.encodeCall(store.setFeeRecipient, (address(new MockAggregator(8, 1, 2)))));
         _contained(tl, abi.encodeCall(store.setMaxFlashFeeBps, (20)));
-        _contained(tl, abi.encodeCall(store.setCachedWindow, (1800)));
-        _contained(tl, abi.encodeCall(store.setDisagreementPauseMax, (1800)));
-        _contained(tl, abi.encodeCall(store.setTwapWindow, (M, 2400)));
-        _contained(tl, abi.encodeCall(store.setUsdBand, (0.95e8, 1.05e8)));
         _contained(tl, abi.encodeCall(store.setLiquidationPriceMaxAge, (address(fUsdc), 88_200)));
         _contained(tl, abi.encodeCall(store.setFeedMaxAge, (address(fUsdc), 88_200)));
-        _contained(tl, abi.encodeCall(store.setGraceDuration, (900)));
-        _contained(tl, abi.encodeCall(store.setGraceHealthFactor, (0.92e18)));
-        _contained(tl, abi.encodeCall(store.setFeedAgreementMarginBps, (40)));
         _contained(tl, abi.encodeCall(store.setSlippageAllowanceMinBps, (M, 40)));
         _contained(tl, abi.encodeCall(store.setTokenCollateralFactorBps, (usdc, 7000)));
         _contained(tl, abi.encodeCall(store.setStressFloorUsd, (M, 2e8)));
     }
 
-    // TEST-133 verifies: REQ-PSTORE-003, REQ-PSTORE-029, INV-018
-    function test_TEST_133_secondSourceSwitchesTouchOnlyTheStore() public {
-        SecondSource memory a = SecondSource(SecondSourceKind.OracleNetwork, address(netA), bytes32(0), 88_200, 0, 100);
-        SecondSource memory b = SecondSource(SecondSourceKind.OracleNetwork, address(netB), bytes32(0), 88_200, 0, 100);
-        _contained(address(timelock), abi.encodeCall(store.setSecondSource, (usdc, a, b)));
-        _contained(emergencyGuardian, abi.encodeCall(store.useStandbySecondSource, (usdc)));
-        _contained(address(timelock), abi.encodeCall(store.restoreSecondSource, (usdc)));
-    }
-
     // TEST-133 verifies: REQ-PSTORE-011, REQ-PSTORE-003, REQ-CONFIG-072
     function test_TEST_133_viewsRunUnderStaticcall() public {
-        address[] memory toks = new address[](2);
-        (toks[0], toks[1]) = (usdc, usdt);
-        bytes[5] memory views = [
-            abi.encodeCall(store.getOracleConfig, (address(lpOracle))),
-            abi.encodeCall(store.getOracleInputs, (address(lpOracle), toks, true)),
+        bytes[3] memory views = [
             abi.encodeCall(store.liquidationLivenessHolds, (address(spoke), M, 1)),
-            abi.encodeCall(store.feedAgreementToleranceMinBps, (usdc)),
-            abi.encodeCall(store.poolShareMaxBpsOf, (bytes32(0)))
+            abi.encodeCall(store.getMarketParams, (M)),
+            abi.encodeCall(store.getFeed, (address(fUsdc)))
         ];
         for (uint256 i = 0; i < views.length; ++i) {
             vm.startStateDiffRecording();
@@ -245,22 +204,5 @@ contract ParameterStoreBlastRadiusUnitTest is ParameterStoreFixture {
             (bool found, bytes4 which) = BytecodeInspector.pushesAnySelector(code, 0, code.length, sels);
             assertFalse(found, vm.toString(abi.encodePacked(which)));
         }
-    }
-
-    // TEST-133 verifies: REQ-PSTORE-003, REQ-PSTORE-014
-    function test_TEST_133_brokenStoreConfigReadFailsOnlyTheRead() public {
-        // A reverting registry read makes the configuration views revert, which an LPOracle reads as a failed
-        // configuration; no state of the store changes and its setters that do not read the registry still run.
-        vm.mockCallRevert(address(registry), abi.encodeWithSignature("marketOfLpOracle(address)"), "down");
-        (bool ok,) = address(store).staticcall(abi.encodeCall(store.getOracleConfig, (address(lpOracle))));
-        assertFalse(ok);
-        address[] memory toks = new address[](0);
-        (ok,) = address(store).staticcall(abi.encodeCall(store.getOracleInputs, (address(lpOracle), toks, false)));
-        assertFalse(ok);
-        _tl();
-        store.setAvanaFeeShareBps(100);
-        assertEq(store.avanaFeeShareBps(), 100);
-        MarketParams memory p = store.getMarketParams(M);
-        assertEq(p.poolRiskFactor, 4000);
     }
 }

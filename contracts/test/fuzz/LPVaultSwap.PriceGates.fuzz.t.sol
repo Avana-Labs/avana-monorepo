@@ -12,10 +12,10 @@ import {LPVaultSwapUnitBase} from "../unit/LPVaultSwap.Base.sol";
 /// @notice Every combination of the seized market's price state, its four flags, a leg's age against
 /// `liquidationPriceMaxAge`, the repaid reserve's DebtOracle state, its liquidation flag and leg age (2.11 REQ-SWAP-008,
 /// REQ-SWAP-050, REQ-SWAP-091, REQ-SWAP-110, SPEC-LIQ-012): `liquidate` settles exactly when the market is Live or
-/// Drifting with no pause, disagreement pause or expired disagreement and every leg within its age, the grace bound (if
-/// in grace) is met, and the DebtOracle is Live with no liquidation pause and fresh legs; otherwise it reverts with the
-/// first failing check's error (`StalePrice` for the market, then `DebtPriceStale(r)`, then `GraceHealthFactor`) and
-/// nothing moves. `settlePending` applies the same price gates but not the grace bound.
+/// Drifting with no pause, disagreement pause or expired disagreement and every leg within its age, and the DebtOracle is
+/// Live with no liquidation pause and fresh legs; otherwise it reverts with the first failing check's error
+/// (`StalePrice` for the market, then `DebtPriceStale(r)`) and nothing moves. `settlePending` applies the same price
+/// gates.
 /// forge-config: default.isolate = false
 /// forge-config: default.fuzz.runs = 512
 contract LPVaultSwapPriceGatesFuzzTest is LPVaultSwapUnitBase {
@@ -33,7 +33,6 @@ contract LPVaultSwapPriceGatesFuzzTest is LPVaultSwapUnitBase {
         uint8 debtState;
         bool debtPaused;
         uint32 debtLegAge;
-        bool graceMet;
     }
 
     function setUp() public override {
@@ -42,18 +41,6 @@ contract LPVaultSwapPriceGatesFuzzTest is LPVaultSwapUnitBase {
         store.setLiquidationPriceMaxAge(feed, 88_200);
         store.setLiquidationPriceMaxAge(usdcFeed, 88_200);
         vm.warp(1_800_000_000);
-    }
-
-    function _apply(
-        Gates memory g
-    ) internal {
-        lpOracle.setState(PriceState(g.marketState % 4));
-        lpOracle.setFlags(g.paused, g.pauseActive, g.expired, g.grace);
-        lpOracle.setLeg(1, 1, feed, uint64(block.timestamp - (g.legAge % 120_000)));
-        usdcOracle.setState(PriceState(g.debtState % 4), g.debtPaused);
-        usdcOracle.setLeg(0, usdcFeed, uint64(block.timestamp - (g.debtLegAge % 120_000)));
-        uint256 hf = _hf(proxy);
-        store.setGraceHealthFactor(g.graceMet ? hf + 1 : hf);
     }
 
     function _marketOk(

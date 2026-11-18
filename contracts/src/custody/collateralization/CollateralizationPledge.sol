@@ -358,7 +358,6 @@ abstract contract CollateralizationPledge is CollateralizationLedger, ICollatera
     ) private {
         accountCredited[proxy][c.vaultToken] += units;
         totalCredited[c.vaultToken] += units;
-        _poolUnits[c.poolKey] += units;
         if (rescue != 0) accountRescueUnits[proxy][c.vaultToken] += rescue;
     }
 }

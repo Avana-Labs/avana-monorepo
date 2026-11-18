@@ -3,47 +3,33 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreListing} from "../../../src/policy/parameter-store/IParameterStoreListing.sol";
 import {ParameterStoreListingLogic} from "../../../src/policy/parameter-store/ParameterStoreListingLogic.sol";
 import {FeedDef, MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {SecondSourceKind} from "../../../src/types/OracleTypes.sol";
 import {MockAggregator} from "../../utils/mocks/ParameterStoreMocks.sol";
 import {ParameterStoreHarnessBase} from "./ParameterStoreHarnessBase.sol";
 
 /// @title ParameterStoreListingProperties
-/// @notice Echidna and Medusa properties of the ParameterStore's listing logic on an L2 (a sequencer): whatever
-/// sequence of sequencer, market-parameter and feed writes runs, every TWAP window stays within the sequencer grace
-/// (REQ-PSTORE-034), a pinned feed's bounds stay inside the aggregator's `int192` range with the maximum above the
-/// minimum (REQ-CONFIG-022), and each setter succeeds exactly when its predicate holds.
-/// @dev USDT carries a pool-TWAP second source with a 900-second window, written straight into the layout, so the
-/// grace has a second-source window to cover besides the market's.
+/// @notice Echidna and Medusa properties of the ParameterStore's listing logic: whatever sequence of market-parameter
+/// and feed writes runs, the market's values stay inside their bounds, a pinned feed's bounds stay inside the
+/// aggregator's `int192` range with the maximum above the minimum (REQ-CONFIG-022), and each setter succeeds exactly
+/// when its predicate holds.
+/// @dev The harness registry gives the market's tokens no price routes, so the listing margin always holds.
 contract ParameterStoreListingProperties is ParameterStoreHarnessBase {
-    uint32 internal constant SOURCE_WINDOW = 900;
-
     address internal immutable LISTING;
-    MockAggregator internal immutable SEQ;
     MockAggregator internal immutable FEED;
 
-    constructor() ParameterStoreHarnessBase(true) {
-        LISTING = address(new ParameterStoreListingLogic(address(this), address(_REGISTRY), 12, true));
-        SEQ = new MockAggregator(0, 0, 0);
-        SEQ.setRound(0, 1);
+    constructor() ParameterStoreHarnessBase() {
+        LISTING = address(new ParameterStoreListingLogic(address(this), address(_REGISTRY), 12));
         FEED = new MockAggregator(8, 1e6, 1e12);
-        Layout storage $ = _s();
-        $.secondSource[USDT].kind = SecondSourceKind.PoolTwap;
-        $.secondSource[USDT].source = address(INTEGRATION);
-        $.secondSource[USDT].poolRef = bytes32(uint256(0xC0FFEE));
-        $.secondSource[USDT].twapWindow = SOURCE_WINDOW;
-        $.secondSource[USDT].toleranceBps = 120;
-        $.sequencer.feed = address(SEQ);
-        $.sequencer.gracePeriod = 3600;
     }
 
     // ─── Properties ───
 
-    function property_windowsWithinGrace() external view returns (bool) {
-        return _windowsFitGrace();
+    function property_marketParamsInRange() external view returns (bool) {
+        MarketParams storage p = _s().market[M];
+        return p.slippageAllowanceMinBps <= p.slippageAllowanceBps && p.slippageAllowanceBps < 10_000
+            && p.poolRiskFactor >= 1 && p.poolRiskFactor <= 9000 && p.minPledgeUsd <= 100_000e8;
     }
 
     function property_pinnedFeedInRange() external view returns (bool) {
@@ -54,25 +40,17 @@ contract ParameterStoreListingProperties is ParameterStoreHarnessBase {
 
     // ─── Assertion entry points ───
 
-    function setSequencer(
-        uint32 grace
-    ) external {
-        uint32 window = _s().market[M].twapWindow;
-        bool ok = _call(LISTING, abi.encodeCall(IParameterStore.setSequencer, (address(SEQ), grace)));
-        bool fits = grace >= window && grace >= SOURCE_WINDOW;
-        assert(ok == (grace >= 600 && grace <= 7200 && fits && ORACLE.failed() == 0));
-    }
-
     function listMarket(
-        uint32 window
+        uint16 slippage,
+        uint16 floor,
+        uint16 factor,
+        uint256 minPledge
     ) external {
-        MarketParams memory p = _s().market[M];
-        p.twapWindow = window;
-        uint32 grace = _s().sequencer.gracePeriod;
+        MarketParams memory p = MarketParams(slippage, floor, factor, minPledge);
         bool ok = _call(LISTING, abi.encodeCall(IParameterStoreListing.setInitialMarketParams, (M, p)));
-        // A 12-second chain needs ⌈window / 12⌉ + 1 observations; the pool holds 1,000.
-        bool predicate = window != 0 && window <= grace && (uint256(window) + 11) / 12 + 1 <= 1000;
-        assert(ok == (predicate && ORACLE.failed() == 0));
+        bool predicate =
+            floor <= slippage && slippage < 10_000 && factor != 0 && factor <= 9000 && minPledge <= 100_000e8;
+        assert(ok == predicate);
     }
 
     /// @notice `setFeed` with feed decimals outside 9–18. A feed of 9 to 18 decimals has an entry point of its own

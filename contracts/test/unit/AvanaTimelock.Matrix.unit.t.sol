@@ -72,7 +72,6 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         rows.push(Row(mr, IMarketRegistry.tripDebtBreaker.selector, true, false));
         // Short delay, DAO-only cancel (restoring).
         rows.push(Row(mr, IMarketRegistryRoutes.restoreRoute.selector, true, true));
-        rows.push(Row(mr, IMarketRegistry.useStandbyRoute.selector, true, true));
         // Normal delay, DAO-only cancel (restoring).
         rows.push(Row(mr, IMarketRegistry.unfreezeAddress.selector, false, true));
         // Normal delay, any canceller.
@@ -94,27 +93,21 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         rows.push(Row(mr, IMarketRegistry.pauseAll.selector, false, false));
         rows.push(Row(mr, IMarketRegistry.resetMarketBreaker.selector, false, false));
         rows.push(Row(mr, IMarketRegistry.resetDebtBreaker.selector, false, false));
-        rows.push(Row(mr, IMarketRegistry.restorePriceRoute.selector, false, false));
         rows.push(Row(mr, UUPSUpgradeable.upgradeToAndCall.selector, false, false));
     }
 
     function _parameterStoreRows(
         address ps
     ) internal {
-        bytes4[21] memory tighten = [
-            IParameterStoreTighten.tightenHardHealthFloor.selector,
+        bytes4[16] memory tighten = [
             IParameterStoreTighten.tightenSlippageAllowanceBps.selector,
             IParameterStoreTighten.tightenFloorRoundingAllowance.selector,
             IParameterStoreTighten.tightenBorrowPriceMaxAge.selector,
-            IParameterStoreTighten.tightenConsistencyToleranceBps.selector,
-            IParameterStoreTighten.tightenFeedAgreementToleranceBps.selector,
             IParameterStoreTighten.tightenPoolRiskFactor.selector,
             IParameterStoreTighten.tightenRouteDepthThreshold.selector,
             IParameterStoreTighten.tightenMarketUsdCap.selector,
             IParameterStoreTighten.tightenTopUpSliceUsd.selector,
             IParameterStoreTighten.tightenTokenUsdCap.selector,
-            IParameterStoreTighten.tightenPoolShareMaxBps.selector,
-            IParameterStoreTighten.tightenPoolShareMaxBpsOf.selector,
             IParameterStoreTighten.tightenMinPledgeUsd.selector,
             IParameterStore.tightenBreakerDeficitMax.selector,
             IParameterStore.tightenGateRecoverySeconds.selector,
@@ -127,17 +120,14 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
         for (uint256 i; i < tighten.length; ++i) {
             rows.push(Row(ps, tighten[i], true, false));
         }
-        bytes4[46] memory normal = [
-            IParameterStoreLoosen.loosenHardHealthFloor.selector,
+        bytes4[32] memory normal = [
             IParameterStoreLoosen.loosenSlippageAllowanceBps.selector,
             IParameterStoreLoosen.loosenFloorRoundingAllowance.selector,
             IParameterStoreLoosen.loosenRouteDepthThreshold.selector,
             IParameterStoreLoosen.loosenMarketUsdCap.selector,
             IParameterStoreLoosen.loosenTopUpSliceUsd.selector,
             IParameterStoreLoosen.loosenTokenUsdCap.selector,
-            IParameterStoreLoosen.loosenPoolShareMaxBps.selector,
             IParameterStoreLoosen.loosenMinPledgeUsd.selector,
-            IParameterStoreLoosen.loosenPoolShareMaxBpsOf.selector,
             IParameterStore.loosenBreakerDeficitMax.selector,
             IParameterStore.loosenGateRecoverySeconds.selector,
             IParameterStore.loosenMaxShortfallBps.selector,
@@ -145,26 +135,15 @@ contract AvanaTimelockMatrixUnitTest is TimelockFixture {
             IParameterStore.loosenMarketSpeedLimits.selector,
             IParameterStore.loosenDebtSpeedLimit.selector,
             IParameterStore.setBorrowPriceMaxAge.selector,
-            IParameterStore.setConsistencyToleranceBps.selector,
-            IParameterStore.setFeedAgreementToleranceBps.selector,
             IParameterStore.setPoolRiskFactor.selector,
             IParameterStore.setAvanaFeeShareBps.selector,
             IParameterStore.setFeeRecipient.selector,
             IParameterStore.setMaxFlashFeeBps.selector,
-            IParameterStore.setCachedWindow.selector,
-            IParameterStore.setDisagreementPauseMax.selector,
-            IParameterStore.setTwapWindow.selector,
-            IParameterStore.setUsdBand.selector,
             IParameterStore.setLiquidationPriceMaxAge.selector,
             IParameterStore.setFeedMaxAge.selector,
-            IParameterStore.setGraceDuration.selector,
-            IParameterStore.setGraceHealthFactor.selector,
-            IParameterStore.setFeedAgreementMarginBps.selector,
             IParameterStore.setSlippageAllowanceMinBps.selector,
             IParameterStore.setTokenCollateralFactorBps.selector,
             IParameterStore.setStressFloorUsd.selector,
-            IParameterStore.setSecondSource.selector,
-            IParameterStore.restoreSecondSource.selector,
             IParameterStoreListing.setInitialMarketParams.selector,
             IParameterStoreListing.setInitialMarketCaps.selector,
             IParameterStoreListing.setInitialTokenCap.selector,

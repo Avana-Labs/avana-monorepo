@@ -6,7 +6,6 @@ pragma solidity 0.8.28;
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketDef, PauseReason} from "../../src/types/MarketTypes.sol";
-import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {
@@ -18,7 +17,7 @@ import {
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 /// @notice Swap-route slots across market statuses, debt-asset classes and kinds; disable and restore across slots,
-/// markets and relistings; and the guardian's standby re-switch lock at its exact end.
+/// markets and relistings.
 contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
     uint256 internal id;
     address internal vt;
@@ -311,76 +310,5 @@ contract MarketRegistryRoutesMatrixUnitTest is MarketRegistryFixture {
             assertEq(r, routes[kind], "the route stays recorded");
             assertEq(usable, expected, "usable");
         }
-    }
-
-    // TEST-231 verifies: REQ-MREG-028, Q-248, Q-263, ATTACK-139
-    // After a DAO cancel at time T a guardian's switch is refused for every t < T + 5 days, with the lock's end, and
-    // admitted from T + 5 days on.
-    function testFuzz_TEST_231_guardianLockEndsExactlyAfterFiveDays(
-        uint32 wait
-    ) public {
-        address t = address(usdc);
-        vm.warp(10_000_000);
-        vm.prank(emergencyGuardian);
-        registry.useStandbyRoute(t, RouteSlot.Primary);
-        vm.prank(aaveGovernanceExecutor);
-        registry.cancelStandbySwitch(t);
-        uint256 until = block.timestamp + 5 days;
-        assertEq(registry.standbySwitchLockedUntil(t), until);
-        uint256 w = bound(wait, 0, 10 days);
-        vm.warp(block.timestamp + w);
-        vm.prank(aaveGuardian);
-        if (block.timestamp < until) {
-            vm.expectRevert(abi.encodeWithSelector(IMarketRegistry.StandbySwitchLocked.selector, t, until));
-        }
-        registry.useStandbyRoute(t, RouteSlot.Alternate);
-        if (block.timestamp >= until) {
-            assertEq(registry.standbySwitchLockedUntil(t), 0, "a switch that runs ends the lock");
-        }
-    }
-
-    // TEST-231 verifies: REQ-MREG-028, Q-248
-    // Each switch, cancel and restore moves the token's route version by exactly one and leaves every other token's.
-    function test_TEST_231_versionMovesByOnePerChange() public {
-        address t = address(usdc);
-        uint64 other = registry.priceRouteVersion(address(usdt));
-        vm.prank(emergencyGuardian);
-        registry.useStandbyRoute(t, RouteSlot.Alternate);
-        assertEq(registry.priceRouteVersion(t), 1);
-        (address[] memory p, address[] memory a, RouteSlot replaced) = registry.activePriceRoutes(t);
-        assertEq(uint8(replaced), uint8(RouteSlot.Alternate));
-        assertEq(p[0], registry.getToken(t).primaryRoute[0]);
-        assertEq(a[0], registry.getToken(t).standbyRoute[0]);
-        vm.prank(address(timelock));
-        registry.restorePriceRoute(t);
-        assertEq(registry.priceRouteVersion(t), 2);
-        assertEq(registry.standbySwitchLockedUntil(t), 0, "a restore sets no lock");
-        vm.prank(address(timelock));
-        registry.useStandbyRoute(t, RouteSlot.Primary);
-        vm.prank(aaveGovernanceExecutor);
-        registry.cancelStandbySwitch(t);
-        assertEq(registry.priceRouteVersion(t), 4);
-        assertEq(registry.priceRouteVersion(address(usdt)), other);
-        // An unlisted token has no routes and version 0.
-        (p, a, replaced) = registry.activePriceRoutes(alice);
-        assertEq(p.length + a.length, 0);
-        assertEq(uint8(replaced), uint8(RouteSlot.None));
-        assertEq(registry.priceRouteVersion(alice), 0);
-    }
-
-    // TEST-231 verifies: REQ-MREG-028
-    // The slot is checked before the token: RouteSlot.None on an unlisted token reports InvalidRouteSlot.
-    function test_TEST_231_slotCheckedBeforeToken() public {
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(IMarketRegistryBase.InvalidRouteSlot.selector);
-        registry.useStandbyRoute(alice, RouteSlot.None);
-        // A replaced slot is refused before the standby is re-checked.
-        vm.prank(emergencyGuardian);
-        registry.useStandbyRoute(address(usdc), RouteSlot.Primary);
-        address[] memory s = registry.getToken(address(usdc)).standbyRoute;
-        ps.setFeed(s[0], 8, 0, 25, 25);
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.StandbyAlreadyActive.selector, address(usdc)));
-        registry.useStandbyRoute(address(usdc), RouteSlot.Alternate);
     }
 }

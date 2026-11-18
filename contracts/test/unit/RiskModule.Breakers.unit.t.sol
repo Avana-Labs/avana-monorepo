@@ -50,52 +50,6 @@ contract RiskModuleBreakersUnitTest is RiskModuleFixture {
         assertEq(riskModule.liveBreakerReasons(mid), BreakerReasons.ISSUER);
     }
 
-    // TEST-228 verifies: SPEC-BRK-002, SPEC-BRK-007, REQ-RISK-091, REQ-ACCESS-158, REQ-ACCESS-167, REQ-ACCESS-136, REQ-ACCESS-087
-    // Sources: 2.7 SPEC-BRK-007 example (breached through t = 1,600 after start, reopens 1,800 s later)
-    function test_TEST_228_poolShareGateRecovers() public {
-        store.setPoolShare(poolKey, 1000);
-        coll.setPoolUnits(poolKey, 2.1e12); // 2.1e16 > 1,000 x 2e13
-        _report(uint64(block.timestamp), 97_000_000, 100_000_000);
-        uint256 start = block.timestamp;
-        assertEq(riskModule.pokeBreakers(mid), BreakerReasons.POOL_SHARE);
-        vm.warp(start + 600);
-        _report(uint64(block.timestamp), 97_000_000, 100_000_000);
-        riskModule.pokeBreakers(mid);
-        coll.setPoolUnits(poolKey, 2e12); // equality: not tripped
-        vm.warp(start + 612);
-        _report(uint64(block.timestamp), 97_000_000, 100_000_000);
-        (uint32 reasons, uint64 reopensAt) = riskModule.getBreakerStatus(mid);
-        assertEq(reopensAt, start + 600 + 1800);
-        assertEq(reasons, BreakerReasons.POOL_SHARE, "only the recorded reason recovers");
-        vm.warp(start + 600 + 1799);
-        _report(uint64(block.timestamp), 97_000_000, 100_000_000);
-        vm.expectRevert(
-            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mid, BreakerReasons.POOL_SHARE)
-        );
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        vm.warp(start + 600 + 1800);
-        _report(uint64(block.timestamp), 97_000_000, 100_000_000);
-        riskModule.preBorrowCheck(address(proxy), GHO_RESERVE, 1);
-        (reasons, reopensAt) = riskModule.getBreakerStatus(mid);
-        assertEq(reasons, 0);
-        assertEq(reopensAt, 0);
-    }
-
-    // TEST-228 verifies: SPEC-BRK-002
-    // Sources: 2.7 SPEC-BRK-002 example (GHO at 1.046 keeps the product above peg)
-    function test_TEST_228_premiumDoesNotTripConcentration() public {
-        store.setPoolShare(poolKey, 1000);
-        coll.setPoolUnits(poolKey, 2.12e12);
-        rVault.setDepth(5.12e12, true);
-        _report(uint64(block.timestamp), 104_600_000, 100_000_000);
-        assertEq(riskModule.liveBreakerReasons(mid), 0);
-        (uint32 reasons,) = riskModule.getBreakerStatus(mid);
-        assertEq(reasons, 0);
-        _report(uint64(block.timestamp), 99_000_000, 100_000_000);
-        (reasons,) = riskModule.getBreakerStatus(mid);
-        assertEq(reasons, BreakerReasons.POOL_SHARE);
-    }
-
     // TEST-228 verifies: REQ-RISK-065, SPEC-BRK-007, REQ-ACCESS-136
     function test_TEST_228_depthAndOracleGates() public {
         rVault.setDepth(0, false);

@@ -13,21 +13,19 @@ import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol
 /// structural changes at the normal delay, and the predicates evaluated at execution.
 contract ParameterStoreTimelockUnitTest is ParameterStoreFixture {
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
     }
 
     // TEST-063 verifies: REQ-PSTORE-002, REQ-CONFIG-051, REQ-CONFIG-053, REQ-ACCESS-155
     function test_TEST_063_tightenSelectorsTakeTheShortDelay() public {
-        bytes[8] memory data = [
+        bytes[6] memory data = [
             abi.encodeCall(IParameterStoreTighten.tightenMarketUsdCap, (M, 4_000_000e8)),
-            abi.encodeCall(IParameterStoreTighten.tightenHardHealthFloor, (M, 1.1e18)),
             abi.encodeCall(IParameterStoreTighten.tightenSlippageAllowanceBps, (M, 40)),
             abi.encodeCall(IParameterStoreTighten.tightenMinPledgeUsd, (M, 20e8)),
             abi.encodeCall(IParameterStore.tightenGateRecoverySeconds, (3600)),
             abi.encodeCall(IParameterStore.tightenMaxShortfallBps, (50)),
-            abi.encodeCall(IParameterStore.tightenMaxFlashFeeBps, (0)),
-            abi.encodeCall(IParameterStoreTighten.tightenPoolShareMaxBpsOf, (M, 1000))
+            abi.encodeCall(IParameterStore.tightenMaxFlashFeeBps, (0))
         ];
         for (uint256 i = 0; i < data.length; ++i) {
             Call[] memory calls = _one(address(store), data[i]);
@@ -35,17 +33,15 @@ contract ParameterStoreTimelockUnitTest is ParameterStoreFixture {
             _run(calls, bytes32(i));
         }
         assertEq(store.marketUsdCap(M), 4_000_000e8);
-        assertEq(store.hardHealthFloor(M), 1.1e18);
         assertEq(store.getMarketParams(M).slippageAllowanceBps, 40);
         assertEq(store.maxFlashFeeBps(), 0);
     }
 
     // TEST-063 verifies: REQ-CONFIG-053, REQ-CONFIG-054, REQ-PSTORE-002, REQ-CONFIG-071
     function test_TEST_063_loosenAndStructuralTakeTheNormalDelay() public {
-        bytes[5] memory data = [
+        bytes[4] memory data = [
             abi.encodeCall(IParameterStoreLoosen.loosenMarketUsdCap, (M, 6_000_000e8)),
-            abi.encodeCall(IParameterStoreLoosen.loosenPoolShareMaxBpsOf, (M, 10_000)),
-            abi.encodeCall(IParameterStore.setGraceDuration, (3600)),
+            abi.encodeCall(IParameterStore.setBorrowPriceMaxAge, (address(fUsdc), 5000)),
             abi.encodeCall(IParameterStore.setMaxFlashFeeBps, (20)),
             abi.encodeCall(IParameterStoreLoosen.loosenSlippageAllowanceBps, (M, 125))
         ];

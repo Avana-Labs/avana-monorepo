@@ -3,17 +3,15 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {DebtReserveDef, MarketStatus} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
+import {DebtReserveDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
-import {SecondSource, SecondSourceKind} from "../../src/types/OracleTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
-import {MockAggregator, MockHub, MockSpoke} from "../utils/mocks/ParameterStoreMocks.sol";
+import {MockHub, MockSpoke} from "../utils/mocks/ParameterStoreMocks.sol";
 
-/// @notice Structural setters, the liquidation-liveness check and the standby second source.
+/// @notice Structural setters and the liquidation-liveness check.
 contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
     }
 
@@ -126,26 +124,6 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         );
     }
 
-    // TEST-064 verifies: REQ-CONFIG-052, SPEC-GOV-012, REQ-CONFIG-049, Q-246, REQ-ACCESS-044, REQ-ACCESS-096
-    function test_TEST_064_graceBounds() public {
-        _tl();
-        store.setGraceHealthFactor(0.9e18);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
-        store.setGraceHealthFactor(0.89e18);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
-        store.setGraceHealthFactor(1e18);
-        _tl();
-        store.setGraceDuration(7200);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
-        store.setGraceDuration(7201);
-        _tl();
-        store.setGraceDuration(60); // either direction at the normal delay
-        assertEq(store.graceDuration(), 60);
-    }
-
     // TEST-064 verifies: REQ-CONFIG-015, REQ-CONFIG-019, REQ-CONFIG-020, REQ-PSTORE-010, SPEC-CF-004, REQ-ACCESS-138
     function test_TEST_064_riskStructural() public {
         _tl();
@@ -165,81 +143,6 @@ contract ParameterStoreAdminUnitTest is ParameterStoreFixture {
         _tl();
         store.setAvanaFeeShareBps(0);
         assertEq(store.avanaFeeShareBps(), 0);
-    }
-
-    function _src(
-        SecondSourceKind kind,
-        address source,
-        bytes32 poolRef,
-        uint16 tol
-    ) internal pure returns (SecondSource memory s) {
-        s.kind = kind;
-        s.source = source;
-        s.poolRef = poolRef;
-        // Each kind carries only its own field: an age for an oracle network, a window for a pool.
-        if (kind == SecondSourceKind.OracleNetwork) s.maxAge = 3600;
-        else s.twapWindow = 1800;
-        s.toleranceBps = tol;
-    }
-
-    /// @dev A second oracle network's aggregator with its feed definition, as a recorded `OracleNetwork` source needs.
-    function _networkFeed() internal returns (address feed) {
-        feed = address(new MockAggregator(8, 1, 2));
-        _tl();
-        store.setFeed(feed, _feedDef(86_400, 1800));
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-028, REQ-PSTORE-029, EMG-103, Q-385
-    function test_TEST_250_standbySecondSource() public {
-        address pyth = _networkFeed();
-        address twapSource = address(integration);
-        SecondSource memory src = _src(SecondSourceKind.OracleNetwork, pyth, bytes32(0), 50);
-        SecondSource memory standby = _src(SecondSourceKind.PoolTwap, twapSource, bytes32(uint256(1)), 100);
-        _tl();
-        store.setSecondSource(usdc, src, standby);
-        assertEq(store.secondSource(usdc).source, pyth);
-        vm.prank(emergencyGuardian);
-        vm.expectRevert();
-        store.useStandbySecondSource(usdc);
-        vm.prank(address(timelock));
-        store.grantRole(AvanaRoles.APPLICATION_PAUSE_GUARDIAN, emergencyGuardian);
-        vm.prank(emergencyGuardian);
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.SecondSourceSwitched(usdc, true, emergencyGuardian);
-        store.useStandbySecondSource(usdc);
-        assertTrue(store.onStandby(usdc));
-        assertEq(store.secondSource(usdc).source, twapSource);
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.StandbyActive.selector, usdc));
-        store.useStandbySecondSource(usdc);
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.NoStandby.selector, usdt));
-        store.useStandbySecondSource(usdt);
-        // Only the timelock restores.
-        vm.prank(emergencyGuardian);
-        vm.expectRevert();
-        store.restoreSecondSource(usdc);
-        _tl();
-        store.restoreSecondSource(usdc);
-        assertFalse(store.onStandby(usdc));
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-029
-    function test_TEST_250_newSecondSourceLeavesStandby() public {
-        address pyth = _networkFeed();
-        SecondSource memory src = _src(SecondSourceKind.OracleNetwork, pyth, 0, 50);
-        SecondSource memory standby = _src(SecondSourceKind.PoolTwap, address(integration), bytes32(uint256(1)), 100);
-        _tl();
-        store.setSecondSource(usdc, src, standby);
-        vm.prank(address(timelock));
-        store.grantRole(AvanaRoles.APPLICATION_PAUSE_GUARDIAN, aaveGuardian);
-        vm.prank(aaveGuardian);
-        store.useStandbySecondSource(usdc);
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.SecondSourceSwitched(usdc, false, address(timelock));
-        store.setSecondSource(usdc, src, standby);
-        assertFalse(store.onStandby(usdc));
     }
 
     // TEST-245 verifies: REQ-PSTORE-021

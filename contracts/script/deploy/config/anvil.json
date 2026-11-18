@@ -115,27 +115,16 @@
     }
   },
   "chain": {
-    "blockTime": 12,
-    "hasSequencer": false,
-    "sequencerFeed": "0x0000000000000000000000000000000000000000",
-    "sequencerGraceSeconds": 0
+    "blockTime": 12
   },
   "parameters": {
-    "initialPoolShareMaxBps": 10000,
     "maxMarketCount": 16,
     "keeperFloor": 1,
     "timelockNormalDelay": 432000,
     "globals": {
-      "cachedWindow": 3600,
-      "disagreementPauseMax": 3600,
-      "usdBandLow": 90000000,
-      "usdBandHigh": 102000000,
-      "graceDuration": 1800,
-      "graceHealthFactor": 950000000000000000,
       "maxFlashFeeBps": 10,
       "avanaFeeShareBps": 2000,
       "feeRecipient": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
-      "feedAgreementMarginBps": 50,
       "gateRecoverySeconds": 1800,
       "maxShortfallBps": 1000
     }
@@ -904,8 +893,6 @@
         "isUsdStable": true,
         "deviationBps": 25,
         "collateralFactorBps": 9000,
-        "agreementToleranceBps": 150,
-        "secondToleranceBps": 150,
         "tokenCapUsd": "50000000",
         "hubs": [
           "stable",
@@ -914,9 +901,7 @@
         "address": "$world:.tokens.USDC",
         "feeds": {
           "primary": "$world:.feeds.USDC.primary",
-          "alternate": "$world:.feeds.USDC.alternate",
-          "standby": "$world:.feeds.USDC.standby",
-          "second": "$world:.feeds.USDC.second"
+          "alternate": "$world:.feeds.USDC.alternate"
         }
       },
       {
@@ -924,8 +909,6 @@
         "isUsdStable": true,
         "deviationBps": 25,
         "collateralFactorBps": 9000,
-        "agreementToleranceBps": 150,
-        "secondToleranceBps": 150,
         "tokenCapUsd": "50000000",
         "hubs": [
           "stable"
@@ -933,9 +916,7 @@
         "address": "$world:.tokens.USDT",
         "feeds": {
           "primary": "$world:.feeds.USDT.primary",
-          "alternate": "$world:.feeds.USDT.alternate",
-          "standby": "$world:.feeds.USDT.standby",
-          "second": "$world:.feeds.USDT.second"
+          "alternate": "$world:.feeds.USDT.alternate"
         }
       },
       {
@@ -943,8 +924,6 @@
         "isUsdStable": false,
         "deviationBps": 50,
         "collateralFactorBps": 8500,
-        "agreementToleranceBps": 200,
-        "secondToleranceBps": 200,
         "tokenCapUsd": "50000000",
         "hubs": [
           "correlated",
@@ -953,9 +932,7 @@
         "address": "$world:.tokens.WETH",
         "feeds": {
           "primary": "$world:.feeds.WETH.primary",
-          "alternate": "$world:.feeds.WETH.alternate",
-          "standby": "$world:.feeds.WETH.standby",
-          "second": "$world:.feeds.WETH.second"
+          "alternate": "$world:.feeds.WETH.alternate"
         }
       },
       {
@@ -963,8 +940,6 @@
         "isUsdStable": false,
         "deviationBps": 50,
         "collateralFactorBps": 8500,
-        "agreementToleranceBps": 200,
-        "secondToleranceBps": 200,
         "tokenCapUsd": "50000000",
         "hubs": [
           "correlated"
@@ -972,9 +947,7 @@
         "address": "$world:.tokens.wstETH",
         "feeds": {
           "primary": "$world:.feeds.wstETH.primary",
-          "alternate": "$world:.feeds.wstETH.alternate",
-          "standby": "$world:.feeds.wstETH.standby",
-          "second": "$world:.feeds.wstETH.second"
+          "alternate": "$world:.feeds.wstETH.alternate"
         }
       }
     ],
@@ -1280,7 +1253,6 @@
         "collateralFactorBps": 3500,
         "maxLiquidationBonus": 10500,
         "collateralRisk": 0,
-        "consistencyToleranceBps": 50,
         "poolRiskFactorBps": 4000,
         "slippageAllowanceBps": 195,
         "slippageAllowanceMinBps": 30,
@@ -1348,7 +1320,6 @@
         "collateralFactorBps": 3000,
         "maxLiquidationBonus": 10800,
         "collateralRisk": 0,
-        "consistencyToleranceBps": 100,
         "poolRiskFactorBps": 4000,
         "slippageAllowanceBps": 300,
         "slippageAllowanceMinBps": 50,
@@ -1416,7 +1387,6 @@
         "collateralFactorBps": 3500,
         "maxLiquidationBonus": 10500,
         "collateralRisk": 0,
-        "consistencyToleranceBps": 50,
         "poolRiskFactorBps": 4000,
         "slippageAllowanceBps": 195,
         "slippageAllowanceMinBps": 30,
@@ -1471,7 +1441,6 @@
         "collateralFactorBps": 3000,
         "maxLiquidationBonus": 10800,
         "collateralRisk": 0,
-        "consistencyToleranceBps": 100,
         "poolRiskFactorBps": 4000,
         "slippageAllowanceBps": 300,
         "slippageAllowanceMinBps": 50,
@@ -1527,7 +1496,6 @@
         "collateralFactorBps": 3400,
         "maxLiquidationBonus": 10600,
         "collateralRisk": 0,
-        "consistencyToleranceBps": 50,
         "poolRiskFactorBps": 4000,
         "slippageAllowanceBps": 230,
         "slippageAllowanceMinBps": 40,
@@ -1596,7 +1564,6 @@
         "collateralFactorBps": 3400,
         "maxLiquidationBonus": 10600,
         "collateralRisk": 0,
-        "consistencyToleranceBps": 50,
         "poolRiskFactorBps": 4000,
         "slippageAllowanceBps": 230,
         "slippageAllowanceMinBps": 40,
@@ -1664,7 +1631,6 @@
         "collateralFactorBps": 3500,
         "maxLiquidationBonus": 10500,
         "collateralRisk": 0,
-        "consistencyToleranceBps": 50,
         "poolRiskFactorBps": 4000,
         "slippageAllowanceBps": 195,
         "slippageAllowanceMinBps": 30,
@@ -1732,7 +1698,6 @@
         "collateralFactorBps": 3000,
         "maxLiquidationBonus": 10800,
         "collateralRisk": 0,
-        "consistencyToleranceBps": 100,
         "poolRiskFactorBps": 4000,
         "slippageAllowanceBps": 300,
         "slippageAllowanceMinBps": 50,
@@ -1800,7 +1765,6 @@
         "collateralFactorBps": 3400,
         "maxLiquidationBonus": 10600,
         "collateralRisk": 0,
-        "consistencyToleranceBps": 50,
         "poolRiskFactorBps": 4000,
         "slippageAllowanceBps": 230,
         "slippageAllowanceMinBps": 40,

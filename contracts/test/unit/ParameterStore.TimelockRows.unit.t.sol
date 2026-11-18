@@ -15,7 +15,7 @@ import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol
 /// resolving on the deployed store (TEST-244).
 contract ParameterStoreTimelockRowsUnitTest is ParameterStoreFixture {
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
     }
 

@@ -7,13 +7,6 @@ pragma solidity 0.8.28;
 /// @notice Tighten setters of the ParameterStore: each moves one risk parameter in its safer direction.
 /// @dev Timelock at the short delay, or `APPLICATION_RISK_STEWARD` at once.
 interface IParameterStoreTighten {
-    /// @notice Enables or raises a market's optional `hardHealthFloor` (0 = off).
-    /// @param value New floor, WAD.
-    function tightenHardHealthFloor(
-        uint256 marketId,
-        uint256 value
-    ) external;
-
     /// @notice Lowers a market's `slippageAllowanceBps`.
     /// @dev Reverts `LivenessBound` below `slippageAllowanceMinBps`.
     function tightenSlippageAllowanceBps(
@@ -34,21 +27,6 @@ interface IParameterStoreTighten {
     function tightenBorrowPriceMaxAge(
         address feed,
         uint32 value
-    ) external;
-
-    /// @notice Lowers a market's `consistencyToleranceBps`.
-    /// @dev Reverts `LivenessBound` below `consistencyToleranceMinBps`.
-    /// @param value New tolerance, bps of the fair price.
-    function tightenConsistencyToleranceBps(
-        uint256 marketId,
-        uint16 value
-    ) external;
-
-    /// @notice Lowers a token's `feedAgreementToleranceBps`.
-    /// @dev Reverts `LivenessBound` below the token's lower bound.
-    function tightenFeedAgreementToleranceBps(
-        address token,
-        uint16 value
     ) external;
 
     /// @notice Lowers a market's `poolRiskFactor`, to mirror an Aave collateral-factor cut.
@@ -96,22 +74,10 @@ interface IParameterStoreTighten {
         uint256 value
     ) external;
 
-    /// @notice Lowers `poolShareMaxBps`, the chain default pool-share cap.
-    function tightenPoolShareMaxBps(
-        uint16 value
-    ) external;
-
     /// @notice Raises a market's `minPledgeUsd`.
     /// @param value New minimum, 8-decimal USD.
     function tightenMinPledgeUsd(
         uint256 marketId,
         uint256 value
-    ) external;
-
-    /// @notice Lowers the pool-share cap of a market's pool, `poolShareMaxBpsOf(poolKey)`, below the chain default.
-    /// @dev Every market of that pool on the chain shares the override.
-    function tightenPoolShareMaxBpsOf(
-        uint256 marketId,
-        uint16 value
     ) external;
 }

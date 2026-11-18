@@ -19,7 +19,7 @@ contract ParameterStoreSpeedUnitTest is ParameterStoreFixture {
     uint96 internal constant K = 1000;
 
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
         vm.prank(address(timelock));
         store.grantRole(AvanaRoles.APPLICATION_RISK_STEWARD, safe);

@@ -25,7 +25,6 @@ interface IWiringViews {
     function lpVaultOf(
         uint32 integrationId
     ) external view returns (address);
-    function sequencer() external view returns (address feed, uint32 gracePeriod);
     function hasRole(
         bytes32 role,
         address account
@@ -45,10 +44,6 @@ interface IWiring {
         address lpVault,
         address pricing
     ) external;
-    function setSequencer(
-        address feed,
-        uint32 gracePeriod
-    ) external;
 }
 
 interface IFactoryRegistration {
@@ -66,8 +61,8 @@ interface IFactoryRegistration {
 /// Joint Configuration Safe; `APPLICATION_PAUSE_GUARDIAN` on the ParameterStore for the Emergency Guardian and the Aave
 /// Protocol Guardian; `APPLICATION_RISK_STEWARD` on the ParameterStore for the Joint Configuration Safe. Only the Aave
 /// governance executor can cancel it. `chain-wiring` records the chain's Avana Hubs, the flash source, each LPVault in
-/// the VaultTokenFactory and in the MarketRegistry with its concentrated-liquidity LPOracle implementation as pricing,
-/// and the sequencer feed on an L2. It is kept apart so a cancel of one never drops the other.
+/// the VaultTokenFactory and in the MarketRegistry with its concentrated-liquidity LPOracle implementation as pricing.
+/// It is kept apart so a cancel of one never drops the other.
 /// Scheduling as the Safe needs `AVANA_SCHEDULE=1` and a node that accepts the Safe as an unlocked sender
 /// (`anvil --auto-impersonate`), run with `--unlocked --sender <safe>`.
 contract ConfigureAccess is TimelockOperations {
@@ -76,9 +71,7 @@ contract ConfigureAccess is TimelockOperations {
         string memory out = vm.readFile(_outputPath("avana"));
         address timelock = vm.parseJsonAddress(out, ".timelock");
         Operation memory roles = _guardianRoles(c, out);
-        Operation memory wiring = _wiring(
-            c, out, vm.parseJsonAddress(out, ".marketRegistry.proxy"), vm.parseJsonAddress(out, ".parameterStore.proxy")
-        );
+        Operation memory wiring = _wiring(c, out, vm.parseJsonAddress(out, ".marketRegistry.proxy"));
         _propose(timelock, roles, c.gov.governanceSafe);
         _propose(timelock, wiring, c.gov.governanceSafe);
     }
@@ -146,8 +139,7 @@ contract ConfigureAccess is TimelockOperations {
     function _wiring(
         ChainInputs memory c,
         string memory out,
-        address registry,
-        address store
+        address registry
     ) private view returns (Operation memory op) {
         address factory = vm.parseJsonAddress(out, ".vaultTokenFactory");
         address[] memory lpVaults = vm.parseJsonAddressArray(out, ".lpVaults");
@@ -186,15 +178,6 @@ contract ConfigureAccess is TimelockOperations {
                 registry,
                 abi.encodeCall(IWiring.registerIntegration, (id, lpVaults[i], pricing[i])),
                 "MarketRegistry.registerIntegration"
-            );
-        }
-        (address feed, uint32 grace) = c.hasSequencer ? IWiringViews(store).sequencer() : (address(0), uint32(0));
-        if (c.hasSequencer && (feed != c.sequencerFeed || grace != c.sequencerGraceSeconds)) {
-            _add(
-                op,
-                store,
-                abi.encodeCall(IWiring.setSequencer, (c.sequencerFeed, c.sequencerGraceSeconds)),
-                "ParameterStore.setSequencer"
             );
         }
     }

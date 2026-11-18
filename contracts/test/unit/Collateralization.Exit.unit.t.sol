@@ -68,7 +68,6 @@ contract CollateralizationExitUnitTest is CollateralizationFixture {
         PledgeCounters memory k = coll.getCounters(vt, alice);
         assertEq(k.regularUsed, 800_000_000_000, "only NFT 7's charge stays");
         assertEq(k.tokenUsed[1], 800_000_000_000);
-        assertEq(k.poolUnits, 4_000_000_000);
         assertEq(_gap(), 0);
         (uint256[] memory ids,) = coll.getMarketRecords(vt, 0, 10);
         assertEq(ids.length, 1);

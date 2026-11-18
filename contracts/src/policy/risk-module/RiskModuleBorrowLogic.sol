@@ -61,11 +61,10 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
         address proxy,
         uint256 minHealthFactor
     ) external view override returns (uint256 healthFactor) {
-        uint256 marketId;
-        // The price and the oracle are not used here.
+        // Only the health factor is used here.
         // forge-lint: disable-next-line(unused-return)
-        (, healthFactor,, marketId,) = _healthAndPrice(proxy);
-        uint256 required = RiskModuleMath.requiredHealthFactor(_store().hardHealthFloor(marketId), minHealthFactor);
+        (, healthFactor,,,) = _healthAndPrice(proxy);
+        uint256 required = RiskModuleMath.requiredHealthFactor(minHealthFactor);
         if (healthFactor < required) revert HealthFactorTooLow(healthFactor, required);
     }
 
@@ -171,7 +170,7 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
         IRiskModuleBreakerLogic b = IRiskModuleBreakerLogic(_BREAKER);
         // Any reason blocks the borrow, so the reopening time is not used.
         // forge-lint: disable-next-line(unused-return)
-        (uint32 reasons,) = b.marketBreaker(s.marketId, false, 0);
+        (uint32 reasons,) = b.marketBreaker(s.marketId);
         if (reasons != 0) revert BreakerTripped(s.marketId, reasons);
         for (uint256 i = 0; i < s.debt.length; ++i) {
             uint256 r = s.debt[i];

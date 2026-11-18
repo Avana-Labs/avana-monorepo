@@ -10,8 +10,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title FullStackLiquidationIntegrationTest
 /// @notice Liquidation cascades and one-sided unwinds on the full real stack (`FullStackMarkets`): the real
-/// MarketRegistry's markets, routes and gates, the RiskModule's concentration gate on the ParameterStore's
-/// `poolShareMaxBps`, the markets' real LPOracles as the AaveOracle sources, the real AaveAdapter and Collateralization,
+/// MarketRegistry's markets, routes and gates, the RiskModule's pool-depth gate, the markets' real LPOracles as the
+/// AaveOracle sources, the real AaveAdapter and Collateralization,
 /// on the real local Aave V4. LPVaultSwap is `LPVaultSwapMock`, which liquidates on the Spoke and settles through the
 /// real Collateralization and AaveAdapter.
 /// forge-config: default.isolate = false
@@ -51,8 +51,8 @@ contract FullStackLiquidationIntegrationTest is FullStackMarkets {
     // ─── TEST-218: cascade ───
 
     /// @notice Twelve $10,000 accounts in two markets, half opened at HF about 1.10 and half at about 1.04; outside LPs remove
-    /// liquidity until Avana's share of each pool is above `poolShareMaxBps` (10 %), and the RiskModule then refuses a
-    /// new borrow and an exposure-raising pledge in both markets while a debt-free account still withdraws; both pool
+    /// all liquidity, so each pool's time-weighted depth reads 0 and the RiskModule's `POOL_DEPTH` gate refuses a new
+    /// borrow and an exposure-raising pledge in both markets while a debt-free account still withdraws; both pool
     /// tokens then fall 7 %. In random order, every account below HF 1 is liquidated (none halts: no stop of the 3.6
     /// matrix is in force), every account above HF 1 refuses a liquidation, and repays and debt-free withdrawals
     /// interleaved with the liquidations all succeed.
@@ -73,9 +73,9 @@ contract FullStackLiquidationIntegrationTest is FullStackMarkets {
             _borrowAs(wallets[i], m, ghoReserveId, i < n / 2 ? 2727e18 : 2884e18);
         }
         (bytes32 freeKey,) = _pledgeAs(carol, mA, units);
-        // Outside LPs remove liquidity: Avana's six or seven accounts of 5,000 whole tokens are 20 % or more of each pool.
-        lpVault.setMarketDepth(mA, 150_000e6);
-        lpVault.setMarketDepth(mB, 150_000e6);
+        // Outside LPs remove liquidity: each pool's time-weighted depth reads 0.
+        lpVault.setMarketDepth(mA, 0);
+        lpVault.setMarketDepth(mB, 0);
         uint256[2] memory ms = [mA, mB];
         for (uint256 k = 0; k < 2; ++k) {
             uint256 nonce = adapterC.borrowNonce(proxies[k]);
@@ -83,7 +83,7 @@ contract FullStackLiquidationIntegrationTest is FullStackMarkets {
             (bool ok,) = adapter.call(
                 abi.encodeCall(adapterC.borrow, (ms[k], ghoReserveId, 1e18, wallets[k], _deadline(), 0, nonce))
             );
-            assertFalse(ok, "concentration gate refuses a new borrow");
+            assertFalse(ok, "the depth gate refuses a new borrow");
             bytes32 key = _newKey();
             lpVault.mintPosition(key, wallets[k], ms[k], units);
             vm.prank(wallets[k]);

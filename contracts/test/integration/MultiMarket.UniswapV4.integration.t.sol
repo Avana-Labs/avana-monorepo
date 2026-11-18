@@ -10,7 +10,7 @@ import {IUniswapV4PoolManager} from "../../src/interfaces/external/uniswap-v4/IU
 import {LiquidationPreview, PositionFeesView} from "../../src/lens/lens/types/LensTypes.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PriceState, PriceStateView} from "../../src/types/OracleTypes.sol";
+import {PriceState} from "../../src/types/OracleTypes.sol";
 import {PledgePreview, PositionRef} from "../../src/types/PositionTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackUniswapV4} from "../utils/fixtures/RealStackUniswapV4.sol";

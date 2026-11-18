@@ -74,14 +74,6 @@ abstract contract CollateralizationViews is CollateralizationLedger, ICollateral
     }
 
     /// @inheritdoc ICollateralization
-    function poolUnits(
-        bytes32 poolKey
-    ) external view override returns (uint256 units) {
-        _checkAdapterView();
-        units = _poolUnits[poolKey];
-    }
-
-    /// @inheritdoc ICollateralization
     function getPending(
         address vaultToken
     ) external view override returns (Pending memory balance) {

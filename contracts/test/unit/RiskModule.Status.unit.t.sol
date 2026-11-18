@@ -85,7 +85,6 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
         assertEq(uint8(s.pauseReason), uint8(PauseReason.None));
         assertEq(s.healthFactor, 1.5e18);
         assertEq(s.healthFactorExcludingRescue, 1.5e18);
-        assertEq(s.hardHealthFloor, 0);
         assertTrue(s.borrowAllowed);
         assertTrue(s.withdrawWithDebtAllowed);
         assertEq(s.markets.length, 1);
@@ -278,9 +277,7 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
     }
 
     // TEST-028 verifies: REQ-ADAPTER-038, REQ-RISK-038, REQ-ADAPTER-018
-    function test_TEST_028_statusPauseStateAndFloor() public {
-        store.setHardFloor(mid, 1.25e18);
-        assertEq(_status().hardHealthFloor, 1.25e18);
+    function test_TEST_028_statusPauseState() public {
         // The pause state is reported in its own two fields; the RiskModule's own checks do not read it, so both
         // "would pass" flags stay true (the Adapter applies the pause gate before calling the RiskModule).
         vm.prank(emergencyGuardian);
@@ -429,7 +426,6 @@ contract RiskModuleStatusUnitTest is RiskModuleFixture {
         assertEq(uint8(s.pauseReason), uint8(PauseReason.None));
         assertEq(s.healthFactor, 0);
         assertEq(s.healthFactorExcludingRescue, 0);
-        assertEq(s.hardHealthFloor, 0);
         assertFalse(s.borrowAllowed);
         assertFalse(s.withdrawWithDebtAllowed);
     }

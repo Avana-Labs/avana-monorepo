@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../governance/roles/AvanaRoles.sol";
-import {SecondSource} from "../../types/OracleTypes.sol";
 import {IParameterStore} from "./IParameterStore.sol";
 import {IParameterStoreListing} from "./IParameterStoreListing.sol";
 import {ParameterStoreRouter} from "./ParameterStoreRouter.sol";
@@ -17,22 +16,6 @@ abstract contract ParameterStoreForwardAdmin is ParameterStoreRouter, IParameter
     function setBorrowPriceMaxAge(
         address,
         uint32
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_ADMIN_ORACLE_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function setConsistencyToleranceBps(
-        uint256,
-        uint16
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_ADMIN_ORACLE_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function setFeedAgreementToleranceBps(
-        address,
-        uint16
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
         _forward(_ADMIN_ORACLE_LOGIC);
     }
@@ -74,59 +57,6 @@ abstract contract ParameterStoreForwardAdmin is ParameterStoreRouter, IParameter
     }
 
     /// @inheritdoc IParameterStore
-    function setSecondSource(
-        address,
-        SecondSource calldata,
-        SecondSource calldata
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_ADMIN_RISK_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function useStandbySecondSource(
-        address
-    ) external override onlyRole(AvanaRoles.APPLICATION_PAUSE_GUARDIAN) {
-        _forward(_ADMIN_RISK_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function restoreSecondSource(
-        address
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_ADMIN_RISK_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function setCachedWindow(
-        uint32
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_ADMIN_ORACLE_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function setDisagreementPauseMax(
-        uint32
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_ADMIN_ORACLE_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function setTwapWindow(
-        uint256,
-        uint32
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_ADMIN_ORACLE_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function setUsdBand(
-        uint256,
-        uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_ADMIN_ORACLE_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
     function setLiquidationPriceMaxAge(
         address,
         uint32
@@ -138,27 +68,6 @@ abstract contract ParameterStoreForwardAdmin is ParameterStoreRouter, IParameter
     function setFeedMaxAge(
         address,
         uint32
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_ADMIN_ORACLE_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function setGraceDuration(
-        uint32
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_ADMIN_ORACLE_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function setGraceHealthFactor(
-        uint256
-    ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
-        _forward(_ADMIN_ORACLE_LOGIC);
-    }
-
-    /// @inheritdoc IParameterStore
-    function setFeedAgreementMarginBps(
-        uint16
     ) external override onlyRole(AvanaRoles.APPLICATION_ADMIN) {
         _forward(_ADMIN_ORACLE_LOGIC);
     }

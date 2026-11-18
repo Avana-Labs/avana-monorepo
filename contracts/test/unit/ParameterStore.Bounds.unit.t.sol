@@ -19,7 +19,7 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
     bytes internal notLooser = abi.encodeWithSelector(IParameterStoreBase.NotLooser.selector);
 
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
     }
 
@@ -53,41 +53,6 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
     ) internal returns (bool ok, bytes memory ret) {
         vm.prank(address(timelock));
         (ok, ret) = address(store).call(abi.encodeCall(store.setInitialMarketParams, (M, p)));
-    }
-
-    // ─── hardHealthFloor: 0 (off) or [1e18, 1.25e18] ───
-
-    // TEST-064 verifies: REQ-PSTORE-031, REQ-CONFIG-050, REQ-CONFIG-067, Q-398
-    function test_TEST_064_hardFloorTightenAtBothEnds() public {
-        _refuses(abi.encodeCall(store.tightenHardHealthFloor, (M, 1e18 - 1)), oob);
-        assertEq(store.hardHealthFloor(M), 0);
-        _accepts(abi.encodeCall(store.tightenHardHealthFloor, (M, 1e18)));
-        assertEq(store.hardHealthFloor(M), 1e18);
-        _accepts(abi.encodeCall(store.tightenHardHealthFloor, (M, 1.25e18)));
-        assertEq(store.hardHealthFloor(M), 1.25e18);
-        // Above the maximum the value is stricter, so the bound is the error.
-        _refuses(abi.encodeCall(store.tightenHardHealthFloor, (M, 1.25e18 + 1)), oob);
-        assertEq(store.hardHealthFloor(M), 1.25e18);
-    }
-
-    // TEST-064 verifies: REQ-PSTORE-031, REQ-PSTORE-004, REQ-CONFIG-050
-    function test_TEST_064_hardFloorAtListingAtBothEnds() public {
-        MarketParams memory p = _params();
-        uint256[4] memory accepted = [uint256(0), 1e18, 1.1e18, 1.25e18];
-        for (uint256 i = 0; i < accepted.length; ++i) {
-            p.hardHealthFloor = accepted[i];
-            (bool ok,) = _relist(p);
-            assertTrue(ok, "listing refused an in-bounds floor");
-            assertEq(store.hardHealthFloor(M), accepted[i]);
-        }
-        uint256[3] memory refused = [uint256(1), 1e18 - 1, 1.25e18 + 1];
-        for (uint256 i = 0; i < refused.length; ++i) {
-            p.hardHealthFloor = refused[i];
-            (bool ok, bytes memory ret) = _relist(p);
-            assertFalse(ok);
-            assertEq(ret, oob);
-            assertEq(store.hardHealthFloor(M), 1.25e18);
-        }
     }
 
     // ─── slippageAllowanceBps: [slippageAllowanceMinBps, 10,000) ───
@@ -149,44 +114,6 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         // With the floor at 0 the allowance can be tightened all the way to 0.
         _accepts(abi.encodeCall(store.tightenSlippageAllowanceBps, (M, 0)));
         assertEq(store.getMarketParams(M).slippageAllowanceBps, 0);
-    }
-
-    // ─── consistencyToleranceBps: [10, 10,000] ───
-
-    // TEST-064 verifies: REQ-CONFIG-052, REQ-CONFIG-050, REQ-CONFIG-054, REQ-ACCESS-097
-    function test_TEST_064_consistencyToleranceAtBothEnds() public {
-        _refuses(abi.encodeCall(store.setConsistencyToleranceBps, (M, 9)), live);
-        _accepts(abi.encodeCall(store.setConsistencyToleranceBps, (M, 10)));
-        assertEq(store.getMarketParams(M).consistencyToleranceBps, 10);
-        _accepts(abi.encodeCall(store.setConsistencyToleranceBps, (M, 10_000)));
-        assertEq(store.getMarketParams(M).consistencyToleranceBps, 10_000);
-        _refuses(abi.encodeCall(store.setConsistencyToleranceBps, (M, 10_001)), oob);
-        _refuses(abi.encodeCall(store.setConsistencyToleranceBps, (M, type(uint16).max)), oob);
-        assertEq(store.getMarketParams(M).consistencyToleranceBps, 10_000);
-        // The tighten setter reaches the same floor from above.
-        _accepts(abi.encodeCall(store.tightenConsistencyToleranceBps, (M, 10)));
-        _refuses(abi.encodeCall(store.tightenConsistencyToleranceBps, (M, 10)), notStricter);
-        _refuses(abi.encodeCall(store.tightenConsistencyToleranceBps, (M, 9)), live);
-    }
-
-    // TEST-064 verifies: REQ-CONFIG-052, REQ-PSTORE-004
-    function test_TEST_064_consistencyToleranceAtListingAtBothEnds() public {
-        MarketParams memory p = _params();
-        p.consistencyToleranceBps = 10_000;
-        (bool ok, bytes memory ret) = _relist(p);
-        assertTrue(ok);
-        p.consistencyToleranceBps = 10_001;
-        (ok, ret) = _relist(p);
-        assertFalse(ok);
-        assertEq(ret, oob);
-        p.consistencyToleranceBps = 10;
-        (ok,) = _relist(p);
-        assertTrue(ok);
-        p.consistencyToleranceBps = 9;
-        (ok, ret) = _relist(p);
-        assertFalse(ok);
-        assertEq(ret, live);
-        assertEq(store.getMarketParams(M).consistencyToleranceBps, 10);
     }
 
     // ─── poolRiskFactor: [1, 9,000] ───
@@ -380,38 +307,6 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         assertEq(store.coverageRatioBps(), 0);
     }
 
-    // ─── poolShareMaxBps: (0, 10,000] ───
-
-    // TEST-272 verifies: REQ-RISK-042, REQ-RISK-044, Q-403
-    function test_TEST_272_poolShareDefaultAtBothEnds() public {
-        _refuses(abi.encodeCall(store.loosenPoolShareMaxBps, (10_001)), oob);
-        _refuses(abi.encodeCall(store.loosenPoolShareMaxBps, (10_000)), notLooser);
-        _accepts(abi.encodeCall(store.tightenPoolShareMaxBps, (1)));
-        assertEq(store.poolShareMaxBps(), 1);
-        _refuses(abi.encodeCall(store.tightenPoolShareMaxBps, (0)), oob);
-        _accepts(abi.encodeCall(store.loosenPoolShareMaxBps, (10_000)));
-        assertEq(store.poolShareMaxBps(), 10_000);
-        _accepts(abi.encodeCall(store.tightenPoolShareMaxBps, (9999)));
-        _refuses(abi.encodeCall(store.loosenPoolShareMaxBps, (10_001)), oob);
-        _refuses(abi.encodeCall(store.tightenPoolShareMaxBps, (0)), oob);
-        assertEq(store.poolShareMaxBps(), 9999);
-    }
-
-    // TEST-272 verifies: REQ-RISK-042, REQ-RISK-044, Q-383
-    function test_TEST_272_poolShareOverrideAtBothEnds() public {
-        bytes32 key = keccak256(abi.encode(uint32(1), address(pool), bytes32(0)));
-        _refuses(abi.encodeCall(store.tightenPoolShareMaxBpsOf, (M, 0)), oob);
-        _accepts(abi.encodeCall(store.tightenPoolShareMaxBpsOf, (M, 1)));
-        assertEq(store.poolShareMaxBpsOf(key), 1);
-        // The override rises at most to the chain default.
-        _refuses(abi.encodeCall(store.loosenPoolShareMaxBpsOf, (M, 10_001)), oob);
-        _accepts(abi.encodeCall(store.loosenPoolShareMaxBpsOf, (M, 10_000)));
-        assertEq(store.poolShareMaxBpsOf(key), 10_000);
-        _accepts(abi.encodeCall(store.tightenPoolShareMaxBps, (5000)));
-        assertEq(store.poolShareMaxBpsOf(key), 5000);
-        _refuses(abi.encodeCall(store.loosenPoolShareMaxBpsOf, (M, 5001)), oob);
-    }
-
     // ─── USD caps and the stress floor: (0, 2^128 − 1] ───
 
     // TEST-272 verifies: REQ-RISK-041, REQ-RISK-044
@@ -506,91 +401,6 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         assertEq(store.stressFloorUsd(M), 1);
     }
 
-    // ─── Grace, band, windows ───
-
-    // TEST-064 verifies: REQ-CONFIG-052, REQ-CONFIG-049, INV-047
-    function test_TEST_064_graceDurationAtBothEnds() public {
-        _accepts(abi.encodeCall(store.setGraceDuration, (0)));
-        assertEq(store.graceDuration(), 0);
-        _accepts(abi.encodeCall(store.setGraceDuration, (7200)));
-        assertEq(store.graceDuration(), 7200);
-        _refuses(abi.encodeCall(store.setGraceDuration, (7201)), live);
-        _refuses(abi.encodeCall(store.setGraceDuration, (type(uint32).max)), live);
-        assertEq(store.graceDuration(), 7200);
-        assertEq(store.graceDurationMax(), 7200);
-    }
-
-    // TEST-064 verifies: REQ-CONFIG-052, REQ-CONFIG-049, INV-047, REQ-ACCESS-096
-    function test_TEST_064_graceHealthFactorAtBothEnds() public {
-        _refuses(abi.encodeCall(store.setGraceHealthFactor, (0.9e18 - 1)), live);
-        _accepts(abi.encodeCall(store.setGraceHealthFactor, (0.9e18)));
-        assertEq(store.graceHealthFactor(), 0.9e18);
-        _accepts(abi.encodeCall(store.setGraceHealthFactor, (1e18 - 1)));
-        assertEq(store.graceHealthFactor(), 1e18 - 1);
-        _refuses(abi.encodeCall(store.setGraceHealthFactor, (1e18)), live);
-        _refuses(abi.encodeCall(store.setGraceHealthFactor, (0)), live);
-        assertEq(store.graceHealthFactor(), 1e18 - 1);
-        assertEq(store.graceHealthFactorMin(), 0.9e18);
-    }
-
-    // TEST-064 verifies: REQ-CONFIG-052, REQ-CONFIG-054, INV-047, REQ-ACCESS-099
-    function test_TEST_064_disagreementPauseAtBothEnds() public {
-        _accepts(abi.encodeCall(store.setDisagreementPauseMax, (0)));
-        assertEq(store.disagreementPauseMax(), 0);
-        _accepts(abi.encodeCall(store.setDisagreementPauseMax, (3600)));
-        assertEq(store.disagreementPauseMax(), 3600);
-        _refuses(abi.encodeCall(store.setDisagreementPauseMax, (3601)), live);
-        assertEq(store.disagreementPauseMax(), 3600);
-    }
-
-    // TEST-064 verifies: REQ-CONFIG-050, REQ-CONFIG-054
-    function test_TEST_064_cachedWindowAboveZero() public {
-        _refuses(abi.encodeCall(store.setCachedWindow, (0)), oob);
-        _accepts(abi.encodeCall(store.setCachedWindow, (1)));
-        assertEq(store.cachedWindow(), 1);
-        _accepts(abi.encodeCall(store.setCachedWindow, (type(uint32).max)));
-        assertEq(store.cachedWindow(), type(uint32).max);
-    }
-
-    // TEST-064 verifies: REQ-CONFIG-055, REQ-CONFIG-049
-    function test_TEST_064_usdBandAroundOneDollar() public {
-        _accepts(abi.encodeCall(store.setUsdBand, (1e8 - 1, 1e8 + 1)));
-        assertEq(store.usdBandLow(), 1e8 - 1);
-        assertEq(store.usdBandHigh(), 1e8 + 1);
-        _refuses(abi.encodeCall(store.setUsdBand, (1e8, 1.02e8)), oob);
-        _refuses(abi.encodeCall(store.setUsdBand, (0.9e8, 1e8)), oob);
-        _refuses(abi.encodeCall(store.setUsdBand, (1.02e8, 0.9e8)), oob);
-        assertEq(store.usdBandLow(), 1e8 - 1);
-        _accepts(abi.encodeCall(store.setUsdBand, (0, type(uint256).max)));
-        assertEq(store.usdBandLow(), 0);
-        assertEq(store.usdBandHigh(), type(uint256).max);
-    }
-
-    // TEST-250 verifies: REQ-CONFIG-024, REQ-CONFIG-050, REQ-CONFIG-052
-    function test_TEST_250_agreementMarginAtBothEnds() public {
-        // Tolerances are 150 and every route sums to 50, so margins up to 100 keep every token in bounds.
-        _accepts(abi.encodeCall(store.setFeedAgreementMarginBps, (0)));
-        assertEq(store.feedAgreementMarginBps(), 0);
-        assertEq(store.feedAgreementToleranceMinBps(usdc), 50);
-        _accepts(abi.encodeCall(store.setFeedAgreementMarginBps, (100)));
-        assertEq(store.feedAgreementToleranceMinBps(usdc), 150);
-        _refuses(abi.encodeCall(store.setFeedAgreementMarginBps, (101)), live);
-        _refuses(abi.encodeCall(store.setFeedAgreementMarginBps, (10_001)), oob);
-        assertEq(store.feedAgreementMarginBps(), 100);
-    }
-
-    // TEST-250 verifies: REQ-CONFIG-024, REQ-CONFIG-050, REQ-CONFIG-052, REQ-ACCESS-098
-    function test_TEST_250_agreementToleranceAtBothEnds() public {
-        // Lower bound 25 + 25 + 50 = 100.
-        _refuses(abi.encodeCall(store.setFeedAgreementToleranceBps, (usdc, 99)), live);
-        _accepts(abi.encodeCall(store.setFeedAgreementToleranceBps, (usdc, 100)));
-        assertEq(store.feedAgreementToleranceBps(usdc), 100);
-        _accepts(abi.encodeCall(store.setFeedAgreementToleranceBps, (usdc, 10_000)));
-        assertEq(store.feedAgreementToleranceBps(usdc), 10_000);
-        _refuses(abi.encodeCall(store.setFeedAgreementToleranceBps, (usdc, 10_001)), oob);
-        assertEq(store.feedAgreementToleranceBps(usdc), 10_000);
-    }
-
     // ─── Spoke liquidation expectations ───
 
     // TEST-249 verifies: REQ-PSTORE-022, REQ-CONFIG-050
@@ -662,14 +472,11 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
     // TEST-064 verifies: REQ-CONFIG-051, REQ-CONFIG-067, SPEC-GOV-011
     function test_TEST_064_notStricterBeforeBounds() public {
         // A value both not stricter and out of bounds reports NotStricter: direction first, then bounds.
-        _refuses(abi.encodeCall(store.tightenHardHealthFloor, (M, 0)), notStricter);
         _refuses(abi.encodeCall(store.tightenMinPledgeUsd, (M, 0)), notStricter);
         _refuses(abi.encodeCall(store.tightenGateRecoverySeconds, (0)), notStricter);
         _refuses(abi.encodeCall(store.tightenDebtStressRiseBps, (usdc, 0)), notStricter);
         _refuses(abi.encodeCall(store.tightenMarketUsdCap, (M, USD_MAX + 1)), notStricter);
-        _refuses(abi.encodeCall(store.tightenPoolShareMaxBps, (10_001)), notStricter);
         _refuses(abi.encodeCall(store.tightenSlippageAllowanceBps, (M, 100)), notStricter);
-        _refuses(abi.encodeCall(store.tightenConsistencyToleranceBps, (M, 50)), notStricter);
         _refuses(abi.encodeCall(store.tightenPoolRiskFactor, (M, 4001)), notStricter);
     }
 
@@ -679,23 +486,19 @@ contract ParameterStoreBoundsUnitTest is ParameterStoreFixture {
         _refuses(abi.encodeCall(store.loosenGateRecoverySeconds, (7201)), notLooser);
         _refuses(abi.encodeCall(store.loosenMarketUsdCap, (M, 0)), notLooser);
         _refuses(abi.encodeCall(store.loosenSlippageAllowanceBps, (M, 0)), notLooser);
-        _refuses(abi.encodeCall(store.loosenPoolShareMaxBps, (0)), notLooser);
         _refuses(abi.encodeCall(store.loosenTokenUsdCap, (address(hub), usdc, 0)), notLooser);
         _refuses(abi.encodeCall(store.loosenTopUpSliceUsd, (M, 0)), notLooser);
         _refuses(abi.encodeCall(store.loosenMinPledgeUsd, (M, USD_MAX)), notLooser);
-        _refuses(abi.encodeCall(store.loosenHardHealthFloor, (M, 0)), notLooser);
     }
 
     // TEST-064 verifies: REQ-CONFIG-052, REQ-PSTORE-004, REQ-CONFIG-067
     function test_TEST_064_listingLivenessBeforeRange() public {
-        // A consistency tolerance below 10 and a slippage of 10,000 together report the liveness failure first.
+        // A slippage floor above the allowance and an allowance of 10,000 together report the liveness failure first.
         MarketParams memory p = _params();
-        p.consistencyToleranceBps = 9;
         p.slippageAllowanceBps = 10_000;
         (bool ok, bytes memory ret) = _relist(p);
         assertFalse(ok);
-        assertEq(ret, live);
-        p.consistencyToleranceBps = 50;
+        assertEq(ret, oob);
         p.slippageAllowanceMinBps = 10_001;
         (ok, ret) = _relist(p);
         assertFalse(ok);

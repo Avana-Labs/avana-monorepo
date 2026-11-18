@@ -100,8 +100,6 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         assertEq(k.sliceUsed, 0);
         assertEq(k.tokenUsed[0], 1_000_000_000_000, "USDC counter");
         assertEq(k.tokenUsed[1], 1_000_000_000_000, "USDT counter");
-        assertEq(k.poolKey, keccak256(abi.encode(INTEGRATION, pool, bytes32(0))));
-        assertEq(k.poolUnits, 5_000_000_000);
         assertEq(lpVault.ownerOf(KEY42), address(lpVault), "custody");
         assertEq(lpVault.depositorOf(KEY42), alice, "depositor of record");
     }
@@ -263,13 +261,7 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
         used[0] = 1_000_000_000_000;
         used[1] = 1_000_000_000_000;
         PledgeCounters memory expected = PledgeCounters({
-            hub: aave.hub,
-            regularUsed: 1_000_000_000_000,
-            sliceUsed: 0,
-            poolKey: keccak256(abi.encode(INTEGRATION, pool, bytes32(0))),
-            poolUnits: 5_000_000_000,
-            accountRecords: 1,
-            tokenUsed: used
+            hub: aave.hub, regularUsed: 1_000_000_000_000, sliceUsed: 0, accountRecords: 1, tokenUsed: used
         });
         _acquire(adapter);
         vm.expectCall(
@@ -343,18 +335,16 @@ contract CollateralizationPledgeUnitTest is CollateralizationFixture {
 
     // TEST-272 verifies: REQ-COLL-026, REQ-VAULT-034, INV-092, ATTACK-157, Q-295, Q-383
     // Sources: 5.1 TEST-272 (ledger side)
-    /// @notice Two markets of one pool share one pool counter, and the token counters are keyed by Hub, so a pledge in
-    /// the second market sees the first market's exposure.
+    /// @notice The token counters are keyed by Hub, so a pledge in a second market of the pool sees the first market's
+    /// exposure, while the market buckets are per market.
     function test_TEST_272_hubAndPoolKeyedCounters() public {
         _pledge(alice, aliceProxy, KEY42, 5_000_000_000);
         address second = _secondMarketToken();
         PledgeCounters memory k2 = coll.getCounters(second, alice);
         PledgeCounters memory k1 = coll.getCounters(vt, alice);
-        assertEq(k2.poolKey, k1.poolKey, "same pool, same key");
-        assertEq(k2.poolUnits, 5_000_000_000, "pool counter shared across ranges");
         assertEq(k2.tokenUsed[0], 1_000_000_000_000, "USDC counter is per Hub");
+        assertEq(k2.tokenUsed[0], k1.tokenUsed[0], "the same USDC counter");
         assertEq(k2.regularUsed, 0, "market buckets are per market");
-        assertEq(coll.poolUnits(k1.poolKey), 5_000_000_000);
     }
 
     // TEST-235 verifies: REQ-COLL-016, REQ-VAULT-015, SPEC-BACK-004, SPEC-BACK-014, INV-082, Q-253

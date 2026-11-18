@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IntegrationCapabilities, PoolKeying} from "../../../src/amm/types/AmmTypes.sol";
 import {ILPOracle} from "../../../src/oracle/ILPOracle.sol";
 import {FeedDef, MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {OracleConfig, PriceState, PriceStateView} from "../../../src/types/OracleTypes.sol";
+import {PriceState} from "../../../src/types/OracleTypes.sol";
 import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 
 /// @title RegistryParameterStoreMock
@@ -14,8 +14,6 @@ import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 contract RegistryParameterStoreMock {
     mapping(address => FeedDef) internal _feeds;
     mapping(address => uint16) public debtStressRiseBps;
-    mapping(address => uint16) public feedAgreementToleranceBps;
-    mapping(address => uint16) public feedAgreementToleranceMinBps;
     mapping(uint256 => MarketParams) internal _params;
     mapping(uint256 => uint256) public marketUsdCap;
     mapping(uint256 => uint256) public topUpSliceUsd;
@@ -26,7 +24,6 @@ contract RegistryParameterStoreMock {
     uint16 public maxFlashFeeBps = 10;
     uint16 public avanaFeeShareBps;
     uint16 public coverageRatioBps = 2000;
-    bool public oracleConfigReverts;
 
     function setFeed(
         address feed,
@@ -64,15 +61,6 @@ contract RegistryParameterStoreMock {
         uint16 v
     ) external {
         debtStressRiseBps[asset] = v;
-    }
-
-    function setTolerance(
-        address token,
-        uint16 value,
-        uint16 min
-    ) external {
-        feedAgreementToleranceBps[token] = value;
-        feedAgreementToleranceMinBps[token] = min;
     }
 
     function setMaxFlashFeeBps(
@@ -129,12 +117,6 @@ contract RegistryParameterStoreMock {
         livenessFails[keccak256(abi.encode(spoke, marketId, reserveId))] = fails;
     }
 
-    function setOracleConfigReverts(
-        bool r
-    ) external {
-        oracleConfigReverts = r;
-    }
-
     function getMarketParams(
         uint256 id
     ) external view returns (MarketParams memory) {
@@ -147,14 +129,6 @@ contract RegistryParameterStoreMock {
         uint256 reserveId
     ) external view returns (bool) {
         return !livenessFails[keccak256(abi.encode(spoke, marketId, reserveId))];
-    }
-
-    function getOracleConfig(
-        address
-    ) external view returns (OracleConfig memory config) {
-        require(!oracleConfigReverts, "NoConfig");
-        config.marketId = 1;
-        config.twapWindow = 1800;
     }
 }
 
@@ -344,13 +318,12 @@ contract RegistryLPVaultMock {
 }
 
 /// @title RegistryLPOracleMock
-/// @notice An LPOracle as the MarketRegistry sees it: seed, binding, configuration check and price state.
+/// @notice An LPOracle as the MarketRegistry sees it: seed, binding and price status.
 contract RegistryLPOracleMock {
     uint8 public decimals = 8;
     int256 public latestAnswer = 1e8;
     uint256 public marketId;
     address public integration;
-    uint256 public failedChecks;
     PriceState public state = PriceState.Live;
 
     constructor(
@@ -369,27 +342,10 @@ contract RegistryLPOracleMock {
         latestAnswer = answer;
     }
 
-    function setFailed(
-        uint256 f
-    ) external {
-        failedChecks = f;
-    }
-
     function setState(
         PriceState s
     ) external {
         state = s;
-    }
-
-    function checkConfig(
-        OracleConfig calldata
-    ) external view returns (uint256) {
-        return failedChecks;
-    }
-
-    function getPriceState() external view returns (PriceStateView memory report) {
-        report.state = state;
-        report.answer = latestAnswer;
     }
 
     function getPriceStatus() external view returns (ILPOracle.PriceStatus memory s) {

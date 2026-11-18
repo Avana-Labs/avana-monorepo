@@ -10,7 +10,7 @@ library AvanaRoles {
     /// @notice Upgrades, setters, listings and keepers on every upgradeable Avana contract; held only by the timelock.
     bytes32 internal constant APPLICATION_ADMIN = keccak256("APPLICATION_ADMIN");
 
-    /// @notice Immediate pause, unpause, unfreeze, breaker resets and standby switches.
+    /// @notice Immediate pause, unpause, unfreeze and breaker resets.
     bytes32 internal constant APPLICATION_PAUSE_GUARDIAN = keccak256("APPLICATION_PAUSE_GUARDIAN");
 
     /// @notice Immediate freezes and breaker trips on the MarketRegistry.

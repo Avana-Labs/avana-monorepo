@@ -49,7 +49,7 @@ contract ParameterStoreFeeRecipientUnitTest is ParameterStoreFixture {
     ProgrammableCandidate internal c;
 
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         c = new ProgrammableCandidate();
     }
 

@@ -80,8 +80,6 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
     uint32 internal constant BLOCK_TIME = 12;
     uint256 internal constant T0 = 1_762_650_000;
     uint256 internal constant MAX_MARKETS = 64;
-    /// @dev Default `poolShareMaxBps` (TEST-218: 10 %).
-    uint16 internal constant POOL_SHARE_MAX_BPS = 1000;
 
     AvanaTimelock internal timelock;
     MarketRegistry internal registry;
@@ -371,32 +369,23 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
     ) private {
         address tl = address(timelock);
         ParameterStoreLogics memory l = ParameterStoreLogics({
-            tighten: address(new ParameterStoreTightenLogic(tl, registryAddr, BLOCK_TIME, false)),
-            loosen: address(new ParameterStoreLoosenLogic(tl, registryAddr, BLOCK_TIME, false)),
-            listing: address(new ParameterStoreListingLogic(tl, registryAddr, BLOCK_TIME, false)),
-            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, registryAddr, BLOCK_TIME, false)),
-            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, registryAddr, BLOCK_TIME, false))
+            tighten: address(new ParameterStoreTightenLogic(tl, registryAddr, BLOCK_TIME)),
+            loosen: address(new ParameterStoreLoosenLogic(tl, registryAddr, BLOCK_TIME)),
+            listing: address(new ParameterStoreListingLogic(tl, registryAddr, BLOCK_TIME)),
+            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, registryAddr, BLOCK_TIME)),
+            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, registryAddr, BLOCK_TIME))
         });
-        ParameterStore impl = new ParameterStore(tl, registryAddr, BLOCK_TIME, false, l);
+        ParameterStore impl = new ParameterStore(tl, registryAddr, BLOCK_TIME, l);
         AdapterPlaceholder(storeAddr)
-            .upgradeToAndCall(
-                address(impl), abi.encodeCall(IParameterStore.initialize, (tl, _globals(), POOL_SHARE_MAX_BPS))
-            );
+            .upgradeToAndCall(address(impl), abi.encodeCall(IParameterStore.initialize, (tl, _globals())));
         store = IParameterStore(storeAddr);
     }
 
     /// @dev Default global values (as `ParameterStoreRegistryFixture`).
     function _globals() internal view returns (GlobalParams memory g) {
-        g.cachedWindow = 3600;
-        g.disagreementPauseMax = 3600;
-        g.usdBandLow = 0.9e8;
-        g.usdBandHigh = 1.02e8;
-        g.graceDuration = 1800;
-        g.graceHealthFactor = 0.95e18;
         g.maxFlashFeeBps = uint16(MAX_FLASH_FEE_BPS);
         g.avanaFeeShareBps = uint16(AVANA_FEE_SHARE_BPS);
         g.feeRecipient = feeRecipient;
-        g.feedAgreementMarginBps = 50;
         g.gateRecoverySeconds = 1800;
         g.maxShortfallBps = uint16(MAX_SHORTFALL_BPS);
     }

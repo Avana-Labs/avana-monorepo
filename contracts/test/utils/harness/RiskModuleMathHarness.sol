@@ -51,20 +51,6 @@ contract RiskModuleMathHarness {
         return RiskModuleMath.split(c, regularUsed, marketCap, eligible);
     }
 
-    function poolShareExceeds(
-        uint256 units,
-        uint256 capBps,
-        uint256 depth
-    ) external pure returns (bool) {
-        return RiskModuleMath.poolShareExceeds(units, capBps, depth);
-    }
-
-    function atOrBelowPeg(
-        uint256[] memory quotes
-    ) external pure returns (bool) {
-        return RiskModuleMath.atOrBelowPeg(quotes);
-    }
-
     function rescueValue(
         uint256 units,
         uint256 price8,
@@ -83,10 +69,9 @@ contract RiskModuleMathHarness {
     }
 
     function requiredHealthFactor(
-        uint256 hardFloor,
         uint256 minHf
     ) external pure returns (uint256) {
-        return RiskModuleMath.requiredHealthFactor(hardFloor, minHf);
+        return RiskModuleMath.requiredHealthFactor(minHf);
     }
 
     function exemption(

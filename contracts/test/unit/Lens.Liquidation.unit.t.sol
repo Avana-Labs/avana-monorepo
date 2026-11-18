@@ -535,7 +535,7 @@ contract LensLiquidationUnitTest is LensFixture {
     function _params(
         uint16 slippage
     ) internal pure returns (MarketParamsLike memory) {
-        return MarketParamsLike(1800, 50, slippage, 30, 0, 10e8, 0);
+        return MarketParamsLike(slippage, 30, 0, 10e8);
     }
 
     function _updatePaused(

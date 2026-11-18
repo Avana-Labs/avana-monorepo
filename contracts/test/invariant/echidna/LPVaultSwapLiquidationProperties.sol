@@ -374,10 +374,6 @@ contract LiqWorld {
 
     // ─── ParameterStore ───
 
-    function graceHealthFactor() external pure returns (uint256) {
-        return 0.95e18;
-    }
-
     function getMarketParams(
         uint256
     ) external pure returns (MarketParams memory p) {
@@ -402,18 +398,6 @@ contract LiqWorld {
 
     function poke() external pure returns (PriceState) {
         return PriceState.Live;
-    }
-
-    /// @notice `getPriceState()`: a Live `PriceStateView` with every field zero and no token report, written as its
-    /// ABI encoding (the offset word, 25 head words with the `tokens` offset 0x320 in the sixth, the empty array).
-    function getPriceState() external pure {
-        assembly ("memory-safe") {
-            let p := mload(0x40)
-            calldatacopy(p, calldatasize(), 864)
-            mstore(p, 0x20)
-            mstore(add(p, 0xc0), 0x320)
-            return(p, 864)
-        }
     }
 
     function latestAnswer() external view returns (int256) {

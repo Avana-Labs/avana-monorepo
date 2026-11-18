@@ -24,18 +24,16 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
     ParameterStore internal impl;
     bytes internal oob = abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
-    bytes internal live = abi.encodeWithSelector(IParameterStoreBase.LivenessBound.selector);
 
     function setUp() public {
-        _deployStore(false);
-        impl = new ParameterStore(address(timelock), address(registry), BLOCK_TIME, false, logics);
+        _deployStore();
+        impl = new ParameterStore(address(timelock), address(registry), BLOCK_TIME, logics);
     }
 
     function _init(
-        GlobalParams memory g,
-        uint16 poolShare
+        GlobalParams memory g
     ) internal returns (bool ok, bytes memory err, IParameterStore s) {
-        bytes memory data = abi.encodeCall(IParameterStore.initialize, (address(timelock), g, poolShare));
+        bytes memory data = abi.encodeCall(IParameterStore.initialize, (address(timelock), g));
         try new ERC1967Proxy(address(impl), data) returns (ERC1967Proxy p) {
             (ok, s) = (true, IParameterStore(address(p)));
         } catch (bytes memory reason) {
@@ -47,7 +45,7 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         GlobalParams memory g,
         bytes memory expected
     ) internal {
-        (bool ok, bytes memory err,) = _init(g, 10_000);
+        (bool ok, bytes memory err,) = _init(g);
         assertFalse(ok, "initialize accepted an out-of-bounds value");
         assertEq(err, expected, "wrong initialize error");
     }
@@ -56,67 +54,11 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         GlobalParams memory g
     ) internal returns (IParameterStore s) {
         bool ok;
-        (ok,, s) = _init(g, 10_000);
+        (ok,, s) = _init(g);
         assertTrue(ok, "initialize refused an in-bounds value");
     }
 
     // ─── Each global value at its edges ───
-
-    // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-050, REQ-CONFIG-052
-    function test_TEST_242_disagreementPauseAtBothEnds() public {
-        GlobalParams memory g = _defaultGlobals();
-        g.disagreementPauseMax = 0;
-        assertEq(_accepted(g).disagreementPauseMax(), 0);
-        g.disagreementPauseMax = 1800;
-        assertEq(_accepted(g).disagreementPauseMax(), 1800);
-        g.disagreementPauseMax = 3600;
-        assertEq(_accepted(g).disagreementPauseMax(), 3600);
-        g.disagreementPauseMax = 3601;
-        _refused(g, live);
-    }
-
-    // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-052
-    function test_TEST_242_graceDurationAtBothEnds() public {
-        GlobalParams memory g = _defaultGlobals();
-        g.graceDuration = 0;
-        assertEq(_accepted(g).graceDuration(), 0);
-        g.graceDuration = 7200;
-        assertEq(_accepted(g).graceDuration(), 7200);
-        g.graceDuration = 7201;
-        _refused(g, live);
-    }
-
-    // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-052
-    function test_TEST_242_graceHealthFactorAtBothEnds() public {
-        GlobalParams memory g = _defaultGlobals();
-        g.graceHealthFactor = 0.9e18;
-        assertEq(_accepted(g).graceHealthFactor(), 0.9e18);
-        g.graceHealthFactor = 1e18 - 1;
-        assertEq(_accepted(g).graceHealthFactor(), 1e18 - 1);
-        g.graceHealthFactor = 0.9e18 - 1;
-        _refused(g, live);
-        g.graceHealthFactor = 1e18;
-        _refused(g, live);
-    }
-
-    // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-050, REQ-CONFIG-055
-    function test_TEST_242_cachedWindowAndBandEdges() public {
-        GlobalParams memory g = _defaultGlobals();
-        g.cachedWindow = 0;
-        _refused(g, oob);
-        g.cachedWindow = 1;
-        assertEq(_accepted(g).cachedWindow(), 1);
-        g = _defaultGlobals();
-        g.usdBandLow = 1e8;
-        _refused(g, oob);
-        g.usdBandLow = 1e8 - 1;
-        assertEq(_accepted(g).usdBandLow(), 1e8 - 1);
-        g = _defaultGlobals();
-        g.usdBandHigh = 1e8;
-        _refused(g, oob);
-        g.usdBandHigh = 1e8 + 1;
-        assertEq(_accepted(g).usdBandHigh(), 1e8 + 1);
-    }
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-024, REQ-PSTORE-010
     function test_TEST_242_flashFeeAndFeeShareEdges() public {
@@ -133,17 +75,6 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         g.avanaFeeShareBps = 5000;
         assertEq(_accepted(g).avanaFeeShareBps(), 5000);
         g.avanaFeeShareBps = 5001;
-        _refused(g, oob);
-    }
-
-    // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-024, REQ-CONFIG-050
-    function test_TEST_242_agreementMarginEdges() public {
-        GlobalParams memory g = _defaultGlobals();
-        g.feedAgreementMarginBps = 0;
-        assertEq(_accepted(g).feedAgreementMarginBps(), 0);
-        g.feedAgreementMarginBps = 10_000;
-        assertEq(_accepted(g).feedAgreementMarginBps(), 10_000);
-        g.feedAgreementMarginBps = 10_001;
         _refused(g, oob);
     }
 
@@ -173,23 +104,6 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         _refused(g, oob);
     }
 
-    // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-026, REQ-RISK-042, Q-403
-    function test_TEST_242_poolShareEdges() public {
-        GlobalParams memory g = _defaultGlobals();
-        (bool ok, bytes memory err, IParameterStore s) = _init(g, 0);
-        assertFalse(ok);
-        assertEq(err, oob);
-        (ok, err,) = _init(g, 10_001);
-        assertFalse(ok);
-        assertEq(err, oob);
-        (ok,, s) = _init(g, 1);
-        assertTrue(ok);
-        assertEq(s.poolShareMaxBps(), 1);
-        (ok,, s) = _init(g, 10_000);
-        assertTrue(ok);
-        assertEq(s.poolShareMaxBps(), 10_000);
-    }
-
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-056
     function test_TEST_242_feeRecipientCheckedAtInitialize() public {
         GlobalParams memory g = _defaultGlobals();
@@ -205,21 +119,15 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
     // ─── Check order ───
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-050, REQ-CONFIG-052
-    function test_TEST_242_livenessBeforeRangeBeforeRecipient() public {
+    function test_TEST_242_rangeBeforeRecipient() public {
         GlobalParams memory g = _defaultGlobals();
-        g.cachedWindow = 0;
         g.feeRecipient = address(0);
-        g.graceDuration = 7201;
-        _refused(g, live);
-        g.graceDuration = 1800;
-        g.graceHealthFactor = 1e18;
-        _refused(g, live);
-        g.graceHealthFactor = 0.95e18;
+        g.maxShortfallBps = 5001;
         _refused(g, oob);
-        g.cachedWindow = 3600;
+        g.maxShortfallBps = 1000;
         _refused(g, abi.encodeWithSelector(IParameterStoreBase.InvalidFeeRecipient.selector, address(0)));
         // The timelock argument is checked before any value.
-        bytes memory data = abi.encodeCall(IParameterStore.initialize, (alice, g, 0));
+        bytes memory data = abi.encodeCall(IParameterStore.initialize, (alice, g));
         vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.AdminRoleOnlyTimelock.selector, bytes32(0), alice));
         new ERC1967Proxy(address(impl), data);
     }
@@ -228,13 +136,11 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-PSTORE-023, REQ-ACCESS-153, REQ-ACCESS-150
     function test_TEST_242_initializeGrantsRolesAndEmits() public {
-        bytes memory data = abi.encodeCall(IParameterStore.initialize, (address(timelock), _defaultGlobals(), 10_000));
+        bytes memory data = abi.encodeCall(IParameterStore.initialize, (address(timelock), _defaultGlobals()));
         vm.expectEmit();
         emit IAccessControl.RoleGranted(bytes32(0), address(timelock), address(this));
         vm.expectEmit();
         emit IAccessControl.RoleGranted(AvanaRoles.APPLICATION_ADMIN, address(timelock), address(this));
-        vm.expectEmit();
-        emit IParameterStore.SequencerSet(address(0), 0);
         vm.expectEmit();
         emit Initializable.Initialized(1);
         IParameterStore s = IParameterStore(address(new ERC1967Proxy(address(impl), data)));
@@ -253,24 +159,13 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-050, REQ-ACCESS-101
     function test_TEST_242_everyInitialValueReadsBack() public view {
         GlobalParams memory g = _defaultGlobals();
-        assertEq(store.cachedWindow(), g.cachedWindow);
-        assertEq(store.disagreementPauseMax(), g.disagreementPauseMax);
-        assertEq(store.usdBandLow(), g.usdBandLow);
-        assertEq(store.usdBandHigh(), g.usdBandHigh);
-        assertEq(store.graceDuration(), g.graceDuration);
-        assertEq(store.graceHealthFactor(), g.graceHealthFactor);
         assertEq(store.maxFlashFeeBps(), g.maxFlashFeeBps);
         assertEq(store.avanaFeeShareBps(), g.avanaFeeShareBps);
         assertEq(store.feeRecipient(), g.feeRecipient);
-        assertEq(store.feedAgreementMarginBps(), g.feedAgreementMarginBps);
         assertEq(store.gateRecoverySeconds(), g.gateRecoverySeconds);
         assertEq(store.maxShortfallBps(), g.maxShortfallBps);
         // Fixed constants of the implementation.
-        assertEq(store.graceHealthFactorMin(), 0.9e18);
-        assertEq(store.graceDurationMax(), 7200);
-        assertEq(store.consistencyToleranceMinBps(), 10);
         assertEq(store.MAX_HEARTBEAT_MARGIN(), 3600);
-        assertEq(store.LOOSEN_HEALTH_FACTOR_STEP(), 0.03e18);
         assertEq(store.LOOSEN_CAP_STEP_BPS(), 15_000);
         assertEq(store.LOOSEN_SLIPPAGE_STEP_BPS(), 25);
     }
@@ -282,12 +177,14 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         bytes32 slot =
             keccak256(abi.encode(uint256(keccak256("avana.storage.ParameterStore")) - 1)) & ~bytes32(uint256(0xff));
         assertEq(slot, 0x97d60a1f76524429d85918aee5154ffd84c83f78fddb1d1f3d0a0bfeca081800);
-        // GlobalParams opens the layout: cachedWindow and disagreementPauseMax share the first word, then the band.
+        // GlobalParams opens the layout: the flash fee, the fee share, the recipient and the gate recovery share the
+        // first word, then the shortfall bound.
         uint256 w0 = uint256(vm.load(address(store), slot));
-        assertEq(uint32(w0), store.cachedWindow());
-        assertEq(uint32(w0 >> 32), store.disagreementPauseMax());
-        assertEq(uint256(vm.load(address(store), bytes32(uint256(slot) + 1))), store.usdBandLow());
-        assertEq(uint256(vm.load(address(store), bytes32(uint256(slot) + 2))), store.usdBandHigh());
+        assertEq(uint16(w0), store.maxFlashFeeBps());
+        assertEq(uint16(w0 >> 16), store.avanaFeeShareBps());
+        assertEq(address(uint160(w0 >> 32)), store.feeRecipient());
+        assertEq(uint64(w0 >> 192), store.gateRecoverySeconds());
+        assertEq(uint16(uint256(vm.load(address(store), bytes32(uint256(slot) + 1)))), store.maxShortfallBps());
         // Neither the implementation nor any logic contract holds a value of its own.
         assertEq(vm.load(address(implementation), slot), bytes32(0));
         assertEq(vm.load(logics.tighten, slot), bytes32(0));
@@ -297,28 +194,13 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
     // TEST-242 verifies: REQ-PSTORE-001, REQ-ACCESS-150, REQ-ACCESS-031
     function test_TEST_242_implementationCannotBeInitialized() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        impl.initialize(address(timelock), _defaultGlobals(), 10_000);
+        impl.initialize(address(timelock), _defaultGlobals());
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        implementation.initialize(address(timelock), _defaultGlobals(), 10_000);
+        implementation.initialize(address(timelock), _defaultGlobals());
         // A second initialize of the live proxy fails the same way, as the timelock too.
         _tl();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        store.initialize(address(timelock), _defaultGlobals(), 10_000);
-    }
-
-    // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-050, REQ-CONFIG-052
-    /// @notice Values past the far side of each bound are refused too: a grace health factor above 1, a band low above
-    /// $1 and a band high below $1.
-    function test_TEST_242_valuesPastTheEdgesRefused() public {
-        GlobalParams memory g = _defaultGlobals();
-        g.graceHealthFactor = 1.01e18;
-        _refused(g, live);
-        g = _defaultGlobals();
-        g.usdBandLow = 1.01e8;
-        _refused(g, oob);
-        g = _defaultGlobals();
-        g.usdBandHigh = 0.99e8;
-        _refused(g, oob);
+        store.initialize(address(timelock), _defaultGlobals());
     }
 
     // TEST-242 verifies: REQ-PSTORE-001, REQ-CONFIG-056
@@ -328,14 +210,14 @@ contract ParameterStoreInitializeUnitTest is ParameterStoreFixture {
         address noCode = makeAddr("registryNotYetDeployed");
         address tl = address(timelock);
         ParameterStoreLogics memory l = ParameterStoreLogics({
-            tighten: address(new ParameterStoreTightenLogic(tl, noCode, BLOCK_TIME, false)),
-            loosen: address(new ParameterStoreLoosenLogic(tl, noCode, BLOCK_TIME, false)),
-            listing: address(new ParameterStoreListingLogic(tl, noCode, BLOCK_TIME, false)),
-            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, noCode, BLOCK_TIME, false)),
-            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, noCode, BLOCK_TIME, false))
+            tighten: address(new ParameterStoreTightenLogic(tl, noCode, BLOCK_TIME)),
+            loosen: address(new ParameterStoreLoosenLogic(tl, noCode, BLOCK_TIME)),
+            listing: address(new ParameterStoreListingLogic(tl, noCode, BLOCK_TIME)),
+            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, noCode, BLOCK_TIME)),
+            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, noCode, BLOCK_TIME))
         });
-        ParameterStore early = new ParameterStore(tl, noCode, BLOCK_TIME, false, l);
-        bytes memory data = abi.encodeCall(IParameterStore.initialize, (tl, _defaultGlobals(), 10_000));
+        ParameterStore early = new ParameterStore(tl, noCode, BLOCK_TIME, l);
+        bytes memory data = abi.encodeCall(IParameterStore.initialize, (tl, _defaultGlobals()));
         IParameterStore s = IParameterStore(address(new ERC1967Proxy(address(early), data)));
         assertEq(s.feeRecipient(), feeRecipient);
     }

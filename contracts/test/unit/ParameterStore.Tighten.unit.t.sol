@@ -11,35 +11,8 @@ import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol
 /// @notice Tighten setters: strictly safer, within hard and liveness bounds, in that order (SPEC-GOV-011).
 contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
-    }
-
-    // TEST-064 verifies: REQ-PSTORE-031, REQ-CONFIG-050, REQ-CONFIG-051, REQ-CONFIG-067, Q-398, REQ-ACCESS-037, REQ-ACCESS-120
-    function test_TEST_064_hardHealthFloorRaisesWithinBounds() public {
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterTightened("hardHealthFloor", bytes32(M), 0, 1.1e18, address(timelock));
-        store.tightenHardHealthFloor(M, 1.1e18);
-        _tl();
-        store.tightenHardHealthFloor(M, 1.12e18);
-        assertEq(store.hardHealthFloor(M), 1.12e18);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
-        store.tightenHardHealthFloor(M, 1.08e18);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.tightenHardHealthFloor(M, 1.3e18);
-    }
-
-    // TEST-064 verifies: REQ-PSTORE-031, REQ-CONFIG-050
-    function test_TEST_064_hardHealthFloorBelowOneRejected() public {
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.tightenHardHealthFloor(M, 0.99e18);
-        _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.UnknownMarket.selector, 9));
-        store.tightenHardHealthFloor(9, 1.1e18);
     }
 
     // TEST-064 verifies: REQ-CONFIG-052, REQ-CONFIG-041, REQ-PSTORE-015, INV-047
@@ -60,37 +33,6 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         _tl();
         vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
         store.tightenSlippageAllowanceBps(M, 29);
-    }
-
-    // TEST-064 verifies: REQ-CONFIG-052, SPEC-GOV-009, REQ-PSTORE-009, INV-047, REQ-ACCESS-039, REQ-ACCESS-097, REQ-ACCESS-076
-    function test_TEST_064_consistencyTolerance() public {
-        _tl();
-        store.tightenConsistencyToleranceBps(M, 10);
-        assertEq(store.getMarketParams(M).consistencyToleranceBps, 10);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
-        store.tightenConsistencyToleranceBps(M, 10);
-        _tl();
-        store.setConsistencyToleranceBps(M, 50);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
-        store.tightenConsistencyToleranceBps(M, 9);
-    }
-
-    // TEST-064 verifies: REQ-CONFIG-024, REQ-CONFIG-052, SPEC-GOV-009, REQ-ACCESS-040, REQ-ACCESS-098, REQ-ACCESS-077
-    function test_TEST_064_feedToleranceNeverBelowLowerBound() public {
-        // dev(primary) 25 + dev(alternate) 25 + margin 50 = 100.
-        assertEq(store.feedAgreementToleranceMinBps(usdc), 100);
-        _tl();
-        store.tightenFeedAgreementToleranceBps(usdc, 100);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
-        store.tightenFeedAgreementToleranceBps(usdc, 100);
-        _tl();
-        store.setFeedAgreementToleranceBps(usdc, 150);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.LivenessBound.selector);
-        store.tightenFeedAgreementToleranceBps(usdc, 99);
     }
 
     // TEST-064 verifies: REQ-CONFIG-023, REQ-PSTORE-009, Q-182, REQ-ACCESS-038
@@ -179,24 +121,6 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         _tl();
         store.tightenTokenUsdCap(h, usdc, 0);
         assertEq(store.tokenUsdCap(h, usdc), 0);
-    }
-
-    // TEST-272 verifies: REQ-RISK-042, SPEC-CAP-005, Q-383, Q-399, Q-403
-    function test_TEST_272_poolShareDefaultAndOverride() public {
-        bytes32 key = keccak256(abi.encode(uint32(1), address(pool), bytes32(0)));
-        assertEq(store.poolShareMaxBpsOf(key), 10_000);
-        _tl();
-        store.tightenPoolShareMaxBpsOf(M, 1000);
-        assertEq(store.poolShareMaxBpsOf(key), 1000);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.NotStricter.selector);
-        store.tightenPoolShareMaxBpsOf(M, 1000);
-        _tl();
-        store.tightenPoolShareMaxBps(500);
-        assertEq(store.poolShareMaxBpsOf(key), 500); // the override never exceeds the default
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.tightenPoolShareMaxBps(0);
     }
 
     // TEST-064 verifies: REQ-PSTORE-005, Q-230
@@ -289,15 +213,6 @@ contract ParameterStoreTightenUnitTest is ParameterStoreFixture {
         (bool ok,) = address(store).call(abi.encodeCall(store.tightenSlippageAllowanceBps, (M, value)));
         assertEq(ok, value < 100 && value >= 30);
         assertGe(store.getMarketParams(M).slippageAllowanceBps, store.slippageAllowanceMinBps(M));
-    }
-
-    // TEST-064 verifies: REQ-PSTORE-031, REQ-CONFIG-051
-    function testFuzz_TEST_064_tightenHardFloorInBounds(
-        uint256 value
-    ) public {
-        _tl();
-        (bool ok,) = address(store).call(abi.encodeCall(store.tightenHardHealthFloor, (M, value)));
-        assertEq(ok, value >= 1e18 && value <= 1.25e18);
     }
 
     // TEST-064 verifies: REQ-PSTORE-011

@@ -89,7 +89,7 @@ contract AaveAdapterAaveStatesIntegrationTest is RealStackFlows {
         _refreshFeeds();
     }
 
-    /// @dev The LPOracles' grace window (`graceDuration`, 1,800 s) passes with fresh rounds.
+    /// @dev 1,801 s pass with fresh rounds.
     function _waitOutGrace() internal {
         vm.warp(block.timestamp + 1801);
         vm.roll(block.number + 1801 / BLOCK_TIME);

@@ -130,14 +130,14 @@ contract MarketRegistryActivationChecksUnitTest is MarketRegistryFixture {
 
     // TEST-231 verifies: REQ-CONFIG-026, REQ-CONFIG-034, REQ-MREG-027
     // A price-source change is checked against a market that is only Registered too: re-pointing USDT's alternate at
-    // USDC's standby feed breaks the common-mode guard of the listed USDC/USDT market and is refused, so the market
+    // USDC's alternate feeds breaks the common-mode guard of the listed USDC/USDT market and is refused, so the market
     // still activates.
     function test_TEST_231_priceSourceChangeGuardsARegisteredMarket() public {
-        address[] memory usdcStandby = registry.getToken(address(usdc)).standbyRoute;
-        (address[] memory p,, address[] memory s) = _routes("usdt2");
+        address[] memory usdcAlt = registry.getToken(address(usdc)).alternateRoute;
+        (address[] memory p,) = _routes("usdt2");
         vm.prank(address(timelock));
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.ListingCheckFailed.selector, bytes32("commonMode")));
-        registry.setPriceSource(address(usdt), p, usdcStandby, s);
+        registry.setPriceSource(address(usdt), p, usdcAlt);
         _activate();
     }
 

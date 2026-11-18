@@ -13,7 +13,6 @@ import {
     WindDownState
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {DriftReason, Market, PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
-import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistrySpokeImplMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
 import {RegistryLPOracleMock} from "../utils/mocks/MarketRegistryMocks.sol";
@@ -117,11 +116,6 @@ contract MarketRegistryViewsUnitTest is MarketRegistryFixture {
         assertFalse(registry.isFrozenAddress(anyAddr));
         assertEq(registry.freezesInWindow(anyAddr), 0);
         assertEq(registry.activeMarketCount(anyAddr), 0);
-        (address[] memory p, address[] memory a, RouteSlot replaced) = registry.activePriceRoutes(anyAddr);
-        assertEq(p.length + a.length, 0);
-        assertEq(uint8(replaced), uint8(RouteSlot.None));
-        assertEq(registry.standbySwitchLockedUntil(anyAddr), 0);
-        assertEq(registry.priceRouteVersion(anyAddr), 0);
         (uint32 latched, uint64 at) = registry.marketBreaker(anyId);
         assertEq(uint256(latched) + at, 0);
     }

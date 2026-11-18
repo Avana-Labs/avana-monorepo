@@ -10,7 +10,7 @@ import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol
 /// @notice Loosen setters: strictly looser, within bounds, one step, at most once per `normalDelay` per key.
 contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
     }
 
@@ -19,43 +19,6 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         bytes32 scope
     ) internal pure returns (bytes32) {
         return keccak256(abi.encode(name, scope));
-    }
-
-    // TEST-225 verifies: REQ-PSTORE-017, REQ-PSTORE-031, SPEC-GOV-011, Q-246, Q-398, REQ-ACCESS-037, REQ-ACCESS-120
-    function test_TEST_225_hardFloorStepAndSpacing() public {
-        _tl();
-        store.tightenHardHealthFloor(M, 1.1e18);
-        bytes32 key = _key("hardHealthFloor", bytes32(M));
-        _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.LoosenStepTooLarge.selector, key));
-        store.loosenHardHealthFloor(M, 1.0699e18);
-        uint256 t = block.timestamp;
-        _tl();
-        store.loosenHardHealthFloor(M, 1.07e18);
-        assertEq(store.lastLoosenedAt(key), t);
-        vm.warp(t + 3 days);
-        _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.LoosenTooSoon.selector, key, t + 432_000));
-        store.loosenHardHealthFloor(M, 1.04e18);
-        vm.warp(t + 432_000);
-        _tl();
-        store.loosenHardHealthFloor(M, 1.04e18);
-        vm.warp(block.timestamp + 432_000);
-        // From 1.04 a value below 1.00 counts as 1.00 in the step: 0.04 > 0.03.
-        _tl();
-        vm.expectRevert(abi.encodeWithSelector(IParameterStoreBase.LoosenStepTooLarge.selector, key));
-        store.loosenHardHealthFloor(M, 0);
-        _tl();
-        store.loosenHardHealthFloor(M, 1.03e18);
-        vm.warp(block.timestamp + 432_000);
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterLoosened("hardHealthFloor", bytes32(M), 1.03e18, 0, address(timelock));
-        store.loosenHardHealthFloor(M, 0.5e18);
-        assertEq(store.hardHealthFloor(M), 0);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.NotLooser.selector);
-        store.loosenHardHealthFloor(M, 0);
     }
 
     // TEST-225 verifies: REQ-PSTORE-017, REQ-CONFIG-071, SPEC-GOV-011, Q-246, REQ-ACCESS-041
@@ -170,26 +133,6 @@ contract ParameterStoreLoosenUnitTest is ParameterStoreFixture {
         _tl();
         vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
         store.loosenTokenUsdCap(h, usdc, uint256(type(uint128).max) + 1);
-    }
-
-    // TEST-225 verifies: REQ-RISK-043, SPEC-CAP-005, Q-383, Q-399
-    function test_TEST_225_poolShareLoosening() public {
-        bytes32 poolKey = keccak256(abi.encode(uint32(1), address(pool), bytes32(0)));
-        _tl();
-        store.tightenPoolShareMaxBpsOf(M, 1000);
-        _tl();
-        store.tightenPoolShareMaxBps(5000);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.loosenPoolShareMaxBpsOf(M, 5001);
-        _tl();
-        store.loosenPoolShareMaxBpsOf(M, 5000);
-        assertEq(store.poolShareMaxBpsOf(poolKey), 5000);
-        _tl();
-        store.loosenPoolShareMaxBps(10_000);
-        _tl();
-        vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        store.loosenPoolShareMaxBps(10_001);
     }
 
     // TEST-225 verifies: REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-030, REQ-PSTORE-005, Q-399, REQ-ACCESS-165

@@ -150,9 +150,6 @@ contract MarketRegistrySafetyLogic is MarketRegistryStorage, IMarketRegistryLogi
             if (temp & BreakerReasons.ORACLE != 0) {
                 l.lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.ORACLE)] = at;
             }
-            if (temp & BreakerReasons.POOL_SHARE != 0) {
-                l.lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_SHARE)] = at;
-            }
             if (temp & BreakerReasons.POOL_DEPTH != 0) {
                 l.lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_DEPTH)] = at;
             }

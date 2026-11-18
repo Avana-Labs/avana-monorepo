@@ -19,7 +19,6 @@ import {IAggregatorV3} from "../../interfaces/external/chainlink/IAggregatorV3.s
 import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {Market, MarketDef} from "../../types/MarketTypes.sol";
-import {RouteSlot} from "../../types/OracleTypes.sol";
 import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
 import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
@@ -185,15 +184,14 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         _onlyDelegated();
         TokenDef storage t = _s().tokens[token];
         if (token == address(0) || t.listed) revert ListingCheckFailed("listed");
-        if (def.replacedSlot != RouteSlot.None) revert ListingCheckFailed("replacedSlot");
         // An ERC-777 token is never listed, so its hooks never run inside a custody, settlement or route call.
         if (_isErc777Token(token)) revert ListingCheckFailed("erc777");
-        if (def.alternateRoute.length == 0 && def.standbyRoute.length == 0) {
+        if (def.alternateRoute.length == 0) {
             // Monitoring-only listing: one route; serves only a fixed-price debt reserve.
             bytes32 bad = _routeLegsCheck(def.primaryRoute);
             if (bad != 0) revert ListingCheckFailed(bad);
         } else {
-            _checkThreeRoutes(def.primaryRoute, def.alternateRoute, def.standbyRoute);
+            _checkTwoRoutes(def.primaryRoute, def.alternateRoute);
         }
         uint8 dec = IERC20Metadata(token).decimals();
         t.listed = true;
@@ -201,8 +199,6 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         t.isUsdStable = def.isUsdStable;
         t.primaryRoute = def.primaryRoute;
         t.alternateRoute = def.alternateRoute;
-        t.standbyRoute = def.standbyRoute;
-        t.replacedSlot = RouteSlot.None;
         t.issuerProbe = def.issuerProbe;
         t.pegModule = def.pegModule;
         emit TokenListed(token, dec, def.primaryRoute, def.alternateRoute, def.pegModule);
@@ -211,25 +207,16 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
     function setPriceSource(
         address token,
         address[] calldata primaryRoute,
-        address[] calldata alternateRoute,
-        address[] calldata standbyRoute
+        address[] calldata alternateRoute
     ) external {
         _onlyDelegated();
         Layout storage l = _s();
         TokenDef storage t = l.tokens[token];
         if (!t.listed) revert TokenNotListed(token);
-        _checkThreeRoutes(primaryRoute, alternateRoute, standbyRoute);
+        _checkTwoRoutes(primaryRoute, alternateRoute);
         t.primaryRoute = primaryRoute;
         t.alternateRoute = alternateRoute;
-        t.standbyRoute = standbyRoute;
-        t.replacedSlot = RouteSlot.None;
-        delete l.standbyCancelledAt[token];
-        ++l.priceRouteVersion[token];
         // The checks below read the routes from this registry, so they run after the write.
-        IParameterStore ps = IParameterStore(_PARAMETER_STORE);
-        if (ps.feedAgreementToleranceBps(token) < ps.feedAgreementToleranceMinBps(token)) {
-            revert ListingCheckFailed("tolerance");
-        }
         uint256 count = l.marketCount;
         bytes32 failed = 0;
         for (uint256 id = 1; id <= count && failed == 0; ++id) {
@@ -239,7 +226,7 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
             failed = _checkMarketRoutes(id, marketTokens, m.lpOracle);
         }
         if (failed != 0) revert ListingCheckFailed(failed);
-        emit PriceSourceSet(token, primaryRoute, alternateRoute, standbyRoute);
+        emit PriceSourceSet(token, primaryRoute, alternateRoute);
     }
 
     function listCollateralMarket(
@@ -312,18 +299,14 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         _writeMarket(marketId, lpVault, tokens, decs, unitDecimals, def);
     }
 
-    function _checkThreeRoutes(
+    function _checkTwoRoutes(
         address[] calldata primary,
-        address[] calldata alternate,
-        address[] calldata standby
+        address[] calldata alternate
     ) private view {
         bytes32 bad = _routeLegsCheck(primary);
         if (bad == 0) bad = _routeLegsCheck(alternate);
-        if (bad == 0) bad = _routeLegsCheck(standby);
         if (bad != 0) revert ListingCheckFailed(bad);
-        if (_shareFeed(primary, alternate) || _shareFeed(primary, standby) || _shareFeed(alternate, standby)) {
-            revert ListingCheckFailed("sharedFeed");
-        }
+        if (_shareFeed(primary, alternate)) revert ListingCheckFailed("sharedFeed");
     }
 
     function _bind(

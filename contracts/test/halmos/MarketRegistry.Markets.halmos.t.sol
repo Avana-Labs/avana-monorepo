@@ -24,7 +24,6 @@ import {
     TokenDef
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketDef} from "../../src/types/MarketTypes.sol";
-import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
 import {
     RegistryAaveOracleMock,
@@ -319,10 +318,7 @@ contract MarketRegistryMarketsHalmosTest is Test {
         t.isUsdStable = true;
         t.primaryRoute = _feed();
         t.alternateRoute = _feed();
-        t.standbyRoute = _feed();
-        t.replacedSlot = RouteSlot.None;
         t.issuerProbe = probe;
-        ps.setTolerance(token, 100, 50);
         vm.prank(TIMELOCK);
         registry.listToken(token, t);
     }

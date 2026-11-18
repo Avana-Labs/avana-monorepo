@@ -3,9 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RiskStatus} from "../../amm/types/AmmTypes.sol";
 import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
-import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IFlashSource} from "../../flash/IFlashSource.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
@@ -26,9 +24,6 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// @notice Lens module serving `ILensPreview`.
 contract LensPreviewModule is LensDeleverage, ILensPreview {
     // forge-lint: disable-start(calls-loop)
-    /// @dev A pool-share cap of 10,000 bps is no limit.
-    uint256 internal constant NO_POOL_SHARE_CAP = 10_000;
-
     struct Borrow {
         Market m;
         DebtReserveDef def;
@@ -99,7 +94,7 @@ contract LensPreviewModule is LensDeleverage, ILensPreview {
         uint256 floor = _store().stressFloorUsd(marketId);
         usdCharge = Math.mulDiv(added, accepted > floor ? accepted : floor, 10 ** m.decimals, Math.Rounding.Ceil);
         address depositor = coll.getRecord(coll.recordIdOf(m.integrationId, positionKey)).depositor;
-        rescueOnly = _rescueOnly(marketId, m, depositor, added, usdCharge);
+        rescueOnly = _rescueOnly(marketId, m, depositor, usdCharge);
     }
 
     /// @inheritdoc ILensPreview
@@ -166,11 +161,9 @@ contract LensPreviewModule is LensDeleverage, ILensPreview {
         uint256 riskPremium,
         uint256 deadline
     ) internal view returns (uint256 ht) {
-        uint256 h0 = _store().hardHealthFloor(b.marketId);
-        if (h0 < WAD_) h0 = WAD_;
         uint256 bps = SettlementMath.BPS;
         uint256 growth = _growth(_maxRate(b, riskPremium), deadline);
-        ht = Math.mulDiv(h0, growth * (bps + LensConstants.BORROW_MAX_MARGIN_BPS), RAY_UNIT * bps, Math.Rounding.Ceil);
+        ht = Math.mulDiv(WAD_, growth * (bps + LensConstants.BORROW_MAX_MARGIN_BPS), RAY_UNIT * bps, Math.Rounding.Ceil);
     }
 
     /// @dev `⌊max(0, weighted × WAD / target − debtValue) / unitValue⌋`, capped by the draw-cap headroom.
@@ -229,7 +222,6 @@ contract LensPreviewModule is LensDeleverage, ILensPreview {
         uint256 marketId,
         Market memory m,
         address depositor,
-        uint256 added,
         uint256 usdCharge
     ) internal view returns (bool) {
         if (_registry().pauseState(m.hub) == PauseState.Paused && _registry().pauseReason(m.hub) == PauseReason.General)
@@ -239,15 +231,7 @@ contract LensPreviewModule is LensDeleverage, ILensPreview {
         if (_registry().isFrozenAddress(depositor) || usdCharge < _store().minPledgeUsd(marketId)) return true;
         // forge-lint: disable-next-line(unused-return)
         (uint32 reasons,) = IRiskModule(_RISK_MODULE).getBreakerStatus(marketId);
-        if (reasons & ~(BreakerReasons.ORACLE | BreakerReasons.CONFIG_DRIFT) != 0) return true;
-        bytes32 key = keccak256(abi.encode(m.integrationId, m.pool, m.poolId));
-        uint256 cap = _store().poolShareMaxBpsOf(key);
-        if (cap >= NO_POOL_SHARE_CAP) return false;
-        RiskStatus memory rs =
-            ILPVault(m.integration).riskStatus(marketId, _store().getMarketParams(marketId).twapWindow);
-        if (!rs.depthAvailable) return true;
-        uint256 units = ICollateralization(_COLLATERALIZATION).poolUnits(key) + added;
-        return RiskModuleMath.poolShareExceeds(units, cap, rs.depthUnits);
+        return reasons & ~(BreakerReasons.ORACLE | BreakerReasons.CONFIG_DRIFT) != 0;
     }
     // forge-lint: disable-end(calls-loop)
 

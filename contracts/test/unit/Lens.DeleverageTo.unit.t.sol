@@ -97,6 +97,5 @@ contract LensDeleverageToUnitTest is LensFixture {
         assertEq(v.debtReserveIds.length, 1, "GHO only");
         assertEq(v.borrowRatesRay.length, 1, "one rate");
         assertEq(v.debtReserveIds[0], debtReserveId, "GHO");
-        assertEq(v.hardHealthFloor, 0, "no hard floor by default");
     }
 }

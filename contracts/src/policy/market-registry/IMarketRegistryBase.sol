@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {PauseReason, PauseState} from "../../types/MarketTypes.sol";
-import {RouteSlot} from "../../types/OracleTypes.sol";
 import {BreakerScope} from "./types/Breaker.sol";
 
 /// @title IMarketRegistryBase
@@ -87,18 +86,6 @@ interface IMarketRegistryBase {
 
     error NotRiskModule();
 
-    /// @notice `useStandbyRoute` for a token with an empty standby route.
-    error NoStandbyRoute(address token);
-
-    /// @notice `useStandbyRoute` while a slot is already replaced.
-    error StandbyAlreadyActive(address token);
-
-    /// @notice `cancelStandbySwitch` or `restorePriceRoute` with no slot replaced.
-    error StandbyNotActive(address token);
-
-    /// @notice A route slot other than `Primary` or `Alternate`.
-    error InvalidRouteSlot();
-
     /// @notice Liquidation of this (market, debt reserve) pair would have no usable swap route or flash source.
     error LivenessBound(address spoke, uint256 marketId, uint256 debtReserveId);
 
@@ -138,7 +125,7 @@ interface IMarketRegistryBase {
     );
 
     /// @notice Emitted by `setPriceSource`.
-    event PriceSourceSet(address token, address[] primaryRoute, address[] alternateRoute, address[] standbyRoute);
+    event PriceSourceSet(address token, address[] primaryRoute, address[] alternateRoute);
 
     /// @notice Emitted by `listCollateralMarket`.
     /// @param pool Pool address (address(0) for an AMM protocol keyed by identifier).
@@ -193,18 +180,9 @@ interface IMarketRegistryBase {
     /// @param reasons Latched reason bits after the call.
     event BreakerLatched(BreakerScope indexed scope, bytes32 indexed key, uint32 reasons);
 
-    /// @notice `recordBreach` saw a temporary gate (`ORACLE`, `POOL_SHARE`, `POOL_DEPTH`) breached.
+    /// @notice `recordBreach` saw a temporary gate (`ORACLE`, `POOL_DEPTH`) breached.
     /// @param at New `lastBreachAt(key)`, seconds.
     event GateBreached(bytes32 indexed key, uint32 reasons, uint64 at);
 
     event BreakerReset(BreakerScope indexed scope, bytes32 indexed key, address indexed caller);
-
-    /// @notice A token's standby route replaced one of its routes.
-    event StandbyRouteActivated(address indexed token, RouteSlot slot, address indexed caller);
-
-    /// @notice The Aave governance executor undid a standby switch.
-    event StandbySwitchCancelled(address indexed token, address indexed caller);
-
-    /// @notice The replaced slot returned to its recorded route.
-    event PriceRouteRestored(address indexed token);
 }

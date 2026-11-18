@@ -72,7 +72,7 @@ interface IRiskModule is IRiskModuleErrors {
     ) external;
 
     /// @notice Post-action health gate after a borrow, a withdraw-with-debt or a partial removal with debt.
-    /// @dev Reverts unless the rescue-excluded HF >= `max(1e18, hardHealthFloor(marketId), minHealthFactor)`.
+    /// @dev Reverts unless the rescue-excluded HF >= `max(1e18, minHealthFactor)`.
     /// @param minHealthFactor The caller's minimum, WAD; 0 for none.
     /// @return healthFactor The rescue-excluded health factor, WAD.
     function postHealthCheck(

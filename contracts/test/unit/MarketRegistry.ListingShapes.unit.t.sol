@@ -8,7 +8,6 @@ import {ITetherFee} from "../../src/interfaces/external/tether/ITetherFee.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {IssuerProbe} from "../../src/policy/market-registry/types/IssuerProbe.sol";
 import {DebtReserveDef, TokenDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {MarketRegistryDebtChecksHarness} from "../utils/harness/MarketRegistryDebtChecksHarness.sol";
 import {
@@ -43,8 +42,6 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         d.isUsdStable = true;
         d.primaryRoute = p;
         d.alternateRoute = new address[](0);
-        d.standbyRoute = new address[](0);
-        d.replacedSlot = RouteSlot.None;
         d.issuerProbe = IssuerProbe.None;
     }
 
@@ -56,14 +53,13 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         registry.listToken(token, _monitoringDef(feed));
     }
 
-    /// @dev Gives `token` three routes through `setPriceSource`.
-    function _giveThreeRoutes(
+    /// @dev Gives `token` both routes through `setPriceSource`.
+    function _giveBothRoutes(
         address token
     ) internal {
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("three");
-        ps.setTolerance(token, 100, 50);
+        (address[] memory p, address[] memory a) = _routes("both");
         vm.prank(address(timelock));
-        registry.setPriceSource(token, p, a, s);
+        registry.setPriceSource(token, p, a);
     }
 
     /// @dev The Aave reserve, AaveOracle source and funded First-Loss Reserve of a new debt reserve of `asset`.
@@ -136,10 +132,9 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         address token,
         IssuerProbe probe
     ) internal {
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("probe");
-        TokenDef memory d = _tokenDef(p, a, s);
+        (address[] memory p, address[] memory a) = _routes("probe");
+        TokenDef memory d = _tokenDef(p, a);
         d.issuerProbe = probe;
-        ps.setTolerance(token, 100, 50);
         vm.prank(address(timelock));
         registry.listToken(token, d);
     }
@@ -165,27 +160,17 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         assertEq(t.primaryRoute.length, 1);
         assertEq(t.primaryRoute[0], feed);
         assertEq(t.alternateRoute.length, 0);
-        assertEq(t.standbyRoute.length, 0);
         assertEq(uint8(t.issuerProbe), uint8(IssuerProbe.None));
-        (address[] memory primary, address[] memory alternate, RouteSlot replaced) =
-            registry.activePriceRoutes(address(ghoM));
-        assertEq(primary[0], feed);
-        assertEq(alternate.length, 0);
-        assertEq(uint8(replaced), uint8(RouteSlot.None));
         // Enabled as a fixed-price debt reserve with Aave's fixed source.
         DebtReserveDef memory r = _reserveFor(address(ghoM), 18, address(new RegistryFeedMock(8, 1e8)), true);
         _enable(r);
         assertTrue(registry.getDebtReserve(address(spoke), NEW_RESERVE).approved);
         assertTrue(registry.getDebtReserve(address(spoke), NEW_RESERVE).fixedPrice);
-        // There is no standby to switch to.
-        vm.prank(emergencyGuardian);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.NoStandbyRoute.selector, address(ghoM)));
-        registry.useStandbyRoute(address(ghoM), RouteSlot.Primary);
     }
 
     // TEST-139 verifies: REQ-CONFIG-021, REQ-MREG-027
-    /// @notice The monitoring feed still passes the leg checks, and only an empty alternate together with an empty
-    /// standby is a monitoring-only listing: one empty route of the three is refused as before.
+    /// @notice The monitoring feed still passes the leg checks, and an empty primary route is refused whether or not
+    /// the alternate route is set.
     function test_TEST_139_monitoringListingKeepsItsLegChecks() public {
         address noDef = address(new RegistryFeedMock(8, 1e8));
         address noBeat = address(new RegistryFeedMock(8, 1e8));
@@ -198,18 +183,15 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         _expectListing("feed");
         registry.listToken(address(ghoM), _monitoringDef(address(0)));
         vm.stopPrank();
-        (address[] memory p, address[] memory a, address[] memory s) = _routes("partial");
+        (address[] memory p, address[] memory a) = _routes("partial");
         TokenDef memory onlyAlt = _monitoringDef(p[0]);
+        onlyAlt.primaryRoute = new address[](0);
         onlyAlt.alternateRoute = a;
-        TokenDef memory onlyStandby = _monitoringDef(p[0]);
-        onlyStandby.standbyRoute = s;
         TokenDef memory noPrimary = _monitoringDef(p[0]);
         noPrimary.primaryRoute = new address[](0);
         vm.startPrank(address(timelock));
         _expectListing("routeLength");
         registry.listToken(address(ghoM), onlyAlt);
-        _expectListing("routeLength");
-        registry.listToken(address(ghoM), onlyStandby);
         _expectListing("routeLength");
         registry.listToken(address(ghoM), noPrimary);
         vm.stopPrank();
@@ -219,9 +201,9 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
     // TEST-139 verifies: REQ-CONFIG-021, REQ-CONFIG-017, REQ-CONFIG-029, REQ-CONFIG-027
     // Sources: Configuration decision 2026-11-11 (GHO listing)
     /// @notice A monitoring-only token, a fixed-price debt reserve included, is refused as a pool token of a new market
-    /// until `setPriceSource` gives it three routes. Fails without the route check in `_checkTokens` (the first
+    /// until `setPriceSource` gives it both routes. Fails without the route check in `_checkTokens` (the first
     /// registration succeeds).
-    function test_TEST_139_monitoringOnlyTokenIsNoPoolTokenUntilItHasThreeRoutes() public {
+    function test_TEST_139_monitoringOnlyTokenIsNoPoolTokenUntilItHasBothRoutes() public {
         _listMonitoring(address(ghoM));
         _enable(_reserveFor(address(ghoM), 18, address(new RegistryFeedMock(8, 1e8)), true));
         address[] memory toks = new address[](2);
@@ -238,8 +220,8 @@ contract MarketRegistryListingShapesUnitTest is MarketRegistryFixture {
         vm.prank(address(timelock));
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.TokenNotListed.selector, unlisted));
         registry.listCollateralMarket(_marketDef(vt, address(o)));
-        // With three routes the token is an ordinary listed token and the market registers.
-        _giveThreeRoutes(address(ghoM));
+        // With both routes the token is an ordinary listed token and the market registers.
+        _giveBothRoutes(address(ghoM));
         (toks[0], toks[1]) = (address(usdc), address(ghoM));
         lpVault.setPoolTokens(toks, 18);
         vm.prank(address(timelock));

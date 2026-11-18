@@ -7,10 +7,8 @@ import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
 import {Market} from "../../types/MarketTypes.sol";
-import {SecondSource, SecondSourceKind} from "../../types/OracleTypes.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
-import {DebtReserveDef, TokenDef} from "../market-registry/types/MarketRegistryTypes.sol";
-import {IParameterStore} from "./IParameterStore.sol";
+import {DebtReserveDef} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
 import {ParameterStoreRisk} from "./ParameterStoreRisk.sol";
 import {ParameterStoreStorage} from "./ParameterStoreStorage.sol";
@@ -18,7 +16,7 @@ import {GlobalParams, MarketParams} from "./types/ParameterStoreTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title ParameterStoreAdminRiskLogic
-/// @notice Bodies of the structural risk setters, the second-source setters and the initial parameter write.
+/// @notice Bodies of the structural risk setters and the initial parameter write.
 /// @dev Reached only by delegatecall from the ParameterStore, which checks the caller's role.
 // Bodies of selectors the ParameterStore declares; only fully implemented pieces are inherited.
 // solhint-disable comprehensive-interface
@@ -32,43 +30,32 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
     constructor(
         address timelock,
         address marketRegistry,
-        uint32 chainBlockTime,
-        bool hasSequencer
-    ) ParameterStoreStorage(timelock, marketRegistry, chainBlockTime, hasSequencer) {}
+        uint32 chainBlockTime
+    ) ParameterStoreStorage(timelock, marketRegistry, chainBlockTime) {}
 
     /// @inheritdoc IParameterStoreLogic
     function logicConfig()
         external
         view
         override
-        returns (bytes32 kind, address timelock, address marketRegistry, uint32 chainBlockTime, bool hasSequencer)
+        returns (bytes32 kind, address timelock, address marketRegistry, uint32 chainBlockTime)
     {
-        return (keccak256("ParameterStoreAdminRiskLogic"), _TIMELOCK, address(_REGISTRY), _BLOCK_TIME, _HAS_SEQUENCER);
+        return (keccak256("ParameterStoreAdminRiskLogic"), _TIMELOCK, address(_REGISTRY), _BLOCK_TIME);
     }
 
     /// @notice Body of `IParameterStore.initialize`: checks and writes the global values.
-    /// @dev The sequencer check starts empty; on an L2 the first batch calls `setSequencer`.
     function initialize(
         address,
-        GlobalParams calldata params,
-        uint16 initialPoolShareMaxBps
+        GlobalParams calldata params
     ) external {
         _onlyDelegated();
-        if (params.disagreementPauseMax > DISAGREEMENT_PAUSE_MAX || params.graceDuration > GRACE_DURATION_MAX) {
-            revert LivenessBound();
-        }
-        if (params.graceHealthFactor < GRACE_HF_MIN || params.graceHealthFactor >= WAD) revert LivenessBound();
         if (
-            params.cachedWindow == 0 || params.usdBandLow >= ONE_USD || params.usdBandHigh <= ONE_USD
-                || params.maxFlashFeeBps > FLASH_FEE_MAX_BPS || params.avanaFeeShareBps > FEE_SHARE_MAX_BPS
-                || params.feedAgreementMarginBps > BPS || params.gateRecoverySeconds < GATE_RECOVERY_MIN
-                || params.gateRecoverySeconds > GATE_RECOVERY_MAX || params.maxShortfallBps > SHORTFALL_MAX_BPS
-                || initialPoolShareMaxBps == 0 || initialPoolShareMaxBps > BPS
+            params.maxFlashFeeBps > FLASH_FEE_MAX_BPS || params.avanaFeeShareBps > FEE_SHARE_MAX_BPS
+                || params.gateRecoverySeconds < GATE_RECOVERY_MIN || params.gateRecoverySeconds > GATE_RECOVERY_MAX
+                || params.maxShortfallBps > SHORTFALL_MAX_BPS
         ) revert OutOfBounds();
         _requireFeeRecipient(params.feeRecipient);
         _s().g = params;
-        _s().poolShareMaxBps = initialPoolShareMaxBps;
-        emit IParameterStore.SequencerSet(address(0), 0);
     }
 
     /// @notice Body of `IParameterStore.setPoolRiskFactor`.
@@ -107,66 +94,6 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         address old = _s().g.feeRecipient;
         _s().g.feeRecipient = recipient;
         emit ParameterSet("feeRecipient", bytes32(0), uint160(old), uint160(recipient));
-    }
-
-    /// @notice Body of `IParameterStore.setSecondSource`.
-    function setSecondSource(
-        address token,
-        SecondSource calldata src,
-        SecondSource calldata standby
-    ) external {
-        _onlyDelegated();
-        _requireListedToken(token);
-        bool debtOracle = _s().debtStressRiseBps[token] != 0;
-        SecondSource memory s = src;
-        SecondSource memory b = standby;
-        if (!_wellFormed(s, debtOracle) || _sharesRoute(token, s.source)) revert OutOfBounds();
-        bool hasStandby = b.kind != SecondSourceKind.None;
-        if (hasStandby ? !_wellFormed(b, debtOracle) || _shares(token, s, b) : !_empty(b)) revert OutOfBounds();
-        Layout storage $ = _s();
-        address oldSource = $.secondSource[token].source;
-        address oldStandby = $.standby[token].source;
-        $.secondSource[token] = s;
-        $.standby[token] = b;
-        bool wasOnStandby = $.onStandby[token];
-        $.onStandby[token] = false;
-        _recheck(SCOPE_TOKEN, token, false, true);
-        if (hasStandby) {
-            // Check the standby as a guardian would put it in force, then return to the recorded source.
-            $.onStandby[token] = true;
-            _recheck(SCOPE_TOKEN, token, false, false);
-            $.onStandby[token] = false;
-        }
-        emit ParameterSet("secondSource", _a(token), uint160(oldSource), uint160(s.source));
-        emit ParameterSet("standbySecondSource", _a(token), uint160(oldStandby), uint160(b.source));
-        if (wasOnStandby) emit SecondSourceSwitched(token, false, msg.sender);
-    }
-
-    /// @notice Body of `IParameterStore.useStandbySecondSource`.
-    /// @dev Re-checks independence and every affected market, since routes may have changed since `setSecondSource`.
-    function useStandbySecondSource(
-        address token
-    ) external {
-        _onlyDelegated();
-        SecondSource memory b = _s().standby[token];
-        if (b.kind == SecondSourceKind.None) revert NoStandby(token);
-        if (_s().onStandby[token]) revert StandbyActive(token);
-        SecondSource memory recorded = _s().secondSource[token];
-        if (_shares(token, recorded, b)) revert OutOfBounds();
-        _s().onStandby[token] = true;
-        _recheck(SCOPE_TOKEN, token, false, true);
-        emit SecondSourceSwitched(token, true, msg.sender);
-    }
-
-    /// @notice Body of `IParameterStore.restoreSecondSource`.
-    function restoreSecondSource(
-        address token
-    ) external {
-        _onlyDelegated();
-        if (!_s().onStandby[token]) return;
-        _s().onStandby[token] = false;
-        _recheck(SCOPE_TOKEN, token, false, false);
-        emit SecondSourceSwitched(token, false, msg.sender);
     }
 
     /// @notice Body of `IParameterStore.setTokenCollateralFactorBps`.
@@ -289,51 +216,6 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
     ) private view returns (uint256 value) {
         (bool ok, bytes memory ret) = RouteMath._staticRead(target, PROBE_GAS, data, 64);
         if (ok && ret.length == 32) value = abi.decode(ret, (uint256));
-    }
-
-    /// @dev Whether every field the oracles read is in range for the source's kind; `None` is not well formed.
-    function _wellFormed(
-        SecondSource memory s,
-        bool debtOracle
-    ) private view returns (bool) {
-        if (s.toleranceBps == 0 || s.toleranceBps > SECOND_SOURCE_TOLERANCE_MAX_BPS || s.source.code.length == 0) {
-            return false;
-        }
-        if (s.kind == SecondSourceKind.OracleNetwork) {
-            return s.maxAge != 0 && s.twapWindow == 0 && s.poolRef == bytes32(0) && _s().feeds[s.source].decimals != 0;
-        }
-        return s.kind == SecondSourceKind.PoolTwap && !debtOracle && s.twapWindow != 0 && s.maxAge == 0
-            && s.poolRef != bytes32(0) && _withinGrace(s.twapWindow);
-    }
-
-    function _empty(
-        SecondSource memory s
-    ) private pure returns (bool) {
-        return s.kind == SecondSourceKind.None
-            && uint256(uint160(s.source)) | uint256(s.poolRef) | s.maxAge | s.twapWindow | s.toleranceBps == 0;
-    }
-
-    function _sharesRoute(
-        address token,
-        address source
-    ) private view returns (bool) {
-        TokenDef memory def = _REGISTRY.getToken(token);
-        return _contains(def.primaryRoute, source) || _contains(def.alternateRoute, source)
-            || _contains(def.standbyRoute, source);
-    }
-
-    /// @dev Whether the standby shares a feed or pool with the recorded source or a feed with the token's routes.
-    function _shares(
-        address token,
-        SecondSource memory src,
-        SecondSource memory standby
-    ) private view returns (bool) {
-        if (standby.source == src.source) return true;
-        if (
-            standby.kind == SecondSourceKind.PoolTwap && src.kind == SecondSourceKind.PoolTwap
-                && standby.poolRef == src.poolRef
-        ) return true;
-        return _sharesRoute(token, standby.source);
     }
 }
 // forge-lint: disable-end(reentrancy-events)

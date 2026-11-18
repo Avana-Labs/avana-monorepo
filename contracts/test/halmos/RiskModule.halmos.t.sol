@@ -110,7 +110,7 @@ contract RiskModuleHalmosTest is Test {
         uint64 price8,
         uint64 minPledge,
         bool requireRescue,
-        bool capFail,
+        uint32 brk,
         bool eligible,
         uint64 charge,
         uint64 restore
@@ -118,8 +118,7 @@ contract RiskModuleHalmosTest is Test {
         vm.assume(price8 > 0 && minPledge <= 100_000e8);
         uint256 value = h.pledgeUsd(units, price8, 18);
         RiskModuleMath.Exemption memory x;
-        (x.requireRescue, x.capFail, x.eligible, x.charge, x.restore) =
-        (requireRescue, capFail, eligible, charge, restore);
+        (x.requireRescue, x.brk, x.eligible, x.charge, x.restore) = (requireRescue, brk, eligible, charge, restore);
         (bool admitted, bool rescue) = _admit(value, minPledge, x);
         uint256 rescueMin = minPledge < 10e8 ? minPledge : 10e8;
         if (admitted) assert(value >= (rescue ? rescueMin : minPledge));
@@ -163,59 +162,41 @@ contract RiskModuleHalmosTest is Test {
     }
 
     // PROP-067 verifies: REQ-RISK-059, REQ-RISK-068, INV-082
-    /// @notice `postHealthCheck` passes exactly when `hfEx >= max(1e18, hardHealthFloor, minHealthFactor)`: the required
-    /// level is that maximum. The three `requiredIsMaximum` checks split the inputs by which of the three values is the
-    /// largest (a tie goes to the earlier one): `Wad` when neither input exceeds 1e18, `HardFloor` when the hard floor
-    /// exceeds 1e18 and is at least `minHealthFactor`, `MinHf` when `minHealthFactor` exceeds both. Every pair of inputs
-    /// falls in exactly one case, so together they cover every input below 2^256 (the check before the split took
-    /// uint128 inputs). This case: neither input exceeds 1e18 and the required level is 1e18.
-    /// @dev The check is linear (comparisons only); the split keeps each run to a few paths. The unsplit check was
-    /// cancelled at the 6-hour job limit in run 43492412351 with no result line.
+    /// @notice `postHealthCheck` passes exactly when `hfEx >= max(1e18, minHealthFactor)`: the required level is that
+    /// maximum. The two `requiredIsMaximum` checks split the inputs by which value is the larger (a tie goes to 1e18):
+    /// `Wad` when `minHealthFactor` does not exceed 1e18, `MinHf` when it does. Every input falls in exactly one case, so
+    /// together they cover every input below 2^256. This case: the required level is 1e18.
+    /// @dev The check is linear (comparisons only); the split keeps each run to a few paths.
     function check_PROP_067_requiredIsMaximumWad(
         uint256 hfEx,
-        uint256 hardFloor,
         uint256 minHf
     ) public pure {
-        vm.assume(hardFloor <= 1e18 && minHf <= 1e18);
-        _requiredIsMaximum(hfEx, hardFloor, minHf, 1e18);
+        vm.assume(minHf <= 1e18);
+        _requiredIsMaximum(hfEx, minHf, 1e18);
     }
 
     // PROP-067 verifies: REQ-RISK-059, REQ-RISK-068, INV-082
-    /// @notice `check_PROP_067_requiredIsMaximumWad` when the hard floor exceeds 1e18 and is at least `minHealthFactor`:
-    /// the required level is the hard floor.
-    function check_PROP_067_requiredIsMaximumHardFloor(
-        uint256 hfEx,
-        uint256 hardFloor,
-        uint256 minHf
-    ) public pure {
-        vm.assume(hardFloor > 1e18 && minHf <= hardFloor);
-        _requiredIsMaximum(hfEx, hardFloor, minHf, hardFloor);
-    }
-
-    // PROP-067 verifies: REQ-RISK-059, REQ-RISK-068, INV-082
-    /// @notice `check_PROP_067_requiredIsMaximumWad` when `minHealthFactor` exceeds both 1e18 and the hard floor: the
-    /// required level is `minHealthFactor`.
+    /// @notice `check_PROP_067_requiredIsMaximumWad` when `minHealthFactor` exceeds 1e18: the required level is
+    /// `minHealthFactor`.
     function check_PROP_067_requiredIsMaximumMinHf(
         uint256 hfEx,
-        uint256 hardFloor,
         uint256 minHf
     ) public pure {
-        vm.assume(minHf > 1e18 && minHf > hardFloor);
-        _requiredIsMaximum(hfEx, hardFloor, minHf, minHf);
+        vm.assume(minHf > 1e18);
+        _requiredIsMaximum(hfEx, minHf, minHf);
     }
 
-    /// @dev The required level equals `largest`, is at least each of the three values, and a health factor that reaches
-    /// it reaches each of them.
+    /// @dev The required level equals `largest`, is at least both values, and a health factor that reaches it reaches
+    /// both.
     function _requiredIsMaximum(
         uint256 hfEx,
-        uint256 hardFloor,
         uint256 minHf,
         uint256 largest
     ) internal pure {
-        uint256 required = RiskModuleMath.requiredHealthFactor(hardFloor, minHf);
+        uint256 required = RiskModuleMath.requiredHealthFactor(minHf);
         assert(required == largest);
-        assert(required >= 1e18 && required >= hardFloor && required >= minHf);
-        if (hfEx >= required) assert(hfEx >= 1e18 && hfEx >= hardFloor && hfEx >= minHf);
+        assert(required >= 1e18 && required >= minHf);
+        if (hfEx >= required) assert(hfEx >= 1e18 && hfEx >= minHf);
     }
 
     // PROP-067 verifies: SPEC-CF-005, INV-082

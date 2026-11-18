@@ -218,7 +218,7 @@ abstract contract LensFixture is CollateralizationFixture {
         store.setAges(feedUsdc, FEED_AGE, FEED_AGE);
         store.setAges(feedUsdt, FEED_AGE, FEED_AGE);
         store.setAges(feedUsdcDebt, 4200, 4200);
-        store.setMarketParams(MARKET_ID, MarketParams(1800, 50, 100, 30, 0, 10e8, 0));
+        store.setMarketParams(MARKET_ID, MarketParams(100, 30, 0, 10e8));
         store.setFloorRoundingAllowance(address(debt), 1e18);
         store.setFloorRoundingAllowance(address(usdc), 1e6);
         store.setCaps(MARKET_ID, 1_000_000e8, 100_000e8, 1e8);

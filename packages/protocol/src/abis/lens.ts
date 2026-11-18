@@ -555,11 +555,6 @@ export const lensAbi = [
                 "internalType": "uint256"
               },
               {
-                "name": "hardHealthFloor",
-                "type": "uint256",
-                "internalType": "uint256"
-              },
-              {
                 "name": "borrowAllowed",
                 "type": "bool",
                 "internalType": "bool"
@@ -1081,11 +1076,6 @@ export const lensAbi = [
                 "internalType": "uint256"
               },
               {
-                "name": "hardHealthFloor",
-                "type": "uint256",
-                "internalType": "uint256"
-              },
-              {
                 "name": "borrowAllowed",
                 "type": "bool",
                 "internalType": "bool"
@@ -1469,16 +1459,6 @@ export const lensAbi = [
             "name": "tokenHeadroomUsd",
             "type": "uint256[]",
             "internalType": "uint256[]"
-          },
-          {
-            "name": "poolShareBps",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "poolShareMaxBps",
-            "type": "uint256",
-            "internalType": "uint256"
           },
           {
             "name": "chargePricePerWholeToken",
@@ -2626,11 +2606,6 @@ export const lensAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "hardHealthFloor",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
             "name": "marketUsdCap",
             "type": "uint256",
             "internalType": "uint256"
@@ -2878,11 +2853,6 @@ export const lensAbi = [
           },
           {
             "name": "liquidationBonusFactorBps",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "hardHealthFloor",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -3278,11 +3248,6 @@ export const lensAbi = [
           },
           {
             "name": "graceEndsAt",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "graceHealthFactor",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -3978,11 +3943,6 @@ export const lensAbi = [
             "internalType": "bool"
           },
           {
-            "name": "belowGraceHealthFactor",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
             "name": "sharesEqualAssets",
             "type": "bool",
             "internalType": "bool"
@@ -4304,11 +4264,6 @@ export const lensAbi = [
                 "name": "tokenRoomUsd",
                 "type": "uint256[]",
                 "internalType": "uint256[]"
-              },
-              {
-                "name": "poolShareRoomUnits",
-                "type": "uint256",
-                "internalType": "uint256"
               },
               {
                 "name": "recordRoom",

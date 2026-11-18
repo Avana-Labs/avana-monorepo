@@ -185,16 +185,6 @@ export const riskModuleAbi = [
             "internalType": "uint128"
           },
           {
-            "name": "poolKey",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "poolUnits",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
             "name": "accountRecords",
             "type": "uint256",
             "internalType": "uint256"
@@ -480,11 +470,6 @@ export const riskModuleAbi = [
           },
           {
             "name": "healthFactor",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "hardHealthFloor",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -1016,11 +1001,6 @@ export const riskModuleAbi = [
             "internalType": "uint256[]"
           },
           {
-            "name": "poolShareRoomUnits",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
             "name": "recordRoom",
             "type": "uint256",
             "internalType": "uint256"
@@ -1480,16 +1460,6 @@ export const riskModuleAbi = [
   },
   {
     "type": "error",
-    "name": "PoolShareExceeded",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "PoolShareUnavailable",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "PriceNotAccepted",
     "inputs": [
       {
@@ -1553,33 +1523,6 @@ export const riskModuleAbi = [
     "inputs": [
       {
         "name": "reserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "SecondSourceDisagrees",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "SequencerDown",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "SequencerGrace",
-    "inputs": [
-      {
-        "name": "graceEndsAt",
         "type": "uint256",
         "internalType": "uint256"
       }

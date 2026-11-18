@@ -15,7 +15,7 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
     bytes32 internal constant CHAIN = bytes32(0);
 
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
     }
 
@@ -52,14 +52,6 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
     function test_TEST_061_marketStructuralEvents() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("consistencyToleranceBps", bytes32(M), 50, 75);
-        store.setConsistencyToleranceBps(M, 75);
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("twapWindow", bytes32(M), 1800, 3600);
-        store.setTwapWindow(M, 3600);
-        _tl();
-        vm.expectEmit(address(store));
         emit IParameterStoreBase.ParameterSet("poolRiskFactor", bytes32(M), 4000, 2500);
         store.setPoolRiskFactor(M, 2500);
         _tl();
@@ -72,26 +64,6 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
     function test_TEST_061_chainStructuralEvents() public {
         _tl();
         vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("cachedWindow", CHAIN, 3600, 1800);
-        store.setCachedWindow(1800);
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("disagreementPauseMax", CHAIN, 3600, 600);
-        store.setDisagreementPauseMax(600);
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("graceDuration", CHAIN, 1800, 3600);
-        store.setGraceDuration(3600);
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("graceHealthFactor", CHAIN, 0.95e18, 0.92e18);
-        store.setGraceHealthFactor(0.92e18);
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("feedAgreementMarginBps", CHAIN, 50, 30);
-        store.setFeedAgreementMarginBps(30);
-        _tl();
-        vm.expectEmit(address(store));
         emit IParameterStoreBase.ParameterSet("maxFlashFeeBps", CHAIN, 10, 40);
         store.setMaxFlashFeeBps(40);
         _tl();
@@ -100,27 +72,12 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         store.setCoverageRatioBps(2000);
     }
 
-    // TEST-061 verifies: REQ-CONFIG-055, REQ-CONFIG-054
-    function test_TEST_061_usdBandEmitsBothLevels() public {
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("usdBandLow", CHAIN, 0.9e8, 0.95e8);
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("usdBandHigh", CHAIN, 1.02e8, 1.05e8);
-        store.setUsdBand(0.95e8, 1.05e8);
-        assertEq(_logs(abi.encodeCall(store.setUsdBand, (0.9e8, 1.02e8))), 2);
-    }
-
     // TEST-061 verifies: REQ-CONFIG-019, REQ-CONFIG-024, REQ-PSTORE-010, REQ-CONFIG-056, REQ-ACCESS-109
     function test_TEST_061_tokenAndFeeEvents() public {
         _tl();
         vm.expectEmit(address(store));
         emit IParameterStoreBase.ParameterSet("tokenCollateralFactorBps", _a(usdc), 7800, 7000);
         store.setTokenCollateralFactorBps(usdc, 7000);
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("feedAgreementToleranceBps", _a(usdt), 150, 400);
-        store.setFeedAgreementToleranceBps(usdt, 400);
         _tl();
         vm.expectEmit(address(store));
         emit IParameterStoreBase.ParameterSet("avanaFeeShareBps", CHAIN, 2000, 0);
@@ -165,19 +122,12 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
     // TEST-061 verifies: REQ-PSTORE-004, REQ-PSTORE-005
     function test_TEST_061_initialMarketParamsEmitEveryField() public {
         MarketParams memory p = _defaultMarketParams();
-        p.twapWindow = 3600;
-        p.consistencyToleranceBps = 40;
         p.slippageAllowanceBps = 90;
         p.slippageAllowanceMinBps = 35;
         p.poolRiskFactor = 3500;
         p.minPledgeUsd = 20e8;
-        p.hardHealthFloor = 1.1e18;
         bytes32 scope = bytes32(M);
         _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("twapWindow", scope, 1800, 3600);
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("consistencyToleranceBps", scope, 50, 40);
         vm.expectEmit(address(store));
         emit IParameterStoreBase.ParameterSet("slippageAllowanceBps", scope, 100, 90);
         vm.expectEmit(address(store));
@@ -185,19 +135,14 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         vm.expectEmit(address(store));
         emit IParameterStoreBase.ParameterSet("poolRiskFactor", scope, 4000, 3500);
         vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterSet("hardHealthFloor", scope, 0, 1.1e18);
-        vm.expectEmit(address(store));
         emit IParameterStoreBase.MinPledgeUsdSet(M, 10e8, 20e8);
         store.setInitialMarketParams(M, p);
         MarketParams memory got = store.getMarketParams(M);
-        assertEq(got.twapWindow, 3600);
-        assertEq(got.consistencyToleranceBps, 40);
         assertEq(got.slippageAllowanceBps, 90);
         assertEq(got.slippageAllowanceMinBps, 35);
         assertEq(got.poolRiskFactor, 3500);
         assertEq(got.minPledgeUsd, 20e8);
-        assertEq(got.hardHealthFloor, 1.1e18);
-        assertEq(_logs(abi.encodeCall(store.setInitialMarketParams, (M, p))), 7);
+        assertEq(_logs(abi.encodeCall(store.setInitialMarketParams, (M, p))), 4);
     }
 
     // TEST-272 verifies: REQ-RISK-041, REQ-PSTORE-026
@@ -240,39 +185,14 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
         store.loosenTokenUsdCap(address(hub), usdc, 30_000_000e8);
     }
 
-    // TEST-061 verifies: REQ-RISK-043, Q-383, Q-403
-    function test_TEST_061_poolShareLoosenEvents() public {
-        address tl = address(timelock);
-        bytes32 key = keccak256(abi.encode(uint32(1), address(pool), bytes32(0)));
-        vm.startPrank(tl);
-        store.tightenPoolShareMaxBps(4000);
-        store.tightenPoolShareMaxBpsOf(M, 500);
-        vm.stopPrank();
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.CapLoosened("poolShareMaxBpsOf", key, 500, 4000, tl);
-        store.loosenPoolShareMaxBpsOf(M, 4000);
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.CapLoosened("poolShareMaxBps", CHAIN, 4000, 10_000, tl);
-        store.loosenPoolShareMaxBps(10_000);
-        // The override (4,000) is now below the default and served as is.
-        assertEq(store.poolShareMaxBpsOf(key), 4000);
-    }
-
     // TEST-061 verifies: REQ-CONFIG-053, REQ-PSTORE-016, REQ-PSTORE-018, REQ-PSTORE-020, REQ-PSTORE-030, REQ-ACCESS-109
     function test_TEST_061_parameterLoosenEvents() public {
         address tl = address(timelock);
         vm.startPrank(tl);
-        store.tightenHardHealthFloor(M, 1.1e18);
         store.tightenDebtStressRiseBps(usdc, 500);
         store.tightenGateRecoverySeconds(3600);
         store.setDebtAssetParams(gho, DebtReserveParams(0.5e18));
         vm.stopPrank();
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStoreBase.ParameterLoosened("hardHealthFloor", bytes32(M), 1.1e18, 1.08e18, tl);
-        store.loosenHardHealthFloor(M, 1.08e18);
         _tl();
         vm.expectEmit(address(store));
         emit IParameterStoreBase.ParameterLoosened("slippageAllowanceBps", bytes32(M), 100, 125, tl);
@@ -318,14 +238,9 @@ contract ParameterStoreEventsUnitTest is ParameterStoreFixture {
 
     // TEST-061 verifies: REQ-CONFIG-054
     function test_TEST_061_singleValueSettersEmitExactlyOneLog() public {
-        bytes[12] memory calls = [
-            abi.encodeCall(store.setConsistencyToleranceBps, (M, 60)),
-            abi.encodeCall(store.setTwapWindow, (M, 2400)),
+        bytes[7] memory calls = [
             abi.encodeCall(store.setPoolRiskFactor, (M, 3000)),
             abi.encodeCall(store.setSlippageAllowanceMinBps, (M, 40)),
-            abi.encodeCall(store.setCachedWindow, (100)),
-            abi.encodeCall(store.setGraceDuration, (100)),
-            abi.encodeCall(store.setGraceHealthFactor, (0.91e18)),
             abi.encodeCall(store.setTokenCollateralFactorBps, (usdt, 7000)),
             abi.encodeCall(store.setMaxFlashFeeBps, (11)),
             abi.encodeCall(store.setCoverageRatioBps, (1)),

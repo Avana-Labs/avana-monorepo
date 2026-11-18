@@ -339,7 +339,6 @@ abstract contract CollateralizationLedgerModel is CollateralizationFixture {
         assertEq(k.sliceUsed, 0, string.concat(step, ": slice bucket"));
         assertEq(k.tokenUsed[0], charges, string.concat(step, ": USDC counter"));
         assertEq(k.tokenUsed[1], charges, string.concat(step, ": USDT counter"));
-        assertEq(k.poolUnits, total, string.concat(step, ": pool units"));
         (uint256[] memory ids,) = coll.getMarketRecords(vt, 0, 64);
         assertEq(ids.length, mMarket.length, string.concat(step, ": market record count"));
         assertEq(coll.getMarketRecordCount(vt), mMarket.length, string.concat(step, ": market count view"));

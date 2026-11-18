@@ -5,7 +5,6 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Oracle} from "../../src/interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {PriceStateView} from "../../src/types/OracleTypes.sol";
 import {LensFixture} from "../utils/fixtures/LensFixture.sol";
 
 /// @title LensPreviewBranchesUnitTest
@@ -65,16 +64,6 @@ contract LensPreviewBranchesUnitTest is LensFixture {
     }
 
     // ─── helpers ───
-
-    /// @dev Mocks the LPOracle's `getPriceState` with its current view and `freshAnswer` set.
-    function _setFresh(
-        int256 fresh
-    ) internal {
-        vm.clearMockedCalls();
-        PriceStateView memory v = lpo.getPriceState();
-        v.freshAnswer = fresh;
-        vm.mockCall(address(lpo), abi.encodeWithSelector(lpo.getPriceState.selector), abi.encode(v));
-    }
 
     function _assertRwcZero(
         uint256 hf,

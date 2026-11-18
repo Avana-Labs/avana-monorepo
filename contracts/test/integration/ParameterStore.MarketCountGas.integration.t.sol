@@ -10,11 +10,10 @@ import {ParameterStoreRegistryFixture} from "../utils/fixtures/ParameterStoreReg
 import {RegistryLPOracleMock} from "../utils/mocks/MarketRegistryMocks.sol";
 import {console} from "forge-std/console.sol";
 
-/// @notice The ParameterStore's chain-wide re-check walks market IDs 1..marketCount of the real MarketRegistry, so the
-/// registry's `MAX_MARKET_COUNT` bounds its gas. This suite fills the registry to its limit with the fixture's markets
-/// (mock LPOracles, whose `checkConfig` is cheap) and measures the most expensive re-check, `setFeedAgreementMarginBps`
-/// (every market, `checkConfig` of each LPOracle and the tolerance bound of each pool token). The number is an input to
-/// the fork sizing of the limit, which uses the real LPOracle, the worst supported market and cold reads.
+/// @notice The ParameterStore's listing-margin re-check walks market IDs 1..marketCount of the real MarketRegistry, so
+/// the registry's `MAX_MARKET_COUNT` bounds its gas. This suite fills the registry to its limit with the fixture's
+/// markets and measures the re-check of a collateral-factor raise (`setTokenCollateralFactorBps`, every market). The
+/// number is an input to the fork sizing of the limit, which uses the worst supported market and cold reads.
 contract ParameterStoreMarketCountGasIntegrationTest is ParameterStoreRegistryFixture {
     /// @dev EIP-7825 per-transaction gas cap (2^24): the re-check must fit one transaction.
     uint256 internal constant TX_GAS_CAP = 16_777_216;
@@ -51,13 +50,13 @@ contract ParameterStoreMarketCountGasIntegrationTest is ParameterStoreRegistryFi
         registry.listCollateralMarket(d);
     }
 
-    /// @dev Gas of `setFeedAgreementMarginBps`, the SCOPE_ALL re-check with the tolerance bound, as its own call.
+    /// @dev Gas of a `setTokenCollateralFactorBps` raise, which re-runs the listing margin over every market.
     function _recheckGas(
-        uint16 margin
+        uint16 cf
     ) internal returns (uint256 used) {
         vm.prank(address(timelock));
         uint256 before = gasleft();
-        store.setFeedAgreementMarginBps(margin);
+        store.setTokenCollateralFactorBps(address(usdc), cf);
         used = before - gasleft();
     }
 
@@ -66,11 +65,11 @@ contract ParameterStoreMarketCountGasIntegrationTest is ParameterStoreRegistryFi
     function test_TEST_295_recheckGasAtTheMarketCountLimit() public {
         assertEq(registry.MAX_MARKET_COUNT(), MAX_MARKETS);
         _listNext();
-        uint256 one = _recheckGas(40);
+        uint256 one = _recheckGas(7000);
         while (registry.marketCount() < MAX_MARKETS) {
             _listNext();
         }
-        uint256 atCap = _recheckGas(45);
+        uint256 atCap = _recheckGas(7500);
         console.log("re-check gas, 1 market:", one);
         console.log("re-check gas, markets at the limit:", MAX_MARKETS, atCap);
         console.log("marginal gas per market:", (atCap - one) / (MAX_MARKETS - 1));

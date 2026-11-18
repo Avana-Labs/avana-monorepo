@@ -83,11 +83,7 @@ abstract contract DeployInputs is Script {
         });
         c.aave = _aave(json);
         c.blockTime = uint32(vm.parseJsonUint(json, ".chain.blockTime"));
-        c.hasSequencer = vm.parseJsonBool(json, ".chain.hasSequencer");
-        c.sequencerFeed = _addr(json, ".chain.sequencerFeed");
-        c.sequencerGraceSeconds = uint32(vm.parseJsonUint(json, ".chain.sequencerGraceSeconds"));
         c.globals = _globals(json);
-        c.initialPoolShareMaxBps = uint16(vm.parseJsonUint(json, ".parameters.initialPoolShareMaxBps"));
         c.maxMarketCount = vm.parseJsonUint(json, ".parameters.maxMarketCount");
         c.keeperFloor = vm.parseJsonUint(json, ".parameters.keeperFloor");
         c.timelockNormalDelay = vm.parseJsonUint(json, ".parameters.timelockNormalDelay");
@@ -258,16 +254,9 @@ abstract contract DeployInputs is Script {
         string memory json
     ) private view returns (GlobalParams memory g) {
         string memory p = ".parameters.globals";
-        g.cachedWindow = uint32(vm.parseJsonUint(json, string.concat(p, ".cachedWindow")));
-        g.disagreementPauseMax = uint32(vm.parseJsonUint(json, string.concat(p, ".disagreementPauseMax")));
-        g.usdBandLow = vm.parseJsonUint(json, string.concat(p, ".usdBandLow"));
-        g.usdBandHigh = vm.parseJsonUint(json, string.concat(p, ".usdBandHigh"));
-        g.graceDuration = uint32(vm.parseJsonUint(json, string.concat(p, ".graceDuration")));
-        g.graceHealthFactor = vm.parseJsonUint(json, string.concat(p, ".graceHealthFactor"));
         g.maxFlashFeeBps = uint16(vm.parseJsonUint(json, string.concat(p, ".maxFlashFeeBps")));
         g.avanaFeeShareBps = uint16(vm.parseJsonUint(json, string.concat(p, ".avanaFeeShareBps")));
         g.feeRecipient = _addr(json, string.concat(p, ".feeRecipient"));
-        g.feedAgreementMarginBps = uint16(vm.parseJsonUint(json, string.concat(p, ".feedAgreementMarginBps")));
         g.gateRecoverySeconds = uint64(vm.parseJsonUint(json, string.concat(p, ".gateRecoverySeconds")));
         g.maxShortfallBps = uint16(vm.parseJsonUint(json, string.concat(p, ".maxShortfallBps")));
     }

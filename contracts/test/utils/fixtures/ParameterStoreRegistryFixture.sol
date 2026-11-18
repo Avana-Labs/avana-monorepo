@@ -33,7 +33,6 @@ import {
     GlobalParams,
     ParameterStoreLogics
 } from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {RouteSlot} from "../../../src/types/OracleTypes.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {
     RegistryAaveOracleMock,
@@ -59,8 +58,8 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// @notice The real ParameterStore and the real MarketRegistry wired to each other (each holds the other's proxy as
 /// an immutable), with settable mocks for the Aave reads, the LPVault, the First-Loss Reserve and the price feeds. World
 /// after `_setUpWorld`: the Stable LP Hub recorded, integration 1 registered, the CDP Spoke deployed, GHO listed and
-/// enabled as a fixed-price debt reserve funded by the Hub, and USDC and USDT listed with a one-leg primary, a
-/// two-leg alternate and a one-leg standby route whose feeds the store defines (25 bps each).
+/// enabled as a fixed-price debt reserve funded by the Hub, and USDC and USDT listed with a one-leg primary and a
+/// two-leg alternate route whose feeds the store defines (25 bps each).
 abstract contract ParameterStoreRegistryFixture is TimelockFixture {
     uint32 internal constant V3 = 1;
     uint32 internal constant BLOCK_TIME = 12;
@@ -88,8 +87,8 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
     RegistryTokenMock internal usdt;
     RegistryTokenMock internal gho;
     RegistryFeedMock internal ghoSource;
-    /// @dev Per listed token: primary, alternate leg 0, alternate leg 1, standby.
-    mapping(address token => address[4] feeds) internal routeFeeds;
+    /// @dev Per listed token: primary, alternate leg 0, alternate leg 1.
+    mapping(address token => address[3] feeds) internal routeFeeds;
     address internal lockAddr = makeAddr("lock");
     address internal proxyManager = makeAddr("proxyManager");
     address internal payoutEscrow = makeAddr("payoutEscrow");
@@ -162,33 +161,22 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         address tl = address(timelock);
         address reg = address(registry);
         storeLogics = ParameterStoreLogics({
-            tighten: address(new ParameterStoreTightenLogic(tl, reg, BLOCK_TIME, false)),
-            loosen: address(new ParameterStoreLoosenLogic(tl, reg, BLOCK_TIME, false)),
-            listing: address(new ParameterStoreListingLogic(tl, reg, BLOCK_TIME, false)),
-            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, reg, BLOCK_TIME, false)),
-            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, reg, BLOCK_TIME, false))
+            tighten: address(new ParameterStoreTightenLogic(tl, reg, BLOCK_TIME)),
+            loosen: address(new ParameterStoreLoosenLogic(tl, reg, BLOCK_TIME)),
+            listing: address(new ParameterStoreListingLogic(tl, reg, BLOCK_TIME)),
+            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, reg, BLOCK_TIME)),
+            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, reg, BLOCK_TIME))
         });
-        ParameterStore storeImpl = new ParameterStore(tl, reg, BLOCK_TIME, false, storeLogics);
+        ParameterStore storeImpl = new ParameterStore(tl, reg, BLOCK_TIME, storeLogics);
         store = IParameterStore(
-            address(
-                new ERC1967Proxy(
-                    address(storeImpl), abi.encodeCall(IParameterStore.initialize, (tl, _globals(), 10_000))
-                )
-            )
+            address(new ERC1967Proxy(address(storeImpl), abi.encodeCall(IParameterStore.initialize, (tl, _globals()))))
         );
     }
 
     function _globals() internal view returns (GlobalParams memory g) {
-        g.cachedWindow = 3600;
-        g.disagreementPauseMax = 3600;
-        g.usdBandLow = 0.9e8;
-        g.usdBandHigh = 1.02e8;
-        g.graceDuration = 1800;
-        g.graceHealthFactor = 0.95e18;
         g.maxFlashFeeBps = 10;
         g.avanaFeeShareBps = 2000;
         g.feeRecipient = feeRecipient;
-        g.feedAgreementMarginBps = 50;
         g.gateRecoverySeconds = 1800;
         g.maxShortfallBps = 1000;
     }
@@ -238,11 +226,11 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         registry.setAvanaFirstLossReserve(address(hub), address(gho), address(ghoCoverage));
         vm.stopPrank();
         _setGhoReserve();
-        _listToken(address(gho), "gho", IssuerProbe.None, false);
+        _listToken(address(gho), "gho", IssuerProbe.None);
         vm.prank(address(timelock));
         registry.enableDebtReserve(address(spoke), _ghoDef());
-        _listToken(address(usdc), "usdc", IssuerProbe.PausedFlag, true);
-        _listToken(address(usdt), "usdt", IssuerProbe.PausedFlag, true);
+        _listToken(address(usdc), "usdc", IssuerProbe.PausedFlag);
+        _listToken(address(usdt), "usdt", IssuerProbe.PausedFlag);
     }
 
     function _setGhoReserve() internal {
@@ -293,34 +281,24 @@ abstract contract ParameterStoreRegistryFixture is TimelockFixture {
         d.maxAnswerCap = type(int256).max;
     }
 
-    /// @dev Lists `token` with three routes of store-defined feeds and, when `tolerance`, writes its agreement
-    /// tolerance in the store (150 bps) once the registry lists it.
+    /// @dev Lists `token` with two routes of store-defined feeds.
     function _listToken(
         address token,
         string memory label,
-        IssuerProbe probe,
-        bool tolerance
+        IssuerProbe probe
     ) internal {
         address[] memory p = new address[](1);
         address[] memory a = new address[](2);
-        address[] memory s = new address[](1);
         p[0] = _newFeed(string.concat(label, "/USD"));
         a[0] = _newFeed(string.concat(label, "/ETH"));
         a[1] = _newFeed(string.concat(label, "-ETH/USD"));
-        s[0] = _newFeed(string.concat(label, "/USD standby"));
-        routeFeeds[token] = [p[0], a[0], a[1], s[0]];
+        routeFeeds[token] = [p[0], a[0], a[1]];
         TokenDef memory d;
         d.isUsdStable = true;
         d.primaryRoute = p;
         d.alternateRoute = a;
-        d.standbyRoute = s;
-        d.replacedSlot = RouteSlot.None;
         d.issuerProbe = probe;
         vm.prank(address(timelock));
         registry.listToken(token, d);
-        if (tolerance) {
-            vm.prank(address(timelock));
-            store.setFeedAgreementToleranceBps(token, 150);
-        }
     }
 }

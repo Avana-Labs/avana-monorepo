@@ -91,21 +91,6 @@ contract LensPreviewUnitTest is LensFixture {
         vm.clearMockedCalls();
     }
 
-    // TEST-247 verifies: REQ-LENS-035, Q-398
-    function test_TEST_247_borrowMaxHardFloor() public {
-        store.setHardHealthFloor(MARKET_ID, 1.2e18);
-        uint256 w = _weighted(aliceProxy);
-        (uint256 rec, uint256 max) = lens.previewBorrowRecommended(alice, MARKET_ID, debtReserveId, block.timestamp);
-        assertEq(max, Math.mulDiv(w, 1e18, 1.206e18) / 1e8, "H0 = 1.20 x 1.005");
-        assertEq(rec, max, "recommended never above the maximum");
-        store.setHardHealthFloor(MARKET_ID, 0.5e18);
-        assertEq(
-            lens.previewBorrowMax(alice, MARKET_ID, debtReserveId, block.timestamp),
-            Math.mulDiv(w, 1e18, 1.005e18) / 1e8,
-            "a floor below 1.00 never lowers Aave's threshold"
-        );
-    }
-
     // TEST-247 verifies: REQ-LENS-035, REQ-LENS-019
     function test_TEST_247_borrowMaxCappedByDrawHeadroom() public {
         _borrow(aliceProxy, 500e18);

@@ -48,12 +48,6 @@ interface IRiskModuleErrors {
     /// @notice The pledge needs the top-up slice but is not eligible for it, or exceeds the restore amount.
     error SliceNotAvailable();
 
-    /// @notice The AMM integration cannot report the pool share.
-    error PoolShareUnavailable();
-
-    /// @notice Avana's share of the pool, summed over every market of that pool, would exceed its cap.
-    error PoolShareExceeded();
-
     /// @notice The pledge's value at the served price is below the minimum that applies to it.
     /// @param pledgeUsd The pledge's value, rounded down, 8-decimal USD.
     /// @param minPledgeUsd The minimum that applies, 8-decimal USD.
@@ -102,7 +96,7 @@ interface IRiskModuleErrors {
     error HubSharesNotEqualAssets(uint256 marketId);
 
     /// @notice The health factor after the Spoke call is below the required minimum.
-    /// @param required `max(1e18, hardHealthFloor(marketId), minHealthFactor)`, WAD.
+    /// @param required `max(1e18, minHealthFactor)`, WAD.
     error HealthFactorTooLow(uint256 healthFactor, uint256 required);
 
     /// @notice A market circuit breaker is tripped (new activity on that market, or by an account holding it).
@@ -129,15 +123,6 @@ interface IRiskModuleErrors {
 
     /// @notice The AMM integration named by the caller is not the market's integration.
     error IntegrationMismatch(uint256 marketId, uint32 integrationId);
-
-    /// @notice Borrow or withdraw-with-debt while the chain's sequencer-uptime feed reports down or is unreadable.
-    error SequencerDown();
-
-    /// @notice Borrow or withdraw-with-debt during the sequencer grace period after a restart.
-    error SequencerGrace(uint256 graceEndsAt);
-
-    /// @notice Borrow or withdraw-with-debt while a token's second source disagrees with the approved price.
-    error SecondSourceDisagrees(address token);
 
     /// @notice `gasleft()` is below the gas a gas-limited external call requires.
     error InsufficientGas(uint256 gasLeft, uint256 required);

@@ -86,15 +86,13 @@ contract LensActionsConfigFuzzTest is LensFixture {
         uint256 cap,
         uint256 slice,
         uint256 tokenCap,
-        uint256 floor,
         uint256 target
     ) public {
         cap = bound(cap, 1, 1e20);
         slice = bound(slice, 0, cap);
-        (tokenCap, floor) = (bound(tokenCap, 0, 1e20), bound(floor, 0, 2e18));
+        tokenCap = bound(tokenCap, 0, 1e20);
         store.setCaps(MARKET_ID, cap, slice, 1e8);
         store.setTokenCap(aave.hub, address(usdt), tokenCap);
-        store.setHardHealthFloor(MARKET_ID, floor);
         target = bound(target, 1.01e18, 2e18);
         _spokeConfig(
             abi.encodeWithSignature("updateLiquidationTargetHealthFactor(address,uint256)", aave.cdpSpoke, target)
@@ -103,7 +101,6 @@ contract LensActionsConfigFuzzTest is LensFixture {
         assertEq(v.marketUsdCap, cap, "market cap");
         assertEq(v.topUpSliceUsd, slice, "slice");
         assertEq(v.tokenUsdCaps[1], tokenCap, "USDT cap");
-        assertEq(v.hardHealthFloor, floor, "hard floor");
         assertEq(v.targetHealthFactor, target, "target health factor");
         assertEq(v.marketHeadroomUsd, cap, "nothing pledged");
     }

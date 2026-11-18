@@ -6,56 +6,10 @@ pragma solidity 0.8.28;
 import {IntegrationCapabilities, RiskStatus} from "../../../src/amm/types/AmmTypes.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {OracleConfig} from "../../../src/types/OracleTypes.sol";
 import {PledgeCounters, ShapeKind} from "../../../src/types/PositionTypes.sol";
 
-/// @notice LPOracle `checkConfig` with a settable result; records nothing (the call is a view). Beside the fixed
-/// bitmap `failed`, it can fail check `4` when the consistency tolerance is below a floor, check `8` when token 0's
-/// feed-agreement tolerance is below a floor, and check `16` when a leg's borrow age is below a floor, so a test can
-/// tell a check a setter's own write breaks from one that failed before it.
-contract MockLPOracle {
-    uint256 public failed;
-    bool public reverts;
-    uint16 public consistencyFloor;
-    uint16 public toleranceFloor;
-    uint32 public borrowAgeFloor;
-
-    function setFloors(
-        uint16 consistency,
-        uint16 tolerance,
-        uint32 borrowAge
-    ) external {
-        (consistencyFloor, toleranceFloor, borrowAgeFloor) = (consistency, tolerance, borrowAge);
-    }
-
-    function setFailed(
-        uint256 f
-    ) external {
-        failed = f;
-    }
-
-    function setReverts(
-        bool r
-    ) external {
-        reverts = r;
-    }
-
-    function checkConfig(
-        OracleConfig calldata c
-    ) external view returns (uint256 bits) {
-        require(!reverts, "checkConfig");
-        bits = failed;
-        if (c.consistencyToleranceBps < consistencyFloor) bits |= 4;
-        if (c.tokens.length != 0 && c.tokens[0].feedAgreementToleranceBps < toleranceFloor) bits |= 8;
-        for (uint256 i = 0; i < c.tokens.length; ++i) {
-            for (uint256 r = 0; r < 2; ++r) {
-                for (uint256 l = 0; l < c.tokens[i].routes[r].legCount; ++l) {
-                    if (c.tokens[i].routes[r].legs[l].borrowPriceMaxAge < borrowAgeFloor) bits |= 16;
-                }
-            }
-        }
-    }
-}
+/// @notice Code at a market's LPOracle address; the stateless LPOracle has no configuration the ParameterStore checks.
+contract MockLPOracle {}
 
 /// @notice AMM integration `capabilities` and `riskStatus` with settable answers.
 contract MockIntegration {
@@ -118,7 +72,7 @@ contract MockPool {
     }
 }
 
-/// @notice Chainlink aggregator proxy that is its own aggregator, also usable as a sequencer-uptime feed.
+/// @notice Chainlink aggregator proxy that is its own aggregator.
 contract MockAggregator {
     uint8 public decimals;
     int192 public minAnswer;
@@ -361,59 +315,5 @@ contract MockAvanaComponent {
         address registry
     ) {
         (TIMELOCK, MARKET_REGISTRY) = (timelock, registry);
-    }
-}
-
-/// @notice Fields of an `OracleConfig` the ParameterStore tests compare, read from calldata.
-struct OracleConfigSummary {
-    uint256 marketId;
-    uint256 tokenCount;
-    address token0;
-    uint8 legCount00;
-    address aggregator00;
-    uint32 heartbeat00;
-    uint16 margin00;
-    uint32 borrowAge00;
-    int128 maxAnswer00;
-    uint8 legCount10;
-    uint16 tolerance0;
-    uint32 twapWindow;
-    uint16 twapMinObservations;
-    uint16 consistencyToleranceBps;
-    uint16 maxQuoteChangeBps;
-    uint256 usdBandLow;
-    uint32 cachedWindow;
-    uint32 graceDuration;
-    uint32 sequencerGrace;
-}
-
-/// @notice Reads an `OracleConfig` from calldata, where decoding is lazy; a test forwards the raw return bytes of
-/// `getOracleConfig` to `summary` (the two encodings are identical), since decoding the whole nested struct into
-/// memory exceeds the legacy code generator's stack.
-contract OracleConfigReader {
-    function summary(
-        OracleConfig calldata c
-    ) external pure returns (OracleConfigSummary memory s) {
-        s.marketId = c.marketId;
-        s.tokenCount = c.tokens.length;
-        if (s.tokenCount > 0) {
-            s.token0 = c.tokens[0].token;
-            s.legCount00 = c.tokens[0].routes[0].legCount;
-            s.aggregator00 = c.tokens[0].routes[0].legs[0].aggregator;
-            s.heartbeat00 = c.tokens[0].routes[0].legs[0].heartbeat;
-            s.margin00 = c.tokens[0].routes[0].legs[0].heartbeatMargin;
-            s.borrowAge00 = c.tokens[0].routes[0].legs[0].borrowPriceMaxAge;
-            s.maxAnswer00 = c.tokens[0].routes[0].legs[0].maxAnswer;
-            s.tolerance0 = c.tokens[0].feedAgreementToleranceBps;
-        }
-        if (s.tokenCount > 1) s.legCount10 = c.tokens[1].routes[0].legCount;
-        s.twapWindow = c.twapWindow;
-        s.twapMinObservations = c.twapMinObservations;
-        s.consistencyToleranceBps = c.consistencyToleranceBps;
-        s.maxQuoteChangeBps = c.maxQuoteChangeBps;
-        s.usdBandLow = c.usdBandLow;
-        s.cachedWindow = c.cachedWindow;
-        s.graceDuration = c.graceDuration;
-        s.sequencerGrace = c.sequencer.gracePeriod;
     }
 }

@@ -10,7 +10,7 @@ import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreT
 import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {SpeedView} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {AccountGateStatus, Market, PauseReason, PauseState} from "../../../src/types/MarketTypes.sol";
-import {PriceState, PriceStateView, TokenPriceView} from "../../../src/types/OracleTypes.sol";
+import {PriceState} from "../../../src/types/OracleTypes.sol";
 import {PledgePreview} from "../../../src/types/PositionTypes.sol";
 import {CollLPVaultMock} from "./CollateralizationMocks.sol";
 import {DebtPriceView as OracleDebtView} from "./DebtPriceView.sol";
@@ -199,18 +199,14 @@ contract LensRegistryMock {
 contract LensStoreMock {
     mapping(address => uint32) public borrowPriceMaxAge;
     mapping(address => uint32) public liquidationPriceMaxAge;
-    uint256 public graceHealthFactor = 0.95e18;
     mapping(uint256 => MarketParams) internal _params;
     mapping(address => uint256) public floorRoundingAllowance;
     uint16 public avanaFeeShareBps = 2000;
     uint16 public maxFlashFeeBps = 10;
-    mapping(uint256 => uint256) public hardHealthFloor;
     mapping(uint256 => uint256) public marketUsdCap;
     mapping(uint256 => uint256) public topUpSliceUsd;
     mapping(uint256 => uint256) public stressFloorUsd;
     mapping(address => mapping(address => uint256)) public tokenUsdCap;
-    mapping(bytes32 => uint16) internal _poolShareMax;
-    mapping(bytes32 => bool) internal _poolShareSet;
     mapping(uint256 => uint256) public minPledgeUsd;
     uint16 public coverageRatioBps = 1000;
 
@@ -222,27 +218,12 @@ contract LensStoreMock {
         (borrowPriceMaxAge[feed], liquidationPriceMaxAge[feed]) = (borrowAge, liquidationAge);
     }
 
-    function setGraceHealthFactor(
-        uint256 v
-    ) external {
-        graceHealthFactor = v;
-    }
-
     function setMarketParams(
         uint256 id,
         MarketParams memory p
     ) external {
         _params[id] = p;
         minPledgeUsd[id] = p.minPledgeUsd;
-        hardHealthFloor[id] = p.hardHealthFloor;
-    }
-
-    function setHardHealthFloor(
-        uint256 id,
-        uint256 v
-    ) external {
-        hardHealthFloor[id] = v;
-        _params[id].hardHealthFloor = v;
     }
 
     function setMinPledgeUsd(
@@ -284,13 +265,6 @@ contract LensStoreMock {
         tokenUsdCap[hub][token] = cap;
     }
 
-    function setPoolShareMax(
-        bytes32 key,
-        uint16 bps
-    ) external {
-        (_poolShareMax[key], _poolShareSet[key]) = (bps, true);
-    }
-
     function setCoverageRatioBps(
         uint16 v
     ) external {
@@ -301,12 +275,6 @@ contract LensStoreMock {
         uint256 id
     ) external view returns (MarketParams memory) {
         return _params[id];
-    }
-
-    function poolShareMaxBpsOf(
-        bytes32 key
-    ) external view returns (uint16) {
-        return _poolShareSet[key] ? _poolShareMax[key] : 10_000;
     }
 
     function getFeed(
@@ -606,20 +574,6 @@ contract LensLPOracleMock {
             if (_tokens[i].feeds[k] != address(0)) feeds[n++] = _tokens[i].feeds[k];
         }
     }
-
-    function getPriceState() external view returns (PriceStateView memory v) {
-        (v.state, v.reasons, v.answer, v.liquidationPaused) = (state, reasons, latestAnswer(), liquidationPaused);
-        (v.disagreeSince, v.disagreementPauseActive, v.disagreementExpired) = (disagreeSince, pauseActive, expired);
-        (v.inGrace, v.recoveredAt, v.graceEndsAt, v.borrowAllowed) = (inGrace, recoveredAt, graceEndsAt, borrowAllowed);
-        (v.acceptedAnswer, v.acceptedUpdatedAt) = (int256(acceptedPrice), acceptedAt);
-        v.tokens = new TokenPriceView[](_tokens.length);
-        for (uint256 i = 0; i < _tokens.length; ++i) {
-            Token memory t = _tokens[i];
-            TokenPriceView memory p = v.tokens[i];
-            (p.token, p.routeUsed, p.deviationBps, p.valuationPrice) = (t.token, t.routeUsed, t.deviationBps, t.price);
-            (p.legFeeds, p.legUpdatedAt) = (t.feeds, t.updatedAt);
-        }
-    }
 }
 
 /// @notice A debt reserve's DebtOracle: served answer, accepted round, state and the feeds of the route in use.
@@ -634,7 +588,7 @@ contract LensDebtOracleMock {
     // The ParameterStore the real oracle reads its legs' age limits from.
     address public store;
     address[2] internal _feeds;
-    // The oracle's own gates beyond the state (sequencer down or not ready, an alternate past its borrow age).
+    // The oracle's own gates beyond the state (an input not ready, an alternate past its borrow age).
     bool public extraLiquidationPause;
     bool public extraBorrowStop;
 

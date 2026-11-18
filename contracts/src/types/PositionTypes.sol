@@ -31,17 +31,13 @@ enum ShapeKind {
 }
 
 /// @notice Current Collateralization exposure counters a pledge touches, passed by Collateralization to `checkPledge`.
-/// @dev 8-decimal USD; the pool counter is shared by every market of the pool.
+/// @dev 8-decimal USD.
 struct PledgeCounters {
     address hub;
     // Market regular counter R.
     uint128 regularUsed;
     // Market slice counter S.
     uint128 sliceUsed;
-    // Pool the pool-share counter is keyed by.
-    bytes32 poolKey;
-    // poolUnits(poolKey): credited units summed over every market of the pool on the chain.
-    uint256 poolUnits;
     // Open records of the account in the market before this pledge.
     uint256 accountRecords;
     // tokenUsd[hub][tokens[i]] per token in pool order.
@@ -49,7 +45,7 @@ struct PledgeCounters {
 }
 
 /// @notice Non-reverting outcome of the pledge checks for the app and the Lens.
-/// @dev Room values are 8-decimal USD, except `poolShareRoomUnits` in vault-token base units.
+/// @dev Room values are 8-decimal USD.
 struct PledgePreview {
     // True when checkPledge would pass.
     bool eligible;
@@ -67,8 +63,6 @@ struct PledgePreview {
     uint256 sliceRoomUsd;
     // Per-token room in pool order.
     uint256[] tokenRoomUsd;
-    // Units still admissible under the pool-share cap.
-    uint256 poolShareRoomUnits;
     // Open records the account may still add to the market.
     uint256 recordRoom;
 }

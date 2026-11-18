@@ -66,11 +66,7 @@ struct ChainInputs {
     AaveInputs aave;
     // Seconds per block (12 on Ethereum and Sepolia, 2 on Base).
     uint32 blockTime;
-    bool hasSequencer;
-    address sequencerFeed;
-    uint32 sequencerGraceSeconds;
     GlobalParams globals;
-    uint16 initialPoolShareMaxBps;
     uint256 maxMarketCount;
     uint256 keeperFloor;
     // The timelock's initial normal delay, seconds (`REQ-ACCESS-027`: 432,000; 60 to 120 on a test network,

@@ -59,7 +59,7 @@ abstract contract FlashLiquidatorFixture is ParameterStoreFixture {
     address internal bobProxy = makeAddr("bobProxy");
 
     function _deployHelpers() internal {
-        _deployStore(false);
+        _deployStore();
         acl = new MockAaveV3ACLManager();
         provider = new MockAaveV3AddressesProvider(address(acl));
         aavePool = new MockAaveV3Pool(address(provider), POOL_PREMIUM_BPS);

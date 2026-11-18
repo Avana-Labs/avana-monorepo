@@ -37,7 +37,7 @@ abstract contract AvanaDeploy is AvanaPeripheryDeploy {
 
     /// @notice The block interval is one value across the chain: the config's `chain.blockTime` is the chain's known
     /// interval (12 s on chains 1 and 11155111, 2 s on 8453, 84532 and 10), and every Uniswap v3 and v4 LPVault's
-    /// `BLOCK_TIME` equals the ParameterStore's `CHAIN_BLOCK_TIME`, which sizes `twapMinObservations` (`REQ-AMM-V3-012`).
+    /// `BLOCK_TIME` equals the ParameterStore's `CHAIN_BLOCK_TIME` (`REQ-AMM-V3-012`).
     function _checkBlockTime(
         ChainInputs memory c,
         AvanaDeployment memory d

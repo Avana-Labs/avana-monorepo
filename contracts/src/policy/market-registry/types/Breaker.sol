@@ -15,8 +15,6 @@ enum BreakerScope {
 library BreakerReasons {
     /// @notice Temporary gate: the price-state or debt-price gate fails, or a stablecoin-band breach.
     uint32 internal constant ORACLE = 1 << 0;
-    /// @notice Temporary gate, market: Avana's share of the pool's depth is above `poolShareMaxBpsOf(poolKey)`.
-    uint32 internal constant POOL_SHARE = 1 << 2;
     /// @notice Security freeze, market or debt: the issuer probe reports a pause or a transfer fee switched on.
     uint32 internal constant ISSUER = 1 << 3;
     /// @notice Security freeze, debt: the funding Hub's deficit on the Spoke is above `breakerDeficitMax`.
@@ -28,12 +26,12 @@ library BreakerReasons {
     /// @notice Temporary gate, market: the pool's time-weighted depth is unavailable or below the listing minimum.
     uint32 internal constant POOL_DEPTH = 1 << 11;
     /// @notice The temporary-gate reasons.
-    uint32 internal constant TEMPORARY = ORACLE | POOL_SHARE | POOL_DEPTH;
+    uint32 internal constant TEMPORARY = ORACLE | POOL_DEPTH;
     /// @notice The security-freeze reasons a poke can latch.
     uint32 internal constant SECURITY = ISSUER | CONFIG_DRIFT | DEFICIT;
 
     /// @notice The key under which the MarketRegistry keeps the breach time of one temporary reason of breaker `key`.
-    /// @param reason One temporary reason bit (`ORACLE`, `POOL_SHARE` or `POOL_DEPTH`).
+    /// @param reason One temporary reason bit (`ORACLE` or `POOL_DEPTH`).
     function breachKey(
         bytes32 key,
         uint32 reason

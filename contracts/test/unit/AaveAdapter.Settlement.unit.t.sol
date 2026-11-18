@@ -16,7 +16,6 @@ import {PauseReason, PauseState} from "../../src/types/MarketTypes.sol";
 import {PositionRef} from "../../src/types/PositionTypes.sol";
 import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
-import {AdapterSequencerFeed} from "../utils/mocks/AaveAdapterMocks.sol";
 import {LPVaultSwapMock} from "../utils/mocks/LPVaultSwapMock.sol";
 
 /// @title AaveAdapterSettlementUnitTest

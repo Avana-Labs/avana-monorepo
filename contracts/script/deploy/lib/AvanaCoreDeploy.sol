@@ -136,7 +136,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         ChainInputs memory c,
         Predicted memory p
     ) internal returns (UpgradeableDeployment memory d) {
-        bytes memory im = abi.encode(p.timelock, p.marketRegistry, c.blockTime, c.hasSequencer);
+        bytes memory im = abi.encode(p.timelock, p.marketRegistry, c.blockTime);
         string[5] memory names = [
             "ParameterStoreTightenLogic",
             "ParameterStoreLoosenLogic",
@@ -154,9 +154,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
             "ParameterStoreImplementation", bytes.concat(_artifact("ParameterStore.sol", "ParameterStore"), im, logics)
         );
         d.proxy = _proxy(
-            "ParameterStore",
-            d.implementation,
-            abi.encodeCall(IParameterStore.initialize, (p.timelock, c.globals, c.initialPoolShareMaxBps))
+            "ParameterStore", d.implementation, abi.encodeCall(IParameterStore.initialize, (p.timelock, c.globals))
         );
     }
 

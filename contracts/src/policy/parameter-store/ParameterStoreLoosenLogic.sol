@@ -24,36 +24,17 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
     constructor(
         address timelock,
         address marketRegistry,
-        uint32 chainBlockTime,
-        bool hasSequencer
-    ) ParameterStoreStorage(timelock, marketRegistry, chainBlockTime, hasSequencer) {}
+        uint32 chainBlockTime
+    ) ParameterStoreStorage(timelock, marketRegistry, chainBlockTime) {}
 
     /// @inheritdoc IParameterStoreLogic
     function logicConfig()
         external
         view
         override
-        returns (bytes32 kind, address timelock, address marketRegistry, uint32 chainBlockTime, bool hasSequencer)
+        returns (bytes32 kind, address timelock, address marketRegistry, uint32 chainBlockTime)
     {
-        return (keccak256("ParameterStoreLoosenLogic"), _TIMELOCK, address(_REGISTRY), _BLOCK_TIME, _HAS_SEQUENCER);
-    }
-
-    /// @inheritdoc IParameterStoreLoosen
-    function loosenHardHealthFloor(
-        uint256 marketId,
-        uint256 value
-    ) external override {
-        _onlyDelegated();
-        _requireMarket(marketId);
-        MarketParams storage p = _s().market[marketId];
-        uint256 old = p.hardHealthFloor;
-        if (value >= old) revert NotLooser();
-        // A value below 1.00 switches the floor off; off counts as 1.00 in the step, since Aave's own HF 1 applies.
-        uint256 stored = value < WAD ? 0 : value;
-        _step(old - (stored == 0 ? WAD : stored) <= HF_STEP, "hardHealthFloor", bytes32(marketId));
-        _spaceLoosening("hardHealthFloor", bytes32(marketId));
-        p.hardHealthFloor = stored;
-        emit ParameterLoosened("hardHealthFloor", bytes32(marketId), old, stored, msg.sender);
+        return (keccak256("ParameterStoreLoosenLogic"), _TIMELOCK, address(_REGISTRY), _BLOCK_TIME);
     }
 
     /// @inheritdoc IParameterStoreLoosen
@@ -170,18 +151,6 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
     }
 
     /// @inheritdoc IParameterStoreLoosen
-    function loosenPoolShareMaxBps(
-        uint16 value
-    ) external override {
-        _onlyDelegated();
-        uint16 old = _s().poolShareMaxBps;
-        if (value <= old) revert NotLooser();
-        if (value > BPS) revert OutOfBounds();
-        _s().poolShareMaxBps = value;
-        emit CapLoosened("poolShareMaxBps", bytes32(0), old, value, msg.sender);
-    }
-
-    /// @inheritdoc IParameterStoreLoosen
     function loosenMinPledgeUsd(
         uint256 marketId,
         uint256 value
@@ -193,20 +162,6 @@ contract ParameterStoreLoosenLogic is ParameterStoreRisk, IParameterStoreLoosen,
         if (value >= old) revert NotLooser();
         p.minPledgeUsd = value;
         emit MinPledgeUsdSet(marketId, old, value);
-    }
-
-    /// @inheritdoc IParameterStoreLoosen
-    function loosenPoolShareMaxBpsOf(
-        uint256 marketId,
-        uint16 value
-    ) external override {
-        _onlyDelegated();
-        bytes32 poolKey = _poolKey(_market(marketId));
-        uint16 old = _poolShareOf(poolKey);
-        if (value <= old) revert NotLooser();
-        if (value > _s().poolShareMaxBps) revert OutOfBounds();
-        _s().poolShareOverride[poolKey] = value;
-        emit CapLoosened("poolShareMaxBpsOf", poolKey, old, value, msg.sender);
     }
 
     /// @notice Body of `IParameterStore.loosenMaxShortfallBps`.

@@ -23,7 +23,6 @@ import {
     TokenDef
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketDef} from "../../../src/types/MarketTypes.sol";
-import {RouteSlot} from "../../../src/types/OracleTypes.sol";
 import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {
@@ -54,7 +53,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// RiskModule, LPVault, LPOracle, routes, flash source, First-Loss Reserve) and for the Aave reserve reads.
 /// @dev World after `_setUpWorld`: the Stable LP Hub recorded (Stable tier), integration 1 registered, the CDP Spoke
 /// recorded, the GHO First-Loss Reserve funded, a 20,000,000 GHO credit line, the flash source set, GHO listed (issuer probe
-/// None) and enabled as debt reserve 0 (fixed price, same Hub), USDC and USDT listed with three routes each. `_listMarket` lists the USDC/USDT
+/// None) and enabled as debt reserve 0 (fixed price, same Hub), USDC and USDT listed with two routes each. `_listMarket` lists the USDC/USDT
 /// `[-50, 50]` market; `_activate` makes it Active with routes into GHO.
 abstract contract MarketRegistryFixture is TimelockFixture {
     uint32 internal constant V3 = 1;
@@ -296,26 +295,21 @@ abstract contract MarketRegistryFixture is TimelockFixture {
 
     function _routes(
         string memory label
-    ) internal returns (address[] memory p, address[] memory a, address[] memory s) {
+    ) internal returns (address[] memory p, address[] memory a) {
         p = new address[](1);
         a = new address[](2);
-        s = new address[](1);
         p[0] = _newFeed(string.concat(label, "/USD"));
         a[0] = _newFeed(string.concat(label, "/ETH"));
         a[1] = _newFeed(string.concat(label, "-ETH/USD"));
-        s[0] = _newFeed(string.concat(label, "/USD standby"));
     }
 
     function _tokenDef(
         address[] memory p,
-        address[] memory a,
-        address[] memory s
+        address[] memory a
     ) internal pure returns (TokenDef memory d) {
         d.isUsdStable = true;
         d.primaryRoute = p;
         d.alternateRoute = a;
-        d.standbyRoute = s;
-        d.replacedSlot = RouteSlot.None;
         d.issuerProbe = IssuerProbe.PausedFlag;
     }
 
@@ -331,9 +325,8 @@ abstract contract MarketRegistryFixture is TimelockFixture {
         string memory label,
         IssuerProbe probe
     ) internal {
-        (address[] memory p, address[] memory a, address[] memory s) = _routes(label);
-        ps.setTolerance(token, 100, 50);
-        TokenDef memory d = _tokenDef(p, a, s);
+        (address[] memory p, address[] memory a) = _routes(label);
+        TokenDef memory d = _tokenDef(p, a);
         d.issuerProbe = probe;
         vm.prank(address(timelock));
         registry.listToken(token, d);

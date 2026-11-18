@@ -13,7 +13,7 @@ import {LensDebtOracleMock} from "../utils/mocks/LensMocks.sol";
 /// @title LensEdgesUnitTest
 /// @notice Edge rules of the Lens's shared reads: the smaller collateral price and the larger debt price of
 /// SPEC-LIQ-004, a debt route that names no feed, a position out of custody in an account's records, and the
-/// pool-share and backing edges.
+/// backing edges.
 /// forge-config: default.isolate = false
 contract LensEdgesUnitTest is LensFixture {
     function setUp() public {
@@ -42,11 +42,6 @@ contract LensEdgesUnitTest is LensFixture {
         assertEq(r[0].liveUnits, 0, "unitsOf is not read for a position out of custody");
         assertEq(r[0].credited, 10_000e6, "the credit is still reported");
         vm.clearMockedCalls();
-    }
-
-    // TEST-247 verifies: REQ-LENS-018
-    function test_TEST_247_poolShareRoundsUp() public view {
-        assertEq(lens.getCapHeadroom(vt, alice).poolShareBps, 1, "credited units round up to 1 bps");
     }
 
     // TEST-247 verifies: REQ-LENS-012

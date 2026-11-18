@@ -19,7 +19,7 @@ contract ParameterStoreSpeedInvariantTest is ParameterStoreFixture, HandlerReach
     address internal safe = makeAddr("jointConfigurationSafe");
 
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
         vm.prank(address(timelock));
         store.grantRole(AvanaRoles.APPLICATION_RISK_STEWARD, safe);

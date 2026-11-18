@@ -86,7 +86,6 @@
   "src:MarketRegistrySafetyLogic": 90,
   "src:MarketRegistryWindDownLogic": 104,
   "src:OperatorFlashLiquidator": 89,
-  "src:OracleInputsLayout": 102,
   "src:ParameterStore": 1330,
   "src:ParameterStoreAdminOracleLogic": 109,
   "src:ParameterStoreAdminRiskLogic": 105,

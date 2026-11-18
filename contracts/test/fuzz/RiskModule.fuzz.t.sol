@@ -10,7 +10,7 @@ import {Test} from "forge-std/Test.sol";
 
 /// @title RiskModuleFuzzTest
 /// @notice Stateless properties of the RiskModule formulas: rounding direction, overflow inside listing bounds, the cap
-/// split, the pool-share test, the peg product, the rescue exclusion and the exemption step.
+/// split, the rescue exclusion and the exemption step.
 contract RiskModuleFuzzTest is Test {
     uint256 internal constant WAD = 1e18;
     uint256 internal constant RAY = 1e27;
@@ -132,35 +132,12 @@ contract RiskModuleFuzzTest is Test {
 
     // TEST-236 verifies: REQ-RISK-059, REQ-RISK-068, SPEC-CF-005
     function testFuzz_TEST_236_requiredIsTheMaximum(
-        uint256 floor_,
         uint256 minHf
     ) public view {
-        uint256 r = h.requiredHealthFactor(floor_, minHf);
+        uint256 r = h.requiredHealthFactor(minHf);
         assertGe(r, 1e18);
-        assertGe(r, floor_);
         assertGe(r, minHf);
-        assertTrue(r == 1e18 || r == floor_ || r == minHf);
-    }
-
-    // TEST-034 verifies: SPEC-CAP-005, REQ-RISK-023
-    function testFuzz_TEST_034_poolShareExact(
-        uint128 units,
-        uint16 cap,
-        uint128 depth
-    ) public view {
-        assertEq(h.poolShareExceeds(units, cap, depth), uint256(units) * 1e4 > uint256(cap) * depth);
-    }
-
-    // TEST-228 verifies: SPEC-BRK-002
-    function testFuzz_TEST_228_pegProductExact(
-        uint40 q0,
-        uint40 q1,
-        uint40 q2
-    ) public view {
-        uint256[] memory q = new uint256[](3);
-        (q[0], q[1], q[2]) = (q0, q1, q2);
-        bool exact = uint256(q0) * q1 * q2 <= 1e24;
-        assertEq(h.atOrBelowPeg(q), exact);
+        assertTrue(r == 1e18 || r == minHf);
     }
 
     // TEST-235 verifies: REQ-RISK-066, REQ-RISK-067, REQ-RISK-074, PROP-062
@@ -168,7 +145,7 @@ contract RiskModuleFuzzTest is Test {
         RiskModuleMath.Exemption memory x
     ) public view {
         RiskModuleMath.Outcome o = h.exemption(x);
-        bool needs = x.requireRescue || x.capFail || x.depthUnavailable || x.brk != 0 || x.belowMinimum;
+        bool needs = x.requireRescue || x.brk != 0 || x.belowMinimum;
         if (!needs) {
             assertEq(uint8(o), uint8(RiskModuleMath.Outcome.Pass));
             return;
@@ -228,30 +205,6 @@ contract RiskModuleFuzzTest is Test {
         }
         bool exact = (uint256(maxLb) * cf + 9999) / 1e4 >= 1e4 || (uint256(maxLb) - 1e4) * factor / 1e4 < minBonus;
         assertEq(v, exact);
-    }
-
-    // TEST-071 verifies: SPEC-CAP-005, REQ-RISK-023
-    function testFuzz_TEST_071_poolShareUnitsOverflowFails(
-        uint256 units,
-        uint256 capBps,
-        uint256 depth
-    ) public view {
-        // Avana's side `units x 1e4` does not fit 256 bits: the cap fails whatever the pool side.
-        units = bound(units, type(uint256).max / 1e4 + 1, type(uint256).max);
-        assertTrue(h.poolShareExceeds(units, capBps, depth));
-    }
-
-    // TEST-071 verifies: SPEC-CAP-005, REQ-RISK-023
-    function testFuzz_TEST_071_poolShareDepthOverflowHolds(
-        uint256 units,
-        uint256 capBps,
-        uint256 depth
-    ) public view {
-        // The pool side `capBps x depth` exceeds 2^256 while Avana's side fits: the cap holds.
-        units = bound(units, 0, type(uint256).max / 1e4);
-        capBps = bound(capBps, 2, type(uint256).max);
-        depth = bound(depth, type(uint256).max / capBps + 1, type(uint256).max);
-        assertFalse(h.poolShareExceeds(units, capBps, depth));
     }
 
     // TEST-071 verifies: SPEC-CF-005, REQ-RISK-068

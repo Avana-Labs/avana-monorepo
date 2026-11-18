@@ -3,31 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreBase} from "../../src/policy/parameter-store/IParameterStoreBase.sol";
-import {ParameterStore} from "../../src/policy/parameter-store/ParameterStore.sol";
-import {ParameterStoreAdminOracleLogic} from "../../src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol";
-import {ParameterStoreAdminRiskLogic} from "../../src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol";
-import {ParameterStoreListingLogic} from "../../src/policy/parameter-store/ParameterStoreListingLogic.sol";
-import {ParameterStoreLoosenLogic} from "../../src/policy/parameter-store/ParameterStoreLoosenLogic.sol";
-import {ParameterStoreTightenLogic} from "../../src/policy/parameter-store/ParameterStoreTightenLogic.sol";
-import {
-    FeedDef,
-    MarketParams,
-    ParameterStoreLogics
-} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {Market} from "../../src/types/MarketTypes.sol";
-import {ShapeKind} from "../../src/types/PositionTypes.sol";
+import {FeedDef} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {MockAggregator} from "../utils/mocks/ParameterStoreMocks.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-
-/// @notice A sequencer-uptime feed whose round read reverts.
-contract RevertingRoundFeed {
-    function latestRoundData() external pure returns (uint80, int256, uint256, uint256, uint80) {
-        revert("down");
-    }
-}
 
 /// @notice Feed definitions (REQ-CONFIG-022, REQ-CONFIG-023, REQ-ORACLE-049): every range of `setFeed` at its
 /// edges, the pinned decimals and answer bounds, the capped `maxAnswer`, the borrow age a redefinition keeps, the
@@ -37,7 +16,7 @@ contract ParameterStoreFeedsUnitTest is ParameterStoreFixture {
     bytes internal oob = abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
 
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
         f = new MockAggregator(8, 1e6, 1e12);
     }
@@ -324,11 +303,9 @@ contract ParameterStoreFeedsUnitTest is ParameterStoreFixture {
 
     // TEST-064 verifies: SPEC-CF-004, REQ-PSTORE-004, REQ-PSTORE-009
     function test_TEST_064_feedRaiseRefusedAtTheMarginEdge() public {
-        // Tolerances wide enough for large thresholds; CF 9,999 for both tokens and a pool factor of 4,000 give a
-        // margin of 10,000 − ⌊9,999 × 4,000 / 10,000⌋ = 6,001 bps. Each route must stay strictly below it.
+        // CF 9,999 for both tokens and a pool factor of 4,000 give a margin of 10,000 − ⌊9,999 × 4,000 / 10,000⌋ =
+        // 6,001 bps. Each route must stay strictly below it.
         vm.startPrank(address(timelock));
-        store.setFeedAgreementToleranceBps(usdc, 10_000);
-        store.setFeedAgreementToleranceBps(usdt, 10_000);
         store.setTokenCollateralFactorBps(usdc, 9999);
         store.setTokenCollateralFactorBps(usdt, 9999);
         vm.stopPrank();
@@ -347,256 +324,5 @@ contract ParameterStoreFeedsUnitTest is ParameterStoreFixture {
         (ok,) = _set(address(fUsdc), d);
         assertTrue(ok);
         assertEq(store.getFeed(address(fUsdc)).heartbeatDriftBps, 0);
-    }
-}
-
-/// @notice The sequencer-uptime check on an L2 (REQ-PSTORE-023) at every edge of its feed and grace rules.
-contract ParameterStoreFeedsSequencerUnitTest is ParameterStoreFixture {
-    MockAggregator internal seq;
-    bytes internal oob = abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
-
-    function setUp() public {
-        _deployStore(true);
-        seq = new MockAggregator(0, 0, 0);
-        seq.setRound(0, 1_000_000);
-    }
-
-    function _set(
-        address feed,
-        uint32 grace
-    ) internal returns (bool ok, bytes memory ret) {
-        vm.prank(address(timelock));
-        (ok, ret) = address(store).call(abi.encodeCall(store.setSequencer, (feed, grace)));
-    }
-
-    function _invalid(
-        address feed
-    ) internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IParameterStore.InvalidSequencerFeed.selector, feed);
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-023, REQ-CONFIG-050
-    function test_TEST_250_l2GraceAtBothEnds() public {
-        (bool ok, bytes memory ret) = _set(address(seq), 599);
-        assertFalse(ok);
-        assertEq(ret, oob);
-        (ok, ret) = _set(address(seq), 7201);
-        assertFalse(ok);
-        assertEq(ret, oob);
-        (ok, ret) = _set(address(seq), 0);
-        assertFalse(ok);
-        assertEq(ret, oob);
-        _tl();
-        vm.expectEmit(address(store));
-        emit IParameterStore.SequencerSet(address(seq), 600);
-        store.setSequencer(address(seq), 600);
-        (ok,) = _set(address(seq), 7200);
-        assertTrue(ok);
-        (address feed, uint32 grace) = store.sequencer();
-        assertEq(feed, address(seq));
-        assertEq(grace, 7200);
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-023, REQ-ORACLE-099
-    function test_TEST_250_l2FeedAnswerAndStart() public {
-        // Up (0) and down (1) are both valid statuses.
-        seq.setRound(1, 1);
-        (bool ok,) = _set(address(seq), 3600);
-        assertTrue(ok);
-        seq.setRound(0, 1);
-        (ok,) = _set(address(seq), 3600);
-        assertTrue(ok);
-        int256[3] memory bad = [int256(2), -1, type(int256).max];
-        for (uint256 i = 0; i < bad.length; ++i) {
-            seq.setRound(bad[i], 1);
-            bytes memory ret;
-            (ok, ret) = _set(address(seq), 3600);
-            assertFalse(ok);
-            assertEq(ret, _invalid(address(seq)));
-        }
-        seq.setRound(0, 0);
-        (bool done, bytes memory r) = _set(address(seq), 3600);
-        assertFalse(done);
-        assertEq(r, _invalid(address(seq)));
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-023
-    function test_TEST_250_l2FeedMustHoldCodeAndAnswer() public {
-        (bool ok, bytes memory ret) = _set(address(0), 3600);
-        assertFalse(ok);
-        assertEq(ret, _invalid(address(0)));
-        RevertingRoundFeed broken = new RevertingRoundFeed();
-        (ok, ret) = _set(address(broken), 3600);
-        assertFalse(ok);
-        assertEq(ret, _invalid(address(broken)));
-        // A contract without the round read at all.
-        (ok, ret) = _set(address(registry), 3600);
-        assertFalse(ok);
-        assertEq(ret, _invalid(address(registry)));
-        // The feed is checked before the grace period.
-        (ok, ret) = _set(address(broken), 0);
-        assertFalse(ok);
-        assertEq(ret, _invalid(address(broken)));
-        (address feed,) = store.sequencer();
-        assertEq(feed, address(0));
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-023
-    function test_TEST_250_l2InitializeLeavesTheCheckEmpty() public view {
-        (address feed, uint32 grace) = store.sequencer();
-        assertEq(feed, address(0));
-        assertEq(grace, 0);
-    }
-}
-
-/// @notice `twapMinObservations` and the observation-buffer checks of REQ-PSTORE-027 on a 2-second chain and a
-/// 12-second chain, at the edge of each.
-contract ParameterStoreFeedsTwapUnitTest is ParameterStoreFixture {
-    IParameterStore internal base;
-    bytes internal oob = abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
-
-    function setUp() public {
-        _deployStore(false);
-        _listMarket();
-        base = _storeWithBlockTime(2);
-        MockAggregator seq = new MockAggregator(0, 0, 0);
-        seq.setRound(0, 1);
-        vm.startPrank(address(timelock));
-        // The 2-second chain has a sequencer: its grace period bounds every window (REQ-PSTORE-034).
-        base.setSequencer(address(seq), 3600);
-        base.setTokenCollateralFactorBps(usdc, 7800);
-        base.setTokenCollateralFactorBps(usdt, 7500);
-        vm.stopPrank();
-    }
-
-    function _storeWithBlockTime(
-        uint32 blockTime
-    ) internal returns (IParameterStore s) {
-        address tl = address(timelock);
-        address reg = address(registry);
-        ParameterStoreLogics memory l = ParameterStoreLogics({
-            tighten: address(new ParameterStoreTightenLogic(tl, reg, blockTime, true)),
-            loosen: address(new ParameterStoreLoosenLogic(tl, reg, blockTime, true)),
-            listing: address(new ParameterStoreListingLogic(tl, reg, blockTime, true)),
-            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, reg, blockTime, true)),
-            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, reg, blockTime, true))
-        });
-        ParameterStore impl = new ParameterStore(tl, reg, blockTime, true, l);
-        s = IParameterStore(
-            address(
-                new ERC1967Proxy(
-                    address(impl), abi.encodeCall(IParameterStore.initialize, (tl, _defaultGlobals(), 10_000))
-                )
-            )
-        );
-    }
-
-    function _list(
-        IParameterStore s,
-        uint32 window
-    ) internal returns (bool ok, bytes memory ret) {
-        MarketParams memory p = _defaultMarketParams();
-        p.twapWindow = window;
-        vm.prank(address(timelock));
-        (ok, ret) = address(s).call(abi.encodeCall(s.setInitialMarketParams, (M, p)));
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-027, SPEC-ORC-022, Q-326
-    function test_TEST_250_baseNeedsNineHundredOneSlots() public {
-        assertEq(base.CHAIN_BLOCK_TIME(), 2);
-        pool.setCardinality(900);
-        (bool ok, bytes memory ret) = _list(base, 1800);
-        assertFalse(ok);
-        assertEq(ret, oob);
-        pool.setCardinality(901);
-        (ok,) = _list(base, 1800);
-        assertTrue(ok);
-        assertEq(base.twapMinObservations(M), 901);
-        // The same pool on the 12-second chain needs 151.
-        assertEq(store.twapMinObservations(M), 151);
-        pool.setCardinality(150);
-        (ok, ret) = _list(store, 1800);
-        assertFalse(ok);
-        assertEq(ret, oob);
-        pool.setCardinality(151);
-        (ok,) = _list(store, 1800);
-        assertTrue(ok);
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-027
-    function test_TEST_250_observationCountRoundsUp() public {
-        pool.setCardinality(type(uint16).max);
-        uint32[6] memory windows = [uint32(1), 12, 13, 24, 25, 3600];
-        uint16[6] memory expected = [uint16(2), 2, 3, 3, 4, 301];
-        for (uint256 i = 0; i < windows.length; ++i) {
-            vm.prank(address(timelock));
-            store.setTwapWindow(M, windows[i]);
-            assertEq(store.twapMinObservations(M), expected[i], "12 s chain");
-            vm.prank(address(timelock));
-            base.setTwapWindow(M, windows[i]);
-            assertEq(base.twapMinObservations(M), (windows[i] + 1) / 2 + 1, "2 s chain");
-        }
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-027, REQ-CONFIG-050
-    function test_TEST_250_windowNeedingMoreThanSixtyFiveThousandSlotsRefused() public {
-        pool.setCardinality(type(uint16).max);
-        // ⌈786,408 / 12⌉ + 1 = 65,535 slots: the largest count a pool can hold.
-        vm.prank(address(timelock));
-        store.setTwapWindow(M, 786_408);
-        assertEq(store.twapMinObservations(M), type(uint16).max);
-        vm.prank(address(timelock));
-        (bool ok, bytes memory ret) = address(store).call(abi.encodeCall(store.setTwapWindow, (M, 786_409)));
-        assertFalse(ok);
-        assertEq(ret, oob);
-        assertEq(store.getMarketParams(M).twapWindow, 786_408);
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-004, REQ-PSTORE-027
-    function test_TEST_250_noTwapProtocolTakesWindowZeroOnly() public {
-        integration.set(false, true, false, ShapeKind.TickRange);
-        (bool ok, bytes memory ret) = _list(store, 1800);
-        assertFalse(ok);
-        assertEq(ret, oob);
-        (ok,) = _list(store, 0);
-        assertTrue(ok);
-        assertEq(store.twapMinObservations(M), 0);
-        // A protocol with a time-weighted price needs a window.
-        integration.set(true, true, false, ShapeKind.TickRange);
-        (ok, ret) = _list(store, 0);
-        assertFalse(ok);
-        assertEq(ret, oob);
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-004, REQ-PSTORE-027
-    function test_TEST_250_cardinalityReadOnlyForTickRangePools() public {
-        pool.setCardinality(1);
-        // Another shape reads no slot0: only the integration's depth read gates the window.
-        integration.set(true, true, false, ShapeKind.FullPool);
-        (bool ok,) = _list(store, 1800);
-        assertTrue(ok);
-        // A tick-range market without a pool address reads none either.
-        integration.set(true, true, false, ShapeKind.TickRange);
-        Market memory m = registry.getMarket(M);
-        m.pool = address(0);
-        registry.setMarket(M, m);
-        (ok,) = _list(store, 1800);
-        assertTrue(ok);
-    }
-
-    // TEST-250 verifies: REQ-PSTORE-004, SPEC-ORC-022
-    function test_TEST_250_depthReadMustSucceedAndReportDepth() public {
-        integration.set(true, false, false, ShapeKind.TickRange);
-        (bool ok, bytes memory ret) = _list(store, 1800);
-        assertFalse(ok);
-        assertEq(ret, oob);
-        integration.set(true, true, true, ShapeKind.TickRange);
-        (ok, ret) = _list(store, 1800);
-        assertFalse(ok);
-        assertEq(ret, oob);
-        vm.prank(address(timelock));
-        (ok, ret) = address(store).call(abi.encodeCall(store.setTwapWindow, (M, 1800)));
-        assertFalse(ok);
-        assertEq(ret, oob);
     }
 }

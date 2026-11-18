@@ -7,14 +7,6 @@ pragma solidity 0.8.28;
 /// @notice Loosen setters of the ParameterStore: each moves one risk parameter in its riskier direction.
 /// @dev Timelock only, at the normal delay. Step-limited parameters move one step at most once per `normalDelay`.
 interface IParameterStoreLoosen {
-    /// @notice Lowers or disables a market's `hardHealthFloor`.
-    /// @dev At most `LOOSEN_HEALTH_FACTOR_STEP` below the current value; a value below 1e18 is written as 0 (off).
-    /// @param value New floor, WAD, or 0 for off.
-    function loosenHardHealthFloor(
-        uint256 marketId,
-        uint256 value
-    ) external;
-
     /// @notice Raises a market's `slippageAllowanceBps`.
     /// @dev At most `LOOSEN_SLIPPAGE_STEP_BPS` above the current value.
     function loosenSlippageAllowanceBps(
@@ -67,21 +59,10 @@ interface IParameterStoreLoosen {
         uint256 value
     ) external;
 
-    /// @notice Raises `poolShareMaxBps`, the chain default pool-share cap.
-    function loosenPoolShareMaxBps(
-        uint16 value
-    ) external;
-
     /// @notice Lowers a market's `minPledgeUsd`.
     /// @param value New minimum, 8-decimal USD.
     function loosenMinPledgeUsd(
         uint256 marketId,
         uint256 value
-    ) external;
-
-    /// @notice Raises the pool-share cap of a market's pool, at most to the chain default.
-    function loosenPoolShareMaxBpsOf(
-        uint256 marketId,
-        uint16 value
     ) external;
 }

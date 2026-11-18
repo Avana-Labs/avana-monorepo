@@ -15,7 +15,6 @@ import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.
 import {IParameterStoreLoosen} from "../../src/policy/parameter-store/IParameterStoreLoosen.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {PauseReason} from "../../src/types/MarketTypes.sol";
-import {RouteSlot} from "../../src/types/OracleTypes.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -60,13 +59,12 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
     // TEST-066 verifies: REQ-MREG-004, REQ-MREG-022, REQ-MREG-028, Q-262, Q-263, REQ-ACCESS-089, REQ-ACCESS-094, REQ-ACCESS-112, REQ-ACCESS-128
     // Sources: 5.1 TEST-066
     function test_TEST_066_guardianPowersAreStopsOnly() public {
-        bytes[] memory adminOnly = new bytes[](6);
+        bytes[] memory adminOnly = new bytes[](5);
         adminOnly[0] = abi.encodeCall(registry.recordHub, (alice, RiskTier.Stable));
         adminOnly[1] = abi.encodeCall(registry.unfreezeAddress, (alice));
-        adminOnly[2] = abi.encodeCall(registry.restorePriceRoute, (address(usdc)));
-        adminOnly[3] = abi.encodeCall(registry.setRoute, (1, address(usdc), address(gho), 0, alice));
-        adminOnly[4] = abi.encodeCall(registry.setFlashSource, (alice));
-        adminOnly[5] = abi.encodeCall(registry.upgradeToAndCall, (alice, ""));
+        adminOnly[2] = abi.encodeCall(registry.setRoute, (1, address(usdc), address(gho), 0, alice));
+        adminOnly[3] = abi.encodeCall(registry.setFlashSource, (alice));
+        adminOnly[4] = abi.encodeCall(registry.upgradeToAndCall, (alice, ""));
         for (uint256 i = 0; i < adminOnly.length; ++i) {
             vm.prank(emergencyGuardian);
             (bool ok, bytes memory ret) = address(registry).call(adminOnly[i]);
@@ -78,12 +76,7 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         registry.freeze(address(hub));
         registry.pause(address(hub), PauseReason.General);
         registry.freezeAddress(attacker);
-        registry.useStandbyRoute(address(usdc), RouteSlot.Primary);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, emergencyGuardian));
-        registry.cancelStandbySwitch(address(usdc));
         vm.stopPrank();
-        vm.prank(aaveGovernanceExecutor);
-        registry.cancelStandbySwitch(address(usdc));
     }
 
     // TEST-066 verifies: REQ-MREG-004, REQ-MREG-017, REQ-ACCESS-086, REQ-ACCESS-124
@@ -99,15 +92,13 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         registry.pause(address(hub), PauseReason.General);
         vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, freezer));
         registry.resetMarketBreaker(1);
-        vm.expectRevert(abi.encodeWithSelector(IMarketRegistryBase.Unauthorized.selector, freezer));
-        registry.useStandbyRoute(address(usdc), RouteSlot.Primary);
         vm.stopPrank();
     }
 
     // TEST-062 verifies: REQ-MREG-004, REQ-MREG-026, REQ-CONFIG-028
     // Sources: 5.1 TEST-062
     function test_TEST_062_strangerRefusedOnEveryWrite() public {
-        bytes[] memory guarded = new bytes[](10);
+        bytes[] memory guarded = new bytes[](9);
         guarded[0] = abi.encodeCall(registry.freeze, (address(hub)));
         guarded[1] = abi.encodeCall(registry.pause, (address(hub), PauseReason.General));
         guarded[2] = abi.encodeCall(registry.freezeAll, ());
@@ -117,7 +108,6 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         guarded[6] = abi.encodeCall(registry.freezeAddress, (bob));
         guarded[7] = abi.encodeCall(registry.tripMarketBreaker, (1));
         guarded[8] = abi.encodeCall(registry.resetDebtBreaker, (address(spoke), 0));
-        guarded[9] = abi.encodeCall(registry.useStandbyRoute, (address(usdc), RouteSlot.Primary));
         for (uint256 i = 0; i < guarded.length; ++i) {
             vm.prank(attacker);
             (bool ok, bytes memory ret) = address(registry).call(guarded[i]);
@@ -131,7 +121,7 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, attacker, APP_ADMIN)
         );
-        registry.listToken(address(gho), _tokenDef(new address[](0), new address[](0), new address[](0)));
+        registry.listToken(address(gho), _tokenDef(new address[](0), new address[](0)));
     }
 
     // TEST-168 verifies: REQ-CONFIG-001, REQ-CONFIG-002, REQ-MREG-003, REQ-ACCESS-015, REQ-ACCESS-031
@@ -235,40 +225,30 @@ contract MarketRegistryAccessUnitTest is MarketRegistryFixture {
     /// added to the MarketRegistry or one of its logic contracts.
     // TEST-032 verifies: REQ-CONFIG-014
     function test_TEST_032_noRiskParameterModeAllowlistOrWalletCapSelectors() public {
-        bytes4[46] memory params = [
+        bytes4[36] memory params = [
             IParameterStore.marketUsdCap.selector,
             IParameterStore.topUpSliceUsd.selector,
             IParameterStore.stressFloorUsd.selector,
             IParameterStore.tokenUsdCap.selector,
-            IParameterStore.poolShareMaxBps.selector,
             IParameterStore.minPledgeUsd.selector,
             IParameterStore.debtAssetParams.selector,
             IParameterStore.routeDepthThreshold.selector,
-            IParameterStore.poolShareMaxBpsOf.selector,
-            IParameterStoreTighten.tightenHardHealthFloor.selector,
             IParameterStoreTighten.tightenSlippageAllowanceBps.selector,
             IParameterStoreTighten.tightenFloorRoundingAllowance.selector,
             IParameterStoreTighten.tightenBorrowPriceMaxAge.selector,
-            IParameterStoreTighten.tightenConsistencyToleranceBps.selector,
-            IParameterStoreTighten.tightenFeedAgreementToleranceBps.selector,
             IParameterStoreTighten.tightenPoolRiskFactor.selector,
             IParameterStoreTighten.tightenRouteDepthThreshold.selector,
             IParameterStoreTighten.tightenMarketUsdCap.selector,
             IParameterStoreTighten.tightenTopUpSliceUsd.selector,
             IParameterStoreTighten.tightenTokenUsdCap.selector,
-            IParameterStoreTighten.tightenPoolShareMaxBps.selector,
             IParameterStoreTighten.tightenMinPledgeUsd.selector,
-            IParameterStoreTighten.tightenPoolShareMaxBpsOf.selector,
-            IParameterStoreLoosen.loosenHardHealthFloor.selector,
             IParameterStoreLoosen.loosenSlippageAllowanceBps.selector,
             IParameterStoreLoosen.loosenFloorRoundingAllowance.selector,
             IParameterStoreLoosen.loosenRouteDepthThreshold.selector,
             IParameterStoreLoosen.loosenMarketUsdCap.selector,
             IParameterStoreLoosen.loosenTopUpSliceUsd.selector,
             IParameterStoreLoosen.loosenTokenUsdCap.selector,
-            IParameterStoreLoosen.loosenPoolShareMaxBps.selector,
             IParameterStoreLoosen.loosenMinPledgeUsd.selector,
-            IParameterStoreLoosen.loosenPoolShareMaxBpsOf.selector,
             IParameterStore.maxShortfallBps.selector,
             IParameterStore.tightenMaxShortfallBps.selector,
             IParameterStore.loosenMaxShortfallBps.selector,

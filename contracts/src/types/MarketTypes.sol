@@ -113,8 +113,6 @@ struct AccountGateStatus {
     PauseState pauseState;
     // Current health factor, WAD.
     uint256 healthFactor;
-    // hardHealthFloor(marketId) from the ParameterStore, WAD; 0 when off.
-    uint256 hardHealthFloor;
     // True when every preBorrowCheck check that does not depend on the reserve borrowed passes now.
     bool borrowAllowed;
     // True when preWithdrawCheck would pass now, every held debt reserve's debt breaker included.
@@ -143,8 +141,6 @@ struct CapView {
     uint256 sliceHeadroomUsd;
     address[] tokens;
     uint256[] tokenHeadroomUsd;
-    uint256 poolShareBps;
-    uint256 poolShareMaxBps;
     uint256 chargePricePerWholeToken;
     uint256 vaultTokenAddHeadroom;
     DrawHeadroom[] drawHeadroom;

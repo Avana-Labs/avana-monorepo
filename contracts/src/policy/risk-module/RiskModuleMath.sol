@@ -7,7 +7,7 @@ import {IRiskModuleErrors} from "./IRiskModuleErrors.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title RiskModuleMath
-/// @notice The RiskModule's pure formulas: caps, restore amount, pool share, debt value and health factors.
+/// @notice The RiskModule's pure formulas: caps, restore amount, debt value and health factors.
 /// @dev Every rounding is against the borrower.
 library RiskModuleMath {
     /// @notice Static call with explicit gas, copying at most `maxLength` bytes of return data.
@@ -64,7 +64,7 @@ library RiskModuleMath {
         uint256 offset
     ) internal pure returns (bool ok, uint256 word) {
         if (offset > b.length || b.length - offset < 32) return (false, 0);
-        // abi.decode reverts on malformed data, which the sequencer read must report as down.
+        // A bounds-checked read: abi.decode would revert on malformed data instead of reporting it.
         // solhint-disable-next-line no-inline-assembly
         assembly ("memory-safe") {
             word := mload(add(add(b, 0x20), offset))
@@ -88,8 +88,6 @@ library RiskModuleMath {
     uint256 internal constant BPS = 1e4;
     /// @dev `totalDebtValueRay / 1e45` is 8-decimal USD.
     uint256 internal constant DEBT_RAY_PER_USD8 = 1e45;
-    /// @dev `1e8` per token of an `n`-token peg product: `10^{8n}`, `n <= 8`.
-    uint256 internal constant PEG8 = 1e8;
 
     /// @notice Outcome of the exemption step of a pledge.
     enum Outcome {
@@ -99,8 +97,6 @@ library RiskModuleMath {
         // The minimum is the only exemption reason.
         BelowMinimum,
         NotRescue,
-        PoolShareUnavailable,
-        PoolShareExceeded,
         Breaker
     }
 
@@ -169,47 +165,6 @@ library RiskModuleMath {
         uint256 cap
     ) internal pure returns (bool ok) {
         ok = used <= cap && add <= cap - used;
-    }
-
-    /// @notice Whether `units * 1e4 > capBps * depth`; an overflowing `units * 1e4` fails.
-    function poolShareExceeds(
-        uint256 units,
-        uint256 capBps,
-        uint256 depth
-    ) internal pure returns (bool exceeds) {
-        (bool okL, uint256 lhs) = Math.tryMul(units, BPS);
-        (bool okR, uint256 rhs) = Math.tryMul(capBps, depth);
-        if (!okL) return true;
-        if (!okR) return false;
-        exceeds = lhs > rhs;
-    }
-
-    /// @notice Units still admissible under the pool-share cap, floored at 0.
-    function poolShareRoom(
-        uint256 units,
-        uint256 capBps,
-        uint256 depth
-    ) internal pure returns (uint256 room) {
-        uint256 max = Math.mulDiv(capBps, depth, BPS);
-        room = max > units ? max - units : 0;
-    }
-
-    /// @notice Peg test `prod_i q_i <= 10^{8n}`, overflow-safe; a missing quote (0) passes.
-    function atOrBelowPeg(
-        uint256[] memory quotes
-    ) internal pure returns (bool below) {
-        uint256 n = quotes.length;
-        for (uint256 i = 0; i < n; ++i) {
-            if (quotes[i] == 0) return true;
-        }
-        uint256 bound = PEG8 ** n;
-        uint256 acc = 1;
-        for (uint256 i = 0; i < n; ++i) {
-            uint256 q = quotes[i];
-            if (q > bound / acc) return false;
-            acc *= q;
-        }
-        below = true;
     }
 
     /// @notice Debt value, 8-decimal USD, rounded down.
@@ -298,12 +253,9 @@ library RiskModuleMath {
     }
 
     function requiredHealthFactor(
-        uint256 hardHealthFloor,
         uint256 minHealthFactor
     ) internal pure returns (uint256 required) {
-        required = WAD;
-        if (hardHealthFloor > required) required = hardHealthFloor;
-        if (minHealthFactor > required) required = minHealthFactor;
+        required = minHealthFactor > WAD ? minHealthFactor : WAD;
     }
 
     /// @notice Gas floor before a probe with explicit gas `g`: `ceil(64 * g / 63) + POST_CALL_GAS`.
@@ -323,9 +275,6 @@ library RiskModuleMath {
     /// @notice Inputs of the exemption step of a pledge.
     struct Exemption {
         bool requireRescue;
-        // The pool-share cap cannot be evaluated: the pool's depth is unavailable.
-        bool depthUnavailable;
-        bool capFail;
         // The market breaker without `ORACLE`: live, recovering or latched.
         uint32 brk;
         // `pledgeUsd < minPledgeUsd`.
@@ -342,13 +291,11 @@ library RiskModuleMath {
     function exemption(
         Exemption memory x
     ) internal pure returns (Outcome outcome) {
-        bool gates = x.capFail || x.depthUnavailable || x.brk != 0;
+        bool gates = x.brk != 0;
         if (!x.requireRescue && !gates && !x.belowMinimum) return Outcome.Pass;
         if (x.eligible && x.charge <= x.restore) return Outcome.Rescue;
         if (x.belowMinimum && !x.requireRescue && !gates) return Outcome.BelowMinimum;
         if (x.requireRescue || x.belowMinimum) return Outcome.NotRescue;
-        if (x.depthUnavailable) return Outcome.PoolShareUnavailable;
-        if (x.capFail) return Outcome.PoolShareExceeded;
         return Outcome.Breaker;
     }
 }

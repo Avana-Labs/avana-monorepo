@@ -51,12 +51,10 @@ contract CollateralizationAccessUnitTest is CollateralizationFixture {
 
     // TEST-236 verifies: REQ-COLL-018, REQ-VAULT-091, REQ-LOCK-016, Q-253, Q-383
     // Sources: 2.3 REQ-COLL-018 (the RiskModule reads both inside the Adapter's borrow)
-    /// @notice `getAccountRescueUnits` and `poolUnits` answer every caller while the Lock is free or held by the
-    /// AaveAdapter, and refuse every caller, LPVaultSwap included, while LPVaultSwap holds it.
+    /// @notice `getAccountRescueUnits` answers every caller while the Lock is free or held by the AaveAdapter, and
+    /// refuses every caller, LPVaultSwap included, while LPVaultSwap holds it.
     function test_TEST_236_adapterReadableViewMatrix() public {
-        bytes32 poolKey = keccak256(abi.encode(INTEGRATION, pool, bytes32(0)));
-        bytes[2] memory views =
-            [abi.encodeCall(coll.getAccountRescueUnits, (aliceProxy, vt)), abi.encodeCall(coll.poolUnits, (poolKey))];
+        bytes[1] memory views = [abi.encodeCall(coll.getAccountRescueUnits, (aliceProxy, vt))];
         address[5] memory callers = [stranger, adapter, lpVaultSwap, address(lpVault), vt];
         for (uint8 state = FREE; state <= SWAP_HOLDS; ++state) {
             _enter(state);
@@ -66,7 +64,7 @@ contract CollateralizationAccessUnitTest is CollateralizationFixture {
                     (bool ok, bytes memory ret) = address(coll).staticcall(views[v]);
                     assertEq(ok, state != SWAP_HOLDS, "rescue-view admission");
                     if (ok) {
-                        assertEq(abi.decode(ret, (uint256)), v == 0 ? 0 : 5_000_000_000, "value");
+                        assertEq(abi.decode(ret, (uint256)), 0, "value");
                     } else {
                         assertEq(ret, abi.encodeWithSelector(ICollateralizationBase.Locked.selector));
                     }

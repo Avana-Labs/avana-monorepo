@@ -28,7 +28,7 @@ abstract contract FlashSourceFixture is ParameterStoreFixture {
     AaveV3FlashSource internal source;
 
     function _deployFlashSource() internal {
-        _deployStore(false);
+        _deployStore();
         acl = new MockAaveV3ACLManager();
         provider = new MockAaveV3AddressesProvider(address(acl));
         aavePool = new MockAaveV3Pool(address(provider), POOL_PREMIUM_BPS);

@@ -8,7 +8,7 @@ import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRe
 import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {Market} from "../../../src/types/MarketTypes.sol";
-import {PriceState, PriceStateView, TokenPriceView} from "../../../src/types/OracleTypes.sol";
+import {PriceState} from "../../../src/types/OracleTypes.sol";
 import {DebtPriceView} from "./DebtPriceView.sol";
 
 /// @title LVSMarketRegistryMock
@@ -142,7 +142,6 @@ contract LVSParameterStoreMock {
     uint16 public avanaFeeShareBps = 2000;
     uint16 public maxShortfallBps = 1000;
     address public feeRecipient;
-    uint256 public graceHealthFactor = 0.95e18;
     uint32 public defaultLiquidationAge = 88_200;
 
     function setSlippage(
@@ -156,11 +155,6 @@ contract LVSParameterStoreMock {
         uint256 marketId
     ) external view returns (MarketParams memory) {
         return _params[marketId];
-    }
-
-    /// @dev The AaveAdapter's sequencer read: a chain without a sequencer feed (the gate is always Up).
-    function sequencer() external pure returns (address feed, uint32 gracePeriod) {
-        return (address(0), 0);
     }
 
     function setFloorRoundingAllowance(
@@ -194,12 +188,6 @@ contract LVSParameterStoreMock {
         feeRecipient = v;
     }
 
-    function setGraceHealthFactor(
-        uint256 v
-    ) external {
-        graceHealthFactor = v;
-    }
-
     function setLiquidationPriceMaxAge(
         address feed,
         uint32 age
@@ -227,7 +215,7 @@ contract LVSParameterStoreMock {
 
 /// @title LVSLPOracleMock
 /// @notice LPOracle stand-in: an 8-decimal price feed the AaveOracle reads (`latestAnswer`), `poke()` that applies a
-/// pending state (so a test sees whether LPVaultSwap pokes before it reads), `getPriceState()` built from settable
+/// pending state (so a test sees whether LPVaultSwap pokes before it reads), `getPriceStatus()` built from settable
 /// flags and per-token legs, and `getTokenPrices()`.
 contract LVSLPOracleMock {
     int256 public latestAnswer;
@@ -357,22 +345,6 @@ contract LVSLPOracleMock {
             }
         }
         (s.borrowFresh, s.liquidationFresh) = (ok && state == PriceState.Live, ok);
-    }
-
-    function getPriceState() external view returns (PriceStateView memory v) {
-        v.state = state;
-        v.answer = latestAnswer;
-        v.liquidationPaused = liquidationPaused;
-        v.disagreementPauseActive = disagreementPauseActive;
-        v.disagreementExpired = disagreementExpired;
-        v.inGrace = inGrace;
-        v.tokens = new TokenPriceView[](_tokens.length);
-        for (uint256 i = 0; i < _tokens.length; ++i) {
-            v.tokens[i].token = _tokens[i];
-            v.tokens[i].valuationPrice = _prices[i];
-            v.tokens[i].legFeeds = _legFeeds[i];
-            v.tokens[i].legUpdatedAt = _legUpdatedAt[i];
-        }
     }
 }
 

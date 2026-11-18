@@ -25,16 +25,16 @@ contract ForeignDelegator {
     }
 }
 
-/// @notice The five logic contracts behind the implementation (REQ-PSTORE-001): each reports its kind and the four
+/// @notice The five logic contracts behind the implementation (REQ-PSTORE-001): each reports its kind and the three
 /// immutables it was built with, the implementation constructor refuses any slot whose logic differs in one of the
-/// five, every logic and implementation refuses a zero timelock, registry or block time, and a logic contract run
+/// four, every logic and implementation refuses a zero timelock, registry or block time, and a logic contract run
 /// anywhere but through the store's delegatecall either refuses (`NotDelegated`) or acts only on the caller's own
 /// storage.
 contract ParameterStoreLogicsUnitTest is ParameterStoreFixture {
     bytes internal oob = abi.encodeWithSelector(IParameterStoreBase.OutOfBounds.selector);
 
     function setUp() public {
-        _deployStore(false);
+        _deployStore();
         _listMarket();
     }
 
@@ -65,20 +65,19 @@ contract ParameterStoreLogicsUnitTest is ParameterStoreFixture {
         uint256 i,
         address tl,
         address reg,
-        uint32 bt,
-        bool seq
+        uint32 bt
     ) internal returns (address) {
-        if (i == 0) return address(new ParameterStoreTightenLogic(tl, reg, bt, seq));
-        if (i == 1) return address(new ParameterStoreLoosenLogic(tl, reg, bt, seq));
-        if (i == 2) return address(new ParameterStoreListingLogic(tl, reg, bt, seq));
-        if (i == 3) return address(new ParameterStoreAdminOracleLogic(tl, reg, bt, seq));
-        return address(new ParameterStoreAdminRiskLogic(tl, reg, bt, seq));
+        if (i == 0) return address(new ParameterStoreTightenLogic(tl, reg, bt));
+        if (i == 1) return address(new ParameterStoreLoosenLogic(tl, reg, bt));
+        if (i == 2) return address(new ParameterStoreListingLogic(tl, reg, bt));
+        if (i == 3) return address(new ParameterStoreAdminOracleLogic(tl, reg, bt));
+        return address(new ParameterStoreAdminRiskLogic(tl, reg, bt));
     }
 
     function _deployImpl(
         ParameterStoreLogics memory l
     ) internal returns (bool ok, bytes memory err) {
-        try new ParameterStore(address(timelock), address(registry), BLOCK_TIME, false, l) returns (ParameterStore) {
+        try new ParameterStore(address(timelock), address(registry), BLOCK_TIME, l) returns (ParameterStore) {
             ok = true;
         } catch (bytes memory reason) {
             err = reason;
@@ -90,12 +89,11 @@ contract ParameterStoreLogicsUnitTest is ParameterStoreFixture {
         address[5] memory a = _asArray(logics);
         bytes32[5] memory kinds = _kinds();
         for (uint256 i = 0; i < a.length; ++i) {
-            (bytes32 kind, address tl, address reg, uint32 bt, bool seq) = IParameterStoreLogic(a[i]).logicConfig();
+            (bytes32 kind, address tl, address reg, uint32 bt) = IParameterStoreLogic(a[i]).logicConfig();
             assertEq(kind, kinds[i]);
             assertEq(tl, address(timelock));
             assertEq(reg, address(registry));
             assertEq(bt, BLOCK_TIME);
-            assertFalse(seq);
         }
     }
 
@@ -121,11 +119,10 @@ contract ParameterStoreLogicsUnitTest is ParameterStoreFixture {
         address otherTl = makeAddr("otherTimelock");
         address otherReg = makeAddr("otherRegistry");
         for (uint256 slot = 0; slot < 5; ++slot) {
-            address[4] memory wrong = [
-                _logic(slot, otherTl, address(registry), BLOCK_TIME, false),
-                _logic(slot, address(timelock), otherReg, BLOCK_TIME, false),
-                _logic(slot, address(timelock), address(registry), 2, false),
-                _logic(slot, address(timelock), address(registry), BLOCK_TIME, true)
+            address[3] memory wrong = [
+                _logic(slot, otherTl, address(registry), BLOCK_TIME),
+                _logic(slot, address(timelock), otherReg, BLOCK_TIME),
+                _logic(slot, address(timelock), address(registry), 2)
             ];
             for (uint256 j = 0; j < wrong.length; ++j) {
                 address[5] memory b = _asArray(logics);
@@ -162,11 +159,11 @@ contract ParameterStoreLogicsUnitTest is ParameterStoreFixture {
             this.deployLogic(i, tl, reg, 0);
         }
         vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        new ParameterStore(address(0), reg, BLOCK_TIME, false, logics);
+        new ParameterStore(address(0), reg, BLOCK_TIME, logics);
         vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        new ParameterStore(tl, address(0), BLOCK_TIME, false, logics);
+        new ParameterStore(tl, address(0), BLOCK_TIME, logics);
         vm.expectRevert(IParameterStoreBase.OutOfBounds.selector);
-        new ParameterStore(tl, reg, 0, false, logics);
+        new ParameterStore(tl, reg, 0, logics);
     }
 
     /// @dev External so a test can expect the constructor's revert.
@@ -176,7 +173,7 @@ contract ParameterStoreLogicsUnitTest is ParameterStoreFixture {
         address reg,
         uint32 bt
     ) external returns (address) {
-        return _logic(i, tl, reg, bt, false);
+        return _logic(i, tl, reg, bt);
     }
 
     // TEST-062 verifies: REQ-PSTORE-001, REQ-PSTORE-002
@@ -185,9 +182,9 @@ contract ParameterStoreLogicsUnitTest is ParameterStoreFixture {
             abi.encodeCall(store.tightenMarketUsdCap, (M, 1e8)),
             abi.encodeCall(store.loosenMarketUsdCap, (M, 6_000_000e8)),
             abi.encodeCall(store.setInitialMarketCaps, (M, 1e8, 0, 1e8)),
-            abi.encodeCall(store.setCachedWindow, (100)),
+            abi.encodeCall(store.setMaxFlashFeeBps, (5)),
             abi.encodeCall(store.setAvanaFeeShareBps, (100)),
-            abi.encodeCall(store.getOracleConfig, (address(lpOracle)))
+            abi.encodeCall(store.liquidationLivenessHolds, (address(spoke), M, 1))
         ];
         address[6] memory targets =
             [logics.tighten, logics.loosen, logics.listing, logics.adminOracle, logics.adminRisk, logics.adminOracle];
@@ -213,9 +210,9 @@ contract ParameterStoreLogicsUnitTest is ParameterStoreFixture {
         (ok,) = d.run(logics.adminRisk, abi.encodeCall(store.setAvanaFeeShareBps, (4000)));
         assertTrue(ok);
         assertEq(store.avanaFeeShareBps(), 2000);
-        // GlobalParams word 5 packs maxFlashFeeBps (bits 0-15) and avanaFeeShareBps (bits 16-31).
-        uint256 slot = 0x97d60a1f76524429d85918aee5154ffd84c83f78fddb1d1f3d0a0bfeca081800;
-        assertEq(uint16(uint256(vm.load(address(d), bytes32(slot + 5))) >> 16), 4000);
-        assertEq(uint16(uint256(vm.load(address(store), bytes32(slot + 5))) >> 16), 2000);
+        // GlobalParams word 0 packs maxFlashFeeBps (bits 0-15) and avanaFeeShareBps (bits 16-31).
+        bytes32 slot = 0x97d60a1f76524429d85918aee5154ffd84c83f78fddb1d1f3d0a0bfeca081800;
+        assertEq(uint16(uint256(vm.load(address(d), slot)) >> 16), 4000);
+        assertEq(uint16(uint256(vm.load(address(store), slot)) >> 16), 2000);
     }
 }

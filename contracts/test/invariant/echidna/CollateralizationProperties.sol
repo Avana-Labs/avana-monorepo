@@ -161,7 +161,7 @@ contract CollateralizationProperties {
     function property_creditsAreSums() external view returns (bool) {
         (uint256 c0,,,) = _sums(P0);
         (uint256 c1,,,) = _sums(P1);
-        return H.credit(P0) == c0 && H.credit(P1) == c1 && H.total() == c0 + c1 && H.pool() == c0 + c1;
+        return H.credit(P0) == c0 && H.credit(P1) == c1 && H.total() == c0 + c1;
     }
 
     function property_listShape() external view returns (bool) {

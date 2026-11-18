@@ -8,7 +8,6 @@ import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.
 import {AccountGateStatus} from "../../src/types/MarketTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
-import {RiskSequencerFeed} from "../utils/mocks/RiskModuleMocks.sol";
 
 /// @title RiskModuleBoundariesUnitTest
 /// @notice Every numeric gate of the borrow-side checks at its boundary, with the exact error one unit past it: the
@@ -102,19 +101,17 @@ contract RiskModuleBoundariesUnitTest is RiskModuleFixture {
 
     // TEST-236 verifies: REQ-RISK-059, REQ-ADAPTER-027, SPEC-CF-005, SPEC-CF-003
     function test_TEST_236_healthFloorBoundary() public {
-        // Required level max(1.00, hardHealthFloor, minHealthFactor): equal passes, one wei below reverts.
+        // Required level max(1.00, minHealthFactor): equal passes, one wei below reverts.
         _debt(1.25e18, 1000);
-        store.setHardFloor(mid, 1.25e18);
-        assertEq(riskModule.postHealthCheck(address(proxy), 1.1e18), 1.25e18);
+        assertEq(riskModule.postHealthCheck(address(proxy), 1.25e18), 1.25e18);
         _debt(1.25e18 - 1, 1000);
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.HealthFactorTooLow.selector, 1.25e18 - 1, 1.25e18));
-        riskModule.postHealthCheck(address(proxy), 1.1e18);
-        // The caller's minimum above the floor sets the level.
+        riskModule.postHealthCheck(address(proxy), 1.25e18);
+        // The caller's minimum above the health factor sets the level.
         _debt(1.3e18, 1000);
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.HealthFactorTooLow.selector, 1.3e18, 1.3e18 + 1));
         riskModule.postHealthCheck(address(proxy), 1.3e18 + 1);
-        // Both below Aave's 1.00: the level is 1.00.
-        store.setHardFloor(mid, 0.5e18);
+        // A minimum below Aave's 1.00: the level is 1.00.
         _debt(1e18 - 1, 1000);
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.HealthFactorTooLow.selector, 1e18 - 1, 1e18));
         riskModule.postHealthCheck(address(proxy), 0.9e18);
@@ -123,13 +120,10 @@ contract RiskModuleBoundariesUnitTest is RiskModuleFixture {
     // TEST-236 verifies: REQ-RISK-059, SPEC-CF-005, SPEC-CF-003
     function testFuzz_TEST_236_healthFloor(
         uint96 hf,
-        uint96 hardFloor,
         uint96 minHf
     ) public {
         _debt(hf, 1000);
-        store.setHardFloor(mid, hardFloor);
         uint256 required = 1e18;
-        if (hardFloor > required) required = hardFloor;
         if (minHf > required) required = minHf;
         if (hf < required) {
             vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.HealthFactorTooLow.selector, hf, required));

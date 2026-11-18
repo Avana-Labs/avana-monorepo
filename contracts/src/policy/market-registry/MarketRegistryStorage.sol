@@ -85,7 +85,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         mapping(address hub => mapping(address asset => uint256)) unusedCrossHubLineTotal;
         bool unusedCrossHubLinesEnabled;
         mapping(address token => TokenDef) tokens;
-        mapping(address token => uint64) priceRouteVersion;
         mapping(bytes32 slotKey => RouteRecord) routes;
         mapping(bytes32 slotKey => mapping(address route => bool)) approvedBefore;
         mapping(address route => bool) knownRoute;
@@ -100,7 +99,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         mapping(address spoke => bytes32) spokeCodeHash;
         mapping(uint32 integrationId => address[]) integrationContracts;
         mapping(address account => bool) knownIntegrationContract;
-        mapping(address token => uint64) standbyCancelledAt;
         mapping(uint256 marketId => uint32) routeEpoch;
         mapping(uint32 integrationId => IntegrationRecord) integrationRecords;
         mapping(uint256 marketId => RouteSlotRef[]) routeSlots;
@@ -124,8 +122,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
     /// @dev EIP-1967 implementation slot read through the Spoke's `extSload`.
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     bytes32 internal constant _EMPTY_CODE_HASH = keccak256("");
-    /// @dev How long a `cancelStandbySwitch` keeps the guardians from switching the same token again.
-    uint64 internal constant _STANDBY_RESWITCH_COOLDOWN = 5 days;
     /// @dev Offboarding notice before the liquidation-threshold drop and `closeMarket`.
     uint64 internal constant OFFBOARD_NOTICE_SECONDS = 5 days;
     /// @dev Target liquidation threshold after offboarding, as a share of the starting threshold, bps.
@@ -226,7 +222,6 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
     ) internal {
         delete l.lastBreachAt[key];
         delete l.lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.ORACLE)];
-        delete l.lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_SHARE)];
         delete l.lastBreachAt[BreakerReasons.breachKey(key, BreakerReasons.POOL_DEPTH)];
     }
 
@@ -321,12 +316,11 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
         for (uint256 i = 0; i < tokens.length; ++i) {
             TokenDef memory t = _s().tokens[tokens[i]];
             if (!_marginHolds(cfLp, t.primaryRoute) || !_marginHolds(cfLp, t.alternateRoute)) return false;
-            if (!_marginHolds(cfLp, t.standbyRoute)) return false;
         }
         return true;
     }
 
-    /// @dev Common-mode guard: no two pool tokens share a feed across their alternate and standby routes.
+    /// @dev Common-mode guard: no two pool tokens share a feed in their alternate routes.
     function _commonModeHolds(
         address[] memory tokens
     ) internal view returns (bool) {
@@ -334,12 +328,7 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
             TokenDef memory a = _s().tokens[tokens[i]];
             for (uint256 j = i + 1; j < tokens.length; ++j) {
                 TokenDef memory b = _s().tokens[tokens[j]];
-                if (_shareFeed(a.alternateRoute, b.alternateRoute) || _shareFeed(a.alternateRoute, b.standbyRoute)) {
-                    return false;
-                }
-                if (_shareFeed(a.standbyRoute, b.alternateRoute) || _shareFeed(a.standbyRoute, b.standbyRoute)) {
-                    return false;
-                }
+                if (_shareFeed(a.alternateRoute, b.alternateRoute)) return false;
             }
         }
         return true;

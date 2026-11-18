@@ -13,8 +13,8 @@ import {LPVaultSwapUnitBase} from "./LPVaultSwap.Base.sol";
 /// REQ-SWAP-091, Q-247): the LPOracle is poked before its state is read; Cached, Expired, liquidation-paused,
 /// disagreement-paused and disagreement-expired markets and a leg older than `liquidationPriceMaxAge` revert
 /// `StalePrice`; a repaid non-GHO reserve whose DebtOracle is not Live, is liquidation-paused or has a stale leg reverts
-/// `DebtPriceStale(r)`; GHO's fixed source is never gated; inside a grace window only accounts below
-/// `graceHealthFactor` are liquidated. The seized value uses the smaller collateral price and the larger debt price.
+/// `DebtPriceStale(r)`; GHO's fixed source is never gated. The seized value uses the smaller collateral price and the
+/// larger debt price.
 /// forge-config: default.isolate = false
 contract LPVaultSwapPriceGatesUnitTest is LPVaultSwapUnitBase {
     address internal proxy;
@@ -47,8 +47,8 @@ contract LPVaultSwapPriceGatesUnitTest is LPVaultSwapUnitBase {
         _liquidateAs(keeper, _params(proxy, 1950e6));
     }
 
-    /// @notice (a) `liquidationPaused` (which includes a sequencer reporting down) and (d) the disagreement pause and a
-    /// disagreement past `disagreementPauseMax` each refuse the seizure.
+    /// @notice (a) `liquidationPaused` and (d) the disagreement pause and an expired disagreement each refuse the
+    /// seizure.
     // TEST-049 verifies: REQ-SWAP-008, REQ-SWAP-050, INV-059, Q-208, Q-248
     function test_TEST_049_pausedOrDisagreeingMarketRefused() public {
         lpOracle.setFlags(true, false, false, false);
@@ -102,7 +102,6 @@ contract LPVaultSwapPriceGatesUnitTest is LPVaultSwapUnitBase {
         lvs.settlePending(MARKET_ID, usdcReserveId);
         lpOracle.setState(PriceState.Live);
         lpOracle.setFlags(false, false, false, true);
-        store.setGraceHealthFactor(0);
         (uint256 units,,) = lvs.settlePending(MARKET_ID, usdcReserveId);
         assertGt(units, 0, "settled in grace");
     }

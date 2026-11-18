@@ -48,8 +48,7 @@ library TimelockSelectors {
             || selector == IMarketRegistry.cancelRegistration.selector || selector == IMarketRegistry.freeze.selector
             || selector == IMarketRegistry.pause.selector || selector == IMarketRegistry.freezeAddress.selector
             || selector == IMarketRegistry.tripMarketBreaker.selector
-            || selector == IMarketRegistry.tripDebtBreaker.selector
-            || selector == IMarketRegistry.useStandbyRoute.selector || selector == ILPVaultSwap.removeKeeper.selector;
+            || selector == IMarketRegistry.tripDebtBreaker.selector || selector == ILPVaultSwap.removeKeeper.selector;
     }
 
     /// @notice Whether `selector` is in the DAO-only cancel set.
@@ -57,7 +56,6 @@ library TimelockSelectors {
         bytes4 selector
     ) internal pure returns (bool) {
         return selector == IMarketRegistryRoutes.restoreRoute.selector
-            || selector == IMarketRegistry.useStandbyRoute.selector
             || selector == IMarketRegistry.unfreezeAddress.selector || selector == ILPVaultSwap.addKeeper.selector;
     }
 
@@ -77,19 +75,14 @@ library TimelockSelectors {
     function _isTightenSelector(
         bytes4 s
     ) private pure returns (bool) {
-        return s == IParameterStoreTighten.tightenHardHealthFloor.selector
-            || s == IParameterStoreTighten.tightenSlippageAllowanceBps.selector
+        return s == IParameterStoreTighten.tightenSlippageAllowanceBps.selector
             || s == IParameterStoreTighten.tightenFloorRoundingAllowance.selector
             || s == IParameterStoreTighten.tightenBorrowPriceMaxAge.selector
-            || s == IParameterStoreTighten.tightenConsistencyToleranceBps.selector
-            || s == IParameterStoreTighten.tightenFeedAgreementToleranceBps.selector
             || s == IParameterStoreTighten.tightenPoolRiskFactor.selector
             || s == IParameterStoreTighten.tightenRouteDepthThreshold.selector
             || s == IParameterStoreTighten.tightenMarketUsdCap.selector
             || s == IParameterStoreTighten.tightenTopUpSliceUsd.selector
             || s == IParameterStoreTighten.tightenTokenUsdCap.selector
-            || s == IParameterStoreTighten.tightenPoolShareMaxBps.selector
-            || s == IParameterStoreTighten.tightenPoolShareMaxBpsOf.selector
             || s == IParameterStoreTighten.tightenMinPledgeUsd.selector
             || s == IParameterStore.tightenBreakerDeficitMax.selector
             || s == IParameterStore.tightenGateRecoverySeconds.selector

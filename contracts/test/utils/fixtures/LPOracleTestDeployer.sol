@@ -22,7 +22,7 @@ library LPOracleTestDeployer {
     ) internal returns (LPOracle) {
         ILPOracle.TokenRoute[] memory routes = new ILPOracle.TokenRoute[](tokens.length);
         for (uint256 i = 0; i < tokens.length; ++i) {
-            (address[] memory primary,,) = IMarketRegistry(registry).activePriceRoutes(tokens[i]);
+            address[] memory primary = IMarketRegistry(registry).getToken(tokens[i]).primaryRoute;
             routes[i] = ILPOracle.TokenRoute({token: tokens[i], isUsdStable: isUsdStable[i], feeds: primary});
         }
         return new LPOracle(

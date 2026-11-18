@@ -10,15 +10,12 @@ import {AaveAdapterRiskFixture} from "../utils/fixtures/AaveAdapterRiskFixture.s
 /// @title AaveAdapterOpeningGateFuzzTest
 /// @notice Opening-gate rounding (TEST-077) through the real AaveAdapter and the reviewed RiskModule on the real local
 /// Aave V4: whatever the amounts, a borrow or a withdrawal that leaves debt never completes with an exact
-/// collateral-to-debt ratio below `max(1, hardHealthFloor)` (1.10 when the floor is set, Aave's 1.00 when it is off),
-/// with debt spread over the GHO reserve (18 decimals, $1.00) and the USDC reserve (6 decimals, $0.9999).
+/// collateral-to-debt ratio below Aave's 1.00, with debt spread over the GHO reserve (18 decimals, $1.00) and the USDC reserve (6 decimals, $0.9999).
 /// @dev The exact ratio is recomputed from the AaveOracle prices and the collateral factor of the account's own dynamic key with integer
 /// cross-multiplication, no rounding: `units * P_vt * CF * 10^26 >= required * (gho * P_gho + usdc * P_usdc * 10^12)`,
 /// the debt read from the Spoke (which rounds owed amounts up).
 /// forge-config: default.isolate = false
 contract AaveAdapterOpeningGateFuzzTest is AaveAdapterRiskFixture {
-    uint256 internal constant FLOOR = 1.1e18;
-
     bytes32 internal k1;
     bytes32 internal k2;
     address internal p;
@@ -62,20 +59,15 @@ contract AaveAdapterOpeningGateFuzzTest is AaveAdapterRiskFixture {
     // TEST-077 verifies: SPEC-CF-005, REQ-RISK-068, INV-082
     // Sources: MATH-AR-03, MATH-AR-06, SYM-05
     /// @notice GHO then USDC borrows of any size, then a withdrawal of the second record with debt left: each call
-    /// that completes leaves the exact ratio at or above `max(1, hardHealthFloor)`, and the largest borrows the gate
+    /// that completes leaves the exact ratio at or above 1.00, and the largest borrows the gate
     /// admits sit within one fuzzed step of the boundary rather than far inside it.
     function testFuzz_TEST_077_noOpeningBelowTheFloor(
         uint256 gho,
-        uint256 usdcAmount,
-        bool floorOn
+        uint256 usdcAmount
     ) public {
         gho = bound(gho, 1e18, 25_000e18);
         usdcAmount = bound(usdcAmount, 1e6, 25_000e6);
         uint256 required = 1e18;
-        if (floorOn) {
-            rstore.setHardFloor(MARKET_ID, FLOOR);
-            required = FLOOR;
-        }
         if (_tryBorrow(debtReserveId, gho)) assertTrue(_exactRatioAtLeast(required), "GHO borrow below the floor");
         if (_tryBorrow(usdcReserveId, usdcAmount)) {
             assertTrue(_exactRatioAtLeast(required), "USDC borrow below the floor");
@@ -89,19 +81,13 @@ contract AaveAdapterOpeningGateFuzzTest is AaveAdapterRiskFixture {
     }
 
     // TEST-077 verifies: SPEC-CF-005, REQ-RISK-068
-    /// @notice At the edge: with the floor set, a GHO borrow sized one unit past the exact 1.10 boundary is refused,
-    /// and with the floor off a borrow one unit past Aave's 1.00 boundary is refused, whatever USDC debt the account
+    /// @notice At the edge: a GHO borrow one unit past Aave's 1.00 boundary is refused, whatever USDC debt the account
     /// already carries; the largest admitted borrow leaves the exact ratio at or above the boundary.
     function testFuzz_TEST_077_boundaryBorrowRefused(
-        uint256 usdcAmount,
-        bool floorOn
+        uint256 usdcAmount
     ) public {
         usdcAmount = bound(usdcAmount, 1e6, 10_000e6);
         uint256 required = 1e18;
-        if (floorOn) {
-            rstore.setHardFloor(MARKET_ID, FLOOR);
-            required = FLOOR;
-        }
         assertTrue(_tryBorrow(usdcReserveId, usdcAmount), "first USDC borrow");
         // Binary search for the largest GHO amount the gate admits.
         uint256 lo = 0;

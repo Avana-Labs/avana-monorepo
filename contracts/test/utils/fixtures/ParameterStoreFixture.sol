@@ -66,9 +66,7 @@ abstract contract ParameterStoreFixture is TimelockFixture {
     uint256 internal constant M = 1;
     uint32 internal constant BLOCK_TIME = 12;
 
-    function _deployStore(
-        bool hasSequencer
-    ) internal {
+    function _deployStore() internal {
         registry = new MockMarketRegistry();
         collateralization = new MockCollateralization();
         registry.setCollateralization(address(collateralization));
@@ -81,15 +79,15 @@ abstract contract ParameterStoreFixture is TimelockFixture {
         );
         address tl = address(timelock);
         logics = ParameterStoreLogics({
-            tighten: address(new ParameterStoreTightenLogic(tl, address(registry), BLOCK_TIME, hasSequencer)),
-            loosen: address(new ParameterStoreLoosenLogic(tl, address(registry), BLOCK_TIME, hasSequencer)),
-            listing: address(new ParameterStoreListingLogic(tl, address(registry), BLOCK_TIME, hasSequencer)),
-            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, address(registry), BLOCK_TIME, hasSequencer)),
-            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, address(registry), BLOCK_TIME, hasSequencer))
+            tighten: address(new ParameterStoreTightenLogic(tl, address(registry), BLOCK_TIME)),
+            loosen: address(new ParameterStoreLoosenLogic(tl, address(registry), BLOCK_TIME)),
+            listing: address(new ParameterStoreListingLogic(tl, address(registry), BLOCK_TIME)),
+            adminOracle: address(new ParameterStoreAdminOracleLogic(tl, address(registry), BLOCK_TIME)),
+            adminRisk: address(new ParameterStoreAdminRiskLogic(tl, address(registry), BLOCK_TIME))
         });
-        implementation = new ParameterStore(tl, address(registry), BLOCK_TIME, hasSequencer, logics);
+        implementation = new ParameterStore(tl, address(registry), BLOCK_TIME, logics);
         ERC1967Proxy proxy = new ERC1967Proxy(
-            address(implementation), abi.encodeCall(IParameterStore.initialize, (tl, _defaultGlobals(), 10_000))
+            address(implementation), abi.encodeCall(IParameterStore.initialize, (tl, _defaultGlobals()))
         );
         require(address(proxy) == predicted, "prediction");
         store = IParameterStore(address(proxy));
@@ -98,16 +96,9 @@ abstract contract ParameterStoreFixture is TimelockFixture {
     }
 
     function _defaultGlobals() internal view returns (GlobalParams memory g) {
-        g.cachedWindow = 3600;
-        g.disagreementPauseMax = 3600;
-        g.usdBandLow = 0.9e8;
-        g.usdBandHigh = 1.02e8;
-        g.graceDuration = 1800;
-        g.graceHealthFactor = 0.95e18;
         g.maxFlashFeeBps = 10;
         g.avanaFeeShareBps = 2000;
         g.feeRecipient = feeRecipient;
-        g.feedAgreementMarginBps = 50;
         g.gateRecoverySeconds = 1800;
         g.maxShortfallBps = 1000;
     }
@@ -129,9 +120,9 @@ abstract contract ParameterStoreFixture is TimelockFixture {
         fUsdtAlt = new MockAggregator(8, 1e6, 1e12);
         registry.setHub(address(hub), true);
         registry.setSpoke(address(spoke), address(hub));
-        registry.setToken(usdc, _one(address(fUsdc)), _one(address(fUsdcAlt)), new address[](0));
-        registry.setToken(usdt, _one(address(fUsdt)), _one(address(fUsdtAlt)), new address[](0));
-        registry.setToken(gho, new address[](0), new address[](0), new address[](0));
+        registry.setToken(usdc, _one(address(fUsdc)), _one(address(fUsdcAlt)));
+        registry.setToken(usdt, _one(address(fUsdt)), _one(address(fUsdtAlt)));
+        registry.setToken(gho, new address[](0), new address[](0));
         hub.setAsset(address(vaultToken), 7);
         hub.setAddCap(10_000_000);
         Market memory m;
@@ -187,20 +178,15 @@ abstract contract ParameterStoreFixture is TimelockFixture {
     }
 
     function _defaultMarketParams() internal pure returns (MarketParams memory p) {
-        p.twapWindow = 1800;
-        p.consistencyToleranceBps = 50;
         p.slippageAllowanceBps = 100;
         p.slippageAllowanceMinBps = 30;
         p.poolRiskFactor = 4000;
         p.minPledgeUsd = 10e8;
     }
 
-    /// @dev Listing writes of market 1 as the timelock: feeds, token inputs, market parameters and caps, Hub caps.
+    /// @dev Listing writes of market 1 as the timelock: feeds, collateral factors, market parameters and caps, Hub caps.
     function _listMarket() internal {
         vm.startPrank(address(timelock));
-        // Tolerances first: every setFeed re-checks the tolerance lower bound of the tokens whose routes use the feed.
-        store.setFeedAgreementToleranceBps(usdc, 150);
-        store.setFeedAgreementToleranceBps(usdt, 150);
         store.setFeed(address(fUsdc), _feedDef(86_400, 1800));
         store.setFeed(address(fUsdcAlt), _feedDef(86_400, 1800));
         store.setFeed(address(fUsdt), _feedDef(86_400, 1800));

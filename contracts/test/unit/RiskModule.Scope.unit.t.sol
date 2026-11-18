@@ -49,7 +49,7 @@ contract RiskModuleScopeUnitTest is RiskModuleFixture {
             bytes4(
                 keccak256(
                     "checkPledge(address,address,uint256,uint32,bytes32,uint128,"
-                    "(address,uint128,uint128,bytes32,uint256,uint256,uint256[]),bool)"
+                    "(address,uint128,uint128,uint256,uint256[]),bool)"
                 )
             ),
             "checkPledge selector"
