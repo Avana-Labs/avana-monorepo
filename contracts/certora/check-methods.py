@@ -52,6 +52,10 @@ ACCESS_CONTROL = {
     "LPVaultSwap", "AvanaTimelock",
 }
 
+# Verified contracts that are test harnesses with no interface: their specs call the harness's functions directly and
+# have no methods block, so there is nothing to check against an ABI (the fast tier builds src/ only).
+HARNESS_WITHOUT_METHODS = {"FloorCreditMathHarness"}
+
 # Specs verified by no conf: the contract whose interface their unqualified entries bind to.
 SPEC_WITHOUT_CONF = {
     "AvanaFirstLossReserve.spec": "AvanaFirstLossReserve",
@@ -244,6 +248,11 @@ def main() -> int:
         alias = {a: c for c, a in re.findall(r"\busing\s+(\w+)\s+as\s+(\w+)\s*;", text)}
         alias["currentContract"] = next(iter(verified), "")
         for c in verified:
+            if c in HARNESS_WITHOUT_METHODS:
+                if blocks:
+                    print(f"ERROR {rel}: {c} has no interface; call its functions directly, without a methods block")
+                    errors += 1
+                continue
             if not any(n in abis for n in iface(c)):
                 print(f"ERROR {rel}: no ABI in {out.name}/ for {c} (looked for {', '.join(iface(c))})")
                 errors += 1

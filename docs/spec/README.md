@@ -46,7 +46,8 @@ docs/spec/
 │   ├── 01-global-invariants.md        4.1  Global invariants (INV-…)
 │   ├── 02-attack-scenarios.md         4.2  Attack scenarios (ATTACK-…)
 │   ├── 03-external-dependencies.md    4.3  External dependencies (EXT-…)
-│   └── 04-design-decisions.md         4.4  Design decisions (Q-…)
+│   ├── 04-design-decisions.md         4.4  Design decisions (Q-…)
+│   └── 05-floor-credit-proof.md       4.5  Floor credit proof (band markets)
 └── 05-verification/
     ├── README.md                      Verification approach, tools and how to run them
     ├── 01-test-requirements.md        5.1  Implementation tests (TEST-…)
