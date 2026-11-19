@@ -7,8 +7,8 @@ import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.s
 import {ICollateralization} from "../../../src/legacy/ICollateralization.sol";
 import {ILock} from "../../../src/legacy/ILock.sol";
 import {ILegacyAaveAdapter} from "../../../src/legacy/aave-adapter/ILegacyAaveAdapter.sol";
-import {ILPVaultSwapBase} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
-import {DeleverageRequest} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {ILPVaultSwapBase} from "../../../src/legacy/lp-vault-swap/ILPVaultSwapBase.sol";
+import {DeleverageRequest} from "../../../src/legacy/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 

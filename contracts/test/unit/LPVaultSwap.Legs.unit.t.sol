@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
-import {LPVaultSwapImmutables, RouteMode} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {ILPVaultSwapBase} from "../../src/legacy/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LPVaultSwapImmutables, RouteMode} from "../../src/legacy/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {
     LPVaultSwapSettlementHarness,
     LVSHarnessRegistry,

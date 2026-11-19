@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
+import {IAvanaFirstLossReserve} from "../../src/legacy/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {DeployBase} from "./lib/DeployBase.sol";
 import {console2} from "forge-std/console2.sol";
 

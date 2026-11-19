@@ -162,19 +162,19 @@
   "contracts/src/amm/uniswap-v4/UniswapV4State.sol": {
     "UniswapV4State": ["REQ-AMM-V4-003", "REQ-AMM-V4-010", "SPEC-AMM-V4-003"]
   },
-  "contracts/src/coverage/dao-deficit-offset/DaoDeficitOffset.sol": {
+  "contracts/src/legacy/coverage/dao-deficit-offset/DaoDeficitOffset.sol": {
     "DaoDeficitOffset": ["REQ-FLR-046", "REQ-FLR-047", "REQ-FLR-048", "REQ-FLR-049", "SPEC-FLR-006", "INV-100", "Q-410"],
     "DaoDeficitOffset.constructor": ["REQ-FLR-047", "REQ-FLR-008"],
     "DaoDeficitOffset.FIRST_LOSS_LAYER": ["REQ-FLR-046", "REQ-FLR-047"],
     "DaoDeficitOffset._beforeCover": ["REQ-FLR-048", "REQ-FLR-050", "SPEC-FLR-006", "INV-100", "Q-410"]
   },
-  "contracts/src/coverage/dao-deficit-offset/IDaoDeficitOffset.sol": {
+  "contracts/src/legacy/coverage/dao-deficit-offset/IDaoDeficitOffset.sol": {
     "IDaoDeficitOffset": ["REQ-FLR-046", "REQ-FLR-047", "REQ-FLR-048", "REQ-FLR-049", "SPEC-FLR-006", "INV-100", "Q-410"],
     "IDaoDeficitOffset.FirstLossLayerNotExhausted": ["REQ-FLR-048", "REQ-FLR-050"],
     "IDaoDeficitOffset.FirstLossLayerMismatch": ["REQ-FLR-047"],
     "IDaoDeficitOffset.FIRST_LOSS_LAYER": ["REQ-FLR-046", "REQ-FLR-047"]
   },
-  "contracts/src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol": {
+  "contracts/src/legacy/coverage/first-loss-reserve/AvanaFirstLossReserve.sol": {
     "AvanaFirstLossReserve": ["REQ-FLR-001", "REQ-FLR-002", "REQ-FLR-003", "REQ-FLR-004", "REQ-FLR-005", "REQ-FLR-006", "REQ-FLR-012", "REQ-FLR-015", "REQ-FLR-020", "REQ-FLR-022", "REQ-FLR-035", "REQ-FLR-036", "REQ-FLR-040", "REQ-FLR-042", "INV-042", "INV-071", "Q-101", "Q-142", "Q-236"],
     "AvanaFirstLossReserve.constructor": ["REQ-FLR-003", "REQ-FLR-008", "REQ-FLR-039"],
     "AvanaFirstLossReserve.fund": ["REQ-FLR-005", "REQ-FLR-006", "REQ-FLR-010", "REQ-FLR-011", "REQ-FLR-035", "REQ-FLR-037", "REQ-FLR-038", "Q-211"],
@@ -196,7 +196,7 @@
     "AvanaFirstLossReserve._beforeCover": ["REQ-FLR-048", "Q-410"],
     "AvanaFirstLossReserve._alertIfBelowMinimum": ["REQ-FLR-014", "REQ-FLR-031"]
   },
-  "contracts/src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol": {
+  "contracts/src/legacy/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol": {
     "IAvanaFirstLossReserve": ["REQ-FLR-001", "REQ-FLR-005", "REQ-FLR-010", "REQ-FLR-014", "REQ-FLR-038", "REQ-FLR-039", "REQ-FLR-040", "Q-142", "Q-211", "Q-236", "Q-241", "Q-242", "REQ-FLR-002", "REQ-FLR-013", "REQ-FLR-017", "REQ-FLR-023", "REQ-FLR-024", "REQ-FLR-025", "REQ-FLR-008"],
     "IAvanaFirstLossReserve.ReserveFunded": ["REQ-FLR-010", "REQ-FLR-038"],
     "IAvanaFirstLossReserve.DeficitCovered": ["REQ-FLR-018", "SPEC-FLR-001"],
@@ -948,7 +948,7 @@
     "TailCoverageView": ["REQ-LENS-034", "SPEC-CAP-008", "REQ-FLR-046", "Q-249", "Q-378", "Q-410"],
     "WithdrawPreview": ["REQ-LENS-049", "REQ-LENS-005"]
   },
-  "contracts/src/liquidation/lp-vault-swap/ILPVaultSwap.sol": {
+  "contracts/src/legacy/lp-vault-swap/ILPVaultSwap.sol": {
     "ILPVaultSwap": ["REQ-SWAP-002", "REQ-SWAP-003", "REQ-SWAP-019", "REQ-SWAP-032", "REQ-SWAP-040", "REQ-SWAP-041", "REQ-SWAP-042", "REQ-SWAP-043", "REQ-SWAP-044", "REQ-SWAP-045", "REQ-SWAP-046", "REQ-SWAP-047", "REQ-SWAP-077", "REQ-SWAP-084", "REQ-SWAP-085", "REQ-SWAP-100", "REQ-SWAP-104", "REQ-SWAP-108", "Q-148", "Q-201", "Q-211", "Q-213", "Q-214", "Q-216", "Q-217", "Q-281", "Q-224", "Q-226", "Q-227", "Q-235", "Q-240", "Q-241", "Q-242", "Q-247", "Q-250", "Q-256", "Q-271", "Q-377", "Q-379", "Q-404"],
     "ILPVaultSwap.initialize": ["REQ-SWAP-032", "REQ-SWAP-034", "REQ-SWAP-040", "Q-226", "Q-228"],
     "ILPVaultSwap.addKeeper": ["REQ-SWAP-033", "REQ-SWAP-085", "REQ-SWAP-107", "REQ-SWAP-117", "Q-228", "Q-242", "Q-263", "Q-400", "Q-404"],
@@ -973,7 +973,7 @@
     "ILPVaultSwap.PAYOUT_ESCROW": ["REQ-SWAP-076", "REQ-SWAP-082", "REQ-ESCROW-002", "Q-214"],
     "ILPVaultSwap.PAYOUT_TRANSFER_GAS": ["REQ-SWAP-076", "REQ-SWAP-083", "Q-214"]
   },
-  "contracts/src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol": {
+  "contracts/src/legacy/lp-vault-swap/ILPVaultSwapBase.sol": {
     "ILPVaultSwapBase.LockHeld": ["REQ-SWAP-002", "REQ-SWAP-066"],
     "ILPVaultSwapBase.UnknownProxy": ["REQ-SWAP-004"],
     "ILPVaultSwapBase.UnknownMarket": ["REQ-SWAP-004"],
@@ -1025,11 +1025,11 @@
     "ILPVaultSwapBase.PendingSettlementForwarded": ["REQ-SWAP-066", "REQ-SWAP-070", "SPEC-LIQ-014", "Q-201", "Q-211", "Q-236", "Q-379"],
     "ILPVaultSwapBase.Deleveraged": ["REQ-SWAP-106", "SPEC-LIQ-020", "Q-255", "Q-379"]
   },
-  "contracts/src/liquidation/lp-vault-swap/ILPVaultSwapLogic.sol": {
+  "contracts/src/legacy/lp-vault-swap/ILPVaultSwapLogic.sol": {
     "ILPVaultSwapLogic": ["REQ-SWAP-040"],
     "ILPVaultSwapLogic.logicConfig": ["REQ-SWAP-040"]
   },
-  "contracts/src/liquidation/lp-vault-swap/LPVaultSwap.sol": {
+  "contracts/src/legacy/lp-vault-swap/LPVaultSwap.sol": {
     "LPVaultSwap": ["REQ-SWAP-001", "REQ-SWAP-032", "REQ-SWAP-033", "REQ-SWAP-034", "REQ-SWAP-035", "REQ-SWAP-036", "REQ-SWAP-037", "REQ-SWAP-038", "REQ-SWAP-040", "REQ-SWAP-043", "REQ-SWAP-048", "REQ-SWAP-065", "REQ-SWAP-069", "REQ-SWAP-072", "REQ-SWAP-080", "REQ-SWAP-085", "REQ-SWAP-107", "REQ-SWAP-113", "REQ-SWAP-117", "REQ-ACCESS-153", "Q-259", "Q-400", "Q-404"],
     "LPVaultSwap.constructor": ["REQ-SWAP-034", "REQ-SWAP-040"],
     "LPVaultSwap.liquidate": ["REQ-SWAP-001", "REQ-SWAP-072", "REQ-SWAP-085", "REQ-SWAP-086"],
@@ -1058,7 +1058,7 @@
     "LPVaultSwap._grantRole": ["REQ-SWAP-040", "REQ-ACCESS-153", "Q-259"],
     "LPVaultSwap._authorizeUpgrade": ["REQ-SWAP-040", "REQ-SWAP-069"]
   },
-  "contracts/src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol": {
+  "contracts/src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol": {
     "LPVaultSwapDeleverageLogic": ["REQ-SWAP-013", "REQ-SWAP-106", "REQ-SWAP-116", "REQ-SWAP-122", "REQ-SWAP-124", "REQ-FLASH-002", "REQ-FLASH-004", "REQ-FLASH-005", "REQ-FLASH-006", "REQ-FLASH-009", "SPEC-LIQ-015", "SPEC-LIQ-020", "Q-255"],
     "LPVaultSwapDeleverageLogic.constructor": ["REQ-SWAP-040"],
     "LPVaultSwapDeleverageLogic.logicConfig": ["REQ-SWAP-040"],
@@ -1072,7 +1072,7 @@
     "LPVaultSwapDeleverageLogic._releaseAndSwap": ["REQ-SWAP-106", "REQ-SWAP-121", "SPEC-LIQ-018"],
     "LPVaultSwapDeleverageLogic._repaySource": ["REQ-SWAP-122", "REQ-SWAP-124", "REQ-SWAP-108"]
   },
-  "contracts/src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol": {
+  "contracts/src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol": {
     "LPVaultSwapLiquidationLogic": ["REQ-SWAP-001", "REQ-SWAP-002", "REQ-SWAP-003", "REQ-SWAP-005", "REQ-SWAP-006", "REQ-SWAP-009", "REQ-SWAP-011", "REQ-SWAP-012", "REQ-SWAP-015", "REQ-SWAP-016", "REQ-SWAP-017", "REQ-SWAP-020", "REQ-SWAP-025", "REQ-SWAP-026", "REQ-SWAP-028", "REQ-SWAP-072", "REQ-SWAP-074", "REQ-SWAP-075", "REQ-SWAP-105", "SPEC-LIQ-006", "SPEC-LIQ-010", "SPEC-LIQ-019"],
     "LPVaultSwapLiquidationLogic.constructor": ["REQ-SWAP-040"],
     "LPVaultSwapLiquidationLogic.logicConfig": ["REQ-SWAP-040"],
@@ -1087,7 +1087,7 @@
     "LPVaultSwapLiquidationLogic._waterfall": ["REQ-SWAP-025", "REQ-SWAP-026", "REQ-SWAP-027", "REQ-SWAP-028", "REQ-SWAP-075", "REQ-SWAP-101", "REQ-SWAP-112", "SPEC-LIQ-008", "SPEC-LIQ-009", "SPEC-LIQ-010", "SPEC-LIQ-019", "SPEC-LIQ-022"],
     "LPVaultSwapLiquidationLogic._emitSettled": ["REQ-SWAP-026", "REQ-SWAP-104"]
   },
-  "contracts/src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol": {
+  "contracts/src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol": {
     "LPVaultSwapPendingLogic": ["REQ-SWAP-066", "REQ-SWAP-068", "REQ-SWAP-070", "REQ-SWAP-071", "REQ-SWAP-092", "SPEC-LIQ-014", "Q-201", "Q-211", "Q-338"],
     "LPVaultSwapPendingLogic.constructor": ["REQ-SWAP-040"],
     "LPVaultSwapPendingLogic.logicConfig": ["REQ-SWAP-040"],
@@ -1096,7 +1096,7 @@
     "LPVaultSwapPendingLogic._releaseAndSwap": ["REQ-SWAP-044", "REQ-SWAP-045", "REQ-SWAP-092", "REQ-SWAP-121", "SPEC-LIQ-014", "SPEC-LIQ-018"],
     "LPVaultSwapPendingLogic._fundCoverage": ["REQ-SWAP-070", "REQ-SWAP-077", "REQ-FLR-038"]
   },
-  "contracts/src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol": {
+  "contracts/src/legacy/lp-vault-swap/LPVaultSwapSettlement.sol": {
     "LPVaultSwapSettlement": ["REQ-SWAP-004", "REQ-SWAP-007", "REQ-SWAP-008", "REQ-SWAP-021", "REQ-SWAP-022", "REQ-SWAP-023", "REQ-SWAP-024", "REQ-SWAP-047", "REQ-SWAP-076", "REQ-SWAP-087", "REQ-SWAP-091", "REQ-SWAP-100", "REQ-SWAP-108", "REQ-SWAP-121", "SPEC-LIQ-004", "SPEC-LIQ-012", "SPEC-LIQ-013", "SPEC-LIQ-018"],
     "LPVaultSwapSettlement._loadMarket": ["REQ-SWAP-004", "REQ-SWAP-047"],
     "LPVaultSwapSettlement._loadDebtReserve": ["REQ-SWAP-087", "REQ-SWAP-095", "REQ-SWAP-003"],
@@ -1113,11 +1113,11 @@
     "LPVaultSwapSettlement._tryRoute": ["REQ-SWAP-022", "REQ-SWAP-023", "REQ-SWAP-024", "REQ-SWAP-058", "REQ-SWAP-100"],
     "LPVaultSwapSettlement._deliver": ["REQ-SWAP-076", "REQ-SWAP-077", "REQ-SWAP-082", "REQ-SWAP-083", "REQ-SWAP-114"]
   },
-  "contracts/src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol": {
+  "contracts/src/legacy/lp-vault-swap/LPVaultSwapStorage.sol": {
     "LPVaultSwapStorage": ["REQ-SWAP-040", "REQ-SWAP-047", "REQ-SWAP-070", "REQ-SWAP-103"],
     "LPVaultSwapStorage.constructor": ["REQ-SWAP-034", "REQ-SWAP-040"]
   },
-  "contracts/src/liquidation/lp-vault-swap/SettlementMath.sol": {
+  "contracts/src/legacy/lp-vault-swap/SettlementMath.sol": {
     "SettlementMath": ["SPEC-LIQ-001", "SPEC-LIQ-002", "SPEC-LIQ-003", "SPEC-LIQ-004", "SPEC-LIQ-005", "SPEC-LIQ-008", "SPEC-LIQ-009", "SPEC-LIQ-010", "SPEC-LIQ-014", "SPEC-LIQ-015", "SPEC-LIQ-018", "SPEC-LIQ-019", "SPEC-LIQ-020", "SPEC-LIQ-022", "SPEC-SET-001", "REQ-SWAP-100", "REQ-SWAP-121", "INV-034", "INV-035", "INV-036", "INV-083", "INV-086", "Q-240", "Q-404"],
     "SettlementMath.netBonus": ["SPEC-LIQ-001"],
     "SettlementMath.effectiveSlippage": ["SPEC-LIQ-002", "SPEC-LIQ-003", "SPEC-LIQ-016"],
@@ -1140,7 +1140,7 @@
     "SettlementMath.deleverageRepayment": ["SPEC-LIQ-020", "REQ-SWAP-106", "REQ-SWAP-116"],
     "SettlementMath.deleverageAssetOut": ["SPEC-LIQ-020", "REQ-SWAP-106", "INV-089"]
   },
-  "contracts/src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol": {
+  "contracts/src/legacy/lp-vault-swap/types/LPVaultSwapTypes.sol": {
     "DeleverageRequest": ["REQ-SWAP-106", "SPEC-LIQ-020", "Q-255", "Q-379"],
     "LPVaultSwapImmutables": ["REQ-SWAP-002", "REQ-SWAP-034", "REQ-SWAP-040", "REQ-SWAP-047"],
     "LPVaultSwapLogics": ["REQ-SWAP-040"],

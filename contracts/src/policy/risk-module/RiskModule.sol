@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClTickMath} from "../../amm/concentrated-liquidity/ClTickMath.sol";
-import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
+import {IFirstLossReserve} from "../../coverage/first-loss-reserve/IFirstLossReserve.sol";
 import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {FloorCreditMath} from "../../custody/lp-vault/libraries/FloorCreditMath.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
@@ -150,8 +150,8 @@ contract RiskModule is AccessManaged, RiskModuleStorage, IRiskModule {
         address recorded = _firstLossReserveOf[r.hub][r.underlying];
         if (
             firstLossReserve == address(0) || (recorded != address(0) && recorded != firstLossReserve)
-                || IAvanaFirstLossReserve(firstLossReserve).ASSET() != r.underlying
-                || IAvanaFirstLossReserve(firstLossReserve).HUB() != r.hub
+                || IFirstLossReserve(firstLossReserve).ASSET() != r.underlying
+                || IFirstLossReserve(firstLossReserve).HUB() != r.hub
         ) revert InvalidFirstLossReserve(firstLossReserve);
         address[] storage spokes = _coverageSpokes[r.hub][r.underlying];
         if (_indexOf(spokes, spoke) != type(uint256).max) revert DebtReserveExists(spoke, reserveId);
@@ -393,7 +393,7 @@ contract RiskModule is AccessManaged, RiskModuleStorage, IRiskModule {
         uint256 assetId = IAaveV4Hub(hub).getAssetId(asset);
         (drawCapSum, required) = AaveConfigLogic.coverage(hub, assetId, asset, spokes, _coverageRatioBps);
         address flr = _firstLossReserveOf[hub][asset];
-        funded = flr == address(0) ? 0 : IAvanaFirstLossReserve(flr).fundedBalance();
+        funded = flr == address(0) ? 0 : IFirstLossReserve(flr).fundedBalance();
     }
 
     function _setWidth(

@@ -37,7 +37,7 @@ test/utils/
   harness/   internal-function harnesses for fuzz/ and halmos/
 ```
 
-Tests import Avana interfaces from the contract's folder `src/<domain>/<contract>/`: the aggregate `I<Name>` when a test drives the whole contract, or only the piece it uses, such as `I<Name>Events` for `vm.expectEmit`, `I<Name>Errors` for `vm.expectRevert` selectors and `I<Name>Views` for reads. Structs and enums of one contract come from its `types/` folder (`src/liquidation/lp-vault-swap/types/LiquidationParams.sol`); types shared by several contracts come from `src/types/`.
+Tests import Avana interfaces from the contract's folder `src/<domain>/<contract>/`: the aggregate `I<Name>` when a test drives the whole contract, or only the piece it uses, such as `I<Name>Events` for `vm.expectEmit`, `I<Name>Errors` for `vm.expectRevert` selectors and `I<Name>Views` for reads. Structs and enums of one contract come from its `types/` folder (`src/legacy/lp-vault-swap/types/LiquidationParams.sol`); types shared by several contracts come from `src/types/`.
 
 Uniswap v3-core and v3-periphery are pinned at `=0.7.6` / `<0.8.0` and the workspace compiles only solc 0.8.28 (`auto_detect_solc = false`), so their contracts cannot be built here. The dependencies supply interfaces; local suites use the Uniswap v3 and Slipstream mocks, which implement concentrated-liquidity position math for a market's exact range in 0.8.28, and real pool bytecode comes only from the Ethereum and Base forks. Each mock has a fork counterpart (`TEST-005`), listed in `MockCounterparts.sol`:
 

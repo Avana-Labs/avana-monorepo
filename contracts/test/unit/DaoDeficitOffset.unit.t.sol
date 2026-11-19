@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DaoDeficitOffset} from "../../src/coverage/dao-deficit-offset/DaoDeficitOffset.sol";
-import {IDaoDeficitOffset} from "../../src/coverage/dao-deficit-offset/IDaoDeficitOffset.sol";
-import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
+import {DaoDeficitOffset} from "../../src/legacy/coverage/dao-deficit-offset/DaoDeficitOffset.sol";
+import {IDaoDeficitOffset} from "../../src/legacy/coverage/dao-deficit-offset/IDaoDeficitOffset.sol";
+import {IAvanaFirstLossReserve} from "../../src/legacy/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {DaoDeficitOffsetFixture} from "../utils/fixtures/DaoDeficitOffsetFixture.sol";
 import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";

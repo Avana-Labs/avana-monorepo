@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DaoDeficitOffset} from "../../../src/coverage/dao-deficit-offset/DaoDeficitOffset.sol";
-import {AvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
+import {DaoDeficitOffset} from "../../../src/legacy/coverage/dao-deficit-offset/DaoDeficitOffset.sol";
+import {AvanaFirstLossReserve} from "../../../src/legacy/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
 import {MockDebtAsset} from "../mocks/MockDebtAsset.sol";
 import {
     AvanaFirstLossReserveFixture,

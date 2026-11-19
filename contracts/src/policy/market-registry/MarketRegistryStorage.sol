@@ -9,10 +9,10 @@ pragma solidity 0.8.28;
 // ParameterStore feed-definition reads in loops over a route's one or two feeds and a market's tokens; views only.
 // forge-lint: disable-start(calls-loop)
 
-import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {IAaveV4ExtSload} from "../../interfaces/external/aave/IAaveV4ExtSload.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
+import {IAvanaFirstLossReserve} from "../../legacy/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {FeedDef} from "../parameter-store/types/ParameterStoreTypes.sol";

@@ -116,7 +116,7 @@
     {
       "fingerprint": "0b6e79fc52d397e9",
       "check": "BinaryOpMutation",
-      "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+      "file": "src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
       "function": "LPVaultSwapLiquidationLogic._fundReserve",
       "reason": "Equivalent in reachable states: the reserve is approved exactly `amount` and the allowance is reset after `fund`, with the Lock held, so LPVaultSwap's balance falls by at most `amount` and `before - balance > amount` is false. The balance after `fund` still holds keeperOut, which is positive (keeperOut >= Kf - A with A below D <= Kf), so balance > 0; then before % balance <= before - balance <= amount and the mutant also takes before - balance. Partial and full funding are covered by the TEST-216 suites of LPVaultSwap.BadDebt.",
       "approval": "approved (Josue, 2026-11-16)",
@@ -125,7 +125,7 @@
     {
       "fingerprint": "9c6fbbcec4c0204b",
       "check": "DeleteExpressionMutation",
-      "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+      "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
       "function": "LPVaultSwapDeleverageLogic._clear",
       "reason": "Equivalent: the amount slot is read only in _checkCallback, after it requires the state slot to be _STATE_OPEN, and _runFlash writes the amount slot in the same step that opens the state; _clear resets the state to _STATE_NONE, so a stale amount from an earlier deleverage in the same transaction can never be read. No view or other code reads the slot.",
       "approval": "approved (Josue, 2026-11-16)",

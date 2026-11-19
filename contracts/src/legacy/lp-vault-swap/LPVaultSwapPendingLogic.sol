@@ -3,16 +3,16 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
-import {ICollateralization} from "../../legacy/ICollateralization.sol";
-import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
-import {ILock} from "../../legacy/ILock.sol";
-import {ILegacyAaveAdapter} from "../../legacy/aave-adapter/ILegacyAaveAdapter.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {Market} from "../../types/MarketTypes.sol";
+import {ICollateralization} from "../ICollateralization.sol";
+import {ILegacyLPOracle} from "../ILegacyLPOracle.sol";
+import {ILock} from "../ILock.sol";
+import {ILegacyAaveAdapter} from "../aave-adapter/ILegacyAaveAdapter.sol";
+import {IAvanaFirstLossReserve} from "../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {ILPVaultSwapLogic} from "./ILPVaultSwapLogic.sol";
 import {LPVaultSwapSettlement} from "./LPVaultSwapSettlement.sol";
 import {LPVaultSwapStorage} from "./LPVaultSwapStorage.sol";

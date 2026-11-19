@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
-import {SettlementMath} from "../../src/liquidation/lp-vault-swap/SettlementMath.sol";
+import {ILPVaultSwapBase} from "../../src/legacy/lp-vault-swap/ILPVaultSwapBase.sol";
+import {SettlementMath} from "../../src/legacy/lp-vault-swap/SettlementMath.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {SettlementMathHarness} from "../utils/harness/SettlementMathHarness.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RouteMode} from "../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {RouteMode} from "../legacy/lp-vault-swap/types/LPVaultSwapTypes.sol";
 
 /// @notice Identity of one AMM position held in custody.
 struct PositionRef {

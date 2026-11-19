@@ -5,13 +5,10 @@ pragma solidity 0.8.28;
 
 import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
-import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {ILPVaultSwapLogic} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapLogic.sol";
-import {LPVaultSwap} from "../../../src/liquidation/lp-vault-swap/LPVaultSwap.sol";
-import {
-    LPVaultSwapImmutables,
-    LPVaultSwapLogics
-} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {ILPVaultSwap} from "../../../src/legacy/lp-vault-swap/ILPVaultSwap.sol";
+import {ILPVaultSwapLogic} from "../../../src/legacy/lp-vault-swap/ILPVaultSwapLogic.sol";
+import {LPVaultSwap} from "../../../src/legacy/lp-vault-swap/LPVaultSwap.sol";
+import {LPVaultSwapImmutables, LPVaultSwapLogics} from "../../../src/legacy/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {HalmosAccess} from "../../halmos/HalmosAccess.sol";
 import {
     LPVaultSwapSettlementHarness,

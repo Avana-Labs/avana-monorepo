@@ -5,13 +5,13 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {ILPVaultSwapBase} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {ILPVaultSwap} from "../../../src/legacy/lp-vault-swap/ILPVaultSwap.sol";
+import {ILPVaultSwapBase} from "../../../src/legacy/lp-vault-swap/ILPVaultSwapBase.sol";
 import {
     LiquidationParams,
     LiquidationResult,
     RouteMode
-} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+} from "../../../src/legacy/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IPayoutEscrow} from "../../../src/liquidation/payout-escrow/IPayoutEscrow.sol";
 import {LVSLPOracleMock, LVSMarketRegistryMock} from "../../utils/mocks/LPVaultSwapMocks.sol";
 import {PayoutToken} from "../../utils/mocks/PayoutToken.sol";
