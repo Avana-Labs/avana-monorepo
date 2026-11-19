@@ -29,7 +29,8 @@ certora/
 │   ├── RiskModule.conf          MarketRegistry.conf      ParameterStore.conf      LPOracle.conf      DebtOracle.conf
 │   ├── AvanaTimelock.conf       LPVaultSwap.conf         PayoutEscrow.conf     AvanaFirstLossReserve.conf
 │   ├── PegModuleRoute.conf, DexPathRoute.conf, WrapperThenDexRoute.conf                    (SettlementRoute.spec)
-│   └── ParameterStoreRoles.conf, MarketRegistryRoles.conf   (role-map rules on the router alone, logic unlinked)
+│   ├── ParameterStoreRoles.conf, MarketRegistryRoles.conf   (role-map rules on the router alone, logic unlinked)
+│   └── FloorCreditMath.conf     (the floor-credit library through test/utils/harness/FloorCreditMathHarness.sol)
 └── specs/
     ├── <Contract>.spec       rules of one contract
     └── setup/                shared ghost models imported by the contract specs
@@ -56,6 +57,8 @@ Setup files hold only ghosts and CVL functions; each contract spec binds them in
 | `function f(...) external` | the verified contract's interface (`I<Contract>`; `IAaveV4Hub` for the Hub, `ISettlementRoute` for the swap routes, `IAvanaFirstLossReserve` for AvanaFirstLossReserve.spec), plus `IAccessControl` for the AccessControl contracts (AaveAdapter, MarketRegistry, ParameterStore, RiskModule, LPOracle, DebtOracle, LPVaultSwap, AvanaTimelock; the ProxyManager is immutable with no roles) |
 | `function c.f(...) external` | the interface of the contract bound by `using C as c;`, which must be in that spec's conf |
 | `function _.f(...) external => …` | any interface ABI that declares `f` with those parameter types and the `expect` return types |
+
+`FloorCreditMath.spec` verifies a test harness with no interface (`HARNESS_WITHOUT_METHODS`): its arithmetic rules are over CVL integers and its revert rule calls the harness directly, so it has no methods block.
 
 Internal entries and catch-all (`_._`, `unresolved`) entries are refused, so every external call a spec summarises is bound to a declared interface function. Functions that no Avana interface declares have no methods entry and are called directly in the rules, which the prover resolves against the implementation: OpenZeppelin `TimelockController`'s `schedule`, `execute`, `cancel` and friends (AvanaTimelock.spec), UUPS `upgradeToAndCall`, and Aave's `previewRemoveByShares` (Hub.spec). Calls to external contracts without an Avana interface (ERC-4626 static aTokens, the Aave DAO's AccessManager, Chainlink aggregators) stay unresolved, which lets them return anything.
 
