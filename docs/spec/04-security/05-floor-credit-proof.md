@@ -127,8 +127,8 @@ Two integer effects are left to the caller (LPVault, step 2 of the refactor) and
 | Fact | Check |
 |---|---|
 | Floor at every price, below, inside and above the band | `test/fuzz/FloorCreditMath.fuzz.t.sol` (`testFuzz_valueCoversCreditAtAnyPrice`), exact integer cross-multiplication on random bands, positions and prices |
-| Floor at the band edges and at prices in the band | `test/halmos/FloorCreditMath.halmos.t.sol` (`check_valueCoversCreditAtBandEdges`, `check_valueCoversCreditInsideBand`), bounded symbolic |
-| Monotone in `L` | `check_creditMonotoneInLiquidity` and `testFuzz_creditMonotoneInLiquidity` |
+| Floor at the band edges and at prices in the band | `test/halmos/FloorCreditMath.halmos.t.sol`, bounded symbolic (five fixed shapes near `MIN_TICK`, `L < 2^64`), as lemmas: `check_creditMatchesReference` (library = plain formula), `check_referenceAtMostToken1Ratio` and `check_referenceAtMostToken0Ratio` (credit ≤ `L·r1`, `L·r0`: the two band edges), `check_ratioCovers{Below,Inside,Above}Position` (`m·V_band(s) ≤ V_position(s)` for symbolic `s` in the band) |
+| Monotone in `L` | `check_referenceMonotoneInLiquidity` and `testFuzz_creditMonotoneInLiquidity` |
 | Rounding down | `testFuzz_creditRoundsDown` (against the exact rational value) |
 | Revert outside the band | `testFuzz_revertsOutsideBand` |
 | Near-full-range band gives near-0 credit | `testFuzz_nearFullRangeBandGivesNearZeroCredit` |

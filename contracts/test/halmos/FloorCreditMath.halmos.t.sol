@@ -8,86 +8,185 @@ import {FloorCreditMath} from "../../src/custody/lp-vault/libraries/FloorCreditM
 import {Test} from "forge-std/Test.sol";
 
 /// @title FloorCreditMathHalmosTest
-/// @notice Bounded symbolic checks of the floor-credit formula (docs/spec/04-security/05-floor-credit-proof.md): a
-/// position inside its band is worth at least its credit in band liquidity at both band edges and at every price in
-/// the band, and the credit is non-decreasing in liquidity.
-/// @dev Bounds: square-root prices in `[MIN_SQRT_PRICE, MIN_SQRT_PRICE + 2^16)` and liquidity below `2^32`, so every
-/// cross-multiplied value below fits 256 bits and the library's `mulDiv` stays on its single-word path. The proof and
-/// the fuzz suite (`test/fuzz/FloorCreditMath.fuzz.t.sol`) cover the whole domain; these checks cover every input in
-/// the bounded one. Values are exact rationals of the square-root prices, compared by cross-multiplication.
+/// @notice Bounded symbolic checks of the floor credit (docs/spec/04-security/05-floor-credit-proof.md), split into
+/// lemmas small enough for the solver. With `x, y` the position's and `X, Y` the band's square-root prices, `Δ = y − x`,
+/// `D = Y − X`, `r1 = Δ/D`, `r0 = Δ·X·Y/(D·x·y)` and `m = min(r0, r1)`:
+///
+/// 1. `check_creditMatchesReference`: the library returns `ref(L) = min(t, ⌊⌊t·Y/y⌋·X/x⌋)`, `t = ⌊L·Δ/D⌋`.
+/// 2. `check_referenceAtMostToken1Ratio`, `check_referenceAtMostToken0Ratio`: `ref(L) ≤ L·r1` and `ref(L) ≤ L·r0`,
+///    i.e. the position covers its credit at the upper and the lower band edge (the value ratio there is `r1`, `r0`).
+/// 3. `check_referenceMonotoneInLiquidity`: `ref` is non-decreasing in `L`.
+/// 4. `check_ratioCovers{BelowPosition,InsidePosition,AbovePosition}`: for every price `s` in the band,
+///    `m·V_band(s) ≤ V_position(s)`, in the three price regimes of the position. With 1 and 2 (`credit ≤ L·m`) this
+///    gives `credit·V_band(s) ≤ L·V_position(s)` at every price in the band. Outside the band the ratio is constant
+///    (`r0` below, `r1` above), which 2 covers.
+/// @dev Bounds: five fixed bands and positions near `MIN_TICK`, their ticks converted with `ClTickMath` (concrete
+/// values below `2^34`), and liquidity below `2^64`; the fuzz suite (`test/fuzz/FloorCreditMath.fuzz.t.sol`) covers
+/// the whole domain. Every product below then fits 256 bits, so the checks use plain arithmetic. Lemma 1 assumes
+/// `mulmod(a, b, 2^256 − 1) == a·b` for the three products `Math.mulDiv` forms; each is below `2^128`, so the
+/// assumption removes no input and only rules out `mulDiv`'s 512-bit branch.
 contract FloorCreditMathHalmosTest is Test {
-    uint256 internal constant WINDOW = 2 ** 16;
-    uint256 internal constant MAX_LIQUIDITY = 2 ** 32;
+    uint256 internal constant MAX_LIQUIDITY = 2 ** 64;
+    uint256 internal constant SHAPES = 5;
 
-    /// @dev Constrains `MIN ≤ sx ≤ x < y ≤ sy < MIN + WINDOW` and `L < MAX_LIQUIDITY`, and returns the credit.
-    function _credit(
-        uint160 x,
-        uint160 y,
-        uint160 sx,
-        uint160 sy,
+    /// @dev Square-root prices of one position `[x, y]` inside one band `[X, Y]`.
+    struct Shape {
+        uint256 x;
+        uint256 y;
+        uint256 bx;
+        uint256 by;
+    }
+
+    /// @dev Shape `k`: a narrow position in the middle of a wide band, one at each band edge, the whole band, and a
+    /// narrow position in a narrow (stable-like) band. All ticks lie in `[MIN_TICK, −870_000]`.
+    function _shape(
+        uint256 k
+    ) internal pure returns (Shape memory s) {
+        vm.assume(k < SHAPES);
+        int24 a;
+        int24 b;
+        int24 ba = -880_000;
+        int24 bb = -870_000;
+        if (k == 0) (a, b) = (-876_000, -874_000);
+        else if (k == 1) (a, b) = (-880_000, -879_000);
+        else if (k == 2) (a, b) = (-871_000, -870_000);
+        else if (k == 3) (a, b) = (ba, bb);
+        else (a, b, ba, bb) = (-878_960, -878_940, -879_000, -878_900);
+        s.x = ClTickMath.getSqrtPriceAtTick(a);
+        s.y = ClTickMath.getSqrtPriceAtTick(b);
+        s.bx = ClTickMath.getSqrtPriceAtTick(ba);
+        s.by = ClTickMath.getSqrtPriceAtTick(bb);
+    }
+
+    /// @dev `ref(L)`, the credit in plain arithmetic, with its intermediate terms.
+    function _reference(
+        Shape memory s,
+        uint256 liquidity
+    ) internal pure returns (uint256 ref, uint256 t, uint256 u) {
+        t = liquidity * (s.y - s.x) / (s.by - s.bx);
+        u = t * s.by / s.y;
+        uint256 token0 = u * s.bx / s.x;
+        ref = token0 < t ? token0 : t;
+    }
+
+    /// @dev See the contract's `@dev`: states that the high word of `a·b` is 0, as `Math.mulDiv` tests it.
+    function _assumeExactProduct(
+        uint256 a,
+        uint256 b
+    ) internal pure {
+        unchecked {
+            vm.assume(mulmod(a, b, type(uint256).max) == a * b);
+            vm.assume(mulmod(a, b, type(uint256).max) == b * a);
+        }
+    }
+
+    // ---------------------------------------------------------------- lemma 1
+
+    /// @notice The library's credit equals the plain-arithmetic reference on the same terms.
+    function check_creditMatchesReference(
+        uint256 k,
         uint128 liquidity
-    ) internal pure returns (uint256) {
-        uint256 lo = ClTickMath.MIN_SQRT_PRICE;
-        vm.assume(sx >= lo && sy < lo + WINDOW);
-        vm.assume(sx <= x && x < y && y <= sy);
+    ) public pure {
+        Shape memory s = _shape(k);
         vm.assume(liquidity < MAX_LIQUIDITY);
-        return FloorCreditMath.creditAtSqrtPrices(x, y, sx, sy, liquidity);
+        (uint256 ref, uint256 t, uint256 u) = _reference(s, liquidity);
+        _assumeExactProduct(liquidity, s.y - s.x);
+        _assumeExactProduct(t, s.by);
+        _assumeExactProduct(u, s.bx);
+        uint256 credit =
+            FloorCreditMath.creditAtSqrtPrices(uint160(s.x), uint160(s.y), uint160(s.bx), uint160(s.by), liquidity);
+        assert(credit == ref);
     }
 
-    /// @dev Value in token1 of one unit of liquidity on `[lo, hi]` at `s`, as `num / den` (see the proof's table).
-    function _unitValue(
-        uint256 lo,
-        uint256 hi,
-        uint256 s
-    ) internal pure returns (uint256 num, uint256 den) {
-        if (s <= lo) return (s * s * (hi - lo), lo * hi);
-        if (s >= hi) return (hi - lo, 1);
-        return ((s - lo) * hi + s * (hi - s), hi);
-    }
+    // ---------------------------------------------------------------- lemma 2
 
-    /// @notice At the lower band edge (only token0 held by both) and the upper edge (only token1), the position is
-    /// worth at least its credit: `C·(sy − sx)·x·y ≤ L·(y − x)·sx·sy` and `C·(sy − sx) ≤ L·(y − x)`.
-    function check_valueCoversCreditAtBandEdges(
-        uint160 x,
-        uint160 y,
-        uint160 sx,
-        uint160 sy,
-        uint128 liquidity
+    /// @notice `ref(L) ≤ L·r1`: at the upper band edge (token1 only) the position covers its credit.
+    function check_referenceAtMostToken1Ratio(
+        uint256 k,
+        uint256 liquidity
     ) public pure {
-        uint256 c = _credit(x, y, sx, sy, liquidity);
-        uint256 band = uint256(sy) - sx;
-        uint256 pos = uint256(y) - x;
-        assert(c * band * x * y <= uint256(liquidity) * pos * sx * sy);
-        assert(c * band <= uint256(liquidity) * pos);
+        Shape memory s = _shape(k);
+        vm.assume(liquidity < MAX_LIQUIDITY);
+        (uint256 ref,,) = _reference(s, liquidity);
+        assert(ref * (s.by - s.bx) <= liquidity * (s.y - s.x));
     }
 
-    /// @notice At every price `s` in the band, `C·V_band(s) ≤ L·V_position(s)`.
-    function check_valueCoversCreditInsideBand(
-        uint160 x,
-        uint160 y,
-        uint160 sx,
-        uint160 sy,
-        uint128 liquidity,
-        uint160 s
+    /// @notice `ref(L) ≤ L·r0`: at the lower band edge (token0 only) the position covers its credit.
+    function check_referenceAtMostToken0Ratio(
+        uint256 k,
+        uint256 liquidity
     ) public pure {
-        uint256 c = _credit(x, y, sx, sy, liquidity);
-        vm.assume(sx <= s && s <= sy);
-        (uint256 pn, uint256 pd) = _unitValue(x, y, s);
-        (uint256 bn, uint256 bd) = _unitValue(sx, sy, s);
-        assert(c * bn * pd <= uint256(liquidity) * pn * bd);
+        Shape memory s = _shape(k);
+        vm.assume(liquidity < MAX_LIQUIDITY);
+        (uint256 ref,,) = _reference(s, liquidity);
+        assert(ref * (s.by - s.bx) * s.x * s.y <= liquidity * (s.y - s.x) * s.bx * s.by);
     }
 
-    /// @notice More liquidity on the same prices never earns less credit.
-    function check_creditMonotoneInLiquidity(
-        uint160 x,
-        uint160 y,
-        uint160 sx,
-        uint160 sy,
-        uint128 liquidity,
-        uint128 more
+    // ---------------------------------------------------------------- lemma 3
+
+    /// @notice More liquidity never earns less credit.
+    function check_referenceMonotoneInLiquidity(
+        uint256 k,
+        uint256 liquidity,
+        uint256 more
     ) public pure {
-        uint256 c = _credit(x, y, sx, sy, liquidity);
+        Shape memory s = _shape(k);
         vm.assume(liquidity <= more && more < MAX_LIQUIDITY);
-        assert(c <= FloorCreditMath.creditAtSqrtPrices(x, y, sx, sy, more));
+        (uint256 lo,,) = _reference(s, liquidity);
+        (uint256 hi,,) = _reference(s, more);
+        assert(lo <= hi);
+    }
+
+    // ---------------------------------------------------------------- lemma 4
+
+    /// @dev `m = p/q`: `r1 = Δ/D` when `x·y ≤ X·Y` (then `r1 ≤ r0`), else `r0 = Δ·X·Y/(D·x·y)`.
+    function _ratio(
+        Shape memory s
+    ) internal pure returns (uint256 p, uint256 q) {
+        if (s.x * s.y <= s.bx * s.by) return (s.y - s.x, s.by - s.bx);
+        return ((s.y - s.x) * s.bx * s.by, (s.by - s.bx) * s.x * s.y);
+    }
+
+    /// @dev `p·V_band(s) ≤ q·V_position(s)` for `s` in the band, the position's value given as `num/den`; the band is
+    /// in range, `V_band(s) = (2·s·Y − X·Y − s²)/Y`.
+    function _ratioCovers(
+        Shape memory s,
+        uint256 price,
+        uint256 num,
+        uint256 den
+    ) internal pure {
+        (uint256 p, uint256 q) = _ratio(s);
+        uint256 bandNum = 2 * price * s.by - s.bx * s.by - price * price;
+        assert(p * bandNum * den <= q * num * s.by);
+    }
+
+    /// @notice `X ≤ s ≤ x`: the position holds only token0, `V_position(s) = s²·Δ/(x·y)`.
+    function check_ratioCoversBelowPosition(
+        uint256 k,
+        uint256 price
+    ) public pure {
+        Shape memory s = _shape(k);
+        vm.assume(s.bx <= price && price <= s.x);
+        _ratioCovers(s, price, price * price * (s.y - s.x), s.x * s.y);
+    }
+
+    /// @notice `x < s < y`: the position is in range, `V_position(s) = (2·s·y − x·y − s²)/y`.
+    function check_ratioCoversInsidePosition(
+        uint256 k,
+        uint256 price
+    ) public pure {
+        Shape memory s = _shape(k);
+        vm.assume(s.x < price && price < s.y);
+        _ratioCovers(s, price, 2 * price * s.y - s.x * s.y - price * price, s.y);
+    }
+
+    /// @notice `y ≤ s ≤ Y`: the position holds only token1, `V_position(s) = Δ`.
+    function check_ratioCoversAbovePosition(
+        uint256 k,
+        uint256 price
+    ) public pure {
+        Shape memory s = _shape(k);
+        vm.assume(s.y <= price && price <= s.by);
+        _ratioCovers(s, price, s.y - s.x, 1);
     }
 }
