@@ -2,7 +2,7 @@
 
 > **Status:** Draft · **Owner:** Avana Labs · **Last reviewed:** 2026-11-18
 
-A band market accepts any concentrated-liquidity position that sits fully inside its band of ticks `[A, B]`, and credits it a fixed number of **band units**, where one band unit is one unit of liquidity spread over the whole band. The credit is computed once, at pledge, by [`FloorCreditMath`](../../../contracts/src/custody/lp-vault/libraries/FloorCreditMath.sol), and reads no pool price:
+A band market accepts any concentrated-liquidity position that sits fully inside its band of ticks `[A, B]`, and credits it a fixed number of **band units**, where one band unit is one unit of liquidity spread over the whole band. The credit is computed once, at pledge, by [`FloorCreditMath`](../../../contracts/src/custody/lp-vault/libraries/FloorCreditMath.sol), and reads no pool price. It is what the position holds at each band edge divided by what one band unit holds there, the lesser of the two, which is
 
 ```
 credit = L · min(r0, r1)
@@ -16,7 +16,7 @@ for a position of liquidity `L` on the ticks `[a, b]` with `A ≤ a < b ≤ B`. 
 2. **Edge minimum.** The least ratio of the two values, over all prices, is reached at a band edge (and at every price outside the band).
 3. **Partial liquidation.** Unwinding from the position the liquidity worth the seized credit, at the oracle price, leaves remaining floor credit at least the remaining credit.
 
-It then states what the integer code adds (rounding) and where each fact is checked.
+It then states what the integer code adds (rounding) and how each fact is established.
 
 ## Notation
 
@@ -103,33 +103,41 @@ the remaining credit. So after any sequence of partial liquidations (each at its
 
 ## Integer arithmetic
 
-`FloorCreditMath.creditAtSqrtPrices` computes, with `Δ = y − x` and `D = Y − X` on the Q64.96 values,
+`FloorCreditMath.credit` takes ticks and liquidity only. It converts the ticks with `ClTickMath.getSqrtPriceAtTick` and computes each ratio as what the position holds at a band edge divided by what one band unit holds there, with Uniswap v4-core `SqrtPriceMath.getAmount0Delta` and `getAmount1Delta` (the amount math of Uniswap's `getAmountsForLiquidity`). With `U = 2^128 − 1` band units measuring one unit precisely:
 
 ```
-t      = floor(L·Δ / D)                                        ≤ L·r1
-token0 = floor( floor(t·Y / y) · X / x )                       ≤ t·(Y/y)·(X/x) ≤ L·r1·(XY)/(xy) = L·r0
-credit = min(t, token0)                                        ≤ L·m
+a0 = getAmount0Delta(x, y, L, down)  = floor(L·2^96·Δ / (x·y))        token0 at √A (position)
+u0 = getAmount0Delta(X, Y, U, up)    = ceil (U·2^96·D / (X·Y))        token0 at √A (U band units)
+a1 = getAmount1Delta(x, y, L, down)  = floor(L·Δ / 2^96)              token1 at √B (position)
+u1 = getAmount1Delta(X, Y, U, up)    = ceil (U·D / 2^96)              token1 at √B (U band units)
+credit = min( floor(a0·U / u0), floor(a1·U / u1) )
 ```
 
-using `r0 = r1·(XY)/(xy)` (expand both ratios). Every `floor` lowers its argument and is non-decreasing in it, so:
+with `Δ = y − x` and `D = Y − X`. Exactly, `a0·U/u0 = L·r0` and `a1·U/u1 = L·r1`; the position's amounts round down and the band unit's round up, so each side is at most its exact value:
 
 - **Rounding favours the protocol:** `credit ≤ L·m`, the exact credit, so Sections 1–3 hold for the integer credit with room to spare.
+- **Rounding is small in value:** the round-down of `a` costs less than one base unit of the token, and the round-up of `u` costs less than `L·r/U < 1` base unit, so the credit falls short of the exact formula by at most 2 base units of the token's value at the binding edge, plus one band unit. Counted in band units the shortfall can be large where one band unit holds far less than a base unit (a narrow band at low square-root prices); it is still worth at most 2 base units.
 - **Monotone in `L`:** each step is a non-decreasing function of `L`, so the integer credit is too.
-- **No overflow:** `t ≤ L < 2^128` (since `Δ ≤ D`) and `Y/y ≤ MAX_SQRT_PRICE / MIN_SQRT_PRICE < 2^128`, so `t·Y/y < 2^256`; `mulDiv` keeps the 512-bit product, and the final value is at most `t`, so it fits `uint128`. The function reverts unless `MIN_SQRT_PRICE ≤ X ≤ x < y ≤ Y ≤ MAX_SQRT_PRICE`; `credit(ticks…)` reverts unless `A ≤ a < b ≤ B`, because outside the band the formula over-credits (Section 1's first two cases use `[x, y] ⊆ [X, Y]`).
+- **No overflow:** each amount is below `2^192` (`L·2^96·Δ/(x·y) < 2^128·2^96·2^160/2^64`), `mulDiv` keeps the 512-bit products, and each side is at most `L·r ≤ L`, so the result fits `uint128`. `credit` reverts unless `A ≤ a < b ≤ B`, because outside the band the formula over-credits (Section 1's first two cases use `[x, y] ⊆ [X, Y]`).
 
 Two integer effects are left to the caller (LPVault, step 2 of the refactor) and are not covered by this library:
 
-- **Token amounts.** Uniswap's `getAmountsForLiquidity` rounds amounts down by at most one base unit per token, and burning returns amounts rounded down. The floor compares exact values; a caller that compares rounded token amounts must allow that unit.
+- **Token amounts.** Burning returns amounts rounded down. The floor compares exact values; a caller that compares rounded token amounts must allow one base unit per token.
 - **Unwound liquidity.** Section 3 uses the exact `λ`. Rounded to an integer, `λ` should be rounded up (the liquidator receives at least the seized value), and the remaining credit should be stored as `min(C − c, credit(L − λ))`. That keeps "credit ≤ floor credit" true by construction; Section 3 shows the `min` takes `C − c` up to the rounding of `λ` and of the credit.
 
-## Where each fact is checked
+## How each fact is established
+
+The inequality is proven on paper, above: Section 1 (the floor at every price, through (★) and the concavity of `φ` inside the position), Section 2 (the edge minimum) and Section 3 (partial liquidation). The code is checked against the formula, and its rounding and overflow are checked by fuzzing:
 
 | Fact | Check |
 |---|---|
-| Floor at every price, below, inside and above the band | `test/fuzz/FloorCreditMath.fuzz.t.sol` (`testFuzz_valueCoversCreditAtAnyPrice`), exact integer cross-multiplication on random bands, positions and prices |
-| Floor at the band edges and at prices in the band | `test/halmos/FloorCreditMath.halmos.t.sol`, bounded symbolic (five fixed shapes near `MIN_TICK`, `L < 2^64`), as lemmas: `check_creditMatchesReference` (library = plain formula), `check_referenceAtMostToken1Ratio` and `check_referenceAtMostToken0Ratio` (credit ≤ `L·r1`, `L·r0`: the two band edges), `check_ratioCovers{Below,Inside,Above}Position` (`m·V_band(s) ≤ V_position(s)` for symbolic `s` in the band) |
-| Monotone in `L` | `check_referenceMonotoneInLiquidity` and `testFuzz_creditMonotoneInLiquidity` |
-| Rounding down | `testFuzz_creditRoundsDown` (against the exact rational value) |
+| Floor at every price, edge minimum, partial liquidation | Proof, Sections 1–3 |
+| The code computes the formula of the previous section | `test/halmos/FloorCreditMath.halmos.t.sol` (`check_creditMatchesReference`): bounded symbolic, five fixed shapes near `MIN_TICK`, `L < 2^64` |
+| The amounts-based credit equals the ratio formula `L·min(r0, r1)`, never above it, within 2 base units of value | `test/fuzz/FloorCreditMath.fuzz.t.sol` (`testFuzz_creditMatchesRatioFormula`, `testFuzz_creditRoundsDown`), exact rational comparison over the whole tick and liquidity domain |
+| Floor at every price, below, inside and above the band | `testFuzz_valueCoversCreditAtAnyPrice`, `testFuzz_valueCoversCreditAtEdges`, exact integer cross-multiplication |
+| No overflow | every fuzz test, over `L` up to `2^128 − 1` and ticks across `[MIN_TICK, MAX_TICK]` |
+| Monotone in `L` | `testFuzz_creditMonotoneInLiquidity` |
 | Revert outside the band | `testFuzz_revertsOutsideBand` |
+| A position equal to its band gets its liquidity, up to rounding | `testFuzz_fullBandPositionGetsItsLiquidity` |
 | Near-full-range band gives near-0 credit | `testFuzz_nearFullRangeBandGivesNearZeroCredit` |
 | Partial liquidation | `testFuzz_partialLiquidationKeepsFloor` |

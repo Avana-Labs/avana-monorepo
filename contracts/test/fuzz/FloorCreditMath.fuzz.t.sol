@@ -7,6 +7,7 @@ import {ClTickMath} from "../../src/amm/concentrated-liquidity/ClTickMath.sol";
 import {FloorCreditMath} from "../../src/custody/lp-vault/libraries/FloorCreditMath.sol";
 import {BigUint} from "../utils/BigUint.sol";
 import {FloorCreditMathHarness} from "../utils/harness/FloorCreditMathHarness.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title FloorCreditMathFuzzTest
@@ -14,14 +15,15 @@ import {Test} from "forge-std/Test.sol";
 /// random bands, positions, liquidities and prices: the position is worth at least its credit in band liquidity at
 /// every price below, inside and above the band; the credit rounds down and stays within a few units of the exact
 /// formula; it is non-decreasing in liquidity; a near-full-range band credits almost nothing; positions outside the
-/// band revert; and a partial liquidation at any price leaves floor credit covering the remaining credit.
+/// band revert; and a partial liquidation at any price leaves floor credit covering the remaining credit. The credit
+/// is computed from token amounts, which round to whole base units, so "close to the exact formula" is measured in
+/// value: the shortfall is worth at most 2 base units of the token at the binding band edge, plus one band unit.
 /// @dev Every value comparison is exact: values are rationals of the Q64.96 square-root prices, compared by
 /// cross-multiplication in `BigUint`, so no rounding of the test itself can hide or fake a failure.
 contract FloorCreditMathFuzzTest is Test {
     using BigUint for uint256[];
 
-    /// @dev Exact-formula slack of the integer credit: `credit ≥ L·min(r0, r1) − 5` (three floors and the min).
-    uint256 internal constant PRECISION = 5;
+    uint256 internal constant Q96 = 2 ** 96;
 
     FloorCreditMathHarness internal h;
 
@@ -133,6 +135,32 @@ contract FloorCreditMathFuzzTest is Test {
         return token1 && token0;
     }
 
+    /// @dev `k` is within 2 base units of value of `L·r` on one side, plus one band unit: `(L·r1 − k − 1)·D/2^96 ≤ 2`
+    /// (token1 at the upper edge, one band unit holding `D/2^96`) or `(L·r0 − k − 1)·2^96·D/(sx·sy) ≤ 2` (token0 at the
+    /// lower edge). With `k ≤ L·min(r0, r1)` this bounds `L·min(r0, r1) − k` by the same. The 2 is the round-down of
+    /// the position's amount (below 1) and the round-up of the band unit's (below `L·r/(2^128 − 1) < 1`).
+    function _closeToExact(
+        Case memory c,
+        uint256 liquidity,
+        uint256 k
+    ) internal pure returns (bool) {
+        uint256[] memory liquidityDelta = BigUint.from(liquidity).mul(c.y - c.x);
+        // L·Δ ≤ (k + 1)·D + 2·2^96
+        bool token1 = liquidityDelta.lte(BigUint.from(k + 1).mul(c.sy - c.sx).add(BigUint.from(2 * Q96)));
+        return token1 || _closeToExactToken0(c, liquidityDelta, k);
+    }
+
+    /// @dev Token0 side of `_closeToExact`: `2^96·L·Δ·sx·sy ≤ 2·x·y·sx·sy + (k + 1)·2^96·D·x·y`.
+    function _closeToExactToken0(
+        Case memory c,
+        uint256[] memory liquidityDelta,
+        uint256 k
+    ) internal pure returns (bool) {
+        uint256[] memory xy = BigUint.from(c.x).mul(c.y);
+        uint256[] memory rhs = xy.mul(c.sx).mul(c.sy).mul(2).add(xy.mul(c.sy - c.sx).mul(Q96).mul(k + 1));
+        return liquidityDelta.mul(Q96).mul(c.sx).mul(c.sy).lte(rhs);
+    }
+
     // ---------------------------------------------------------------- floor
 
     /// @notice The position is worth at least its credit in band liquidity at a random price below, inside or above
@@ -168,8 +196,8 @@ contract FloorCreditMathFuzzTest is Test {
 
     // ---------------------------------------------------------------- rounding
 
-    /// @notice The integer credit is at most the exact `L·min(r0, r1)` (rounding favours the protocol) and within
-    /// `PRECISION` units of it.
+    /// @notice The integer credit is at most the exact `L·min(r0, r1)` (rounding favours the protocol) and close to it
+    /// (`_closeToExact`).
     function testFuzz_creditRoundsDown(
         int256 bandLowerSeed,
         int256 bandUpperSeed,
@@ -179,19 +207,51 @@ contract FloorCreditMathFuzzTest is Test {
     ) public pure {
         Case memory c = _case(bandLowerSeed, bandUpperSeed, lowerSeed, upperSeed, liquiditySeed, 0);
         assertTrue(_atMostExact(c, c.liquidity, c.credit), "credit at most the exact formula");
-        assertFalse(_atMostExact(c, c.liquidity, uint256(c.credit) + PRECISION), "credit within PRECISION of it");
+        assertTrue(_closeToExact(c, c.liquidity, c.credit), "credit close to it");
         assertLe(c.credit, c.liquidity, "credit at most liquidity");
     }
 
-    /// @notice A position equal to its band gets credit equal to its liquidity.
+    /// @notice A position equal to its band gets credit equal to its liquidity, up to the rounding of its amounts.
     function testFuzz_fullBandPositionGetsItsLiquidity(
         int256 bandLowerSeed,
         int256 bandUpperSeed,
-        uint128 liquidity
+        uint256 liquiditySeed
     ) public pure {
-        int24 bandA = int24(_bound(bandLowerSeed, ClTickMath.MIN_TICK, ClTickMath.MAX_TICK - 1));
-        int24 bandB = int24(_bound(bandUpperSeed, int256(bandA) + 1, ClTickMath.MAX_TICK));
-        assertEq(FloorCreditMath.credit(bandA, bandB, bandA, bandB, liquidity), liquidity, "full credit");
+        Case memory c = _case(bandLowerSeed, bandUpperSeed, bandLowerSeed, bandUpperSeed, liquiditySeed, 0);
+        c.a = c.bandA;
+        c.b = c.bandB;
+        c.x = c.sx;
+        c.y = c.sy;
+        c.credit = FloorCreditMath.credit(c.a, c.b, c.bandA, c.bandB, c.liquidity);
+        assertLe(c.credit, c.liquidity, "at most the liquidity");
+        assertTrue(_closeToExact(c, c.liquidity, c.credit), "full credit up to rounding");
+    }
+
+    // ---------------------------------------------------------------- old formula
+
+    /// @dev The ratio formula the credit replaced, `min(t, ⌊⌊t·sy/y⌋·sx/x⌋)` with `t = ⌊L·Δ/D⌋`.
+    function _ratioCredit(
+        Case memory c
+    ) internal pure returns (uint256) {
+        uint256 t = Math.mulDiv(c.liquidity, c.y - c.x, c.sy - c.sx);
+        uint256 token0 = Math.mulDiv(Math.mulDiv(t, c.sy, c.y), c.sx, c.x);
+        return token0 < t ? token0 : t;
+    }
+
+    /// @notice The amounts-based credit agrees with the ratio formula: never above the exact ratio, and below the
+    /// integer ratio credit by at most 2 base units of the token's value at the binding edge, plus one band unit.
+    function testFuzz_creditMatchesRatioFormula(
+        int256 bandLowerSeed,
+        int256 bandUpperSeed,
+        int256 lowerSeed,
+        int256 upperSeed,
+        uint256 liquiditySeed
+    ) public pure {
+        Case memory c = _case(bandLowerSeed, bandUpperSeed, lowerSeed, upperSeed, liquiditySeed, 0);
+        uint256 ratio = _ratioCredit(c);
+        assertTrue(_atMostExact(c, c.liquidity, c.credit), "never above the exact ratio");
+        assertTrue(_atMostExact(c, c.liquidity, ratio), "the ratio formula rounds down");
+        if (ratio > c.credit) assertTrue(_closeToExact(c, c.liquidity, c.credit), "within 2 base units of value");
     }
 
     // ---------------------------------------------------------------- monotone
@@ -229,8 +289,7 @@ contract FloorCreditMathFuzzTest is Test {
         assertLe(credit, liquidity >> 48, "near-zero credit");
     }
 
-    /// @notice A position that is empty, inverted or leaves the band on either side reverts `NotInsideBand`; square-root
-    /// prices out of order or outside Uniswap's domain revert `SqrtPricesNotInsideBand`.
+    /// @notice A position that is empty, inverted or leaves the band on either side reverts `NotInsideBand`.
     function testFuzz_revertsOutsideBand(
         int256 bandLowerSeed,
         int256 bandUpperSeed,
@@ -259,21 +318,6 @@ contract FloorCreditMathFuzzTest is Test {
         }
         vm.expectRevert(abi.encodeWithSelector(FloorCreditMath.NotInsideBand.selector, a, b, bandA, bandB));
         h.credit(a, b, bandA, bandB, liquidity);
-    }
-
-    /// @notice The square-root entry point refuses a band reaching outside `[MIN_SQRT_PRICE, MAX_SQRT_PRICE]`.
-    function test_sqrtPricesOutsideDomainRevert() public {
-        uint160 lo = ClTickMath.MIN_SQRT_PRICE;
-        uint160 hi = ClTickMath.MAX_SQRT_PRICE;
-        vm.expectRevert(
-            abi.encodeWithSelector(FloorCreditMath.SqrtPricesNotInsideBand.selector, lo, lo + 1, lo - 1, hi)
-        );
-        h.creditAtSqrtPrices(lo, lo + 1, lo - 1, hi, 1);
-        vm.expectRevert(
-            abi.encodeWithSelector(FloorCreditMath.SqrtPricesNotInsideBand.selector, lo, lo + 1, lo, hi + 1)
-        );
-        h.creditAtSqrtPrices(lo, lo + 1, lo, hi + 1, 1);
-        assertEq(h.creditAtSqrtPrices(lo, hi, lo, hi, 7), 7, "whole domain");
     }
 
     // ---------------------------------------------------------------- partial liquidation
@@ -312,7 +356,7 @@ contract FloorCreditMathFuzzTest is Test {
         // r0·kept + 1 > remaining  ⇔  kept·Δ·sx·sy + D·x·y > remaining·D·x·y.
         _checkToken0Remainder(c, keptDelta.mul(c.sx).mul(c.sy), d.mul(c.x).mul(c.y), remaining);
         uint128 keptCredit = FloorCreditMath.credit(c.a, c.b, c.bandA, c.bandB, uint128(kept));
-        assertGe(uint256(keptCredit) + PRECISION + 1, remaining, "integer floor covers the remaining credit");
+        assertTrue(_closeToExact(c, kept, keptCredit), "integer floor of the remainder close to its exact floor");
     }
 
     /// @dev `keptDeltaSxSy + dxy > remaining·dxy`.

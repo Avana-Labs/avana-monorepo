@@ -6,8 +6,8 @@ pragma solidity 0.8.28;
 import {FloorCreditMath} from "../../../src/custody/lp-vault/libraries/FloorCreditMath.sol";
 
 /// @title FloorCreditMathHarness
-/// @notice External wrappers of the internal `FloorCreditMath` functions, so suites can call them across a message call
-/// (`vm.expectRevert` needs one) and read their reverts.
+/// @notice External wrapper of the internal `FloorCreditMath.credit`, so suites can call it across a message call
+/// (`vm.expectRevert` needs one) and read its reverts.
 contract FloorCreditMathHarness {
     function credit(
         int24 tickLower,
@@ -17,15 +17,5 @@ contract FloorCreditMathHarness {
         uint128 liquidity
     ) external pure returns (uint128) {
         return FloorCreditMath.credit(tickLower, tickUpper, bandLower, bandUpper, liquidity);
-    }
-
-    function creditAtSqrtPrices(
-        uint160 sqrtLower,
-        uint160 sqrtUpper,
-        uint160 sqrtBandLower,
-        uint160 sqrtBandUpper,
-        uint128 liquidity
-    ) external pure returns (uint128) {
-        return FloorCreditMath.creditAtSqrtPrices(sqrtLower, sqrtUpper, sqrtBandLower, sqrtBandUpper, liquidity);
     }
 }
