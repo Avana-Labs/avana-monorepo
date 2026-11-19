@@ -24,18 +24,19 @@
  *    ghost market per ID, each token's and feed's `decimals` a ghost per address, and each Chainlink feed's
  *    `latestRoundData` a ghost answer per feed, so `listingTickOf` and `listPool` read the same listing price.
  *  - Other external reads (activation and coverage) are unresolved view calls: any return value.
- *  - The AccessManager is OpenZeppelin's v5.1.0 code for the authorization rule (`authority()` is required to be it);
- *    `consumeScheduledOp` is NONDET.
+ *  - The AccessManager's `canCall` decision is the ghost AuthorityModel (setup/AuthorityModel.spec), bound by sighash
+ *    because the low-level STATICCALL of `restricted` has no resolvable target; `consumeScheduledOp` is NONDET.
  */
 
-using AccessManager as manager;
+import "setup/AuthorityModel.spec";
 
 methods {
     function spokeWidth(IRiskModule.SpokeKind) external returns (IRiskModule.Width) envfree;
     function listPool(IRiskModule.ListPoolParams) external returns (uint256, uint256);
     function setSpokeWidth(IRiskModule.SpokeKind, IRiskModule.Width) external;
 
-    function manager.canCall(address, address, bytes4) external returns (bool, uint32);
+    function _.canCall(address caller, address target, bytes4 selector) external
+        => authorityCanCall(caller, target, selector) expect (bool, uint32);
     function _.consumeScheduledOp(address, bytes) external => NONDET;
     function _.listMarket(uint256, bytes32, int24, int24) external => NONDET;
     function _.getMarket(uint256 id) external => vaultMarket(id) expect (ILPVault.Market);
@@ -152,16 +153,12 @@ rule listPoolFullRangeIsUsableTicks(IRiskModule.ListPoolParams p) {
 
 rule onlyAuthorizedCallerSetsSpokeWidth(IRiskModule.SpokeKind kind, IRiskModule.Width width) {
     env e;
-    require authority(e) == manager;
-    bool immediate;
-    uint32 delay;
-    immediate, delay = manager.canCall(
-        e, e.msg.sender, currentContract, to_bytes4(sig:setSpokeWidth(IRiskModule.SpokeKind, IRiskModule.Width).selector)
-    );
+    bytes4 selector = to_bytes4(sig:setSpokeWidth(IRiskModule.SpokeKind, IRiskModule.Width).selector);
 
     setSpokeWidth@withrevert(e, kind, width);
 
-    assert !lastReverted => (immediate || delay > 0), "a caller the AccessManager does not authorize set a width";
+    assert !lastReverted => authorized(e.msg.sender, currentContract, selector),
+        "a caller the AccessManager does not authorize set a width";
 }
 
 rule spokeWidthsChangeOnlyBySetSpokeWidth(method f, IRiskModule.SpokeKind kind)

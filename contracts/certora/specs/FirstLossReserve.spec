@@ -14,10 +14,11 @@
  *
  * Summaries: the Hub's deficit, Spoke list and added-assets reads are ghosts; `eliminateDeficit` records its
  * arguments; `consumeScheduledOp` records its caller; `remove`, `add`, the first-loss layer's reads and token calls
- * are NONDET. The AccessManager is OpenZeppelin's v5.1.0 code for the authorization rules.
+ * are NONDET. The AccessManager's `canCall` decision is the ghost AuthorityModel (setup/AuthorityModel.spec), bound
+ * by sighash because the low-level STATICCALL of `restricted` has no resolvable target.
  */
 
-using AccessManager as manager;
+import "setup/AuthorityModel.spec";
 
 methods {
     function coverDeficit(address, uint256) external returns (uint256, uint256);
@@ -26,7 +27,8 @@ methods {
     function WITHDRAWAL_DELAY() external returns (uint32) envfree;
     function ASSET_ID() external returns (uint256) envfree;
 
-    function manager.canCall(address, address, bytes4) external returns (bool, uint32);
+    function _.canCall(address caller, address target, bytes4 selector) external
+        => authorityCanCall(caller, target, selector) expect (bool, uint32);
     function _.consumeScheduledOp(address caller, bytes) external => recordConsume(caller) expect void;
 
     // Hub
@@ -75,26 +77,22 @@ function recordCover(uint256 assetId, uint256 amount, address spoke) returns (ui
 
 rule onlyAuthorizedCallerCoversDeficit(address spoke, uint256 maxAmount) {
     env e;
-    require authority(e) == manager;
-    bool immediate;
-    uint32 delay;
-    immediate, delay = manager.canCall(e, e.msg.sender, currentContract, to_bytes4(sig:coverDeficit(address, uint256).selector));
+    bytes4 selector = to_bytes4(sig:coverDeficit(address, uint256).selector);
 
     coverDeficit@withrevert(e, spoke, maxAmount);
 
-    assert !lastReverted => (immediate || delay > 0), "a caller the AccessManager does not authorize covered a deficit";
+    assert !lastReverted => authorized(e.msg.sender, currentContract, selector),
+        "a caller the AccessManager does not authorize covered a deficit";
 }
 
 rule onlyAuthorizedCallerWithdraws(uint256 amount, address to) {
     env e;
-    require authority(e) == manager;
-    bool immediate;
-    uint32 delay;
-    immediate, delay = manager.canCall(e, e.msg.sender, currentContract, to_bytes4(sig:withdraw(uint256, address).selector));
+    bytes4 selector = to_bytes4(sig:withdraw(uint256, address).selector);
 
     withdraw@withrevert(e, amount, to);
 
-    assert !lastReverted => (immediate || delay > 0), "a caller the AccessManager does not authorize withdrew";
+    assert !lastReverted => authorized(e.msg.sender, currentContract, selector),
+        "a caller the AccessManager does not authorize withdrew";
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -103,16 +101,13 @@ rule onlyAuthorizedCallerWithdraws(uint256 amount, address to) {
 
 rule delayedWithdrawalConsumesSchedule(uint256 amount, address to) {
     env e;
-    require authority(e) == manager;
     require !consumed;
-    bool immediate;
-    uint32 delay;
-    immediate, delay = manager.canCall(e, e.msg.sender, currentContract, to_bytes4(sig:withdraw(uint256, address).selector));
+    bytes4 selector = to_bytes4(sig:withdraw(uint256, address).selector);
 
     withdraw(e, amount, to);
 
     assert WITHDRAWAL_DELAY() == 1209600, "WITHDRAWAL_DELAY is not 14 days";
-    assert !immediate => (consumed && consumedFor == e.msg.sender),
+    assert !authImmediate[e.msg.sender][currentContract][selector] => (consumed && consumedFor == e.msg.sender),
         "a delayed caller withdrew without consuming its scheduled operation";
 }
 
