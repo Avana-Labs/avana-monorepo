@@ -39,6 +39,8 @@ library SwapCalls {
         Swap[] memory swaps,
         address[] memory forbidden
     ) internal {
+        // Each swap is one step of the caller's route: any failure must revert the whole route.
+        // forge-lint: disable-start(calls-loop, require-revert-in-loop)
         for (uint256 i; i < swaps.length; ++i) {
             Swap memory s = swaps[i];
             _check(s.target, forbidden);
@@ -54,20 +56,22 @@ library SwapCalls {
                 }
             }
             IERC20(s.tokenIn).forceApprove(s.target, amountIn);
-            // forge-lint: disable-next-line(calls-loop)
             (bool ok, bytes memory reason) = s.target.call(s.data);
             if (!ok) revert SwapFailed(i, reason);
             IERC20(s.tokenIn).forceApprove(s.target, 0);
         }
+        // forge-lint: disable-end(calls-loop, require-revert-in-loop)
     }
 
     function _check(
         address target,
         address[] memory forbidden
     ) private view {
+        // forge-lint: disable-start(require-revert-in-loop)
         if (target == address(this) || target.code.length == 0) revert ForbiddenTarget(target);
         for (uint256 j; j < forbidden.length; ++j) {
             if (target == forbidden[j]) revert ForbiddenTarget(target);
         }
+        // forge-lint: disable-end(require-revert-in-loop)
     }
 }

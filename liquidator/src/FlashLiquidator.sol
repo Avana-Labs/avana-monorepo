@@ -3,71 +3,175 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {FlashLiquidatorBase} from "./FlashLiquidatorBase.sol";
-import {IParameterStore} from "avana/policy/parameter-store/IParameterStore.sol";
+import {IFlashLiquidator} from "./IFlashLiquidator.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {ILPVault} from "avana/custody/lp-vault/ILPVault.sol";
+import {IAaveV3ACLManager} from "avana/interfaces/external/aave/IAaveV3ACLManager.sol";
+import {IAaveV3FlashLoanReceiver} from "avana/interfaces/external/aave/IAaveV3FlashLoanReceiver.sol";
+import {IAaveV3Pool} from "avana/interfaces/external/aave/IAaveV3Pool.sol";
+import {IAaveV3PoolAddressesProvider} from "avana/interfaces/external/aave/IAaveV3PoolAddressesProvider.sol";
+import {IAaveV4Spoke} from "avana/interfaces/external/aave/IAaveV4Spoke.sol";
+import {ILiquidationModule} from "avana/liquidation/liquidation-module/ILiquidationModule.sol";
+import {SwapCalls} from "avana/periphery/libraries/SwapCalls.sol";
+import {IRiskModule} from "avana/policy/risk-module/IRiskModule.sol";
 
 /// @title FlashLiquidator
-/// @notice The chain's public flash liquidation helper: anyone may call it, and it pulls funds only from its caller and
-/// pays only its caller.
-/// @dev Escrow credit no caller can be matched to goes to `feeRecipient` through `claimEscrowed`.
-contract FlashLiquidator is FlashLiquidatorBase {
-    /// @notice Fixes the chain's Aave V3 Pool, LPVaultSwap, MarketRegistry and ParameterStore.
+/// @notice Flash loan, liquidation in kind, sale of the pool tokens, repayment, profit to the bot.
+/// @dev Not upgradeable, no admin. Holds tokens only inside `flashLiquidate` and sends what is left to the recipient.
+contract FlashLiquidator is IFlashLiquidator, IAaveV3FlashLoanReceiver {
+    using SafeERC20 for IERC20;
+    using TransientSlot for *;
+
+    /// @inheritdoc IFlashLiquidator
+    address public immutable override POOL;
+    /// @inheritdoc IFlashLiquidator
+    address public immutable override LIQUIDATION_MODULE;
+    /// @inheritdoc IFlashLiquidator
+    address public immutable override RISK_MODULE;
+    /// @inheritdoc IFlashLiquidator
+    address public immutable override LP_VAULT;
+    /// @inheritdoc IFlashLiquidator
+    address public immutable override OPERATOR;
+
+    /// @dev Transient hash of the open loan's request (`keccak256("avana.flashliquidator.context")`; the next two slots follow it).
+    bytes32 private constant CONTEXT_SLOT = 0x968b1f2ee55a8bb84b957ed334786776b74022b9dd7500b6860f590307485e1c;
+    /// @dev Transient debt repaid and top-up of the open loan, for the event.
+    bytes32 private constant REPAID_SLOT = 0x968b1f2ee55a8bb84b957ed334786776b74022b9dd7500b6860f590307485e1d;
+    bytes32 private constant TOP_UP_SLOT = 0x968b1f2ee55a8bb84b957ed334786776b74022b9dd7500b6860f590307485e1e;
+
+    /// @dev Reads the RiskModule and the LPVault from the module. Reverts `InvalidAddress` for a zero address.
     constructor(
         address pool,
-        address lpVaultSwap,
-        address marketRegistry,
-        address parameterStore
-    ) FlashLiquidatorBase(pool, lpVaultSwap, marketRegistry, parameterStore) {}
-
-    /// @notice The public helper always takes a loan; a caller funding the whole repayment calls `liquidate` itself.
-    function _zeroLoanAllowed() internal pure override returns (bool allowed) {
-        allowed = false;
+        address liquidationModule,
+        address operator
+    ) {
+        if (pool == address(0)) revert InvalidAddress(pool);
+        if (liquidationModule == address(0)) revert InvalidAddress(liquidationModule);
+        if (operator == address(0)) revert InvalidAddress(operator);
+        POOL = pool;
+        LIQUIDATION_MODULE = liquidationModule;
+        OPERATOR = operator;
+        RISK_MODULE = ILiquidationModule(liquidationModule).RISK_MODULE();
+        LP_VAULT = ILiquidationModule(liquidationModule).LP_VAULT();
     }
 
-    /// @notice Any caller may use the public helper.
-    function _callerAllowed() internal pure override returns (bool allowed) {
-        allowed = true;
+    /// @inheritdoc IFlashLiquidator
+    function flashLiquidate(
+        Request calldata request
+    ) external override returns (uint256 profit) {
+        if (msg.sender != OPERATOR) revert NotOperator(msg.sender);
+        if (request.flashAmount == 0) revert InvalidAmount();
+        address asset = _debtAsset(request.params.marketId, request.params.debtReserveId);
+        bytes memory data = abi.encode(request);
+        CONTEXT_SLOT.asBytes32().tstore(keccak256(data));
+        REPAID_SLOT.asUint256().tstore(0);
+        TOP_UP_SLOT.asUint256().tstore(0);
+
+        uint256 premium = flashPremium(request.flashAmount);
+        address[] memory assets = new address[](1);
+        assets[0] = asset;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = request.flashAmount;
+        IAaveV3Pool(POOL).flashLoan(address(this), assets, amounts, new uint256[](1), address(this), data, 0);
+        if (CONTEXT_SLOT.asBytes32().tload() != bytes32(0)) revert InvalidFlashCallback();
+
+        address to = request.recipient == address(0) ? OPERATOR : request.recipient;
+        profit = IERC20(asset).balanceOf(address(this));
+        if (profit < request.minProfit) revert ProfitTooLow(profit, request.minProfit);
+        ILPVault.Market memory m = ILPVault(LP_VAULT).getMarket(request.params.marketId);
+        _sweep(asset, to);
+        if (m.token0 != asset) _sweep(m.token0, to);
+        if (m.token1 != asset) _sweep(m.token1, to);
+        // The operator's own call; the event reports what the loan did once it is closed.
+        // forge-lint: disable-start(reentrancy-events)
+        emit FlashLiquidated(
+            request.params.account,
+            request.params.marketId,
+            asset,
+            request.flashAmount,
+            premium,
+            REPAID_SLOT.asUint256().tload(),
+            TOP_UP_SLOT.asUint256().tload(),
+            profit
+        );
+        // forge-lint: disable-end(reentrancy-events)
     }
 
-    /// @notice The caller pays its own inventory, shortfall budget and top-ups.
-    function _payer() internal view override returns (address payer) {
-        payer = msg.sender;
+    /// @inheritdoc IAaveV3FlashLoanReceiver
+    /// @dev Liquidates, sells, tops up from the operator if the sale falls short, and approves the Pool.
+    function executeOperation(
+        address[] calldata assets,
+        uint256[] calldata amounts,
+        uint256[] calldata premiums,
+        address initiator,
+        bytes calldata params
+    ) external override returns (bool) {
+        if (
+            msg.sender != POOL || initiator != address(this) || assets.length != 1
+                || CONTEXT_SLOT.asBytes32().tload() != keccak256(params)
+        ) revert InvalidFlashCallback();
+        CONTEXT_SLOT.asBytes32().tstore(bytes32(0));
+        Request memory request = abi.decode(params, (Request));
+        IERC20 asset = IERC20(assets[0]);
+
+        ILiquidationModule.LiquidationParams memory p = request.params;
+        p.debtToCover = amounts[0];
+        p.receiver = address(this);
+        asset.forceApprove(LIQUIDATION_MODULE, amounts[0]);
+        ILiquidationModule.LiquidationResult memory r = ILiquidationModule(LIQUIDATION_MODULE).liquidate(p);
+        asset.forceApprove(LIQUIDATION_MODULE, 0);
+        REPAID_SLOT.asUint256().tstore(r.debtRepaid);
+
+        address[] memory forbidden = new address[](2);
+        (forbidden[0], forbidden[1]) = (LIQUIDATION_MODULE, POOL);
+        SwapCalls.run(request.swaps, forbidden);
+
+        uint256 owed = amounts[0] + premiums[0];
+        uint256 balance = asset.balanceOf(address(this));
+        if (balance < owed) {
+            uint256 topUp = owed - balance;
+            if (topUp > request.maxTopUp) revert TopUpExceeded(topUp, request.maxTopUp);
+            TOP_UP_SLOT.asUint256().tstore(topUp);
+            // The operator approves this contract for top-ups; only the operator can start a loan.
+            // forge-lint: disable-next-line(arbitrary-send-erc20)
+            asset.safeTransferFrom(OPERATOR, address(this), topUp);
+        }
+        asset.forceApprove(POOL, owed);
+        return true;
     }
 
-    /// @notice The caller receives its own payout.
-    function _recipient() internal view override returns (address recipient) {
-        recipient = msg.sender;
+    /// @inheritdoc IFlashLiquidator
+    function flashPremium(
+        uint256 amount
+    ) public view override returns (uint256) {
+        if (isFlashBorrower()) return 0;
+        return Math.mulDiv(amount, IAaveV3Pool(POOL).FLASHLOAN_PREMIUM_TOTAL(), 10_000, Math.Rounding.Ceil);
     }
 
-    /// @notice Anyone may claim; the credit goes to `feeRecipient`.
-    /// @dev Reverts `InvalidFeeRecipient` while `feeRecipient` is unset.
-    function _claimRecipient() internal view override returns (address recipient) {
-        recipient = IParameterStore(PARAMETER_STORE).feeRecipient();
-        if (recipient == address(0)) revert InvalidFeeRecipient();
+    /// @inheritdoc IFlashLiquidator
+    function isFlashBorrower() public view override returns (bool) {
+        address acl = IAaveV3PoolAddressesProvider(IAaveV3Pool(POOL).ADDRESSES_PROVIDER()).getACLManager();
+        return IAaveV3ACLManager(acl).isFlashBorrower(address(this));
     }
 
-    /// @notice The request's `maxTopUp` alone bounds the top-up.
-    function _topUpBound(
-        uint256 maxTopUp,
-        uint256 /* debtRepaid */
-    ) internal pure override returns (uint256 bound) {
-        bound = maxTopUp;
+    /// @dev The underlying of a debt reserve of the market's Spoke.
+    function _debtAsset(
+        uint256 marketId,
+        uint256 debtReserveId
+    ) internal view returns (address) {
+        address spoke = IRiskModule(RISK_MODULE).getMarket(marketId).spoke;
+        return IAaveV4Spoke(spoke).getReserve(debtReserveId).underlying;
     }
 
-    /// @notice The public caller sizes its own loan and pays its premium: no bound.
-    // No loan-size bound in the public helper.
-    // forge-lint: disable-next-item(empty-block)
-    function _checkLoanNeed(
-        uint256, /* flashAmount */
-        uint256 /* debtRepaid */
-    ) internal pure override {}
-
-    /// @notice The public caller risks only its own funds: no bound beyond `maxTopUp` and `minPayout`.
-    // No outlay bound in the public helper: the caller funds and keeps the result.
-    // forge-lint: disable-next-item(empty-block)
-    function _checkOutlay(
-        uint256, /* outlay */
-        uint256, /* payout */
-        uint256 /* debtRepaid */
-    ) internal pure override {}
+    /// @dev Sends this contract's whole balance of `token` to `to`.
+    function _sweep(
+        address token,
+        address to
+    ) internal {
+        uint256 amount = IERC20(token).balanceOf(address(this));
+        if (amount != 0) IERC20(token).safeTransfer(to, amount);
+    }
 }

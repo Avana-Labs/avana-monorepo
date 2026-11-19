@@ -1,6 +1,7 @@
 # Avana's own liquidation bot contracts. They compile against the protocol's sources and dependencies in ../contracts.
 [profile.default]
 src = "src"
+test = "test"
 out = "out"
 cache_path = "cache"
 libs = ["../contracts/dependencies"]
@@ -22,6 +23,9 @@ remappings = [
   "forge-std/=../contracts/dependencies/forge-std-1.17.0/src/",
   "solady/=../contracts/dependencies/solady-0.1.26/src/",
 ]
+
+[profile.default.fuzz]
+runs = 1_000
 
 [fmt]
 line_length = 120

@@ -124,9 +124,10 @@ contract FlashloanRepay is IFlashloanRepay, IWithdrawReceiver, IAaveV3FlashLoanR
         uint256 repaid = IAaveAdapter(ADAPTER).repay(c.marketId, c.params.reserveId, amount, c.wallet);
         IERC20(asset).forceApprove(ADAPTER, 0);
         // The burned vault-token count is not needed: the tokens received are.
-        // forge-lint: disable-next-line(unused-return)
+        // forge-lint: disable-start(unused-return)
         IAaveAdapter(ADAPTER)
             .withdraw(c.positionKey, c.params.liquidity, c.params.amount0Min, c.params.amount1Min, address(this));
+        // forge-lint: disable-end(unused-return)
         address[] memory forbidden = new address[](3);
         (forbidden[0], forbidden[1], forbidden[2]) = (ADAPTER, LP_VAULT, POOL);
         SwapCalls.run(c.params.swaps, forbidden);
@@ -135,6 +136,8 @@ contract FlashloanRepay is IFlashloanRepay, IWithdrawReceiver, IAaveV3FlashLoanR
         uint256 balance = IERC20(asset).balanceOf(address(this));
         if (balance < owed) revert InsufficientProceeds(balance, owed);
         IERC20(asset).forceApprove(POOL, owed);
+        // Every call above is to the adapter, the Pool or the wallet's own route, inside the wallet's own call.
+        // forge-lint: disable-next-line(reentrancy-events)
         emit RepaidWithCollateral(c.wallet, c.positionKey, asset, repaid, premium, c.params.liquidity);
     }
 

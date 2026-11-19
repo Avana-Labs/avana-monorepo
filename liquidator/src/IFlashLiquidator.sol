@@ -3,143 +3,86 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LiquidationParams} from "avana/legacy/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {ILiquidationModule} from "avana/liquidation/liquidation-module/ILiquidationModule.sol";
+import {Swap} from "avana/periphery/libraries/SwapCalls.sol";
 
 /// @title IFlashLiquidator
-/// @notice Flash liquidation helper: borrows the debt asset from Aave V3 and runs `LPVaultSwap.liquidate` in the loan.
-/// @dev Immutable, no owner; holds no funds or allowances between transactions.
+/// @notice The liquidation bot's flash path: borrows the debt asset from the chain's Aave V3 Pool, liquidates through
+/// the LiquidationModule (paid in both pool tokens), sells the tokens with the bot's route, repays the loan and sends
+/// the rest to the bot.
+/// @dev Outside the protocol. Not upgradeable, no admin, no funds or allowances between transactions. Only `OPERATOR`
+/// (the bot's signer) may call it, because the Aave DAO's `FLASH_BORROWER` grant waives the premium for this address
+/// and is meant for Avana's committed liquidations only.
 interface IFlashLiquidator {
-    /// @notice Liquidates through `LPVaultSwap.liquidate`, funded by a flash loan of the debt asset.
-    /// @dev The context is cleared last, so reentry during the payout reverts `ContextActive`.
-    /// @return payout Net debt asset paid to the recipient.
-    function flashLiquidate(
-        FlashLiquidationRequest calldata request
-    ) external returns (uint256 payout);
+    /// @notice One flash liquidation.
+    /// @param params Passed to `LiquidationModule.liquidate`; `debtToCover` is set to `flashAmount` and `receiver` to
+    /// this contract.
+    /// @param flashAmount Debt asset borrowed and offered to the liquidation; the module refunds what Aave did not take.
+    /// @param swaps The route from the pool tokens to the debt asset.
+    /// @param maxTopUp Most debt asset pulled from the operator when the sale does not cover the loan (a committed
+    /// operator liquidates at a loss when it must).
+    /// @param minProfit Least debt asset left after the loan, or zero.
+    /// @param recipient Receiver of the profit and of any unsold pool token; zero means the operator.
+    struct Request {
+        ILiquidationModule.LiquidationParams params;
+        uint256 flashAmount;
+        Swap[] swaps;
+        uint256 maxTopUp;
+        uint256 minProfit;
+        address recipient;
+    }
 
-    /// @notice Aave V3 `flashLoan` callback: runs the liquidation and approves the Pool for exactly `F + premium`.
-    /// @dev Reverts `InvalidFlashCallback` unless the call matches the open, unused context.
-    /// @param initiator The `flashLoan` caller; must be this helper.
-    /// @param params `abi.encode(LiquidationParams)`, bound to the context by hash.
-    function executeOperation(
-        address[] calldata assets,
-        uint256[] calldata amounts,
-        uint256[] calldata premiums,
-        address initiator,
-        bytes calldata params
-    ) external returns (bool success);
-
-    /// @notice Claims the helper's whole PayoutEscrow credit of `token` to the variant's claim recipient.
-    /// @dev Reverts `ContextActive` while a `flashLiquidate` context is open.
-    function claimEscrowed(
-        address token
-    ) external returns (uint256 amount);
-
-    /// @notice What the Pool can lend of `asset` now; 0 unless the reserve is active, not paused and flash-enabled.
-    function maxFlashLoan(
-        address asset
-    ) external view returns (uint256 available);
-
-    /// @notice The premium the Pool charges this helper for `amount` of `asset`, rounded up.
-    /// @dev 0 while the helper holds `FLASH_BORROWER` on the Pool's ACLManager.
-    function flashPremium(
-        address asset,
-        uint256 amount
-    ) external view returns (uint256 premium);
-
-    /// @notice The chain's Aave V3 Pool, the lender of every debt asset.
-    function POOL() external view returns (address pool);
-
-    /// @notice The chain's LPVaultSwap.
-    function LP_VAULT_SWAP() external view returns (address lpVaultSwap);
-
-    /// @notice The chain's MarketRegistry.
-    function MARKET_REGISTRY() external view returns (address registry);
-
-    /// @notice The chain's ParameterStore.
-    function PARAMETER_STORE() external view returns (address store);
-
-    /// @notice A constructor address is `address(0)`.
-    error ZeroAddress();
-
-    /// @notice The operator variant's `MAX_TOP_UP_BPS` exceeds 10^4.
-    error InvalidTopUpBps(uint256 bps);
-
-    /// @notice The Pool is a Hub recorded on the chain.
-    error FlashSourceIsHub();
-
-    /// @notice A context of this helper is already open (nesting or reentry).
-    error ContextActive();
-
-    /// @notice The operator variant was called by an address other than `SIGNER`.
-    error NotSigner();
-
-    /// @notice The flash amount or the request's bounds are out of range.
-    error InvalidFlashAmount();
-
-    /// @notice The Pool cannot lend the flash amount now.
-    /// @param available `maxFlashLoan(asset)`.
-    error InsufficientFlashLiquidity(uint256 available);
-
-    /// @notice The callback does not match the open context, or the Pool returned without running it.
+    /// @notice A zero constructor address.
+    error InvalidAddress(address account);
+    /// @notice The caller is not the operator.
+    error NotOperator(address caller);
+    /// @notice A zero flash amount.
+    error InvalidAmount();
+    /// @notice The flash-loan callback does not match the loan this contract opened.
     error InvalidFlashCallback();
+    /// @notice The sale left the loan short by more than `maxTopUp`.
+    error TopUpExceeded(uint256 topUp, uint256 maxTopUp);
+    /// @notice The profit is below `minProfit`.
+    error ProfitTooLow(uint256 profit, uint256 minProfit);
 
-    /// @notice The premium the Pool charges exceeds the caller's `maxPremium`.
-    error PremiumTooHigh(uint256 premium, uint256 maxPremium);
-
-    /// @notice The premium exceeds `maxFlashFeeBps` of the amount.
-    /// @param maxPremium `floor(maxFlashFeeBps * amount / 1e4)`.
-    error FlashFeeTooHigh(uint256 premium, uint256 maxPremium);
-
-    /// @notice The top-up needed to repay `F + premium` exceeds its bound.
-    error TopUpExceeded(uint256 topUp, uint256 bound);
-
-    /// @notice The operator variant's loan exceeds what the liquidation needed.
-    /// @param need The largest loan allowed.
-    error FlashAmountAboveNeed(uint256 flashAmount, uint256 need);
-
-    /// @notice The operator variant's Safe would lose more than `MAX_TOP_UP_BPS` of the debt repaid.
-    /// @param outlay What the Safe would lose net.
-    /// @param bound `floor(D * MAX_TOP_UP_BPS / 1e4)`.
-    error OutlayExceeded(uint256 outlay, uint256 bound);
-
-    /// @notice The public helper's `claimEscrowed` found `feeRecipient` unset in the ParameterStore.
-    error InvalidFeeRecipient();
-
-    /// @notice The net payout is below the request's `minPayout`.
-    error PayoutTooLow(uint256 payout, uint256 minPayout);
-
-    /// @notice Emitted after `flashLoan` returns and the payout is sent.
-    /// @param caller `msg.sender` of `flashLiquidate`.
-    /// @param recipient The payout recipient.
-    /// @param asset The debt asset borrowed and repaid.
-    /// @param flashAmount `F`.
-    /// @param premium The premium the Pool charged.
-    /// @param keeperOut What LPVaultSwap paid the helper.
-    /// @param topUp What the helper pulled from its payer to repay the Pool (0 when none).
-    /// @param payout The net payout sent to the recipient.
+    /// @notice A flash liquidation completed.
     event FlashLiquidated(
-        address indexed caller,
-        address indexed recipient,
+        address indexed account,
+        uint256 indexed marketId,
         address indexed asset,
         uint256 flashAmount,
         uint256 premium,
-        uint256 keeperOut,
+        uint256 debtRepaid,
         uint256 topUp,
-        uint256 payout
+        uint256 profit
     );
-}
 
-/// @notice Arguments of a flash liquidation helper's `flashLiquidate`.
-/// @dev Amounts are in base units of the debt asset. The helper takes no route, recipient, lender or calldata from it.
-struct FlashLiquidationRequest {
-    // Passed unchanged to LPVaultSwap.liquidate.
-    LiquidationParams params;
-    // F, the amount borrowed; 0 (no loan) only in the operator variant.
-    uint256 flashAmount;
-    // Most premium accepted on F.
-    uint256 maxPremium;
-    // Most debt asset pulled from the payer to repay the loan.
-    uint256 maxTopUp;
-    // Smallest net payout after the loan and premium are repaid.
-    uint256 minPayout;
+    /// @notice Runs one flash liquidation. Only `OPERATOR`.
+    /// @return profit Debt asset sent to the recipient after the loan and its premium.
+    function flashLiquidate(
+        Request calldata request
+    ) external returns (uint256 profit);
+
+    /// @notice The premium the Pool charges this contract for `amount`: zero while it holds `FLASH_BORROWER`.
+    function flashPremium(
+        uint256 amount
+    ) external view returns (uint256 premium);
+
+    /// @notice Whether the Aave DAO has granted this contract `FLASH_BORROWER` on the Pool.
+    function isFlashBorrower() external view returns (bool);
+
+    /// @notice The Aave V3 Pool that lends the debt asset.
+    function POOL() external view returns (address pool);
+
+    /// @notice The LiquidationModule.
+    function LIQUIDATION_MODULE() external view returns (address module);
+
+    /// @notice The RiskModule that lists the markets.
+    function RISK_MODULE() external view returns (address riskModule);
+
+    /// @notice The LPVault that names each market's pool tokens.
+    function LP_VAULT() external view returns (address lpVault);
+
+    /// @notice The bot's signer, the only caller.
+    function OPERATOR() external view returns (address operator);
 }
