@@ -5,216 +5,128 @@
 export const lpVaultAbi = [
   {
     "type": "function",
-    "name": "AMM_PROTOCOL",
+    "name": "MAX_POSITIONS",
     "inputs": [],
     "outputs": [
       {
-        "name": "protocol",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "name": "maxPositions",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "COLLATERALIZATION",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "collateralization",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "INTEGRATION_ID",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "integrationId",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "LOCK",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "lock",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "MARKET_REGISTRY",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "marketRegistry",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "bindMarket",
+    "name": "accountCredit",
     "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      },
       {
         "name": "marketId",
         "type": "uint256",
         "internalType": "uint256"
-      },
-      {
-        "name": "pool",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "poolId",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "shape",
-        "type": "tuple",
-        "internalType": "struct PositionShape",
-        "components": [
-          {
-            "name": "kind",
-            "type": "uint8",
-            "internalType": "enum ShapeKind"
-          },
-          {
-            "name": "tickLower",
-            "type": "int24",
-            "internalType": "int24"
-          },
-          {
-            "name": "tickUpper",
-            "type": "int24",
-            "internalType": "int24"
-          }
-        ]
-      },
-      {
-        "name": "integrationData",
-        "type": "bytes",
-        "internalType": "bytes"
       }
     ],
     "outputs": [
       {
-        "name": "tokens",
-        "type": "address[]",
-        "internalType": "address[]"
+        "name": "credit",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "addLiquidity",
+    "inputs": [
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
       },
       {
-        "name": "unitDecimals",
-        "type": "uint8",
-        "internalType": "uint8"
+        "name": "payer",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "amount0Desired",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount1Desired",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount0Min",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount1Min",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "liquidity",
+        "type": "uint128",
+        "internalType": "uint128"
+      },
+      {
+        "name": "credit",
+        "type": "uint128",
+        "internalType": "uint128"
+      },
+      {
+        "name": "amount0",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount1",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "capabilities",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "caps",
-        "type": "tuple",
-        "internalType": "struct IntegrationCapabilities",
-        "components": [
-          {
-            "name": "poolKeying",
-            "type": "uint8",
-            "internalType": "enum PoolKeying"
-          },
-          {
-            "name": "feeMode",
-            "type": "uint8",
-            "internalType": "enum FeeMode"
-          },
-          {
-            "name": "pricingMode",
-            "type": "uint8",
-            "internalType": "enum PricingMode"
-          },
-          {
-            "name": "shapeKind",
-            "type": "uint8",
-            "internalType": "enum ShapeKind"
-          },
-          {
-            "name": "hasTwap",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "reentrancyGuarded",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "nativeToken",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "rateTokens",
-            "type": "bool",
-            "internalType": "bool"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "checkReadSafe",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "view"
   },
   {
     "type": "function",
     "name": "collectFees",
     "inputs": [
       {
-        "name": "positionKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        "name": "depositor",
+        "name": "positionKeys",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
+      },
+      {
+        "name": "recipient",
         "type": "address",
         "internalType": "address"
       }
     ],
     "outputs": [
       {
-        "name": "amounts",
+        "name": "amounts0",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      },
+      {
+        "name": "amounts1",
         "type": "uint256[]",
         "internalType": "uint256[]"
       }
@@ -223,75 +135,7 @@ export const lpVaultAbi = [
   },
   {
     "type": "function",
-    "name": "composition",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "units",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "prices",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "amounts",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      },
-      {
-        "name": "exact",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "consistencyDeviation",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "window",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "prices",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "deviationBps",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "available",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "depositorOf",
+    "name": "feesOf",
     "inputs": [
       {
         "name": "positionKey",
@@ -301,16 +145,21 @@ export const lpVaultAbi = [
     ],
     "outputs": [
       {
-        "name": "depositor",
-        "type": "address",
-        "internalType": "address"
+        "name": "amount0",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount1",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "effectiveSupply",
+    "name": "getMarket",
     "inputs": [
       {
         "name": "marketId",
@@ -320,105 +169,48 @@ export const lpVaultAbi = [
     ],
     "outputs": [
       {
-        "name": "supply",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "isAllowedPoolHook",
-    "inputs": [
-      {
-        "name": "hooks",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "allowed",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "isInCustody",
-    "inputs": [
-      {
-        "name": "positionKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "inCustody",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "marketOf",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "pool",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "poolId",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "shape",
+        "name": "market",
         "type": "tuple",
-        "internalType": "struct PositionShape",
+        "internalType": "struct ILPVault.Market",
         "components": [
           {
-            "name": "kind",
-            "type": "uint8",
-            "internalType": "enum ShapeKind"
+            "name": "pool",
+            "type": "bytes32",
+            "internalType": "bytes32"
           },
           {
-            "name": "tickLower",
+            "name": "token0",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "token1",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "bandLower",
             "type": "int24",
             "internalType": "int24"
           },
           {
-            "name": "tickUpper",
+            "name": "bandUpper",
             "type": "int24",
             "internalType": "int24"
+          },
+          {
+            "name": "totalCredit",
+            "type": "uint128",
+            "internalType": "uint128"
           }
         ]
-      },
-      {
-        "name": "tokens",
-        "type": "address[]",
-        "internalType": "address[]"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "marketOfPosition",
+    "name": "getPosition",
     "inputs": [
       {
         "name": "positionKey",
@@ -428,77 +220,113 @@ export const lpVaultAbi = [
     ],
     "outputs": [
       {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "position",
+        "type": "tuple",
+        "internalType": "struct ILPVault.Position",
+        "components": [
+          {
+            "name": "account",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "marketId",
+            "type": "uint96",
+            "internalType": "uint96"
+          },
+          {
+            "name": "liquidity",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "credit",
+            "type": "uint128",
+            "internalType": "uint128"
+          }
+        ]
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "maxRecordsPerAccountMarket",
+    "name": "listMarket",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "pool",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "bandLower",
+        "type": "int24",
+        "internalType": "int24"
+      },
+      {
+        "name": "bandUpper",
+        "type": "int24",
+        "internalType": "int24"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "locked",
     "inputs": [],
     "outputs": [
       {
-        "name": "records",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "isLocked",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "positionOwner",
+    "name": "marketOfPool",
     "inputs": [
       {
-        "name": "positionKey",
+        "name": "pool",
         "type": "bytes32",
         "internalType": "bytes32"
       }
     ],
     "outputs": [
       {
-        "name": "owner",
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "pledge",
+    "inputs": [
+      {
+        "name": "from",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "rateProviders",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "providers",
-        "type": "address[]",
-        "internalType": "address[]"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "receivePosition",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
       },
       {
-        "name": "owner",
+        "name": "account",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
         "name": "positionKey",
@@ -508,7 +336,7 @@ export const lpVaultAbi = [
     ],
     "outputs": [
       {
-        "name": "units",
+        "name": "credit",
         "type": "uint128",
         "internalType": "uint128"
       }
@@ -517,55 +345,50 @@ export const lpVaultAbi = [
   },
   {
     "type": "function",
-    "name": "releaseToDepositor",
+    "name": "positionsOf",
     "inputs": [
       {
-        "name": "positionKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "units",
-        "type": "uint128",
-        "internalType": "uint128"
-      },
-      {
-        "name": "minAmounts",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "amounts",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "returnPosition",
-    "inputs": [
-      {
-        "name": "positionKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "depositor",
+        "name": "account",
         "type": "address",
         "internalType": "address"
       }
     ],
-    "stateMutability": "nonpayable"
+    "outputs": [
+      {
+        "name": "positionKeys",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "returnStray",
+    "name": "previewCredit",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "credit",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "release",
     "inputs": [
       {
         "name": "positionKey",
@@ -578,104 +401,18 @@ export const lpVaultAbi = [
         "internalType": "address"
       }
     ],
-    "outputs": [],
+    "outputs": [
+      {
+        "name": "credit",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ],
     "stateMutability": "nonpayable"
   },
   {
     "type": "function",
-    "name": "riskMetadata",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "positionKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "meta",
-        "type": "tuple",
-        "internalType": "struct RiskMetadata",
-        "components": [
-          {
-            "name": "inRange",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "readSafe",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "avanaUnits",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "poolUnits",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "poolShareBps",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "positionUnits",
-            "type": "uint128",
-            "internalType": "uint128"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "riskStatus",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "window",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "status",
-        "type": "tuple",
-        "internalType": "struct RiskStatus",
-        "components": [
-          {
-            "name": "depthUnits",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "depthAvailable",
-            "type": "bool",
-            "internalType": "bool"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "topUpPosition",
+    "name": "removeLiquidity",
     "inputs": [
       {
         "name": "positionKey",
@@ -683,43 +420,44 @@ export const lpVaultAbi = [
         "internalType": "bytes32"
       },
       {
-        "name": "owner",
+        "name": "liquidity",
+        "type": "uint128",
+        "internalType": "uint128"
+      },
+      {
+        "name": "amount0Min",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount1Min",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "recipient",
         "type": "address",
         "internalType": "address"
-      },
-      {
-        "name": "topUp",
-        "type": "bytes",
-        "internalType": "bytes"
       }
     ],
     "outputs": [
       {
-        "name": "unitsAdded",
+        "name": "credit",
         "type": "uint128",
         "internalType": "uint128"
+      },
+      {
+        "name": "amount0",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount1",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "unitsOf",
-    "inputs": [
-      {
-        "name": "positionKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "units",
-        "type": "uint128",
-        "internalType": "uint128"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -731,14 +469,19 @@ export const lpVaultAbi = [
         "internalType": "bytes32"
       },
       {
-        "name": "units",
+        "name": "credit",
         "type": "uint128",
         "internalType": "uint128"
       },
       {
-        "name": "minAmounts",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
+        "name": "amount0Min",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount1Min",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
         "name": "recipient",
@@ -748,54 +491,27 @@ export const lpVaultAbi = [
     ],
     "outputs": [
       {
-        "name": "amounts",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "validatePosition",
-    "inputs": [
+        "name": "liquidity",
+        "type": "uint128",
+        "internalType": "uint128"
+      },
       {
-        "name": "marketId",
+        "name": "creditRemoved",
+        "type": "uint128",
+        "internalType": "uint128"
+      },
+      {
+        "name": "amount0",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "owner",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "positionKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "name": "amount1",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
-    "outputs": [
-      {
-        "name": "units",
-        "type": "uint128",
-        "internalType": "uint128"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "wrappedNative",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "weth",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
+    "stateMutability": "nonpayable"
   },
   {
     "type": "event",
@@ -808,23 +524,140 @@ export const lpVaultAbi = [
         "internalType": "bytes32"
       },
       {
-        "name": "depositor",
+        "name": "recipient",
         "type": "address",
         "indexed": true,
         "internalType": "address"
       },
       {
-        "name": "amounts",
-        "type": "uint256[]",
+        "name": "amount0",
+        "type": "uint256",
         "indexed": false,
-        "internalType": "uint256[]"
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount1",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
   },
   {
     "type": "event",
-    "name": "MarketBound",
+    "name": "FeesHeld",
+    "inputs": [
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "amount0",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount1",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "LiquidityAdded",
+    "inputs": [
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "payer",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "liquidity",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
+      },
+      {
+        "name": "credit",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
+      },
+      {
+        "name": "amount0",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount1",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "LiquidityRemoved",
+    "inputs": [
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "recipient",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "liquidity",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
+      },
+      {
+        "name": "credit",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
+      },
+      {
+        "name": "amount0",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount1",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MarketListed",
     "inputs": [
       {
         "name": "marketId",
@@ -834,24 +667,30 @@ export const lpVaultAbi = [
       },
       {
         "name": "pool",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "token0",
         "type": "address",
         "indexed": false,
         "internalType": "address"
       },
       {
-        "name": "poolId",
-        "type": "bytes32",
+        "name": "token1",
+        "type": "address",
         "indexed": false,
-        "internalType": "bytes32"
+        "internalType": "address"
       },
       {
-        "name": "tickLower",
+        "name": "bandLower",
         "type": "int24",
         "indexed": false,
         "internalType": "int24"
       },
       {
-        "name": "tickUpper",
+        "name": "bandUpper",
         "type": "int24",
         "indexed": false,
         "internalType": "int24"
@@ -861,13 +700,19 @@ export const lpVaultAbi = [
   },
   {
     "type": "event",
-    "name": "PositionReceived",
+    "name": "PositionPledged",
     "inputs": [
       {
         "name": "positionKey",
         "type": "bytes32",
         "indexed": true,
         "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
         "name": "marketId",
@@ -876,67 +721,66 @@ export const lpVaultAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "depositor",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "units",
-        "type": "uint128",
-        "indexed": false,
-        "internalType": "uint128"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "PositionReturned",
-    "inputs": [
-      {
-        "name": "positionKey",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "depositor",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "StrayReceived",
-    "inputs": [
-      {
-        "name": "positionKey",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      },
-      {
         "name": "from",
         "type": "address",
         "indexed": false,
         "internalType": "address"
       },
       {
-        "name": "operator",
-        "type": "address",
+        "name": "liquidity",
+        "type": "uint128",
         "indexed": false,
-        "internalType": "address"
+        "internalType": "uint128"
+      },
+      {
+        "name": "credit",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
       }
     ],
     "anonymous": false
   },
   {
     "type": "event",
-    "name": "StrayReturned",
+    "name": "PositionReleased",
+    "inputs": [
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "recipient",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "liquidity",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
+      },
+      {
+        "name": "credit",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PositionUnwound",
     "inputs": [
       {
         "name": "positionKey",
@@ -947,73 +791,46 @@ export const lpVaultAbi = [
       {
         "name": "recipient",
         "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "UnitsReleased",
-    "inputs": [
-      {
-        "name": "positionKey",
-        "type": "bytes32",
         "indexed": true,
-        "internalType": "bytes32"
+        "internalType": "address"
       },
       {
-        "name": "units",
+        "name": "liquidity",
         "type": "uint128",
         "indexed": false,
         "internalType": "uint128"
       },
       {
-        "name": "depositor",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "amounts",
-        "type": "uint256[]",
-        "indexed": false,
-        "internalType": "uint256[]"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "UnitsUnwound",
-    "inputs": [
-      {
-        "name": "positionKey",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "units",
+        "name": "credit",
         "type": "uint128",
         "indexed": false,
         "internalType": "uint128"
       },
       {
-        "name": "recipient",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        "name": "amount0",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       },
       {
-        "name": "amounts",
-        "type": "uint256[]",
+        "name": "amount1",
+        "type": "uint256",
         "indexed": false,
-        "internalType": "uint256[]"
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AlreadyPledged",
+    "inputs": [
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
   },
   {
     "type": "error",
@@ -1038,8 +855,46 @@ export const lpVaultAbi = [
   },
   {
     "type": "error",
-    "name": "FeesRolledIn",
-    "inputs": []
+    "name": "InvalidAddress",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidAmount",
+    "inputs": [
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidBand",
+    "inputs": [
+      {
+        "name": "bandLower",
+        "type": "int24",
+        "internalType": "int24"
+      },
+      {
+        "name": "bandUpper",
+        "type": "int24",
+        "internalType": "int24"
+      }
+    ]
   },
   {
     "type": "error",
@@ -1048,53 +903,7 @@ export const lpVaultAbi = [
   },
   {
     "type": "error",
-    "name": "InvalidPool",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidPrices",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidRecipient",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidShape",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "LengthMismatch",
-    "inputs": [
-      {
-        "name": "expected",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "actual",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "LockNotHeld",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "Locked",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "MarketBinding",
+    "name": "InvalidMarketId",
     "inputs": [
       {
         "name": "marketId",
@@ -1105,78 +914,116 @@ export const lpVaultAbi = [
   },
   {
     "type": "error",
-    "name": "NotCollateralization",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotDepositor",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotInCustody",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotMarketRegistry",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotStray",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotTokenOwner",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "PoolLocked",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "PoolMismatch",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "PositionEncumbered",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "RangeMismatch",
+    "name": "InvalidPool",
     "inputs": [
       {
-        "name": "tickLower",
-        "type": "int24",
-        "internalType": "int24"
-      },
-      {
-        "name": "tickUpper",
-        "type": "int24",
-        "internalType": "int24"
+        "name": "pool",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ]
   },
   {
     "type": "error",
-    "name": "TopUpNotSupported",
-    "inputs": []
+    "name": "MarketNotListed",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",
-    "name": "UnsupportedNft",
-    "inputs": []
+    "name": "NotPledged",
+    "inputs": [
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
   },
   {
     "type": "error",
-    "name": "ZeroUnits",
-    "inputs": []
+    "name": "NotPositionAccount",
+    "inputs": [
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "NotTokenOwner",
+    "inputs": [
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PoolAlreadyListed",
+    "inputs": [
+      {
+        "name": "pool",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PoolMismatch",
+    "inputs": [
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "pool",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TooManyPositions",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ZeroCredit",
+    "inputs": [
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
   }
 ] as const;
