@@ -72,9 +72,7 @@ contracts/
 │   ├── custody/
 │   │   ├── lp-vault/               ILPVault: NFT custody, liquidity removal, fee collection, stray NFTs (one LPVault per AMM protocol per chain)
 │   │   └── collateralization/      ICollateralization: records, pledge and release, seizure, pending settlement, counters
-│   ├── vault-token/
-│   │   ├── vault-token/            IVaultToken
-│   │   └── vault-token-factory/    IVaultTokenFactory
+│   ├── vault-token/                IVaultToken: the collateral ERC-20 of one band market (1 unit = 1 unit of credit)
 │   ├── proxy/
 │   │   ├── position-proxy/         IPositionProxy (logic-free account: Adapter-only execute)
 │   │   └── proxy-manager/          IProxyManager (CREATE2 deployer of every PositionProxy)
@@ -84,7 +82,7 @@ contracts/
 │   │   ├── risk-module/            IRiskModule: pledge and borrow-side checks, previews, RiskModuleMath
 │   │   ├── market-registry/        IMarketRegistry: Spokes, debt reserves, tokens, markets, routes, in-kind, pause state
 │   │   └── parameter-store/        IParameterStore: risk parameters with tighten, loosen and listing setters
-│   ├── oracle/                     ILPOracle: stateless LP price per market; ChainlinkPrice: debt feed ages
+│   ├── oracle/                     ILPOracle: stateless price of one band-liquidity unit per market (DESIGN.md)
 │   ├── liquidation/
 │   │   ├── lp-vault-swap/          ILPVaultSwap
 │   │   ├── settlement-routes/      ISettlementRoute (swap routes from each unwound token into the debt asset)
@@ -124,7 +122,7 @@ GHO and the other debt assets are reached through OpenZeppelin's `IERC20`. Flash
 | `amm/` | AMM integration interface; Uniswap v3 and Aerodrome Slipstream integrations | Interfaces of each LPVault and its pricing library | [2.19](../docs/spec/02-contracts/19-amm-integration-interface.md), [2.20](../docs/spec/02-contracts/20-uniswap-v3-integration.md), [2.21](../docs/spec/02-contracts/21-aerodrome-slipstream-integration.md) | `REQ-AMM-CORE-…`, `SPEC-AMM-CORE-…`, `REQ-AMM-V3-…`, `SPEC-AMM-V3-…`, `REQ-AMM-SLIP-…`, `SPEC-AMM-SLIP-…` |
 | `custody/lp-vault/` | LPVault (one per AMM protocol per chain) | Immutable | [2.2](../docs/spec/02-contracts/02-lp-vault.md) | `REQ-VAULT-…`, `REQ-ARCH-031` |
 | `custody/collateralization/` | Collateralization | Immutable | [2.3](../docs/spec/02-contracts/03-collateralization.md) | `REQ-COLL-…`, `REQ-VAULT-…`, `SPEC-BACK-…`, `REQ-ARCH-171` |
-| `vault-token/vault-token/`, `vault-token/vault-token-factory/` | Vault token, VaultTokenFactory | Immutable | [2.4](../docs/spec/02-contracts/04-vault-tokens.md) | `REQ-VTOKEN-…`, `SPEC-UNIT-…`, `REQ-ARCH-032`, `REQ-ARCH-033` |
+| `vault-token/` | Vault token | Immutable | [2.4](../docs/spec/02-contracts/04-vault-tokens.md) | `REQ-VTOKEN-…`, `SPEC-UNIT-…`, `REQ-ARCH-032`, `REQ-ARCH-033` |
 | `proxy/position-proxy/`, `proxy/proxy-manager/` | PositionProxy, ProxyManager | Immutable: each PositionProxy is a logic-free contract created by CREATE2 per (wallet, CDP Spoke, market) by the immutable ProxyManager, with no beacon or upgrade | [2.5](../docs/spec/02-contracts/05-position-proxy-and-proxy-manager.md) | `REQ-PROXY-…`, `SPEC-PROXY-…`, `REQ-ARCH-034`, `REQ-ARCH-035` |
 | `policy/aave-adapter/`, `policy/risk-module/` | AaveAdapter, RiskModule | Upgradeable (UUPS) | [2.6](../docs/spec/02-contracts/06-aave-adapter.md), [2.7](../docs/spec/02-contracts/07-risk-module.md) | `REQ-ADAPTER-…`, `REQ-PROXY-…`, `REQ-RISK-…`, `SPEC-CAP-…`, `SPEC-CF-…` |
 | `policy/market-registry/` | MarketRegistry: Spokes, debt reserves, tokens, price sources, markets, routes, in-kind windows and the application pause state | Upgradeable (UUPS) | [2.8](../docs/spec/02-contracts/08-market-registry.md) | `REQ-CONFIG-…`, `REQ-MREG-…`, `REQ-ARCH-142` |
