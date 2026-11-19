@@ -141,3 +141,5 @@ The inequality is proven on paper, above: Section 1 (the floor at every price, t
 | A position equal to its band gets its liquidity, up to rounding | `testFuzz_fullBandPositionGetsItsLiquidity` |
 | Near-full-range band gives near-0 credit | `testFuzz_nearFullRangeBandGivesNearZeroCredit` |
 | Partial liquidation | `testFuzz_partialLiquidationKeepsFloor` |
+
+Supplementary, not a merge gate: `contracts/certora/specs/FloorCreditMath.spec` (`certora/conf/FloorCreditMath.conf`) restates Sections 1–2 and the integer bounds as Certora rules over unbounded integers: the credit is at most `L·r0` and `L·r1`, is monotone in `L`, every credit within both edge bounds is worth at most the position at every price in the band (the inside case by Section 1's concavity argument), and `credit` reverts outside the band. Its runs are logged in `contracts/certora/RUNS.md`.
