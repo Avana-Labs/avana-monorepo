@@ -9,10 +9,10 @@ pragma solidity 0.8.28;
 // Loop lengths are the registry's size, which only governed operations grow.
 
 import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
-import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
+import {ICollateralization} from "../../legacy/ICollateralization.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {PledgeCounters} from "../../types/PositionTypes.sol";
 import {DebtReserveDef, TokenDef} from "../market-registry/types/MarketRegistryTypes.sol";

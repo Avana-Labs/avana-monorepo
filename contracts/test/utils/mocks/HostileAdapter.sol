@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILock} from "../../../src/lock/lock/ILock.sol";
+import {ICollateralization} from "../../../src/legacy/ICollateralization.sol";
+import {ILock} from "../../../src/legacy/ILock.sol";
 import {IPositionProxy} from "../../../src/proxy/position-proxy/IPositionProxy.sol";
 import {IVaultToken} from "../../../src/vault-token/vault-token/IVaultToken.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";

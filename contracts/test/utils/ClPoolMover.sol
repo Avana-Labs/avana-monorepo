@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
+import {ILegacyLPVault} from "../../src/legacy/ILegacyLPVault.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -59,7 +59,7 @@ contract ClPoolMover {
     /// is locked; repays the loan and fee from this contract's balance.
     function probeLocked(
         IClPoolActions pool,
-        ILPVault integration,
+        ILegacyLPVault integration,
         uint256 marketId
     ) external {
         probeRan = false;
@@ -85,7 +85,7 @@ contract ClPoolMover {
     ) external {
         (address pool, address integration, uint256 marketId) = abi.decode(data, (address, address, uint256));
         require(msg.sender == pool, "pool only");
-        try ILPVault(integration).checkReadSafe(marketId) {}
+        try ILegacyLPVault(integration).checkReadSafe(marketId) {}
         catch (bytes memory reason) {
             probed = bytes4(reason);
         }

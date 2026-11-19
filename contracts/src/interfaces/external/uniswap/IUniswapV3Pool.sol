@@ -34,6 +34,29 @@ interface IUniswapV3Pool {
             bool unlocked
         );
 
+    /// @notice Fee growth per unit of liquidity over the pool's life, token0, Q128.128.
+    function feeGrowthGlobal0X128() external view returns (uint256);
+
+    /// @notice Fee growth per unit of liquidity over the pool's life, token1, Q128.128.
+    function feeGrowthGlobal1X128() external view returns (uint256);
+
+    /// @notice Returns the state of a tick.
+    function ticks(
+        int24 tick
+    )
+        external
+        view
+        returns (
+            uint128 liquidityGross,
+            int128 liquidityNet,
+            uint256 feeGrowthOutside0X128,
+            uint256 feeGrowthOutside1X128,
+            int56 tickCumulativeOutside,
+            uint160 secondsPerLiquidityOutsideX128,
+            uint32 secondsOutside,
+            bool initialized
+        );
+
     /// @notice Returns the currently in-range liquidity available to the pool.
     function liquidity() external view returns (uint128);
 

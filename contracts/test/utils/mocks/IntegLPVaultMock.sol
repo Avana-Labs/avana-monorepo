@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClMarketConfig, IntegrationCapabilities, PoolKeying, RiskStatus} from "../../../src/amm/types/AmmTypes.sol";
-import {ILPVaultBase} from "../../../src/custody/lp-vault/ILPVaultBase.sol";
-import {ILock} from "../../../src/lock/lock/ILock.sol";
+import {ILegacyLPVaultBase} from "../../../src/legacy/ILegacyLPVaultBase.sol";
+import {ILock} from "../../../src/legacy/ILock.sol";
 import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -19,7 +19,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 /// @dev Principal per removed unit of market `m` is `rate[m][i] / 1e18` raw units of token `i`, rounded down; the vault
 /// holds a float of every token and pays from it. The storage of `CollLPVaultMock` comes first, slot for slot, so a
 /// suite can etch this code over an LPVault the VaultTokenFactory already registered.
-contract IntegLPVaultMock is ILPVaultBase {
+contract IntegLPVaultMock is ILegacyLPVaultBase {
     uint256 public constant RATE_SCALE = 1e18;
 
     struct Position {

@@ -13,9 +13,9 @@ pragma solidity 0.8.28;
 // forge-lint: disable-start(calls-loop)
 
 import {IntegrationCapabilities, PoolKeying} from "../../amm/types/AmmTypes.sol";
-import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAggregatorV3} from "../../interfaces/external/chainlink/IAggregatorV3.sol";
+import {ILegacyLPVault} from "../../legacy/ILegacyLPVault.sol";
 import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {Market, MarketDef} from "../../types/MarketTypes.sol";
@@ -37,7 +37,7 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         address lpVault,
         MarketDef calldata def
     ) internal view {
-        IntegrationCapabilities memory caps = ILPVault(lpVault).capabilities();
+        IntegrationCapabilities memory caps = ILegacyLPVault(lpVault).capabilities();
         bool byAddress = caps.poolKeying == PoolKeying.Address;
         if (byAddress ? (def.pool == address(0) || def.poolId != 0) : (def.pool != address(0) || def.poolId == 0)) {
             revert ListingCheckFailed("pool");
@@ -47,7 +47,7 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         if (sh.kind == ShapeKind.FullPool ? (sh.tickLower != 0 || sh.tickUpper != 0) : sh.tickLower >= sh.tickUpper) {
             revert ListingCheckFailed("shape");
         }
-        uint256 records = ILPVault(lpVault).maxRecordsPerAccountMarket();
+        uint256 records = ILegacyLPVault(lpVault).maxRecordsPerAccountMarket();
         if (records == 0 || records > AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET) {
             revert ListingCheckFailed("records");
         }
@@ -314,12 +314,12 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         MarketDef calldata def
     ) private returns (address[] memory tokens, uint8 unitDecimals) {
         if (!relisting) {
-            return ILPVault(lpVault).bindMarket(marketId, def.pool, def.poolId, def.shape, def.integrationData);
+            return ILegacyLPVault(lpVault).bindMarket(marketId, def.pool, def.poolId, def.shape, def.integrationData);
         }
         PositionShape memory sh;
         address pool;
         bytes32 poolId;
-        (pool, poolId, sh, tokens) = ILPVault(lpVault).marketOf(marketId);
+        (pool, poolId, sh, tokens) = ILegacyLPVault(lpVault).marketOf(marketId);
         if (
             pool != def.pool || poolId != def.poolId || sh.kind != def.shape.kind || sh.tickLower != def.shape.tickLower
                 || sh.tickUpper != def.shape.tickUpper

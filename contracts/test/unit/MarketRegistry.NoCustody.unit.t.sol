@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
+import {ILegacyLPVault} from "../../src/legacy/ILegacyLPVault.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {MarketDef} from "../../src/types/MarketTypes.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
@@ -41,7 +41,7 @@ contract MarketRegistryNoCustodyUnitTest is MarketRegistryFixture {
             assertEq(a.value, 0, "the registry sends no value");
             if (a.kind == VmSafe.AccountAccessKind.Call) {
                 assertEq(a.account, address(lpVault), "a state-changing call to another contract");
-                assertEq(bytes4(a.data), ILPVault.bindMarket.selector, "a call other than bindMarket");
+                assertEq(bytes4(a.data), ILegacyLPVault.bindMarket.selector, "a call other than bindMarket");
                 ++binds;
             } else if (a.kind == VmSafe.AccountAccessKind.DelegateCall) {
                 assertTrue(_allowedDelegate(a.account), "a delegatecall outside the registry's own code");

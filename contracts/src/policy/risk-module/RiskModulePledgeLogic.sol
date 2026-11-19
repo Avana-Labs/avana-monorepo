@@ -8,9 +8,9 @@ pragma solidity 0.8.28;
 /// @dev Safe under STATICCALL: makes no call to Collateralization or the LPVault.
 // View calls in loops over the market's pool tokens and the Spoke's reserves, bounded by listings.
 
-import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
-import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
+import {ICollateralization} from "../../legacy/ICollateralization.sol";
+import {ILegacyLPVault} from "../../legacy/ILegacyLPVault.sol";
 import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {DriftReason, Market} from "../../types/MarketTypes.sol";
@@ -84,8 +84,9 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         if (p.reason != bytes4(0)) return p;
         p.usdCharge =
             RiskModuleMath.usdCharge(units, _capPrice(m.lpOracle), _store().stressFloorUsd(marketId), m.decimals);
-        uint256 cap =
-            Math.min(ILPVault(m.integration).maxRecordsPerAccountMarket(), AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET);
+        uint256 cap = Math.min(
+            ILegacyLPVault(m.integration).maxRecordsPerAccountMarket(), AmmConstants.MAX_RECORDS_PER_ACCOUNT_MARKET
+        );
         if (k.accountRecords >= cap) {
             p.reason = TooManyRecords.selector;
             return p;
@@ -110,7 +111,7 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         address depositor,
         bytes32 positionKey
     ) internal view returns (bytes4 reason, uint128 units) {
-        ILPVault amm = ILPVault(m.integration);
+        ILegacyLPVault amm = ILegacyLPVault(m.integration);
         if (amm.positionOwner(positionKey) != depositor) return (NotPositionOwner.selector, 0);
         try amm.validatePosition(marketId, depositor, positionKey) returns (uint128 u) {
             units = u;

@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {RiskStatus} from "../../amm/types/AmmTypes.sol";
-import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
+import {ILegacyLPVault} from "../../legacy/ILegacyLPVault.sol";
 import {DriftReason, Market} from "../../types/MarketTypes.sol";
 import {BreakerReasons} from "../market-registry/types/Breaker.sol";
 import {IssuerProbe, IssuerProbes} from "../market-registry/types/IssuerProbe.sol";
@@ -67,7 +67,7 @@ contract RiskModuleBreakerLogic is RiskModuleBase, IRiskModuleBreakerLogic {
         uint256 marketId
     ) internal view returns (uint32 live) {
         Market memory m = _market(marketId);
-        RiskStatus memory rs = ILPVault(m.integration).riskStatus(marketId, DEPTH_WINDOW);
+        RiskStatus memory rs = ILegacyLPVault(m.integration).riskStatus(marketId, DEPTH_WINDOW);
         if (!rs.depthAvailable || rs.depthUnits == 0) live |= BreakerReasons.POOL_DEPTH;
         for (uint256 i = 0; i < m.tokens.length; ++i) {
             if (_issuerTripped(m.tokens[i])) {

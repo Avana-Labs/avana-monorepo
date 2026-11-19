@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILock} from "../../../src/lock/lock/ILock.sol";
+import {ILock} from "../../../src/legacy/ILock.sol";
 
 /// @title LockMember
 /// @notice Test stand-in for a Lock member (the AaveAdapter or LPVaultSwap) or for a non-member contract: it acquires,

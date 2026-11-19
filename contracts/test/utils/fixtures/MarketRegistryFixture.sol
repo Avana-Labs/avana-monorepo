@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
-import {ILPVault} from "../../../src/custody/lp-vault/ILPVault.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
+import {ILegacyLPVault} from "../../../src/legacy/ILegacyLPVault.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {MarketRegistryActivationLogic} from "../../../src/policy/market-registry/MarketRegistryActivationLogic.sol";
 import {MarketRegistryHubsLogic} from "../../../src/policy/market-registry/MarketRegistryHubsLogic.sol";
@@ -238,7 +238,7 @@ abstract contract MarketRegistryFixture is AvanaTest {
         uint32 id
     ) internal view returns (bytes32) {
         address v = factory.lpVaultOf(id);
-        ILPVault a = ILPVault(v);
+        ILegacyLPVault a = ILegacyLPVault(v);
         return keccak256(abi.encode(block.chainid, v, v.codehash, a.AMM_PROTOCOL(), a.capabilities().poolKeying));
     }
 

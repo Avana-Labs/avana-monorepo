@@ -28,8 +28,7 @@
         "utils/mocks/UniswapV3Mocks.sol:MockNFPM",
         "utils/mocks/UniswapV3Mocks.sol:MockV3Factory",
         "utils/mocks/UniswapV3Mocks.sol:MockV3Pool",
-        "utils/mocks/ParameterStoreMocks.sol:MockPool",
-        "invariant/echidna/UniswapV3IntegrationProperties.sol:EchidnaNfpm"
+        "utils/mocks/ParameterStoreMocks.sol:MockPool"
       ]
     },
     "aerodrome-slipstream": {
@@ -41,10 +40,7 @@
         "utils/mocks/SlipstreamMocks.sol:MockCLFactory",
         "utils/mocks/SlipstreamMocks.sol:MockCLPool",
         "utils/mocks/SlipstreamMocks.sol:MockCLGauge",
-        "utils/mocks/SlipstreamMocks.sol:MockLeafVoter",
-        "invariant/echidna/SlipstreamIntegrationProperties.sol:EchidnaSlipNpm",
-        "invariant/echidna/SlipstreamIntegrationProperties.sol:EchidnaCLFactory",
-        "invariant/echidna/SlipstreamIntegrationProperties.sol:EchidnaCLPool"
+        "utils/mocks/SlipstreamMocks.sol:MockLeafVoter"
       ]
     },
     "aave-v3-pool": {

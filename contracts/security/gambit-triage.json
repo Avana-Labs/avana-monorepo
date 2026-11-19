@@ -42,24 +42,6 @@
       "review": "mutation gate run 43492416937, equivalent mutant"
     },
     {
-      "fingerprint": "eeaa6abb026f26be",
-      "check": "DeleteExpressionMutation",
-      "file": "src/amm/concentrated-liquidity/ClLPVaultCustody.sol",
-      "function": "ClLPVaultCustody.positionOwner",
-      "reason": "Equivalent: `owner` is the named return value and is already address(0) when the catch branch runs, so dropping the assignment returns the same value.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "mutation gate run 43492416937, equivalent mutant"
-    },
-    {
-      "fingerprint": "0155205b6e96789a",
-      "check": "SwapArgumentsOperatorMutation",
-      "file": "src/amm/concentrated-liquidity/ClLPVaultMarkets.sol",
-      "function": "ClLPVaultMarkets.consistencyDeviation",
-      "reason": "Equivalent: swapping the operands only negates `diff`, and the next statement returns its absolute value (diff < 0 ? -diff : diff); |diff| is at most 2 * MAX_TICK, so the negation cannot overflow.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "mutation gate run 43492416937, equivalent mutant"
-    },
-    {
       "fingerprint": "135edb3bf7d7a81b",
       "check": "DeleteExpressionMutation",
       "file": "src/flash/AaveV3FlashSource.sol",

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
+import {ILegacyLPVault} from "../../legacy/ILegacyLPVault.sol";
 import {ISettlementRoute} from "../../liquidation/settlement-routes/ISettlementRoute.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
@@ -227,7 +227,7 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
     ) private view returns (bytes32) {
         address lpVault = IVaultTokenFactory(_VAULT_TOKEN_FACTORY).lpVaultOf(integrationId);
         if (lpVault == address(0)) revert IMarketRegistry.InvalidIntegration(integrationId);
-        ILPVault v = ILPVault(lpVault);
+        ILegacyLPVault v = ILegacyLPVault(lpVault);
         return
             keccak256(
                 abi.encode(block.chainid, lpVault, lpVault.codehash, v.AMM_PROTOCOL(), v.capabilities().poolKeying)

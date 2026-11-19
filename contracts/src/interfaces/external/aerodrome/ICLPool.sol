@@ -52,4 +52,29 @@ interface ICLPool {
     function observe(
         uint32[] calldata secondsAgos
     ) external view returns (int56[] memory tickCumulatives, uint160[] memory secondsPerLiquidityCumulativeX128s);
+
+    /// @notice Fee growth per unit of unstaked liquidity over the pool's life, token0, Q128.128.
+    function feeGrowthGlobal0X128() external view returns (uint256);
+
+    /// @notice Fee growth per unit of unstaked liquidity over the pool's life, token1, Q128.128.
+    function feeGrowthGlobal1X128() external view returns (uint256);
+
+    /// @notice Returns the state of a tick.
+    function ticks(
+        int24 tick
+    )
+        external
+        view
+        returns (
+            uint128 liquidityGross,
+            int128 liquidityNet,
+            int128 stakedLiquidityNet,
+            uint256 feeGrowthOutside0X128,
+            uint256 feeGrowthOutside1X128,
+            uint256 rewardGrowthOutsideX128,
+            int56 tickCumulativeOutside,
+            uint160 secondsPerLiquidityOutsideX128,
+            uint32 secondsOutside,
+            bool initialized
+        );
 }
