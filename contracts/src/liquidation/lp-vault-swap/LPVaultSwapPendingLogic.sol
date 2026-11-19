@@ -8,7 +8,7 @@ import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {ICollateralization} from "../../legacy/ICollateralization.sol";
 import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
 import {ILock} from "../../legacy/ILock.sol";
-import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
+import {ILegacyAaveAdapter} from "../../legacy/aave-adapter/ILegacyAaveAdapter.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
@@ -118,7 +118,7 @@ contract LPVaultSwapPendingLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
         uint256 n = c.m.tokens.length;
         c.t = _snapshot(c.m.tokens, c.d.asset);
         uint256 r0 = asset.balanceOf(address(this));
-        IAaveAdapter(_AAVE_ADAPTER).burnSeized(marketId, c.m.vaultToken, c.units);
+        ILegacyAaveAdapter(_AAVE_ADAPTER).burnSeized(marketId, c.m.vaultToken, c.units);
         // The released amounts are measured as balance changes, never read from returns.
         // forge-lint: disable-next-line(unused-return)
         ICollateralization(_COLLATERALIZATION).settlePending(c.m.vaultToken, c.units);

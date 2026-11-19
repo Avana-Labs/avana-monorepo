@@ -1,7 +1,7 @@
 /*
- * AaveAdapter gates and call graph (src/policy/aave-adapter/AaveAdapter.sol, the router, with the bodies of its entry
+ * AaveAdapter gates and call graph (src/legacy/aave-adapter/LegacyAaveAdapter.sol, the router, with the bodies of its entry
  * points in AaveAdapterUserLogic, AaveAdapterExitLogic, AaveAdapterCollateralLogic and AaveAdapterSettlementLogic,
- * reached by delegatecall and linked in the conf; interface src/policy/aave-adapter/IAaveAdapter.sol, spec 2.6). Conf:
+ * reached by delegatecall and linked in the conf; interface src/legacy/aave-adapter/ILegacyAaveAdapter.sol, spec 2.6). Conf:
  * AaveAdapterGates.conf. The Adapter's backing, mint and burn, proxy-binding and role rules are in AaveAdapter.spec
  * (AaveAdapter.conf).
  *

@@ -10,7 +10,7 @@ import {ICollateralization} from "../../legacy/ICollateralization.sol";
 import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
 import {ILegacyVaultToken} from "../../legacy/ILegacyVaultToken.sol";
 import {ILock} from "../../legacy/ILock.sol";
-import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
+import {ILegacyAaveAdapter} from "../../legacy/aave-adapter/ILegacyAaveAdapter.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {Market} from "../../types/MarketTypes.sol";
@@ -178,7 +178,7 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         uint256 n = c.m.tokens.length;
         c.t = _snapshot(c.m.tokens, c.d.asset);
         uint256 r0 = asset.balanceOf(address(this));
-        IAaveAdapter(_AAVE_ADAPTER).burnSeized(p.marketId, c.m.vaultToken, c.units);
+        ILegacyAaveAdapter(_AAVE_ADAPTER).burnSeized(p.marketId, c.m.vaultToken, c.units);
         uint256[] memory mins = p.minAmounts.length == 0 ? new uint256[](n) : p.minAmounts;
         // The released amounts are measured as balance changes, never read from returns.
         // forge-lint: disable-next-line(unused-return)
@@ -273,7 +273,7 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
             }
         }
         if (toWallet != 0) {
-            address wallet = IAaveAdapter(_AAVE_ADAPTER).walletOf(p.proxy);
+            address wallet = ILegacyAaveAdapter(_AAVE_ADAPTER).walletOf(p.proxy);
             bool escrowed = _deliver(address(asset), wallet, toWallet);
             emit BorrowerSurplusPaid(p.proxy, wallet, address(asset), toWallet, escrowed);
         }

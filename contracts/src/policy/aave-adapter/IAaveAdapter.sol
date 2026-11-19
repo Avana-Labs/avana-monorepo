@@ -3,208 +3,140 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PositionRef} from "../../types/PositionTypes.sol";
-import {IAaveAdapterBase} from "./IAaveAdapterBase.sol";
-import {RepayWithCollateralParams} from "./types/AaveAdapterTypes.sol";
-import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
-
 /// @title IAaveAdapter
-/// @notice The chain's single entry point for every borrower action on every CDP Spoke.
-/// @dev UUPS proxy; only the AccessManager's governance role can upgrade it. Holds no tokens between calls.
-interface IAaveAdapter is IAaveAdapterBase, IAccessManaged {
-    /// @notice Initializes the proxy storage.
-    /// @dev Runs once; sets the AccessManager that authorizes upgrades.
-    function initialize(
-        address authority
-    ) external;
+/// @notice The only door for users. It pledges NFT positions to the band market they fit, adds liquidity, withdraws a
+/// whole NFT or part of one, borrows, repays and collects fees. Each wallet gets one account per market: a thin proxy
+/// that is the Aave user and approves this adapter as its position manager in its constructor.
+/// @dev Not upgradeable and holds no admin role. It owns no funds between calls: vault tokens are minted to it and
+/// supplied in the same call, and withdrawn vault tokens are burned in the same call. Aave's own health check guards
+/// every withdraw and borrow. The design record is `DESIGN.md` next to this file.
+interface IAaveAdapter {
+    /// @notice A zero address, or an address the call cannot take.
+    error InvalidAddress(address account);
+    /// @notice A zero amount.
+    error InvalidAmount();
+    /// @notice No market of the pool takes a position on these ticks: it is neither full range nor inside the Custom
+    /// range band. The app suggests Full range.
+    error NoMarketFits(bytes32 pool, int24 tickLower, int24 tickUpper);
+    /// @notice The market is listed but its Aave reserve has not passed activation.
+    error MarketNotActive(uint256 marketId);
+    /// @notice The wallet has no account in the market.
+    error NoAccount(address wallet, uint256 marketId);
+    /// @notice The position is not pledged by the caller's account.
+    error NotPositionOwner(bytes32 positionKey, address wallet);
+    /// @notice There is no debt to repay.
+    error NoDebt(address account, uint256 reserveId);
 
-    /// @notice Removes part of one record's credited units; the position stays in custody.
-    /// @param units Credited units removed; must be below the record's credited units.
-    /// @param minHealthFactor Caller's minimum rescue-excluded health factor after a removal with debt, WAD.
-    /// @return amounts Raw amount of each pool token paid to the depositor of record.
-    function removeLiquidity(
-        uint256 marketId,
-        PositionRef calldata position,
-        uint128 units,
-        uint256[] calldata minAmounts,
-        uint256 deadline,
-        uint256 minHealthFactor
-    ) external returns (uint256[] memory amounts);
+    /// @notice A wallet's account in a market was deployed.
+    event AccountCreated(address indexed wallet, uint256 indexed marketId, address account);
+    /// @notice A position was pledged and its credit supplied to Aave as vault tokens.
+    event Pledged(address indexed wallet, uint256 indexed marketId, bytes32 indexed positionKey, uint128 credit);
+    /// @notice Liquidity was added to a pledged position and the new credit supplied.
+    event LiquidityAdded(address indexed wallet, bytes32 indexed positionKey, uint128 liquidity, uint128 credit);
+    /// @notice A position was withdrawn, whole (`liquidity == 0`) or in part, and `burned` vault tokens left Aave.
+    event Withdrawn(
+        address indexed wallet,
+        bytes32 indexed positionKey,
+        address indexed recipient,
+        uint128 liquidity,
+        uint256 burned
+    );
+    /// @notice A wallet borrowed `amount` of a debt reserve.
+    event Borrowed(
+        address indexed wallet, uint256 indexed marketId, uint256 indexed reserveId, uint256 amount, address recipient
+    );
+    /// @notice `payer` repaid `amount` of a wallet's debt.
+    event Repaid(
+        address indexed wallet, uint256 indexed marketId, uint256 indexed reserveId, uint256 amount, address payer
+    );
 
-    /// @notice Credits units added to a pledged position.
-    /// @dev Depositor of record only.
-    /// @param topUp Integration-encoded LP amount for a fungible-share position; empty for an NFT position.
-    function recredit(
-        uint256 marketId,
-        PositionRef calldata position,
-        bytes calldata topUp,
-        uint256 deadline
-    ) external returns (uint128 added);
-
-    /// @notice Repays one debt reserve with units released from one record, via LPVaultSwap's flash deleverage.
-    /// @dev While debt remains, reverts unless the health factor ends >= `max(before, minHealthFactor)`.
-    function repayWithCollateral(
-        RepayWithCollateralParams calldata p
-    ) external returns (uint256 debtRepaid, uint256 debtAssetToWallet);
-
-    /// @notice Burns `units` of a market's vault token from LPVaultSwap's balance.
-    /// @dev Only LPVaultSwap while it holds the Lock.
-    function burnSeized(
-        uint256 marketId,
-        address vaultToken,
-        uint256 units
-    ) external;
-
-    /// @notice Repays `amount` of the session's debt reserve on the session's proxy with funds from LPVaultSwap.
-    /// @dev Only LPVaultSwap inside the Adapter's open deleverage session.
-    /// @param amount Debt asset LPVaultSwap provides, base units.
-    function deleverageRepay(
-        address proxy,
-        uint256 debtReserveId,
-        uint256 amount
-    ) external returns (uint256 repaid);
-
-    /// @notice Withdraws and burns the session's units and has Collateralization release them to LPVaultSwap.
-    /// @dev Same caller and session checks as `deleverageRepay`; runs only after it.
-    /// @param minAmounts Least raw amount of each pool token, market token order.
-    function deleverageRelease(
-        address proxy,
-        PositionRef calldata position,
-        uint128 units,
-        uint256[] calldata minAmounts
-    ) external returns (uint256[] memory amounts, bool closed);
-
-    /// @notice Pledges one AMM position into a market, creating the wallet's proxy for that market if needed.
+    /// @notice Pledges a position to the market it fits and supplies its floor credit to Aave as collateral.
+    /// @dev Routing: a full-range position goes to the pool's Full range market; any other position to its Custom range
+    /// market if fully inside that band; else `NoMarketFits`. Deploys the caller's account on its first pledge in the
+    /// market. The caller approves the LPVault for the NFT first. Pledging works at any health factor; a full supply
+    /// cap or a frozen reserve stops it in Aave.
+    /// @param positionKey The position (the NFT's token ID for an NFPM, or the AMM's key).
+    /// @return marketId The market the position went to.
+    /// @return credit The credit supplied, in band units.
     function pledge(
-        uint256 marketId,
-        PositionRef calldata position,
-        uint256 deadline
-    ) external returns (address proxy, uint256 recordId, uint128 credited);
+        bytes32 positionKey
+    ) external returns (uint256 marketId, uint128 credit);
 
-    /// @notice Borrows `amount` of an approved debt asset on the caller's account and sends it to `receiver`.
-    /// @dev Consumes `expectedNonce`.
-    /// @param minHealthFactor Caller's minimum health factor after the borrow, WAD; 0 for none.
+    /// @notice Adds liquidity to one of the caller's pledged positions and supplies the new credit.
+    /// @dev The caller approves the LPVault for both tokens; what the AMM does not use is refunded.
+    /// @return liquidity Liquidity added.
+    /// @return credit Credit added.
+    /// @return amount0 Token0 used.
+    /// @return amount1 Token1 used.
+    function addLiquidity(
+        bytes32 positionKey,
+        uint256 amount0Desired,
+        uint256 amount1Desired,
+        uint256 amount0Min,
+        uint256 amount1Min
+    ) external returns (uint128 liquidity, uint128 credit, uint256 amount0, uint256 amount1);
+
+    /// @notice Withdraws one of the caller's positions: the whole NFT, or part of its liquidity as tokens.
+    /// @dev `liquidity` of zero, or at least the record's, sends the whole NFT and its held fees to `recipient`. Any
+    /// other amount removes that liquidity and sends both tokens. The account's supply then drops to its remaining
+    /// credit, and Aave reverts the call if the health factor would fall below one.
+    /// @param positionKey The position.
+    /// @param liquidity Liquidity to remove; zero for the whole NFT.
+    /// @param amount0Min Least token0 for a partial withdraw.
+    /// @param amount1Min Least token1 for a partial withdraw.
+    /// @param recipient Receiver of the NFT or the tokens.
+    /// @return burned Vault tokens withdrawn from Aave and burned.
+    function withdraw(
+        bytes32 positionKey,
+        uint128 liquidity,
+        uint256 amount0Min,
+        uint256 amount1Min,
+        address recipient
+    ) external returns (uint256 burned);
+
+    /// @notice Borrows a debt reserve of the market's Spoke against the caller's account and sends it to `recipient`.
+    /// @dev The RiskModule's `checkBorrow` gates it (registered reserve, a keeper, First-Loss coverage); Aave checks
+    /// the health factor.
     function borrow(
         uint256 marketId,
-        uint256 debtReserveId,
+        uint256 reserveId,
         uint256 amount,
-        address receiver,
-        uint256 deadline,
-        uint256 minHealthFactor,
-        uint256 expectedNonce
-    ) external returns (uint256 drawn);
+        address recipient
+    ) external;
 
-    /// @notice Repays one debt reserve of `borrower`'s account for a market with the caller's funds.
-    /// @dev Any caller pays; reads no MarketRegistry or price, so repay always works.
-    /// @param maxRepaySpend Most the payer allows to be pulled, base units.
-    /// @param repayAll True to clear the reserve's whole debt or revert.
+    /// @notice Repays up to `amount` of `wallet`'s debt in the market, paid by the caller.
+    /// @dev Anyone may repay for anyone. Pulls only what is owed, so `type(uint256).max` repays all.
+    /// @return repaid The amount repaid.
     function repay(
-        address borrower,
         uint256 marketId,
-        uint256 debtReserveId,
-        uint256 maxRepaySpend,
-        bool repayAll,
-        uint256 deadline
-    ) external returns (uint256 spent);
+        uint256 reserveId,
+        uint256 amount,
+        address wallet
+    ) external returns (uint256 repaid);
 
-    /// @notice Withdraws one record's units, burns them and returns the whole position to its depositor of record.
-    /// @param units The record's credited units after reconcile.
-    /// @param minHealthFactor Caller's minimum health factor after a with-debt withdrawal, WAD.
-    function withdraw(
-        uint256 marketId,
-        PositionRef calldata position,
-        uint256 units,
-        uint256 deadline,
-        uint256 minHealthFactor
-    ) external;
-
-    /// @notice Repays every named debt reserve in full, then makes a debt-free withdrawal of one record.
-    /// @dev Reverts `DebtRemaining` if any debt reserve of the account is still borrowed.
-    /// @param units The record's credited units after reconcile.
-    /// @param maxRepaySpends Cap for each listed reserve, base units of its asset.
-    function repayAllAndWithdraw(
-        uint256 marketId,
-        PositionRef calldata position,
-        uint256 units,
-        uint256[] calldata debtReserveIds,
-        uint256[] calldata maxRepaySpends,
-        uint256 deadline
-    ) external;
-
-    /// @notice Returns the position of a record at 0 credited units to its depositor of record.
-    /// @dev Depositor of record only.
-    function releaseZeroCredit(
-        uint256 marketId,
-        PositionRef calldata position,
-        uint256 deadline
-    ) external;
-
-    /// @notice Collects fees a custodied position earned and pays them to the depositor of record.
-    /// @dev Depositor of record only. Reverts `FeesRolledIn` for AMM protocols that roll fees into the position.
-    /// @return fees Fees paid to the depositor, raw units of each pool token in the market's token order.
+    /// @notice Collects the fees of the caller's named positions in a market and sends them to the caller.
+    /// @return amounts0 Token0 fees per position.
+    /// @return amounts1 Token1 fees per position.
     function collectFees(
         uint256 marketId,
-        PositionRef calldata position,
-        uint256 deadline
-    ) external returns (uint256[] memory fees);
+        bytes32[] calldata positionKeys
+    ) external returns (uint256[] memory amounts0, uint256[] memory amounts1);
 
-    /// @notice Clears a proxy's stale indebted mark once its Spoke account has no debt.
-    function refreshDebtMark(
-        address proxy
-    ) external;
-
-    /// @notice Returns the wallet's proxy for a market.
-    /// @return proxy The proxy, or `address(0)` before the wallet's first pledge to the market.
-    function proxyOf(
-        address wallet,
-        uint256 marketId
-    ) external view returns (address proxy);
-
-    /// @notice Returns the wallet bound to a proxy.
-    /// @return wallet The bound wallet, or `address(0)` if `proxy` was not created by this Adapter.
-    function walletOf(
-        address proxy
-    ) external view returns (address wallet);
-
-    /// @notice Returns the binding the Adapter stored for a proxy at creation.
-    /// @return spoke The bound CDP Spoke, or `address(0)` if `proxy` was not created by this Adapter.
+    /// @notice The wallet's account in a market; zero before its first pledge.
     function accountOf(
-        address proxy
-    ) external view returns (address spoke, uint256 marketId, address vaultToken, uint256 reserveId);
-
-    /// @notice Returns the CREATE2 address of `(wallet, market)`'s proxy, deployed or not.
-    function predictProxy(
         address wallet,
         uint256 marketId
-    ) external view returns (address proxy);
+    ) external view returns (address account);
 
-    /// @notice Returns the next expected borrow nonce of a proxy.
-    /// @dev Starts at 0 and rises by 1 per successful borrow of any asset.
-    function borrowNonce(
-        address proxy
-    ) external view returns (uint256 nonce);
+    /// @notice The address the wallet's account in a market has, or will have once deployed.
+    function predictAccount(
+        address wallet,
+        uint256 marketId
+    ) external view returns (address account);
 
-    /// @notice Returns the ProxyManager (implementation immutable).
-    function PROXY_MANAGER() external view returns (address proxyManager);
-
-    /// @notice Returns Collateralization (implementation immutable).
-    function COLLATERALIZATION() external view returns (address collateralization);
-
-    /// @notice Returns the LegacyRiskModule (implementation immutable).
+    /// @notice The RiskModule that routes pledges and gates borrows.
     function RISK_MODULE() external view returns (address riskModule);
 
-    /// @notice Returns the MarketRegistry (implementation immutable).
-    function MARKET_REGISTRY() external view returns (address marketRegistry);
-
-    /// @notice Returns the ParameterStore (implementation immutable).
-    function PARAMETER_STORE() external view returns (address parameterStore);
-
-    /// @notice Returns the chain's LPVaultSwap, the only caller of `burnSeized` (implementation immutable).
-    function LP_VAULT_SWAP() external view returns (address lpVaultSwap);
-
-    /// @notice Returns the protocol Lock (implementation immutable).
-    function LOCK() external view returns (address lock);
-
-    /// @notice Returns the chain's VaultTokenFactory (implementation immutable).
-    function VAULT_TOKEN_FACTORY() external view returns (address vaultTokenFactory);
+    /// @notice The LPVault that holds the NFTs.
+    function LP_VAULT() external view returns (address lpVault);
 }

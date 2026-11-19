@@ -6,8 +6,8 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../../src/legacy/ICollateralization.sol";
+import {ILegacyAaveAdapter} from "../../../src/legacy/aave-adapter/ILegacyAaveAdapter.sol";
 import {IRiskModuleErrors} from "../../../src/legacy/risk-module/IRiskModuleErrors.sol";
-import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreTighten} from "../../../src/policy/parameter-store/IParameterStoreTighten.sol";
@@ -24,7 +24,7 @@ import {StdUtils} from "forge-std/StdUtils.sol";
 
 /// @notice The real contracts and identities the full-stack handler drives.
 struct FullStackWorld {
-    IAaveAdapter adapter;
+    ILegacyAaveAdapter adapter;
     MarketRegistry registry;
     IParameterStore store;
     AccessManager accessManager;

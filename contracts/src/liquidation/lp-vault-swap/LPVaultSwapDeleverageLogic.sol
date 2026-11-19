@@ -7,7 +7,7 @@ import {IFlashSource} from "../../flash/IFlashSource.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
 import {ILock} from "../../legacy/ILock.sol";
-import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
+import {ILegacyAaveAdapter} from "../../legacy/aave-adapter/ILegacyAaveAdapter.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
@@ -168,7 +168,7 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
     ) private {
         IERC20 asset = IERC20(fc.asset);
         asset.forceApprove(_AAVE_ADAPTER, received);
-        uint256 repaid = IAaveAdapter(_AAVE_ADAPTER).deleverageRepay(fc.r.proxy, fc.r.debtReserveId, received);
+        uint256 repaid = ILegacyAaveAdapter(_AAVE_ADAPTER).deleverageRepay(fc.r.proxy, fc.r.debtReserveId, received);
         asset.forceApprove(_AAVE_ADAPTER, 0);
         _REPAID_SLOT.asUint256().tstore(repaid);
         (uint256 recovered, Tracked memory t) = _releaseAndSwap(fc);
@@ -235,7 +235,7 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
         uint256[] memory mins = fc.r.minAmounts.length == 0 ? new uint256[](n) : fc.r.minAmounts;
         // The released amounts are measured as balance changes, never read from returns.
         // forge-lint: disable-next-line(unused-return)
-        IAaveAdapter(_AAVE_ADAPTER).deleverageRelease(fc.r.proxy, fc.r.position, fc.r.units, mins);
+        ILegacyAaveAdapter(_AAVE_ADAPTER).deleverageRelease(fc.r.proxy, fc.r.position, fc.r.units, mins);
         _swapLegs(_legArgs(fc, _released(t, n)), t);
         uint256 r1 = asset.balanceOf(address(this));
         recovered = r1 > r0 ? r1 - r0 : 0;

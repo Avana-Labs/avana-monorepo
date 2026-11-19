@@ -30,7 +30,7 @@ const ABI_DIR = join(PKG, "src/abis");
  * that still import it, and is not rewritten.
  */
 const CONTRACTS = [
-  ["aaveAdapterAbi", "avana", "IAaveAdapter"],
+  ["aaveAdapterAbi", "avana", "ILegacyAaveAdapter"],
   ["accessManagerAbi", "avana", "IAccessManager"],
   ["aaveV4HubAbi", "aave", "IHub"],
   ["aaveV4SpokeAbi", "aave", "ISpoke"],

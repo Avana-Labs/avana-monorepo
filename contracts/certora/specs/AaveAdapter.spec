@@ -1,7 +1,7 @@
 /*
- * AaveAdapter (src/policy/aave-adapter/AaveAdapter.sol, the router, with the bodies of its entry points in
+ * AaveAdapter (src/legacy/aave-adapter/LegacyAaveAdapter.sol, the router, with the bodies of its entry points in
  * AaveAdapterUserLogic, AaveAdapterExitLogic, AaveAdapterCollateralLogic and AaveAdapterSettlementLogic, reached by
- * delegatecall and linked in the conf; interface src/policy/aave-adapter/IAaveAdapter.sol, spec 2.6), with
+ * delegatecall and linked in the conf; interface src/legacy/aave-adapter/ILegacyAaveAdapter.sol, spec 2.6), with
  * Collateralization (src/custody/collateralization/Collateralization.sol) linked as real code.
  *
  * Backing across the Adapter and Collateralization: every mint equals the units Collateralization credited in the

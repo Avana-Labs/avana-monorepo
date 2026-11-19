@@ -4,9 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {Pending} from "../../../src/legacy/CollateralizationTypes.sol";
-import {AaveAdapterSteps} from "../../../src/policy/aave-adapter/AaveAdapterSteps.sol";
-import {AaveAdapterStorage} from "../../../src/policy/aave-adapter/AaveAdapterStorage.sol";
-import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
+import {AaveAdapterSteps} from "../../../src/legacy/aave-adapter/AaveAdapterSteps.sol";
+import {AaveAdapterStorage} from "../../../src/legacy/aave-adapter/AaveAdapterStorage.sol";
+import {AaveAdapterImmutables} from "../../../src/legacy/aave-adapter/types/AaveAdapterTypes.sol";
 
 /// @notice The two Collateralization views the backing gap reads, with balances the harness sets.
 contract AdapterBackingLedger {

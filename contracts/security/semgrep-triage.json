@@ -166,7 +166,7 @@
     {
       "fingerprint": "cccc81d37d554762",
       "check": "exact-balance-check",
-      "file": "src/policy/aave-adapter/AaveAdapterSteps.sol",
+      "file": "src/legacy/aave-adapter/AaveAdapterSteps.sol",
       "reason": "Not an absolute balance check: `received` is the proxy's balance delta across the payer's transfer, and `received == 0 || received > amount` refuses a pull that delivered nothing or more than was pulled (REQ-PROXY-029, REQ-PROXY-013); a donation to the proxy before the pull changes neither balance read's difference. Covered by test_TEST_029_pullDeliveringNothingReverts, test_TEST_029_donationIgnored and TEST-221.",
       "approval": "approved (Josue, 2026-11-16)"
     },

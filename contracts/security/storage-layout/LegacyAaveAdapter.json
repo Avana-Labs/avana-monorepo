@@ -1,11 +1,11 @@
 {
-  "contract": "AaveAdapter",
-  "source": "src/policy/aave-adapter/AaveAdapter.sol",
+  "contract": "LegacyAaveAdapter",
+  "source": "src/legacy/aave-adapter/LegacyAaveAdapter.sol",
   "storage": [],
   "namespaces": {
     "erc7201:avana.storage.AaveAdapter": {
       "baseSlot": "0x2072e6d03f11061b0cb3832feb372a04fa53d710ed44fa8554d505a1e2dbd700",
-      "declaredIn": "src/policy/aave-adapter/AaveAdapterStorage.sol",
+      "declaredIn": "src/legacy/aave-adapter/AaveAdapterStorage.sol",
       "fields": [
         {
           "path": "proxyOf",

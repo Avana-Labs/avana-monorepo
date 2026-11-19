@@ -17,7 +17,7 @@ import {AaveAdapterImmutables, AdapterAccount} from "./types/AaveAdapterTypes.so
 /// @title AaveAdapterSettlementLogic
 /// @notice Bodies of the LPVaultSwap steps `burnSeized`, `deleverageRepay` and `deleverageRelease`.
 /// @dev None takes the Lock or reads the MarketRegistry.
-// The router implements the IAaveAdapter pieces; this contract only carries bodies.
+// The router implements the ILegacyAaveAdapter pieces; this contract only carries bodies.
 // solhint-disable comprehensive-interface
 // Every call here runs under a Lock held by the Adapter or LPVaultSwap.
 // forge-lint: disable-start(reentrancy-events)
