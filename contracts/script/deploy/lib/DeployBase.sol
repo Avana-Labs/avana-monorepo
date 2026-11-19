@@ -289,11 +289,12 @@ abstract contract DeployBase is DeployInputs {
     }
 
     /// @notice The `additional_compiler_profiles` name a deployable file is restricted to in `foundry.toml`, or "" for
-    /// the default profile. Mirrors `compilation_restrictions`: the RiskModule at 200 runs (the `clvault` settings).
+    /// the default profile. No deployed file has a named profile now: the RiskModule's restriction (200 runs) builds
+    /// it as `RiskModule.json`, and a `RiskModule.clvault.json` left in `out/` by an older build is the replaced
+    /// upgradeable RiskModule, never deployed.
     function _profileOf(
-        string memory file
+        string memory
     ) internal pure returns (string memory) {
-        if (_eq(file, "RiskModule.sol")) return "clvault";
         return "";
     }
 
