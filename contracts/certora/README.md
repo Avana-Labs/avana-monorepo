@@ -253,13 +253,13 @@ To also generate the Gambit mutants locally (Gambit compiles each file with the 
 
 ### VaultToken.spec — `VaultToken.conf`
 
-- **Contracts**: `src/vault-token/VaultToken.sol:VaultToken`, with OpenZeppelin's `AccessManager` v5.1.0 as its authority.
+- **Contracts**: `src/vault-token/VaultToken.sol:VaultToken`; its AccessManager decision is the ghost `AuthorityModel`, bound by the `canCall` sighash (the `restricted` STATICCALL has no resolvable target).
 - **Covers**: only an authorized caller mints and burns (`onlyAuthorizedCallerMints`, `onlyAuthorizedCallerBurns`); the supply is the sum of balances and moves only by the amounts minted and burned (`totalSupplyIsSumOfBalances`, `supplyChangesOnlyByMintOrBurn`, `mintRaisesSupplyByAmount`, `burnLowersSupplyByAmount`); transfers follow the path rule (`transfersFollowThePathRule`).
 - **Summaries**: `consumeScheduledOp` NONDET.
 
 ### RiskModuleBands.spec — `RiskModuleBands.conf`
 
-- **Contracts**: `test/utils/harness/RiskModuleHarness.sol:RiskModuleHarness`, the `src/policy/risk-module/RiskModule.sol` plus a view of the listing tick, bound through `IRiskModule`, with OpenZeppelin's `AccessManager` v5.1.0 as its authority. `RiskModule.conf` covers the legacy RiskModule.
+- **Contracts**: `test/utils/harness/RiskModuleHarness.sol:RiskModuleHarness`, the `src/policy/risk-module/RiskModule.sol` plus a view of the listing tick, bound through `IRiskModule`; its AccessManager decision is the ghost `AuthorityModel`. `RiskModule.conf` covers the legacy RiskModule.
 - **Covers**: a listed band is immutable (`marketsFromNextIdUnlisted`, `listedBandNeverChanges`); the listing checks (`listPoolCustomBandContainsListingPrice`, `listPoolCustomBandAtLeastMinWidth`, `listPoolCustomBandNarrowerThanFullRange`); the Full range band is the pool's usable ticks (`listPoolFullRangeIsUsableTicks`); only the DAO role changes the Spoke widths (`onlyAuthorizedCallerSetsSpokeWidth`, `spokeWidthsChangeOnlyBySetSpokeWidth`).
 - **Summaries**: the LPVault's `listMarket` NONDET and `getMarket` a ghost market per ID; `decimals` a ghost per address and `latestRoundData` a ghost answer per feed, so the harness and `listPool` read the same listing price; `consumeScheduledOp` NONDET.
 - **Loop bound**: 2 (a route has at most two feeds).

@@ -18,14 +18,15 @@
  * Together: the supply equals the credit the authorized roles minted at pledges minus what they burned at withdrawals
  * and liquidations, and no transfer creates or destroys units.
  *
- * Summaries: the AccessManager is OpenZeppelin's v5.1.0 code (`authority()` is required to be it); its
- * `consumeScheduledOp` is NONDET, so a caller with a positive delay passes the check (the rules allow it: the
- * delay is the AccessManager's, enforced by its own scheduling).
+ * Summaries: the AccessManager's `canCall` decision is the ghost AuthorityModel (setup/AuthorityModel.spec), bound by
+ * sighash because the low-level STATICCALL of `restricted` has no resolvable target; its `consumeScheduledOp` is
+ * NONDET, so a caller with a positive delay passes the check (the rules allow it: the delay is the AccessManager's,
+ * enforced by its own scheduling).
  *
  * Storage assumption: OpenZeppelin v5.1.0 `ERC20` storage `_balances` and `_totalSupply`; plain storage.
  */
 
-using AccessManager as manager;
+import "setup/AuthorityModel.spec";
 
 methods {
     function totalSupply() external returns (uint256) envfree;
@@ -37,7 +38,8 @@ methods {
     function transfer(address, uint256) external returns (bool);
     function transferFrom(address, address, uint256) external returns (bool);
 
-    function manager.canCall(address, address, bytes4) external returns (bool, uint32);
+    function _.canCall(address caller, address target, bytes4 selector) external
+        => authorityCanCall(caller, target, selector) expect (bool, uint32);
     function _.consumeScheduledOp(address, bytes) external => NONDET;
 }
 
@@ -62,26 +64,22 @@ definition isBurn(method f) returns bool = f.selector == sig:burn(address, uint2
 
 rule onlyAuthorizedCallerMints(address to, uint256 amount) {
     env e;
-    require authority(e) == manager;
-    bool immediate;
-    uint32 delay;
-    immediate, delay = manager.canCall(e, e.msg.sender, currentContract, to_bytes4(sig:mint(address, uint256).selector));
+    bytes4 selector = to_bytes4(sig:mint(address, uint256).selector);
 
     mint@withrevert(e, to, amount);
 
-    assert !lastReverted => (immediate || delay > 0), "a caller the AccessManager does not authorize minted";
+    assert !lastReverted => authorized(e.msg.sender, currentContract, selector),
+        "a caller the AccessManager does not authorize minted";
 }
 
 rule onlyAuthorizedCallerBurns(address from, uint256 amount) {
     env e;
-    require authority(e) == manager;
-    bool immediate;
-    uint32 delay;
-    immediate, delay = manager.canCall(e, e.msg.sender, currentContract, to_bytes4(sig:burn(address, uint256).selector));
+    bytes4 selector = to_bytes4(sig:burn(address, uint256).selector);
 
     burn@withrevert(e, from, amount);
 
-    assert !lastReverted => (immediate || delay > 0), "a caller the AccessManager does not authorize burned";
+    assert !lastReverted => authorized(e.msg.sender, currentContract, selector),
+        "a caller the AccessManager does not authorize burned";
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
