@@ -49,7 +49,6 @@ const common: LogSpec[] = [
   addSpoke(10n),
   { source: "MarketRegistry", event: "MarketRegistered", args: { marketId: 1n, integrationId: 1, pool: addr(0xf5), poolId: key(0), tokens: [addr(0xf6), addr(0xf7)], vaultToken: addr(0xf0), lpOracle: addr(0xf8), spoke: SPOKE }, address: REGISTRY, block: 10n, logIndex: 1 },
   { source: "MarketRegistry", event: "MarketActivated", args: { marketId: 1n, chainId: 1n, spoke: SPOKE, reserveId: 1n, hub: HUB, hubAssetId: 3n }, address: REGISTRY, block: 10n, logIndex: 2 },
-  { source: "AvanaTimelock", event: "CallScheduled", args: { id: key(9), index: 0n, target: REGISTRY, value: 0n, data: "0x1234", predecessor: key(0), delay: 3_600n }, address: addr(0xa5), block: 10n, logIndex: 3 },
   config(10n, 1_000),
   ...account(1, 11n),
   ...account(2, 12n),
@@ -57,7 +56,6 @@ const common: LogSpec[] = [
   premium(1, 13n, 4, 200n),
   borrow(2, 14n, 3, 2_000n),
   premium(2, 14n, 4, 210n),
-  { source: "MarketRegistry", event: "BreakerLatched", args: { scope: 0, key: key(1), reasons: 4 }, address: REGISTRY, block: 14n, logIndex: 7 },
   { source: "Collateralization", event: "CollateralPledged", args: { recordId: 1n, positionKey: key(1), depositor: wallet(1), integrationId: 1, proxy: proxy(1), vaultToken: addr(0xf0), credited: 100n, usdCharge: 1n, sliceUsd: 1n }, address: C, block: 14n, logIndex: 8 },
   { source: "PayoutEscrow", event: "RemainderEscrowed", args: { token: addr(0xf3), account: wallet(2), amount: 40n }, address: addr(0xa4), block: 14n, logIndex: 9 },
 ];
@@ -72,12 +70,11 @@ const branchA: LogSpec[] = [
   { source: "Collateralization", event: "SeizureReconciled", args: { proxy: proxy(2), vaultToken: addr(0xf0), units: 9n, amounts: [1n, 2n] }, address: C, block: 18n, logIndex: 0 },
 ];
 
-/** Branch b, blocks 15–19: a different repayment, no risk change, a third account and a breaker reset. */
+/** Branch b, blocks 15–19: a different repayment, no risk change, and a third account. */
 const branchB: LogSpec[] = [
   repay(2, 15n, 0, 2_000n),
   ...account(3, 16n),
   borrow(3, 17n, 3, 700n),
-  { source: "MarketRegistry", event: "BreakerReset", args: { scope: 0, key: key(1), caller: REGISTRY }, address: REGISTRY, block: 18n, logIndex: 0 },
   premium(3, 19n, 0, 180n),
 ];
 

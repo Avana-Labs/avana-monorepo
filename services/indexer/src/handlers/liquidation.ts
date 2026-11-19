@@ -55,6 +55,7 @@ ponder.on("LPVaultSwap:KeeperRemoved", async ({ event, context }) => {
 // DeficitSurplusFunded is the part of the report's borrowerSurplus (always the full B) that a deficit liquidation paid
 // into the First-Loss Reserve; BorrowerSurplusPaid carries the rest that reached the wallet (REQ-SWAP-027).
 logOnly("LPVaultSwap", [
+  "AuthorityUpdated",
   "BorrowerSurplusPaid",
   "DeficitSurplusFunded",
   "FlashLoanUsed",

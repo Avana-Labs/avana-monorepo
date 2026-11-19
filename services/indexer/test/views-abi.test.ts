@@ -19,7 +19,8 @@ import { hubViewsAbi, lensAppViewsAbi, lensViewsAbi, registryViewsAbi, spokeView
  * fee views (ILensFees.sol), the after-action previews (ILensActions.sol), the sizing views (ILensSizing.sol) and
  * `getHubAsset` (ILensHubAssets.sol) are absent.
  */
-const NOT_YET_GENERATED = new Set<string>([]);
+// Views the shared snapshot still reads but the Lens no longer has; the readers that replace the Lens drop them.
+const NOT_YET_GENERATED = new Set<string>(["getApplicationState", "getBorrowSpeed", "getDebtReserves", "getMarkets", "getPledgeSpeed"]);
 const APP_NOT_YET_GENERATED = new Set<string>([]);
 
 function layout(p: AbiParameter): string {

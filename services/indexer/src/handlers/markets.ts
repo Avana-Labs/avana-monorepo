@@ -4,7 +4,7 @@
 
 import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
-import { PAUSE_REASON, PAUSE_STATE, enumName, logOnly } from "../lib/logOnly.ts";
+import { logOnly } from "../lib/logOnly.ts";
 import { recordLog } from "../lib/record.ts";
 import { stateReadBlock } from "../lib/stateFloor.ts";
 import { clPoolAbi } from "@avana/services-common/views";
@@ -104,64 +104,16 @@ ponder.on("MarketRegistry:DebtReserveRemoved", async ({ event, context }) => {
     .set({ approved: false, lastBlock: p.blockNumber });
 });
 
-ponder.on("MarketRegistry:PauseStateChanged", async ({ event, context }) => {
-  const p = await recordLog(event, context, "MarketRegistry.PauseStateChanged");
-  const state = enumName(PAUSE_STATE, event.args.current);
-  await context.db
-    .insert(schema.pauseState)
-    .values({ chainId: p.chainId, hub: event.args.hub, state, reason: "None", lastBlock: p.blockNumber })
-    .onConflictDoUpdate({ state, lastBlock: p.blockNumber });
-});
-
-ponder.on("MarketRegistry:PauseReasonChanged", async ({ event, context }) => {
-  const p = await recordLog(event, context, "MarketRegistry.PauseReasonChanged");
-  const reason = enumName(PAUSE_REASON, event.args.current);
-  await context.db
-    .insert(schema.pauseState)
-    .values({ chainId: p.chainId, hub: event.args.hub, state: "None", reason, lastBlock: p.blockNumber })
-    .onConflictDoUpdate({ reason, lastBlock: p.blockNumber });
-});
-
-for (const [name, frozen] of [["AddressFrozen", true], ["AddressUnfrozen", false]] as const) {
-  ponder.on(`MarketRegistry:${name}`, async ({ event, context }) => {
-    const p = await recordLog(event, context, `MarketRegistry.${name}`);
-    await context.db
-      .insert(schema.frozenAddress)
-      .values({ chainId: p.chainId, account: event.args.account, frozen, lastBlock: p.blockNumber })
-      .onConflictDoUpdate({ frozen, lastBlock: p.blockNumber });
-  });
-}
-
-ponder.on("MarketRegistry:BreakerLatched", async ({ event, context }) => {
-  const p = await recordLog(event, context, "MarketRegistry.BreakerLatched");
-  const { scope, key, reasons } = event.args;
-  await context.db
-    .insert(schema.breaker)
-    .values({ chainId: p.chainId, scope: Number(scope), key, latchedReasons: BigInt(reasons), lastBlock: p.blockNumber })
-    .onConflictDoUpdate((row) => ({ latchedReasons: row.latchedReasons | BigInt(reasons), lastBlock: p.blockNumber }));
-});
-
-ponder.on("MarketRegistry:BreakerReset", async ({ event, context }) => {
-  const p = await recordLog(event, context, "MarketRegistry.BreakerReset");
-  await context.db
-    .update(schema.breaker, { chainId: p.chainId, scope: Number(event.args.scope), key: event.args.key })
-    .set({ latchedReasons: 0n, lastBlock: p.blockNumber });
-});
-
 // GateBreached carries no scope; the breach time per key is read live with MarketRegistry.lastBreachAt(key). Hub,
 // CDP Spoke and credit-line events are handled in hubs.ts.
 logOnly("MarketRegistry", [
-  "GateBreached",
+  "AuthorityUpdated",
   "IntegrationContractsFinalized",
   "TokenListed",
   "PriceSourceSet",
   "RouteSet",
   "RouteDisabled",
   "RouteRestored",
-  "StandbyRouteActivated",
-  "StandbySwitchCancelled",
-  "PriceRouteRestored",
-  "IntegrationRegistered",
   "AvanaFirstLossReserveSet",
   "FlashSourceSet",
   "SpokeCodeHashApproved",
