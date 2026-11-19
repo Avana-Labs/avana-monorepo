@@ -3,12 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ILegacyAaveAdapter} from "../../../src/legacy/aave-adapter/ILegacyAaveAdapter.sol";
+import {AaveAdapterImmutables} from "../../../src/legacy/aave-adapter/types/AaveAdapterTypes.sol";
 import {ILegacyRiskModule} from "../../../src/legacy/risk-module/ILegacyRiskModule.sol";
 import {RiskModuleImmutables} from "../../../src/legacy/risk-module/types/RiskModuleTypes.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
-import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
@@ -214,9 +214,12 @@ abstract contract AvanaCoreDeploy is DeployBase {
         }
         // AaveAdapterLogics{user, exit, collateral, settlement}.
         bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2], d.logics[3]);
-        d.implementation =
-            _deploy("AaveAdapterImplementation", bytes.concat(_artifact("AaveAdapter.sol", "AaveAdapter"), im, logics));
-        d.proxy = _proxy("AaveAdapter", d.implementation, abi.encodeCall(IAaveAdapter.initialize, (p.accessManager)));
+        d.implementation = _deploy(
+            "AaveAdapterImplementation",
+            bytes.concat(_artifact("LegacyAaveAdapter.sol", "LegacyAaveAdapter"), im, logics)
+        );
+        d.proxy =
+            _proxy("AaveAdapter", d.implementation, abi.encodeCall(ILegacyAaveAdapter.initialize, (p.accessManager)));
     }
 
     /// @notice LPVaultSwap: liquidation, pending and deleverage logic, the router, the proxy with the keepers.

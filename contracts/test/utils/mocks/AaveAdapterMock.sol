@@ -7,17 +7,17 @@ import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.s
 import {ICollateralization} from "../../../src/legacy/ICollateralization.sol";
 import {ILegacyVaultToken} from "../../../src/legacy/ILegacyVaultToken.sol";
 import {ILock} from "../../../src/legacy/ILock.sol";
+import {IAaveAdapterBase} from "../../../src/legacy/aave-adapter/IAaveAdapterBase.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {DeleverageRequest} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {IAaveAdapterBase} from "../../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {PositionProxy} from "../../../src/proxy/position-proxy/PositionProxy.sol";
 import {PositionRef} from "../../../src/types/PositionTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title AaveAdapterMock
-/// @notice A stand-in for the chain's AaveAdapter (2.6) in the LPVaultSwap suites, built from `IAaveAdapter`
-/// and `IAaveAdapter`: the vault token's `adapter()` and the Lock's AaveAdapter member. It creates real
+/// @notice A stand-in for the chain's AaveAdapter (2.6) in the LPVaultSwap suites, built from `ILegacyAaveAdapter`
+/// and `ILegacyAaveAdapter`: the vault token's `adapter()` and the Lock's AaveAdapter member. It creates real
 /// PositionProxies, pledges through the real Collateralization (credit, mint, supply on the real CDP Spoke), borrows
 /// through the proxy, burns seized units for LPVaultSwap (`burnSeized`), runs the two deleverage steps LPVaultSwap
 /// calls back (`deleverageRepay`, `deleverageRelease`) inside a transient-style session, and drives
@@ -141,7 +141,7 @@ contract AaveAdapterMock is IAaveAdapterBase {
         ILock(lock).release();
     }
 
-    // ─── IAaveAdapter ───
+    // ─── ILegacyAaveAdapter ───
 
     function walletOf(
         address proxy
@@ -149,7 +149,7 @@ contract AaveAdapterMock is IAaveAdapterBase {
         wallet = _binding[proxy].wallet;
     }
 
-    // ─── IAaveAdapter ───
+    // ─── ILegacyAaveAdapter ───
 
     function burnSeized(
         uint256 marketId,

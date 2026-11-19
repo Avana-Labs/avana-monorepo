@@ -230,6 +230,13 @@ abstract contract LPVault is ILPVault, LPVaultStorage, AccessManaged, Reentrancy
     }
 
     /// @inheritdoc ILPVault
+    function positionInfo(
+        bytes32 positionKey
+    ) external view override returns (bytes32 pool, int24 tickLower, int24 tickUpper, uint128 liquidity) {
+        return _readPosition(positionKey);
+    }
+
+    /// @inheritdoc ILPVault
     function previewCredit(
         uint256 marketId,
         bytes32 positionKey

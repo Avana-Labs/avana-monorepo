@@ -5,10 +5,10 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {Pending} from "../../src/legacy/CollateralizationTypes.sol";
-import {AaveAdapterSteps} from "../../src/policy/aave-adapter/AaveAdapterSteps.sol";
-import {AaveAdapterStorage} from "../../src/policy/aave-adapter/AaveAdapterStorage.sol";
-import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
-import {AaveAdapterImmutables} from "../../src/policy/aave-adapter/types/AaveAdapterTypes.sol";
+import {AaveAdapterSteps} from "../../src/legacy/aave-adapter/AaveAdapterSteps.sol";
+import {AaveAdapterStorage} from "../../src/legacy/aave-adapter/AaveAdapterStorage.sol";
+import {IAaveAdapterBase} from "../../src/legacy/aave-adapter/IAaveAdapterBase.sol";
+import {AaveAdapterImmutables} from "../../src/legacy/aave-adapter/types/AaveAdapterTypes.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @notice Token stand-in for the vault token and a debt asset: plain balances, allowances and supply, `burn` and

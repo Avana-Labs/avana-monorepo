@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../../src/legacy/ICollateralization.sol";
-import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {ILegacyAaveAdapter} from "../../../src/legacy/aave-adapter/ILegacyAaveAdapter.sol";
 import {MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {PriceState} from "../../../src/types/OracleTypes.sol";
 import {PositionRef} from "../../../src/types/PositionTypes.sol";
@@ -24,7 +24,7 @@ interface IRiskHandlerConfigurator {
 
 /// @notice The contracts and parameters the risk handler drives.
 struct RiskWorld {
-    IAaveAdapter adapter;
+    ILegacyAaveAdapter adapter;
     ICollateralization coll;
     AdapterRegistryMock registry;
     RiskLPOracleMock lpOracle;

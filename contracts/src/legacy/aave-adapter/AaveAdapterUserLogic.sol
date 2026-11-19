@@ -9,11 +9,11 @@ import {ICollateralization} from "../../legacy/ICollateralization.sol";
 import {ILegacyVaultToken} from "../../legacy/ILegacyVaultToken.sol";
 import {ILegacyVaultTokenFactory} from "../../legacy/ILegacyVaultTokenFactory.sol";
 import {ILegacyRiskModule} from "../../legacy/risk-module/ILegacyRiskModule.sol";
+import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
+import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {PositionRef} from "../../types/PositionTypes.sol";
-import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
-import {DebtReserveDef} from "../market-registry/types/MarketRegistryTypes.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
@@ -22,7 +22,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title AaveAdapterUserLogic
 /// @notice Bodies of the borrower entry points `pledge`, `borrow` and `repay`.
-// The router implements the IAaveAdapter pieces; this contract only carries bodies.
+// The router implements the ILegacyAaveAdapter pieces; this contract only carries bodies.
 // solhint-disable comprehensive-interface
 // Every call here runs under the Adapter's Lock, so no callee can re-enter before the following event.
 // forge-lint: disable-start(reentrancy-events)

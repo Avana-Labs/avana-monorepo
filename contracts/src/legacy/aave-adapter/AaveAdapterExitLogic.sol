@@ -14,7 +14,7 @@ import {AaveAdapterImmutables, AdapterAccount} from "./types/AaveAdapterTypes.so
 
 /// @title AaveAdapterExitLogic
 /// @notice Bodies of `withdraw`, `repayAllAndWithdraw`, `collectFees`, `releaseZeroCredit` and `refreshDebtMark`.
-// The router implements the IAaveAdapter pieces; this contract only carries bodies.
+// The router implements the ILegacyAaveAdapter pieces; this contract only carries bodies.
 // solhint-disable comprehensive-interface
 // Every call here runs under the Adapter's Lock, so no callee can re-enter before the following event.
 // forge-lint: disable-start(reentrancy-events)

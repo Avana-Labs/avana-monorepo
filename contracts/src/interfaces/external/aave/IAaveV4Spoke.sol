@@ -122,6 +122,18 @@ interface IAaveV4Spoke is IAaveV4ExtSload {
         address onBehalfOf
     ) external;
 
+    /// @notice Approves or revokes `positionManager` to act for the caller; the Spoke must have it active.
+    function setUserPositionManager(
+        address positionManager,
+        bool approve
+    ) external;
+
+    /// @notice Supplied assets of `user` in reserve `reserveId`.
+    function getUserSuppliedAssets(
+        uint256 reserveId,
+        address user
+    ) external view returns (uint256);
+
     /// @notice Spoke-wide liquidation settings.
     function getLiquidationConfig() external view returns (LiquidationConfig memory);
 

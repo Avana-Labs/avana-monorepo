@@ -9,9 +9,9 @@ import {ILegacyVaultToken} from "../../legacy/ILegacyVaultToken.sol";
 import {ILegacyRiskModule} from "../../legacy/risk-module/ILegacyRiskModule.sol";
 import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {DeleverageRequest} from "../../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {PositionRef} from "../../types/PositionTypes.sol";
-import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
@@ -19,7 +19,7 @@ import {AaveAdapterImmutables, AdapterAccount, RepayWithCollateralParams} from "
 
 /// @title AaveAdapterCollateralLogic
 /// @notice Bodies of `removeLiquidity`, `recredit` and `repayWithCollateral`.
-// The router implements the IAaveAdapter pieces; this contract only carries bodies.
+// The router implements the ILegacyAaveAdapter pieces; this contract only carries bodies.
 // solhint-disable comprehensive-interface
 // Every call here runs under the Adapter's Lock, so no callee can re-enter before the following event.
 // forge-lint: disable-start(reentrancy-events)

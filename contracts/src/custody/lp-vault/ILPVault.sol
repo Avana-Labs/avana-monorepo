@@ -258,6 +258,12 @@ interface ILPVault {
         uint256 marketId
     ) external view returns (uint256 credit);
 
+    /// @notice Reads a position from its AMM: its pool (zero when none), ticks and live liquidity.
+    /// @dev The AaveAdapter routes a pledge from these, before any record exists.
+    function positionInfo(
+        bytes32 positionKey
+    ) external view returns (bytes32 pool, int24 tickLower, int24 tickUpper, uint128 liquidity);
+
     /// @notice Returns the credit a position would get if pledged to `marketId` now.
     /// @dev Reverts like `pledge` for a position of another pool or outside the band.
     function previewCredit(

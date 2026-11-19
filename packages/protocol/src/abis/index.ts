@@ -24,7 +24,7 @@ export { vaultTokenFactoryAbi } from "./vaultTokenFactory.ts";
 
 /** Artifact name of each ABI, the keys ABI_HASH is computed over. */
 export const ABI_ARTIFACTS = {
-  aaveAdapterAbi: "IAaveAdapter",
+  aaveAdapterAbi: "ILegacyAaveAdapter",
   accessManagerAbi: "IAccessManager",
   aaveV4HubAbi: "IHub",
   aaveV4SpokeAbi: "ISpoke",
@@ -46,4 +46,4 @@ export const ABI_ARTIFACTS = {
 } as const;
 
 /** keccak256 of the canonical JSON of every ABI above; the release manifest's abiHash must equal it (TEST-149). */
-export const ABI_HASH = "0x2ad9a42923ee8aba5b09ebcaf8f2749b76d24fb2442cdffe1c163d44c42fe145" as const;
+export const ABI_HASH = "0x305903129f59bda69249ae644a057e1efcfea138d09ddefb5863eb9ef36e0bb8" as const;
