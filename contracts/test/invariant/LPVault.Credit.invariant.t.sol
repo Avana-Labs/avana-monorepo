@@ -191,7 +191,10 @@ contract LPVaultCreditInvariantTest is LPVaultTestBase {
             ILPVault.Position memory p = vault.getPosition(key);
             if (p.account == address(0)) continue;
             (, int24 lower, int24 upper,,,) = pm.pos(uint256(key));
-            assertLe(p.credit, FloorCreditMath.credit(lower, upper, BAND_LOWER, BAND_UPPER, p.liquidity));
+            uint128 floor = lower == BAND_LOWER && upper == BAND_UPPER
+                ? p.liquidity
+                : FloorCreditMath.credit(lower, upper, BAND_LOWER, BAND_UPPER, p.liquidity);
+            assertLe(p.credit, floor);
             (,,, uint128 live,,) = pm.pos(uint256(key));
             assertGe(live, p.liquidity);
         }

@@ -46,8 +46,6 @@ abstract contract LPVault is ILPVault, LPVaultStorage, AccessManaged, Reentrancy
             revert InvalidMarketId(marketId);
         }
         if (pool == bytes32(0)) revert InvalidPool(pool);
-        uint256 existing = _marketOfPool[pool];
-        if (existing != 0) revert PoolAlreadyListed(pool, existing);
         (address token0, address token1, int24 spacing) = _poolInfo(pool);
         if (
             bandLower >= bandUpper || spacing <= 0 || bandLower % spacing != 0 || bandUpper % spacing != 0
@@ -56,7 +54,6 @@ abstract contract LPVault is ILPVault, LPVaultStorage, AccessManaged, Reentrancy
         _markets[marketId] = Market({
             pool: pool, token0: token0, token1: token1, bandLower: bandLower, bandUpper: bandUpper, totalCredit: 0
         });
-        _marketOfPool[pool] = marketId;
         emit MarketListed(marketId, pool, token0, token1, bandLower, bandUpper);
     }
 
@@ -207,13 +204,6 @@ abstract contract LPVault is ILPVault, LPVaultStorage, AccessManaged, Reentrancy
     }
 
     /// @inheritdoc ILPVault
-    function marketOfPool(
-        bytes32 pool
-    ) external view override returns (uint256) {
-        return _marketOfPool[pool];
-    }
-
-    /// @inheritdoc ILPVault
     function getPosition(
         bytes32 positionKey
     ) external view override returns (Position memory) {
@@ -337,7 +327,7 @@ abstract contract LPVault is ILPVault, LPVaultStorage, AccessManaged, Reentrancy
         (bytes32 pool, int24 tickLower, int24 tickUpper, uint128 live) = _readPosition(positionKey);
         if (pool != m.pool) revert PoolMismatch(positionKey, pool);
         liquidity = live;
-        credit = FloorCreditMath.credit(tickLower, tickUpper, m.bandLower, m.bandUpper, live);
+        credit = _floorCredit(m, tickLower, tickUpper, live);
     }
 
     /// @dev Runs the AMM's increase on `[desired0, desired1, min0, min1]`, checks it and keeps any fees it paid out.
@@ -363,11 +353,23 @@ abstract contract LPVault is ILPVault, LPVaultStorage, AccessManaged, Reentrancy
         uint128 liquidity
     ) private returns (uint128 credit) {
         (, int24 tickLower, int24 tickUpper,) = _readPosition(positionKey);
-        credit = FloorCreditMath.credit(tickLower, tickUpper, m.bandLower, m.bandUpper, liquidity);
+        credit = _floorCredit(m, tickLower, tickUpper, liquidity);
         Position storage p = _positions[positionKey];
         p.liquidity += liquidity;
         p.credit += credit;
         m.totalCredit += credit;
+    }
+
+    /// @dev Floor credit of `liquidity` on `[tickLower, tickUpper]` in the market's band. A position on exactly the band's
+    /// ticks is `liquidity` band units, so it is credited exactly that (the formula would lose a few units to rounding).
+    function _floorCredit(
+        Market storage m,
+        int24 tickLower,
+        int24 tickUpper,
+        uint128 liquidity
+    ) private view returns (uint128) {
+        if (tickLower == m.bandLower && tickUpper == m.bandUpper) return liquidity;
+        return FloorCreditMath.credit(tickLower, tickUpper, m.bandLower, m.bandUpper, liquidity);
     }
 
     /// @dev Lowers a record by `liquidity` and its credit in proportion, rounded down and capped at the floor credit of
@@ -384,7 +386,7 @@ abstract contract LPVault is ILPVault, LPVaultStorage, AccessManaged, Reentrancy
         if (creditLeft != 0) {
             Market storage m = _markets[p.marketId];
             (, int24 tickLower, int24 tickUpper,) = _readPosition(positionKey);
-            uint128 floor = FloorCreditMath.credit(tickLower, tickUpper, m.bandLower, m.bandUpper, left);
+            uint128 floor = _floorCredit(m, tickLower, tickUpper, left);
             if (floor < creditLeft) creditLeft = floor;
         }
         removed = p.credit - creditLeft;

@@ -292,25 +292,6 @@ export const lpVaultAbi = [
   },
   {
     "type": "function",
-    "name": "marketOfPool",
-    "inputs": [
-      {
-        "name": "pool",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "pledge",
     "inputs": [
       {
@@ -969,22 +950,6 @@ export const lpVaultAbi = [
         "name": "positionKey",
         "type": "bytes32",
         "internalType": "bytes32"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "PoolAlreadyListed",
-    "inputs": [
-      {
-        "name": "pool",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ]
   },

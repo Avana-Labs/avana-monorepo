@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ClTickMath} from "../../src/amm/concentrated-liquidity/ClTickMath.sol";
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {FloorCreditMath} from "../../src/custody/lp-vault/libraries/FloorCreditMath.sol";
 import {LPVaultTestToken, MockLPVault, MockPositionManager} from "../utils/mocks/LPVaultMocks.sol";
@@ -111,7 +112,6 @@ contract LPVaultUnitTest is LPVaultTestBase {
         assertEq(m.bandLower, BAND_LOWER);
         assertEq(m.bandUpper, BAND_UPPER);
         assertEq(m.totalCredit, 0);
-        assertEq(vault.marketOfPool(POOL), MARKET);
     }
 
     function test_listMarket_refusesBadIdsPoolsAndBands() public {
@@ -124,8 +124,6 @@ contract LPVaultUnitTest is LPVaultTestBase {
         uint256 tooBig = uint256(type(uint96).max) + 1;
         vm.expectRevert(abi.encodeWithSelector(ILPVault.InvalidMarketId.selector, tooBig));
         vault.listMarket(tooBig, pool, -100, 100);
-        vm.expectRevert(abi.encodeWithSelector(ILPVault.PoolAlreadyListed.selector, POOL, MARKET));
-        vault.listMarket(3, POOL, -100, 100);
         bytes32 unknown = bytes32(uint256(0xDEAD));
         vm.expectRevert(abi.encodeWithSelector(ILPVault.InvalidPool.selector, unknown));
         vault.listMarket(3, unknown, -100, 100);
@@ -137,6 +135,49 @@ contract LPVaultUnitTest is LPVaultTestBase {
         vault.listMarket(3, pool, 100, 100);
         vm.expectRevert(abi.encodeWithSelector(ILPVault.InvalidBand.selector, int24(-887_280), int24(100)));
         vault.listMarket(3, pool, -887_280, 100);
+    }
+
+    function test_listMarket_severalMarketsOnOnePool() public {
+        // A wide market on the same pool as MARKET; each position chooses its market at pledge.
+        vault.listMarket(3, POOL, -400, 400);
+        bytes32 a = _mint(POOL, -200, 200, 1e18);
+        bytes32 b = _mint(POOL, -200, 200, 1e18);
+        uint128 inWide = _pledge(account, MARKET, a);
+        uint128 inNarrow = _pledge(account, 3, b);
+        assertEq(inNarrow, FloorCreditMath.credit(-200, 200, -400, 400, 1e18));
+        assertGt(inNarrow, inWide);
+        assertEq(vault.getPosition(b).marketId, 3);
+        assertEq(vault.getMarket(3).totalCredit, inNarrow);
+        assertEq(vault.getMarket(MARKET).totalCredit, inWide);
+        assertEq(vault.accountCredit(account, 3), inNarrow);
+        // A position inside MARKET's band but outside market 3's is refused there only.
+        bytes32 c = _mint(POOL, -800, 800, 1e18);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                FloorCreditMath.NotInsideBand.selector, int24(-800), int24(800), int24(-400), int24(400)
+            )
+        );
+        _pledge(account, 3, c);
+        _pledge(account, MARKET, c);
+    }
+
+    function test_fullRangeMarket_creditsFullRangeLiquidityExactly() public {
+        // The usable ticks of spacing 10, rounded toward zero in int24 (a literal expression would keep the fraction).
+        int24 spacing = 10;
+        int24 lo = (ClTickMath.MIN_TICK / spacing) * spacing;
+        int24 hi = (ClTickMath.MAX_TICK / spacing) * spacing;
+        vault.listMarket(4, POOL, lo, hi);
+        bytes32 full = _mint(POOL, lo, hi, 123_456_789e18);
+        assertEq(_pledge(account, 4, full), 123_456_789e18);
+        // A narrower position is credited below its liquidity, and a partial removal keeps credit = liquidity.
+        bytes32 narrow = _mint(POOL, lo + spacing, hi, 1e18);
+        uint128 c = _pledge(account, 4, narrow);
+        assertLt(c, 1e18);
+        assertGt(c, 0);
+        vm.prank(adapter);
+        vault.removeLiquidity(full, 456_789e18, 0, 0, recipient);
+        ILPVault.Position memory p = vault.getPosition(full);
+        assertEq(p.credit, p.liquidity);
     }
 
     function test_listMarket_restricted() public {
@@ -170,8 +211,7 @@ contract LPVaultUnitTest is LPVaultTestBase {
 
     function test_pledge_fullBandCreditsItsLiquidity() public {
         (, uint128 credit) = _mintPledge(account, BAND_LOWER, BAND_UPPER, 1e18);
-        assertLe(credit, 1e18);
-        assertApproxEqRel(credit, 1e18, 1e6);
+        assertEq(credit, 1e18);
     }
 
     function test_pledge_narrowerRangeCreditsLess() public {

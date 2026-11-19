@@ -44,8 +44,6 @@ interface ILPVault {
     error InvalidMarketId(uint256 marketId);
     /// @notice The market is not listed.
     error MarketNotListed(uint256 marketId);
-    /// @notice The pool already has a band market.
-    error PoolAlreadyListed(bytes32 pool, uint256 marketId);
     /// @notice The pool is not a canonical pool of the AMM, or it is not usable.
     error InvalidPool(bytes32 pool);
     /// @notice The band is empty, off the pool's tick spacing or outside the tick range.
@@ -125,8 +123,9 @@ interface ILPVault {
     /// @notice Fees an AMM paid out with a liquidity removal were kept for the position.
     event FeesHeld(bytes32 indexed positionKey, uint256 amount0, uint256 amount1);
 
-    /// @notice Lists a band market for a pool. Write-once; one market per pool.
-    /// @dev Reverts `InvalidMarketId`, `PoolAlreadyListed`, `InvalidPool` or `InvalidBand`.
+    /// @notice Lists a band market for a pool. Write-once per market ID.
+    /// @dev Reverts `InvalidMarketId`, `InvalidPool` or `InvalidBand`. A pool can have several markets (a full-range band
+    /// and wider or narrower ones); a position chooses its market at pledge.
     /// @param marketId The market ID, nonzero and at most `type(uint96).max`.
     /// @param pool The pool address as a word, or the pool ID of a singleton AMM.
     /// @param bandLower Lower band tick, a multiple of the pool's tick spacing.
@@ -139,7 +138,8 @@ interface ILPVault {
     ) external;
 
     /// @notice Takes custody of an NFT from `from` and records it for `account` with its floor credit.
-    /// @dev No health check. Accepts any position fully inside the band, in range or not. `from` must have approved
+    /// @dev No health check. Accepts any position fully inside the band, in range or not; a position on exactly the
+    /// band's ticks is credited its liquidity. `from` must have approved
     /// the LPVault for the NFT. Reverts `NotInsideBand` (FloorCreditMath) for a position outside the band.
     /// @param from The NFT's current owner.
     /// @param account The owner account of the record.
@@ -241,11 +241,6 @@ interface ILPVault {
     function getMarket(
         uint256 marketId
     ) external view returns (Market memory market);
-
-    /// @notice Returns the band market of a pool, 0 when none.
-    function marketOfPool(
-        bytes32 pool
-    ) external view returns (uint256 marketId);
 
     /// @notice Returns a position's record; `account == 0` when none.
     function getPosition(
