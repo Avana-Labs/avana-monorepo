@@ -10,8 +10,8 @@
 #
 # A code line is neither blank nor comment-only. A core contract is its folder: the contract, its interface, its
 # storage and its own libraries (every .sol file under the folder). Every other .sol file under src/ must sit in a
-# folder outside the core count (the AMM parts, the role ids, the external interfaces); a file in neither fails the
-# report, so new code cannot land outside the count unnoticed.
+# folder outside the core count (the AMM parts, the role ids, the external interfaces, the periphery helpers); a file
+# in neither fails the report, so new code cannot land outside the count unnoticed.
 #
 # Prints one line per core contract and the outside folders, then the totals; exits 1 when a limit is exceeded or a
 # file is unassigned. script/check-core-size.test.sh checks the counting and each limit on fixture folders.
@@ -53,6 +53,7 @@ OUTSIDE = {
     "AMM parts": "amm",
     "role ids": "governance",
     "external interfaces": "interfaces/external",
+    "periphery": "periphery",
 }
 
 

@@ -245,6 +245,14 @@ contract AdapterTestSpoke {
         return debt[user][reserveId];
     }
 
+    /// @notice The health factor (18 decimals): borrowing power over debt; the largest value with no debt.
+    function getUserAccountData(
+        address user
+    ) external view returns (IAaveV4Spoke.UserAccountData memory d) {
+        (uint256 power, uint256 owed) = headroom(user);
+        d.healthFactor = owed == 0 ? type(uint256).max : power * 1e18 / owed;
+    }
+
     /// @notice Borrowing power left, in debt base units.
     function headroom(
         address user
