@@ -48,6 +48,7 @@ INTERFACE_OF = {
     # added views are called directly.
     "LPOracleHarness": ["ILPOracle"],
     "RiskModuleHarness": ["IRiskModule"],
+    "LiquidationModuleHarness": ["ILiquidationModule"],
 }
 
 # Contracts that inherit OpenZeppelin AccessControl (v5.1.0) and so expose IAccessControl (PROP-034, PROP-070).
