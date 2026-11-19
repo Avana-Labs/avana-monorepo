@@ -44,6 +44,10 @@ INTERFACE_OF = {
     "WrapperThenDexRoute": ["ISettlementRoute"],
     "AvanaFirstLossReserve": ["IAvanaFirstLossReserve"],
     "AaveV3FlashSource": ["IFlashSource", "IAaveV3FlashLoanReceiver"],
+    # Test harnesses that add views to a contract: their entries bind to the wrapped contract's interface, and the
+    # added views are called directly.
+    "LPOracleHarness": ["ILPOracle"],
+    "RiskModuleHarness": ["IRiskModule"],
 }
 
 # Contracts that inherit OpenZeppelin AccessControl (v5.1.0) and so expose IAccessControl (PROP-034, PROP-070).

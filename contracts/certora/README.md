@@ -58,7 +58,7 @@ Setup files hold only ghosts and CVL functions; each contract spec binds them in
 | `function c.f(...) external` | the interface of the contract bound by `using C as c;`, which must be in that spec's conf |
 | `function _.f(...) external => …` | any interface ABI that declares `f` with those parameter types and the `expect` return types |
 
-`FloorCreditMath.spec` verifies a test harness with no interface (`HARNESS_WITHOUT_METHODS`): its arithmetic rules are over CVL integers and its revert rule calls the harness directly, so it has no methods block.
+`LPOracle.spec` and `RiskModuleBands.spec` verify test harnesses that add views to a contract; their entries bind to the wrapped contract's interface (`INTERFACE_OF`) and the added views are called directly. `FloorCreditMath.spec` verifies a test harness with no interface (`HARNESS_WITHOUT_METHODS`): its arithmetic rules are over CVL integers and its revert rule calls the harness directly, so it has no methods block.
 
 Internal entries and catch-all (`_._`, `unresolved`) entries are refused, so every external call a spec summarises is bound to a declared interface function. Functions that no Avana interface declares have no methods entry and are called directly in the rules, which the prover resolves against the implementation: OpenZeppelin `TimelockController`'s `schedule`, `execute`, `cancel` and friends (AvanaTimelock.spec), UUPS `upgradeToAndCall`, and Aave's `previewRemoveByShares` (Hub.spec). Calls to external contracts without an Avana interface (ERC-4626 static aTokens, the Aave DAO's AccessManager, Chainlink aggregators) stay unresolved, which lets them return anything.
 
@@ -246,11 +246,23 @@ To also generate the Gambit mutants locally (Gambit compiles each file with the 
 
 ### LPOracle.spec — `LPOracle.conf`
 
-- **Contracts**: `src/oracle/lp-oracle/LPOracle.sol:LPOracle` (verified implementation).
-- **Covers**: `PROP-023` … `PROP-026` (Halmos primary, arithmetic restated in CVL), `PROP-027`, `PROP-034`, `PROP-044` (SMTChecker primary), `PROP-049` (stored first observation), `PROP-070`, `PROP-074` (served price by state; a `priceRouteVersion` change restarts the disagreement timer and leaves the failure timer); `INV-051`, `INV-055`, `INV-059`, `INV-084`, `INV-087`.
-- **Summaries**: Chainlink aggregators and the pool's `observe` are unresolved, so either `try`/`catch` branch occurs; `getOracleConfig`, `getFeed`, `activePriceRoutes` and `getToken` are NONDET; `priceRouteVersion` is an uninterpreted function of the token. A `GAS` opcode hook fixes a gas floor above `POKE_MIN_GAS_CEILING` (the 5.2 assumption "a gas floor after catch"); `storage_extension_annotation` exposes the ERC-7201 namespace.
-- **Loop bound**: 4 (2 tokens × 2 routes × at most 2 legs).
-- **Not covered**: that a disagreement start is cleared only when the routes agree (`TEST-044`, `TEST-157`, `TEST-159`), and the exact lower-route value during a disagreement, which the rule bounds by `min(fresh, accepted)` (`TEST-230`).
+- **Contracts**: `test/utils/harness/LPOracleHarness.sol:LPOracleHarness`, the stateless band-unit `src/oracle/LPOracle.sol` plus external wrappers of its `LPPriceMath` steps, bound through `ILPOracle`.
+- **Covers**: the price is monotone in the feeds (`normalizeMonotoneInAnswer`, `sqrtPriceMonotoneInPrices`, `valueMonotoneInPrices`, `unitValueMonotoneInFairPrice`); bad feed data (`normalizeIsZeroOnBadAnswer`, `latestAnswerRevertsOnBadLeg`); never above the exact band value the floor credit proof uses (`unitAmountsAtMostExact`, `valueAtMostExact`, which with FloorCreditMath.spec give credit × answer / U ≤ the position's value).
+- **Summaries**: each feed's `latestRoundData` returns a ghost answer per feed and records a bad leg; `decimals` NONDET (constructor only). The immutables are unconstrained.
+- **Loop bound**: 1 (no loops on the rules' paths).
+
+### VaultToken.spec — `VaultToken.conf`
+
+- **Contracts**: `src/vault-token/VaultToken.sol:VaultToken`, with OpenZeppelin's `AccessManager` v5.1.0 as its authority.
+- **Covers**: only an authorized caller mints and burns (`onlyAuthorizedCallerMints`, `onlyAuthorizedCallerBurns`); the supply is the sum of balances and moves only by the amounts minted and burned (`totalSupplyIsSumOfBalances`, `supplyChangesOnlyByMintOrBurn`, `mintRaisesSupplyByAmount`, `burnLowersSupplyByAmount`); transfers follow the path rule (`transfersFollowThePathRule`).
+- **Summaries**: `consumeScheduledOp` NONDET.
+
+### RiskModuleBands.spec — `RiskModuleBands.conf`
+
+- **Contracts**: `test/utils/harness/RiskModuleHarness.sol:RiskModuleHarness`, the `src/policy/risk-module/RiskModule.sol` plus a view of the listing tick, bound through `IRiskModule`, with OpenZeppelin's `AccessManager` v5.1.0 as its authority. `RiskModule.conf` covers the legacy RiskModule.
+- **Covers**: a listed band is immutable (`marketsFromNextIdUnlisted`, `listedBandNeverChanges`); the listing checks (`listPoolCustomBandContainsListingPrice`, `listPoolCustomBandAtLeastMinWidth`, `listPoolCustomBandNarrowerThanFullRange`); the Full range band is the pool's usable ticks (`listPoolFullRangeIsUsableTicks`); only the DAO role changes the Spoke widths (`onlyAuthorizedCallerSetsSpokeWidth`, `spokeWidthsChangeOnlyBySetSpokeWidth`).
+- **Summaries**: the LPVault's `listMarket` NONDET and `getMarket` a ghost market per ID; `decimals` a ghost per address and `latestRoundData` a ghost answer per feed, so the harness and `listPool` read the same listing price; `consumeScheduledOp` NONDET.
+- **Loop bound**: 2 (a route has at most two feeds).
 
 ### DebtOracle.spec — `DebtOracle.conf`
 
