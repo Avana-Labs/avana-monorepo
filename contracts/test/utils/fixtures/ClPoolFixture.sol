@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.sol";
 import {AvanaTest} from "../AvanaTest.sol";
+import {ClPriceMath} from "../libraries/ClPriceMath.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @notice The Uniswap v3 core factory functions the fixture calls (`out-univ3/` build of the pinned release).

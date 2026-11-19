@@ -3,36 +3,26 @@
   "layers": {
     "2.1": [
       {"src": "src/governance/roles", "tests": "test/unit/AvanaRoles.*"},
-      {"src": "src/custody/lp-vault", "tests": "test/{unit,fuzz,integration}/LPVault*"},
-      {"src": "src/oracle/lp-oracle", "files": ["LPPriceMath"], "tests": "test/{unit,fuzz}/LPPriceMath.*"},
-      {"src": "src/oracle/lp-oracle", "files": ["LPOracle*"], "tests": "test/{unit,fuzz,integration}/{LPOracle,Oracles.Contagion}*"},
-      {"src": "src/oracle/debt-oracle", "tests": "test/{unit,fuzz,integration}/{DebtOracle.,Oracles.Contagion}*"},
-      {"src": "src/legacy/lp-vault-swap", "tests": "test/{unit,fuzz,integration}/{SettlementMath,LPVaultSwap,AaveAdapter.LPVaultSwap}*"},
-      {"src": "src/policy/parameter-store", "tests": "test/{unit,fuzz}/ParameterStore*"},
-      {"src": "src/policy/market-registry", "tests": "test/unit/MarketRegistry*"},
+      {"src": "src/custody/lp-vault", "tests": "test/{unit,fuzz,integration,invariant}/LPVault*"},
+      {"src": "src/custody/lp-vault/libraries", "tests": "test/{fuzz,invariant}/{FloorCreditMath,LPVault.Credit}.*"},
+      {"src": "src/oracle", "tests": "test/{unit,fuzz}/LPOracle*"},
       {"src": "src/vault-token", "tests": "test/{unit,integration}/VaultToken.*"}
     ],
     "2.2": [
-      {"src": "src/amm/concentrated-liquidity", "files": ["ClPriceMath", "ClTickMath"], "tests": "test/{unit,fuzz}/ClPriceMath.*"},
-      {"src": "src/amm/concentrated-liquidity", "files": ["NfpmLPVault"], "tests": "test/{unit,integration}/LPVault*"},
+      {"src": "src/amm/concentrated-liquidity", "tests": "test/{unit,integration}/LPVault*"},
       {"src": "src/amm/uniswap-v3", "tests": "test/{unit,integration}/LPVault*"},
       {"src": "src/amm/slipstream", "tests": "test/{unit,integration}/LPVault*"},
-      {"src": "src/amm/uniswap-v4", "files": ["UniswapV4Integration"], "tests": "test/{unit,fuzz,integration}/LPVault*"},
-      {"src": "src/amm/uniswap-v4", "files": ["UniswapV4State"], "tests": "test/{unit,fuzz,integration}/{UniswapV4Integration,LPOracleV4}.*"}
+      {"src": "src/amm/uniswap-v4", "tests": "test/{unit,fuzz,integration}/LPVault*"}
     ],
-    "2.3": [
-      {"src": "src/flash", "tests": "test/{unit,fuzz}/AaveV3FlashSource.*"}
-    ],
-    "2.4": [
-      {"src": "src/proxy/position-proxy", "tests": "test/{unit,integration}/PositionProxy.*"},
-      {"src": "src/proxy/proxy-manager", "tests": "test/unit/ProxyManager.*"}
-    ],
+    "2.3": [],
+    "2.4": [],
     "2.5": [
-      {"src": "src/liquidation/settlement-routes", "tests": "test/{unit,fuzz}/{DexPathRoute,PegModuleRoute,WrapperThenDexRoute,RouteMath,RouteReads,DexHops,SwapRouteBase,SwapRoutes}*"},
-      {"src": "src/liquidation/payout-escrow", "tests": "test/unit/PayoutEscrow.*"},
-      {"src": "src/policy/aave-adapter", "tests": "test/{unit,fuzz,integration}/AaveAdapter*"},
-      {"src": "src/policy/risk-module", "files": ["SpeedLimitMath", "RiskModuleSpeed", "RiskModuleSpeedLogic"], "tests": "test/{unit,fuzz,invariant,integration}/{SpeedLimitMath,RiskModule.Speed,RiskModule.SpeedScopes,RiskModule.NetSpeed,AaveAdapter.Speed,AaveAdapter.NetSpeed}.*"},
-      {"src": "src/legacy/coverage/first-loss-reserve", "tests": "test/{unit,integration}/{AvanaFirstLossReserve,DaoDeficitOffset}*"}
+      {"src": "src/policy/aave-adapter", "tests": "test/{unit,fuzz}/AaveAdapter*"},
+      {"src": "src/policy/risk-module", "tests": "test/{unit,fuzz}/RiskModule*"},
+      {"src": "src/policy/risk-module/libraries", "tests": "test/{unit,fuzz}/RiskModule*"},
+      {"src": "src/liquidation/liquidation-module", "tests": "test/{unit,fuzz,invariant}/LiquidationModule*"},
+      {"src": "src/liquidation/liquidation-module/libraries", "tests": "test/{unit,fuzz,invariant}/LiquidationModule*"},
+      {"src": "src/coverage/first-loss-reserve", "tests": "test/{unit,fuzz,invariant}/FirstLossReserve*"}
     ],
     "2.6": []
   },

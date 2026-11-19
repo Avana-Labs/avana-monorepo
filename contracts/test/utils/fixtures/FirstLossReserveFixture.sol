@@ -7,11 +7,7 @@ import {FirstLossReserve} from "../../../src/coverage/first-loss-reserve/FirstLo
 import {IFirstLossReserve} from "../../../src/coverage/first-loss-reserve/IFirstLossReserve.sol";
 import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {MockDebtAsset} from "../mocks/MockDebtAsset.sol";
-import {
-    AvanaFirstLossReserveFixture,
-    CoverageHubSpokeConfig,
-    ICoverageHubConfigurator
-} from "./AvanaFirstLossReserveFixture.sol";
+import {CoverageHubFixture, CoverageHubSpokeConfig, ICoverageHubConfigurator} from "./CoverageHubFixture.sol";
 import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 
 /// @title FirstLossReserveFixture
@@ -19,7 +15,7 @@ import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessMana
 /// Labs, and behind it the DAO Deficit Offset (the same contract, with the Avana layer as its constructor setting)
 /// funded by the DAO treasury. Both are listed on the Hub with `drawCap = 0`, hold `HUB_DEFICIT_ELIMINATOR_ROLE`, allow
 /// the CDP Spoke, and map `withdraw` to a role held with the 14-day execution delay.
-abstract contract FirstLossReserveFixture is AvanaFirstLossReserveFixture {
+abstract contract FirstLossReserveFixture is CoverageHubFixture {
     uint256 internal constant OFFSET_SIZE = 150_000e18;
 
     FirstLossReserve internal avanaLayer;

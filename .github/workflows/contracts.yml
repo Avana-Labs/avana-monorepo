@@ -135,8 +135,9 @@ jobs:
     # Each runs its script on fixtures, with stand-ins on PATH for the tools it calls: check-sizes.test.sh,
     # mutation-records.test.sh (multi-line mutants and Necessist removals kept whole, timed-out mutants never
     # counted as killed), mutation-ledger.test.sh (the mutation gate's target keys), security-gate.test.sh
-    # (the triage's reviewed-file hashes), check-ai-credit.test.sh (AI credit in commit messages), and
-    # upgrade-operation.test.sh, the slow-tier gate of every timelock upgrade (TEST-263) with a stand-in `gh`.
+    # (the triage's reviewed-file hashes), check-ai-credit.test.sh (AI credit in commit messages),
+    # upgrade-operation.test.sh, the slow-tier gate of every timelock upgrade (TEST-263) with a stand-in `gh`, and
+    # check-core-size.test.sh (the core size report's counting and limits). Then the core size report itself.
     name: script tests (script/*.test.sh)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -147,6 +148,14 @@ jobs:
 
       - name: Script tests
         run: for t in script/*.test.sh; do echo "== $t"; "$t"; done
+
+      - name: Core size report
+        # Code lines of each core contract (at most 800, its own libraries included), the core total (at most 4,000,
+        # the AMM parts not counted) and the policy part, AaveAdapter + RiskModule (at most 1,500).
+        run: |
+          set -o pipefail
+          script/check-core-size.sh | tee core-size.txt
+          { echo '### Core size'; echo '```'; cat core-size.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
   build:
     name: fmt, lint, build

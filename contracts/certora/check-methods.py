@@ -39,11 +39,6 @@ CONTRACTS = HERE.parent
 # Verified contract -> interface ABIs, where the interface is not simply I<Contract>.
 INTERFACE_OF = {
     "HubInstance": ["IAaveV4Hub"],
-    "PegModuleRoute": ["ISettlementRoute"],
-    "DexPathRoute": ["ISettlementRoute"],
-    "WrapperThenDexRoute": ["ISettlementRoute"],
-    "AvanaFirstLossReserve": ["IAvanaFirstLossReserve"],
-    "AaveV3FlashSource": ["IFlashSource", "IAaveV3FlashLoanReceiver"],
     # Test harnesses that add views to a contract: their entries bind to the wrapped contract's interface, and the
     # added views are called directly.
     "LPOracleHarness": ["ILPOracle"],
@@ -52,19 +47,14 @@ INTERFACE_OF = {
 }
 
 # Contracts that inherit OpenZeppelin AccessControl (v5.1.0) and so expose IAccessControl (PROP-034, PROP-070).
-ACCESS_CONTROL = {
-    "AaveAdapter", "ProxyManager", "MarketRegistry", "ParameterStore", "RiskModule",
-    "LPVaultSwap", "AvanaTimelock",
-}
+ACCESS_CONTROL: set[str] = set()
 
 # Verified contracts that are test harnesses with no interface: their specs call the harness's functions directly and
 # have no methods block, so there is nothing to check against an ABI (the fast tier builds src/ only).
 HARNESS_WITHOUT_METHODS = {"FloorCreditMathHarness"}
 
 # Specs verified by no conf: the contract whose interface their unqualified entries bind to.
-SPEC_WITHOUT_CONF = {
-    "AvanaFirstLossReserve.spec": "AvanaFirstLossReserve",
-}
+SPEC_WITHOUT_CONF: dict[str, str] = {}
 
 ELEMENTARY = re.compile(r"^(u?int\d*|address|bool|bytes\d*|string)$")
 

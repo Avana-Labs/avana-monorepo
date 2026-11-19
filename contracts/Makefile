@@ -17,7 +17,7 @@ MNEMONIC_INDEX ?= 0
 
 BROADCAST = $(if $(filter 0,$(dry)),--broadcast $(if $(filter anvil,$(chain)),,--verify),)
 
-.PHONY: build build-aave build-external e2e-local check-aave-unmodified fmt test test-fork test-differential gas gas-check sizes coverage security-fast
+.PHONY: build build-aave build-external e2e-local check-aave-unmodified fmt test test-fork test-differential gas gas-check sizes size-report coverage security-fast
 
 build:
 	forge build
@@ -75,6 +75,9 @@ gas-check:
 
 sizes:
 	script/check-sizes.sh
+
+size-report:
+	script/check-core-size.sh
 
 coverage:
 	script/check-coverage.sh

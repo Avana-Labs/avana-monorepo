@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {GlobalParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {
     AaveInputs,
     ChainInputs,
+    GlobalParams,
     GovernanceInputs,
     HubInput,
     IntegrationInput,

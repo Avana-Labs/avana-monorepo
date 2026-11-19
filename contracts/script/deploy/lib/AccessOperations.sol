@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AvanaAccess} from "./AvanaAccess.sol";
 import {DeployInputs} from "./DeployInputs.sol";
 import {console2} from "forge-std/console2.sol";
 
@@ -322,35 +321,6 @@ abstract contract AccessOperations is DeployInputs {
             vm.broadcast(safe);
             IAccessManagerOps(manager).multicall(_scheduleCalls(op));
             console2.log("scheduled as the governance Safe", safe);
-        }
-    }
-
-    /// @notice The `setTargetFunctionRole` calls that map `target`'s governed functions of `kind` to their roles, for
-    /// the functions not mapped yet.
-    function _bind(
-        Operation memory op,
-        IAccessManagerOps m,
-        AvanaAccess.Kind kind,
-        address target
-    ) internal view {
-        uint64[] memory roles = AvanaAccess.roles();
-        for (uint256 r = 0; r < roles.length; ++r) {
-            bytes4[] memory all = AvanaAccess.selectorsOf(kind, roles[r]);
-            bytes4[] memory missing = new bytes4[](all.length);
-            uint256 n;
-            for (uint256 i = 0; i < all.length; ++i) {
-                if (m.getTargetFunctionRole(target, all[i]) != roles[r]) missing[n++] = all[i];
-            }
-            if (n == 0) continue;
-            assembly ("memory-safe") {
-                mstore(missing, n)
-            }
-            _add(
-                op,
-                address(m),
-                abi.encodeCall(IAccessManagerOps.setTargetFunctionRole, (target, missing, roles[r])),
-                string.concat("AccessManager.setTargetFunctionRole ", vm.getLabel(target))
-            );
         }
     }
 }
