@@ -3,195 +3,273 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IntegrationCapabilities, RiskMetadata, RiskStatus} from "../../amm/types/AmmTypes.sol";
-import {PositionShape} from "../../types/PositionTypes.sol";
-import {ILPVaultBase} from "./ILPVaultBase.sol";
-
 /// @title ILPVault
-/// @notice Custody of one AMM protocol's LP positions on one chain, on Collateralization's instruction.
-/// @dev Not upgradeable, no owner. Position-moving functions are Collateralization-only, under the Lock.
-interface ILPVault is ILPVaultBase {
-    /// @notice Sends a stray position (held with no depositor of record) to the owner governance established.
-    /// @dev Restricted to the governance role (AccessManager), with the Lock free.
-    function returnStray(
-        bytes32 positionKey,
-        address recipient
+/// @notice Custody of concentrated-liquidity NFT positions pledged to band markets. One record per position holds its
+/// owner account, market, recorded liquidity and floor credit. Credit is fixed at pledge from the position's ticks and
+/// liquidity and never reads a pool price. Fees are never collateral: they are paid out per position.
+/// @dev Every mutating function is restricted through the AccessManager and runs under one transient reentrancy guard.
+/// The LPVault applies no health check: the caller checks the account after any credit decrease.
+interface ILPVault {
+    /// @notice A band market: one pool and its fixed band ticks `[bandLower, bandUpper]`.
+    /// @param pool The pool address as a word, or the pool ID of a singleton AMM; zero means not listed.
+    /// @param token0 The pool's first token (the wrapped native token for a native leg).
+    /// @param token1 The pool's second token.
+    /// @param bandLower Lower band tick `A`.
+    /// @param bandUpper Upper band tick `B`.
+    /// @param totalCredit Sum of the credit of the market's open records.
+    struct Market {
+        bytes32 pool;
+        address token0;
+        address token1;
+        int24 bandLower;
+        int24 bandUpper;
+        uint128 totalCredit;
+    }
+
+    /// @notice The record of a pledged position.
+    /// @param account The owner account; zero means no record.
+    /// @param marketId The band market the position is pledged to.
+    /// @param liquidity Liquidity the record holds; live liquidity can only be higher.
+    /// @param credit Floor credit of `liquidity`, in band-liquidity units.
+    struct Position {
+        address account;
+        uint96 marketId;
+        uint128 liquidity;
+        uint128 credit;
+    }
+
+    /// @notice A constructor argument is zero or inconsistent.
+    error InvalidDeployment();
+    /// @notice The market ID is zero, already listed, or above `type(uint96).max`.
+    error InvalidMarketId(uint256 marketId);
+    /// @notice The market is not listed.
+    error MarketNotListed(uint256 marketId);
+    /// @notice The pool is not a canonical pool of the AMM, or it is not usable.
+    error InvalidPool(bytes32 pool);
+    /// @notice The band is empty, off the pool's tick spacing or outside the tick range.
+    error InvalidBand(int24 bandLower, int24 bandUpper);
+    /// @notice `from` does not own the NFT, or the NFT did not arrive.
+    error NotTokenOwner(bytes32 positionKey);
+    /// @notice The position belongs to another pool than the market's.
+    error PoolMismatch(bytes32 positionKey, bytes32 pool);
+    /// @notice The position is already pledged.
+    error AlreadyPledged(bytes32 positionKey);
+    /// @notice The position has no record.
+    error NotPledged(bytes32 positionKey);
+    /// @notice The account already holds `MAX_POSITIONS` positions.
+    error TooManyPositions(address account);
+    /// @notice The position's floor credit is zero.
+    error ZeroCredit(bytes32 positionKey);
+    /// @notice A liquidity or credit amount is zero, or above what the record holds.
+    error InvalidAmount(bytes32 positionKey, uint256 amount);
+    /// @notice The position belongs to another account.
+    error NotPositionAccount(bytes32 positionKey, address account);
+    /// @notice A token amount is below its minimum.
+    /// @param index 0 for token0, 1 for token1.
+    error BelowMinimum(uint256 index, uint256 received, uint256 minimum);
+    /// @notice The account or recipient is the zero address or the LPVault.
+    error InvalidAddress(address account);
+
+    /// @notice A band market was listed.
+    event MarketListed(
+        uint256 indexed marketId, bytes32 indexed pool, address token0, address token1, int24 bandLower, int24 bandUpper
+    );
+    /// @notice A position was pledged.
+    event PositionPledged(
+        bytes32 indexed positionKey,
+        address indexed account,
+        uint256 indexed marketId,
+        address from,
+        uint128 liquidity,
+        uint128 credit
+    );
+    /// @notice Liquidity was added to a pledged position.
+    event LiquidityAdded(
+        bytes32 indexed positionKey,
+        address indexed payer,
+        uint128 liquidity,
+        uint128 credit,
+        uint256 amount0,
+        uint256 amount1
+    );
+    /// @notice Part of a pledged position's liquidity was removed for its account.
+    event LiquidityRemoved(
+        bytes32 indexed positionKey,
+        address indexed recipient,
+        uint128 liquidity,
+        uint128 credit,
+        uint256 amount0,
+        uint256 amount1
+    );
+    /// @notice A position's record was closed and the NFT sent to `recipient`.
+    event PositionReleased(
+        bytes32 indexed positionKey,
+        address indexed account,
+        address indexed recipient,
+        uint128 liquidity,
+        uint128 credit
+    );
+    /// @notice Liquidity worth `credit` was unwound for a liquidation.
+    event PositionUnwound(
+        bytes32 indexed positionKey,
+        address indexed recipient,
+        uint128 liquidity,
+        uint128 credit,
+        uint256 amount0,
+        uint256 amount1
+    );
+    /// @notice A position's fees were paid out.
+    event FeesCollected(bytes32 indexed positionKey, address indexed recipient, uint256 amount0, uint256 amount1);
+    /// @notice Fees an AMM paid out with a liquidity removal were kept for the position.
+    event FeesHeld(bytes32 indexed positionKey, uint256 amount0, uint256 amount1);
+
+    /// @notice Lists a band market for a pool. Write-once per market ID.
+    /// @dev Reverts `InvalidMarketId`, `InvalidPool` or `InvalidBand`. A pool can have several markets (a full-range band
+    /// and wider or narrower ones); a position chooses its market at pledge.
+    /// @param marketId The market ID, nonzero and at most `type(uint96).max`.
+    /// @param pool The pool address as a word, or the pool ID of a singleton AMM.
+    /// @param bandLower Lower band tick, a multiple of the pool's tick spacing.
+    /// @param bandUpper Upper band tick, a multiple of the pool's tick spacing.
+    function listMarket(
+        uint256 marketId,
+        bytes32 pool,
+        int24 bandLower,
+        int24 bandUpper
     ) external;
 
-    /// @notice Returns whether a position is in custody for an open record.
-    /// @dev Reverts with `Locked` while the lock is held.
-    function isInCustody(
-        bytes32 positionKey
-    ) external view returns (bool inCustody);
-
-    /// @notice Returns Collateralization, the only caller of the custody, unwind and fee functions.
-    function COLLATERALIZATION() external view returns (address collateralization);
-
-    /// @notice Returns the MarketRegistry, the only caller of `bindMarket`.
-    function MARKET_REGISTRY() external view returns (address marketRegistry);
-
-    /// @notice Returns the chain's Lock.
-    function LOCK() external view returns (address lock);
-
-    /// @notice Returns the integration identifier assigned at registration in the VaultTokenFactory.
-    function INTEGRATION_ID() external view returns (uint32 integrationId);
-
-    /// @notice Returns the AMM protocol tag, `keccak256` of its name.
-    function AMM_PROTOCOL() external view returns (bytes32 protocol);
-
-    /// @notice Returns the fixed description of the integration.
-    function capabilities() external view returns (IntegrationCapabilities memory caps);
-
-    /// @notice The most open records one account may hold in one market of this integration.
-    /// @dev Sized so a whole-account seizure fits the liquidation gas budget.
-    function maxRecordsPerAccountMarket() external view returns (uint256 records);
-
-    /// @notice Binds a market to its pool and exact shape, once, at listing.
-    /// @dev MarketRegistry-only.
-    /// @param pool Pool address (address(0) for an identifier-keyed protocol).
-    /// @param poolId Pool identifier (bytes32(0) for an address-keyed protocol).
-    /// @return tokens Pool tokens in pool order (native ETH as the wrapped token).
-    function bindMarket(
+    /// @notice Takes custody of an NFT from `from` and records it for `account` with its floor credit.
+    /// @dev No health check. Accepts any position fully inside the band, in range or not; a position on exactly the
+    /// band's ticks is credited its liquidity. `from` must have approved
+    /// the LPVault for the NFT. Reverts `NotInsideBand` (FloorCreditMath) for a position outside the band.
+    /// @param from The NFT's current owner.
+    /// @param account The owner account of the record.
+    /// @param marketId The band market.
+    /// @param positionKey The position.
+    /// @return credit The credit of the position.
+    function pledge(
+        address from,
+        address account,
         uint256 marketId,
-        address pool,
-        bytes32 poolId,
-        PositionShape calldata shape,
-        bytes calldata integrationData
-    ) external returns (address[] memory tokens, uint8 unitDecimals);
-
-    /// @notice Returns a bound market's pool, shape and tokens; reverts `MarketBinding` for an unbound market.
-    function marketOf(
-        uint256 marketId
-    ) external view returns (address pool, bytes32 poolId, PositionShape memory shape, address[] memory tokens);
-
-    /// @notice Validates a position against a market, pulls it from its owner into custody and returns its units.
-    /// @param owner Wallet that owns the position and becomes its depositor of record.
-    function receivePosition(
-        uint256 marketId,
-        address owner,
         bytes32 positionKey
-    ) external returns (uint128 units);
+    ) external returns (uint128 credit);
 
-    /// @notice Sends a custodied position, whole, to its depositor of record.
-    /// @dev Deletes the custody entry before the transfer.
-    function returnPosition(
-        bytes32 positionKey
-    ) external returns (address depositor);
-
-    /// @notice Adds units to a custodied fungible-share position by pulling the LP amount `topUp` encodes from `owner`.
-    /// @dev Reverts `TopUpNotSupported` where anyone can add to a position directly (NFT positions).
-    /// @return unitsAdded Units added, measured by balance delta.
-    function topUpPosition(
+    /// @notice Adds liquidity to a pledged position, paid by `payer`, and raises its credit by the new liquidity's.
+    /// @dev No health check. Pulls the desired amounts from `payer` and refunds what the AMM did not use.
+    /// @param positionKey The pledged position.
+    /// @param payer The address the tokens are pulled from; it must have approved the LPVault.
+    /// @param amount0Desired Most token0 to add.
+    /// @param amount1Desired Most token1 to add.
+    /// @param amount0Min Least token0 to add.
+    /// @param amount1Min Least token1 to add.
+    /// @return liquidity Liquidity added.
+    /// @return credit Credit added.
+    /// @return amount0 Token0 added.
+    /// @return amount1 Token1 added.
+    function addLiquidity(
         bytes32 positionKey,
-        address owner,
-        bytes calldata topUp
-    ) external returns (uint128 unitsAdded);
+        address payer,
+        uint256 amount0Desired,
+        uint256 amount1Desired,
+        uint256 amount0Min,
+        uint256 amount1Min
+    ) external returns (uint128 liquidity, uint128 credit, uint256 amount0, uint256 amount1);
 
-    /// @notice Returns the current owner of a position in the AMM protocol, or address(0) when it does not exist.
-    function positionOwner(
-        bytes32 positionKey
-    ) external view returns (address owner);
+    /// @notice Removes part of a pledged position's liquidity to `recipient`; credit drops in proportion.
+    /// @dev The caller checks the account's health afterwards. Fees the AMM pays out are kept for the position.
+    /// @param positionKey The pledged position.
+    /// @param liquidity Liquidity to remove, at most the record's.
+    /// @param amount0Min Least token0 to receive.
+    /// @param amount1Min Least token1 to receive.
+    /// @param recipient Receiver of the principal.
+    /// @return credit Credit removed.
+    /// @return amount0 Token0 sent.
+    /// @return amount1 Token1 sent.
+    function removeLiquidity(
+        bytes32 positionKey,
+        uint128 liquidity,
+        uint256 amount0Min,
+        uint256 amount1Min,
+        address recipient
+    ) external returns (uint128 credit, uint256 amount0, uint256 amount1);
 
-    /// @notice Returns a position's units if a market accepts it; reverts with `receivePosition`'s error otherwise.
-    function validatePosition(
-        uint256 marketId,
-        address owner,
-        bytes32 positionKey
-    ) external view returns (uint128 units);
+    /// @notice Closes a position's record and sends the whole NFT and its held fees to `recipient`.
+    /// @dev The caller checks the account's health afterwards.
+    /// @param positionKey The pledged position.
+    /// @param recipient Receiver of the NFT.
+    /// @return credit Credit removed.
+    function release(
+        bytes32 positionKey,
+        address recipient
+    ) external returns (uint128 credit);
 
-    /// @notice Returns the token amounts `units` of the market hold at the oracle price vector `prices`.
-    /// @dev Reads no spot state and rounds every amount down, so collateral is never overvalued.
-    /// @param prices Oracle prices in pool order, 8 decimals.
-    function composition(
-        uint256 marketId,
-        uint256 units,
-        uint256[] calldata prices
-    ) external view returns (uint256[] memory amounts, bool exact);
-
-    /// @notice Removes exactly `units` of a custodied position and sends the principal to `recipient`; fees stay owed.
-    /// @dev Reverts `BelowMinimum` (or the AMM's slippage error) under any minimum.
+    /// @notice Unwinds the liquidity worth `credit` of a position, both tokens to `recipient`. Liquidation only.
+    /// @dev Removes `ceil(credit · liquidity / recordCredit)` liquidity, capped at the record's, and lowers the
+    /// record's credit in proportion, so the credit removed is at least `credit` when the cap does not apply.
+    /// @param positionKey The pledged position.
+    /// @param credit Credit to unwind.
+    /// @param amount0Min Least token0 to receive.
+    /// @param amount1Min Least token1 to receive.
+    /// @param recipient Receiver of both tokens.
+    /// @return liquidity Liquidity removed.
+    /// @return creditRemoved Credit removed.
+    /// @return amount0 Token0 sent.
+    /// @return amount1 Token1 sent.
     function unwind(
         bytes32 positionKey,
-        uint128 units,
-        uint256[] calldata minAmounts,
+        uint128 credit,
+        uint256 amount0Min,
+        uint256 amount1Min,
         address recipient
-    ) external returns (uint256[] memory amounts);
+    ) external returns (uint128 liquidity, uint128 creditRemoved, uint256 amount0, uint256 amount1);
 
-    /// @notice Removes exactly `units` and sends the principal to the depositor of record; custody is kept.
-    function releaseToDepositor(
-        bytes32 positionKey,
-        uint128 units,
-        uint256[] calldata minAmounts
-    ) external returns (uint256[] memory amounts);
-
-    /// @notice Collects every owed fee of a custodied position to its depositor of record.
-    /// @dev Reads no pause, breaker or price, so it works in every application state.
+    /// @notice Collects the fees of the named positions of `account`, each paid to `recipient`.
+    /// @param account The owner account of every named position.
+    /// @param positionKeys The positions.
+    /// @param recipient Receiver of the fees.
+    /// @return amounts0 Token0 fees per position.
+    /// @return amounts1 Token1 fees per position.
     function collectFees(
-        bytes32 positionKey,
-        address depositor
-    ) external returns (uint256[] memory amounts);
+        address account,
+        bytes32[] calldata positionKeys,
+        address recipient
+    ) external returns (uint256[] memory amounts0, uint256[] memory amounts1);
 
-    /// @notice Returns range status, pool share and position units of a market.
-    /// @param positionKey Position to report (bytes32(0) for none).
-    function riskMetadata(
+    /// @notice Most positions one account can hold.
+    function MAX_POSITIONS() external view returns (uint256 maxPositions);
+
+    /// @notice Returns a market; `pool == 0` when not listed.
+    function getMarket(
+        uint256 marketId
+    ) external view returns (Market memory market);
+
+    /// @notice Returns a position's record; `account == 0` when none.
+    function getPosition(
+        bytes32 positionKey
+    ) external view returns (Position memory position);
+
+    /// @notice Returns the positions of an account, in no fixed order.
+    function positionsOf(
+        address account
+    ) external view returns (bytes32[] memory positionKeys);
+
+    /// @notice Returns the summed credit of an account's positions in a market.
+    function accountCredit(
+        address account,
+        uint256 marketId
+    ) external view returns (uint256 credit);
+
+    /// @notice Returns the credit a position would get if pledged to `marketId` now.
+    /// @dev Reverts like `pledge` for a position of another pool or outside the band.
+    function previewCredit(
         uint256 marketId,
         bytes32 positionKey
-    ) external view returns (RiskMetadata memory meta);
+    ) external view returns (uint128 credit);
 
-    /// @notice Returns the pool's time-weighted depth over `window` seconds, in the market's units.
-    function riskStatus(
-        uint256 marketId,
-        uint32 window
-    ) external view returns (RiskStatus memory status);
-
-    /// @notice Returns the depositor of record of a custodied position, or address(0).
-    /// @dev Reverts `Locked` while the lock is held.
-    function depositorOf(
+    /// @notice Returns the fees a position would pay out now: held fees plus the AMM's uncollected fees.
+    function feesOf(
         bytes32 positionKey
-    ) external view returns (address depositor);
+    ) external view returns (uint256 amount0, uint256 amount1);
 
-    /// @notice Returns the market a custodied position was received for (0 when not in custody).
-    function marketOfPosition(
-        bytes32 positionKey
-    ) external view returns (uint256 marketId);
-
-    /// @notice Returns the live units of a custodied position.
-    /// @dev Reverts `Locked` while the lock is held unless the caller is Collateralization.
-    function unitsOf(
-        bytes32 positionKey
-    ) external view returns (uint128 units);
-
-    /// @notice Reverts `PoolLocked` while the market's pool is inside its own reentrancy lock.
-    /// @dev Called before every composition read and custody action, so no read happens inside a pool callback.
-    function checkReadSafe(
-        uint256 marketId
-    ) external view;
-
-    /// @notice Returns the deviation, in bps, between the AMM protocol's time-weighted price over `window` and the
-    /// price implied by the oracle vector.
-    /// @dev Consistency check only; it never feeds the price.
-    function consistencyDeviation(
-        uint256 marketId,
-        uint32 window,
-        uint256[] calldata prices
-    ) external view returns (uint256 deviationBps, bool available);
-
-    /// @notice Returns the rate provider of each pool token, address(0) where the token has none.
-    function rateProviders(
-        uint256 marketId
-    ) external view returns (address[] memory providers);
-
-    /// @notice Returns the wrapped native token used in place of a native ETH pool leg, or address(0).
-    /// @dev An unwind wraps native ETH before paying, so every Avana transfer is an ERC-20 transfer.
-    function wrappedNative() external view returns (address weth);
-
-    /// @notice Returns whether a Uniswap v4 hook contract is allowlisted for collateral.
-    function isAllowedPoolHook(
-        address hooks
-    ) external view returns (bool allowed);
-
-    /// @notice Returns the pool units against which one position unit is valued (0 for concentrated liquidity).
-    function effectiveSupply(
-        uint256 marketId
-    ) external view returns (uint256 supply);
+    /// @notice Whether a guarded call is running; integrators can refuse reads while it is.
+    function locked() external view returns (bool isLocked);
 }

@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
-import {ILPVault} from "../../../src/custody/lp-vault/ILPVault.sol";
 import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
+import {ILegacyLPVault} from "../../../src/legacy/ILegacyLPVault.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../../src/policy/market-registry/IMarketRegistryRoutes.sol";
@@ -233,7 +233,7 @@ library AvanaAccess {
         b[n++] = Binding(Kind.VaultTokenFactory, IVaultTokenFactory.deployVaultToken.selector, g);
         b[n++] = Binding(Kind.RiskModule, UUPSUpgradeable.upgradeToAndCall.selector, g);
         b[n++] = Binding(Kind.AaveAdapter, UUPSUpgradeable.upgradeToAndCall.selector, g);
-        b[n++] = Binding(Kind.LpVault, ILPVault.returnStray.selector, g);
+        b[n++] = Binding(Kind.LpVault, ILegacyLPVault.returnStray.selector, g);
         b[n++] =
             Binding(Kind.FirstLossReserve, IAvanaFirstLossReserve.withdraw.selector, AvanaRoles.RESERVE_WITHDRAW_ROLE);
         return n;

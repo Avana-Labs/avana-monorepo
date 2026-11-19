@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IUniswapV3SwapCallback} from "../../../src/interfaces/external/uniswap/IUniswapV3SwapCallback.sol";
+import {ILock} from "../../../src/legacy/ILock.sol";
 import {ISettlementRoute} from "../../../src/liquidation/settlement-routes/ISettlementRoute.sol";
-import {ILock} from "../../../src/lock/lock/ILock.sol";
 import {PayoutToken} from "./PayoutToken.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

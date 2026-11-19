@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {PoolKeying} from "../../amm/types/AmmTypes.sol";
-import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
-import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
+import {ICollateralization} from "../../legacy/ICollateralization.sol";
+import {ILegacyLPVault} from "../../legacy/ILegacyLPVault.sol";
 import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
 import {VaultTokenBindings} from "../../types/MarketTypes.sol";
 import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
@@ -266,17 +266,17 @@ contract VaultTokenFactory is IVaultTokenFactory, AccessManaged {
         uint32 integrationId,
         address lpVault
     ) private view returns (bytes32 ammProtocol) {
-        (bool idOk, uint256 id) = _readWord(lpVault, abi.encodeCall(ILPVault.INTEGRATION_ID, ()));
+        (bool idOk, uint256 id) = _readWord(lpVault, abi.encodeCall(ILegacyLPVault.INTEGRATION_ID, ()));
         bool protocolOk;
         uint256 protocol;
-        (protocolOk, protocol) = _readWord(lpVault, abi.encodeCall(ILPVault.AMM_PROTOCOL, ()));
+        (protocolOk, protocol) = _readWord(lpVault, abi.encodeCall(ILegacyLPVault.AMM_PROTOCOL, ()));
         address lock = _readAddress(_COLLATERALIZATION, abi.encodeCall(ICollateralization.LOCK, ()));
         if (
             !idOk || id != integrationId || !protocolOk || protocol == 0 || lock == address(0)
-                || _readAddress(lpVault, abi.encodeCall(ILPVault.COLLATERALIZATION, ())) != _COLLATERALIZATION
-                || _readAddress(lpVault, abi.encodeCall(ILPVault.LOCK, ())) != lock
+                || _readAddress(lpVault, abi.encodeCall(ILegacyLPVault.COLLATERALIZATION, ())) != _COLLATERALIZATION
+                || _readAddress(lpVault, abi.encodeCall(ILegacyLPVault.LOCK, ())) != lock
                 || _readAddress(lpVault, abi.encodeCall(IAccessManaged.authority, ())) != authority()
-                || _readAddress(lpVault, abi.encodeCall(ILPVault.MARKET_REGISTRY, ())) != _MARKET_REGISTRY
+                || _readAddress(lpVault, abi.encodeCall(ILegacyLPVault.MARKET_REGISTRY, ())) != _MARKET_REGISTRY
         ) revert InvalidIntegration();
         ammProtocol = bytes32(protocol);
     }
@@ -285,7 +285,7 @@ contract VaultTokenFactory is IVaultTokenFactory, AccessManaged {
     function _readCapabilities(
         address lpVault
     ) private view returns (PoolKeying keying, ShapeKind kind) {
-        (bool ok, bytes memory ret) = _read(lpVault, abi.encodeCall(ILPVault.capabilities, ()), CAPABILITIES_SIZE);
+        (bool ok, bytes memory ret) = _read(lpVault, abi.encodeCall(ILegacyLPVault.capabilities, ()), CAPABILITIES_SIZE);
         if (!ok) revert InvalidIntegration();
         (uint256 keyingWord,,, uint256 kindWord) = abi.decode(ret, (uint256, uint256, uint256, uint256));
         if (

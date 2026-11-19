@@ -77,35 +77,21 @@ ponder.on("Collateralization:PendingSettled", async ({ event, context }) => {
 
 logOnly("Collateralization", ["SeizureSettled", "CounterSaturated"]);
 
-ponder.on("LPVault:PositionReceived", async ({ event, context }) => {
-  const p = await recordLog(event, context, "LPVault.PositionReceived");
+// The LPVault's records (step 10 rewrites these tables): a pledge holds the NFT for its account, a release returns it.
+ponder.on("LPVault:PositionPledged", async ({ event, context }) => {
+  const p = await recordLog(event, context, "LPVault.PositionPledged");
   const a = event.args;
   await context.db
     .insert(schema.lpPosition)
-    .values({ chainId: p.chainId, lpVault: event.log.address, positionKey: a.positionKey, marketId: a.marketId, depositor: a.depositor, held: true, stray: false, lastBlock: p.blockNumber })
-    .onConflictDoUpdate({ marketId: a.marketId, depositor: a.depositor, held: true, stray: false, lastBlock: p.blockNumber });
+    .values({ chainId: p.chainId, lpVault: event.log.address, positionKey: a.positionKey, marketId: a.marketId, depositor: a.account, held: true, stray: false, lastBlock: p.blockNumber })
+    .onConflictDoUpdate({ marketId: a.marketId, depositor: a.account, held: true, stray: false, lastBlock: p.blockNumber });
 });
 
-ponder.on("LPVault:PositionReturned", async ({ event, context }) => {
-  const p = await recordLog(event, context, "LPVault.PositionReturned");
+ponder.on("LPVault:PositionReleased", async ({ event, context }) => {
+  const p = await recordLog(event, context, "LPVault.PositionReleased");
   await context.db
     .update(schema.lpPosition, { chainId: p.chainId, lpVault: event.log.address, positionKey: event.args.positionKey })
     .set({ held: false, lastBlock: p.blockNumber });
 });
 
-ponder.on("LPVault:StrayReceived", async ({ event, context }) => {
-  const p = await recordLog(event, context, "LPVault.StrayReceived");
-  await context.db
-    .insert(schema.lpPosition)
-    .values({ chainId: p.chainId, lpVault: event.log.address, positionKey: event.args.positionKey, marketId: 0n, depositor: event.args.from, held: true, stray: true, lastBlock: p.blockNumber })
-    .onConflictDoUpdate({ held: true, stray: true, lastBlock: p.blockNumber });
-});
-
-ponder.on("LPVault:StrayReturned", async ({ event, context }) => {
-  const p = await recordLog(event, context, "LPVault.StrayReturned");
-  await context.db
-    .update(schema.lpPosition, { chainId: p.chainId, lpVault: event.log.address, positionKey: event.args.positionKey })
-    .set({ held: false, lastBlock: p.blockNumber });
-});
-
-logOnly("LPVault", ["MarketBound", "UnitsUnwound", "UnitsReleased", "FeesCollected"]);
+logOnly("LPVault", ["MarketListed", "LiquidityAdded", "LiquidityRemoved", "PositionUnwound", "FeesCollected", "FeesHeld"]);

@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IClIntegration} from "../../src/amm/IClIntegration.sol";
-import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
+import {IClIntegration} from "../../src/legacy/IClIntegration.sol";
+import {ILegacyLPVault} from "../../src/legacy/ILegacyLPVault.sol";
 import {DexHop, HopKind, RouteConfig} from "../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {ILPOracle} from "../../src/oracle/ILPOracle.sol";
 import {LPOracle} from "../../src/oracle/LPOracle.sol";
@@ -854,7 +854,7 @@ contract ListMarkets is ListingBase {
         // must name the same `d`, and the market's LPOracle the same `k` (SPEC-ORC-005, `CL_CHECK_UNIT_EXP`).
         uint256 snap = vm.snapshotState();
         vm.prank(address(registry));
-        (, m.decimals) = ILPVault(m.lpVault).bindMarket(m.marketId, m.pool, m.poolId, m.shape, m.integrationData);
+        (, m.decimals) = ILegacyLPVault(m.lpVault).bindMarket(m.marketId, m.pool, m.poolId, m.shape, m.integrationData);
         m.unitExp = IClIntegration(m.lpVault).unitExponent(m.marketId);
         vm.revertToState(snap);
     }

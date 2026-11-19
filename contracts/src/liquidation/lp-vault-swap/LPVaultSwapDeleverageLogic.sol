@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {IFlashSource} from "../../flash/IFlashSource.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILock} from "../../lock/lock/ILock.sol";
+import {ILock} from "../../legacy/ILock.sol";
 import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";

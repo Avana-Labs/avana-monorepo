@@ -3,42 +3,35 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ILPVault} from "../../custody/lp-vault/ILPVault.sol";
 import {UniswapV4PoolKey} from "../../interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
-import {IClIntegration} from "../IClIntegration.sol";
 
 /// @title IUniswapV4Integration
-/// @notice The Uniswap v4 LPVault: custody of PositionManager positions of hookless v4 pools in exact-range markets.
-/// @dev The consistency read and the depth come from a reference Uniswap v3 pool of the same two tokens.
-interface IUniswapV4Integration is IClIntegration {
-    /// @notice A v4 market's pool key and reference pool, written at `bindMarket`.
-    struct V4Market {
-        UniswapV4PoolKey key;
-        address referencePool;
-    }
+/// @notice The Uniswap v4 LPVault: custody of PositionManager positions of hookless v4 pools, keyed by
+/// `bytes32(tokenId)`; a pool is named by its `PoolId`, whose key must be registered first.
+/// @dev A native leg is wrapped by the PositionManager, so the market's token0 is the wrapped native token.
+interface IUniswapV4Integration is ILPVault {
+    /// @notice The pool has a hook, or is not initialized.
+    error UnsupportedPool(bytes32 poolId);
 
-    /// @notice The position has a subscriber.
-    error SubscribedPosition();
+    /// @notice A pool key was registered under its `PoolId`.
+    event PoolRegistered(bytes32 indexed poolId, address currency0, address currency1, uint24 fee, int24 tickSpacing);
 
-    /// @notice The pool's hook is not allowed.
-    error HookNotAllowed(address hooks);
+    /// @notice Registers a hookless, initialized pool's key so a market can be listed on its `PoolId`.
+    /// @dev Permissionless and idempotent: the `PoolId` is the key's hash. Reverts `UnsupportedPool`.
+    /// @return poolId `keccak256(abi.encode(key))`.
+    function registerPool(
+        UniswapV4PoolKey calldata key
+    ) external returns (bytes32 poolId);
+
+    /// @notice Returns a registered pool key; `tickSpacing == 0` when none.
+    function poolKey(
+        bytes32 poolId
+    ) external view returns (UniswapV4PoolKey memory key);
 
     /// @notice Returns the PoolManager.
     function POOL_MANAGER() external view returns (address poolManager);
 
-    /// @notice Returns the PositionManager whose positions this LPVault custodies.
+    /// @notice Returns the PositionManager whose positions this LPVault holds.
     function POSITION_MANAGER() external view returns (address positionManager);
-
-    /// @notice Returns the Uniswap v3 factory reference pools are checked against.
-    function REFERENCE_FACTORY() external view returns (address factory);
-
-    /// @notice Returns the chain's minimum block interval in seconds, used for the observation check.
-    function BLOCK_TIME() external view returns (uint256 blockTime);
-
-    /// @notice Hook permission bits a pool's hook must clear.
-    function HOOK_MASK() external view returns (uint160 mask);
-
-    /// @notice Returns a bound market's pool key and reference pool.
-    function v4Market(
-        uint256 marketId
-    ) external view returns (V4Market memory market);
 }

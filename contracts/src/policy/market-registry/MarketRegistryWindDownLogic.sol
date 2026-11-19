@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralization} from "../../custody/collateralization/ICollateralization.sol";
+import {ICollateralization} from "../../legacy/ICollateralization.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";

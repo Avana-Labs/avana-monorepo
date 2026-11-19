@@ -26,7 +26,7 @@ function account(i: number, block: bigint): LogSpec[] {
   return [
     { source: "AaveAdapter", event: "UserProxyCreated", args, address: ADAPTER, block, logIndex: 0 },
     { source: "ProxyManager", event: "ProxyDeployed", args, address: MANAGER, block, logIndex: 1 },
-    { source: "LPVault", event: "PositionReceived", args: { positionKey: key(i), marketId: 1n, depositor: wallet(i), units: 100n }, address: LP_VAULT, block, logIndex: 2 },
+    { source: "LPVault", event: "PositionPledged", args: { positionKey: key(i), account: wallet(i), marketId: 1n, from: wallet(i), liquidity: 100n, credit: 100n }, address: LP_VAULT, block, logIndex: 2 },
   ];
 }
 

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LockSlot} from "../../../src/lock/lock/LockSlot.sol";
+import {LockSlot} from "../../../src/legacy/LockSlot.sol";
 
 /// @title LockSlotProperties
 /// @notice Echidna and Medusa properties of `LockSlot.HOLDER_SLOT`, the transient slot of the lock holder. The slot is

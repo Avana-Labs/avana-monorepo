@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVault} from "../custody/lp-vault/ILPVault.sol";
 import {IAggregatorV3} from "../interfaces/external/chainlink/IAggregatorV3.sol";
+import {ILegacyLPVault} from "../legacy/ILegacyLPVault.sol";
 import {IParameterStore} from "../policy/parameter-store/IParameterStore.sol";
 import {FeedDef} from "../policy/parameter-store/types/ParameterStoreTypes.sol";
 import {AmmConstants} from "../types/AmmConstants.sol";
@@ -203,7 +203,7 @@ contract LPOracle is ILPOracle {
         uint256[] memory prices
     ) internal view returns (uint256 price8) {
         // forge-lint: disable-next-line(unused-return)
-        (uint256[] memory amounts,) = ILPVault(_INTEGRATION).composition(_MARKET_ID, units, prices);
+        (uint256[] memory amounts,) = ILegacyLPVault(_INTEGRATION).composition(_MARKET_ID, units, prices);
         bool valid;
         (valid, price8) = LPPriceMath.lpPrice(amounts, prices, _tokenDecimals);
         if (!valid) revert InvalidComposition(_MARKET_ID);

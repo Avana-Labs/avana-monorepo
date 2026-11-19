@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILock} from "../../lock/lock/ILock.sol";
+import {ILock} from "../../legacy/ILock.sol";
 import {ISettlementRoute} from "./ISettlementRoute.sol";
 import {RouteMath} from "./RouteMath.sol";
 import {RouteConfig} from "./types/SettlementRouteTypes.sol";

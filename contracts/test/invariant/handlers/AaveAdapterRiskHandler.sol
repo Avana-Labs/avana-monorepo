@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
+import {ICollateralization} from "../../../src/legacy/ICollateralization.sol";
 import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {MarketStatus} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {PriceState} from "../../../src/types/OracleTypes.sol";

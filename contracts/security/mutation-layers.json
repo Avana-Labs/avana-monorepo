@@ -3,7 +3,7 @@
   "layers": {
     "2.1": [
       {"src": "src/governance/roles", "tests": "test/unit/AvanaRoles.*"},
-      {"src": "src/lock/lock", "tests": "test/unit/Lock.*"},
+      {"src": "src/custody/lp-vault", "tests": "test/{unit,fuzz,integration}/LPVault*"},
       {"src": "src/oracle/lp-oracle", "files": ["LPPriceMath"], "tests": "test/{unit,fuzz}/LPPriceMath.*"},
       {"src": "src/oracle/lp-oracle", "files": ["LPOracle*"], "tests": "test/{unit,fuzz,integration}/{LPOracle,Oracles.Contagion}*"},
       {"src": "src/oracle/debt-oracle", "tests": "test/{unit,fuzz,integration}/{DebtOracle.,Oracles.Contagion}*"},
@@ -11,15 +11,14 @@
       {"src": "src/policy/parameter-store", "tests": "test/{unit,fuzz}/ParameterStore*"},
       {"src": "src/policy/market-registry", "tests": "test/unit/MarketRegistry*"},
       {"src": "src/vault-token/vault-token", "tests": "test/{unit,integration}/VaultToken.*"},
-      {"src": "src/vault-token/vault-token-factory", "tests": "test/{unit,fuzz}/VaultTokenFactory.*"},
-      {"src": "src/custody/collateralization", "tests": "test/{unit,fuzz}/Collateralization*"}
+      {"src": "src/vault-token/vault-token-factory", "tests": "test/{unit,fuzz}/VaultTokenFactory.*"}
     ],
     "2.2": [
       {"src": "src/amm/concentrated-liquidity", "files": ["ClPriceMath", "ClTickMath"], "tests": "test/{unit,fuzz}/ClPriceMath.*"},
-      {"src": "src/amm/concentrated-liquidity", "files": ["ClLPVault*"], "tests": "test/{unit,integration}/{UniswapV3Integration,SlipstreamIntegration,UniswapV4Integration,ClLPVault}.*"},
-      {"src": "src/amm/uniswap-v3", "tests": "test/{unit,integration}/UniswapV3Integration.*"},
-      {"src": "src/amm/slipstream", "tests": "test/unit/SlipstreamIntegration.*"},
-      {"src": "src/amm/uniswap-v4", "files": ["UniswapV4Integration"], "tests": "test/{unit,fuzz,integration}/UniswapV4Integration.*"},
+      {"src": "src/amm/concentrated-liquidity", "files": ["NfpmLPVault"], "tests": "test/{unit,integration}/LPVault*"},
+      {"src": "src/amm/uniswap-v3", "tests": "test/{unit,integration}/LPVault*"},
+      {"src": "src/amm/slipstream", "tests": "test/{unit,integration}/LPVault*"},
+      {"src": "src/amm/uniswap-v4", "files": ["UniswapV4Integration"], "tests": "test/{unit,fuzz,integration}/LPVault*"},
       {"src": "src/amm/uniswap-v4", "files": ["UniswapV4State"], "tests": "test/{unit,fuzz,integration}/{UniswapV4Integration,LPOracleV4}.*"}
     ],
     "2.3": [
