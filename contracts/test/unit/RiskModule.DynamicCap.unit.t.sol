@@ -3,18 +3,18 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IRiskModuleErrors} from "../../src/legacy/risk-module/IRiskModuleErrors.sol";
+import {DynamicCap} from "../../src/legacy/risk-module/types/RiskModuleTypes.sol";
 import {MarketDynamicCap} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {DynamicCap} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @title RiskModuleDynamicCapUnitTest
 /// @notice The per-market dynamic borrow cap of the Aave ARFC "Dynamic Caps Oracle: Rate Limiter" on the real
-/// RiskModule and MarketRegistry: the first borrow of each interval fixes `C = D_start + L(D_start)` with
+/// LegacyRiskModule and MarketRegistry: the first borrow of each interval fixes `C = D_start + L(D_start)` with
 /// `L = clamp(alpha * D, L_min, L_max)`, a borrow reverts when the market's debt after it exceeds `C`, repays and
 /// withdrawals are never limited, who stores, fail-closed terms, gate precedence and the view.
-/// @dev World: the RiskModule fixture with USDC enabled as debt reserve 5 and the account in debt (HF 1.5). The CDP
+/// @dev World: the LegacyRiskModule fixture with USDC enabled as debt reserve 5 and the account in debt (HF 1.5). The CDP
 /// Spoke owes 1,000,000 GHO and 2,400,000 USDC, both at $1.00 unless a test sets another price, so the market's debt
 /// is $3,400,000. Terms: tau = 21,600 s, alpha 2,500 bps, L_min $250,000, L_max $2,500,000; the first borrow of an
 /// interval therefore fixes C = $3,400,000 + $850,000 = $4,250,000.
@@ -259,7 +259,7 @@ contract RiskModuleDynamicCapUnitTest is RiskModuleFixture {
         _book(850_000);
         vm.expectRevert();
         _borrowAsAdapter(GHO_RESERVE, 1e18);
-        // A repay is Aave's alone: it calls no RiskModule check, and the debt it removes is room under the same cap.
+        // A repay is Aave's alone: it calls no LegacyRiskModule check, and the debt it removes is room under the same cap.
         _book(350_000);
         _borrowAsAdapter(GHO_RESERVE, 500_000e18);
         assertEq(riskModule.getDynamicCap(mid).cap, CAP, "a repay does not change the interval's cap");

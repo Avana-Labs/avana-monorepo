@@ -20,7 +20,7 @@ interface IMarketRegistry is IAccessManaged, IMarketRegistryBase, IMarketRegistr
     ) external;
 
     /// @notice Records a standard Aave V4 CDP Spoke, or re-approves a recorded one after an Aave upgrade.
-    /// @dev The Spoke's implementation code hash must be approved, and the RiskModule's Aave config check must pass.
+    /// @dev The Spoke's implementation code hash must be approved, and the LegacyRiskModule's Aave config check must pass.
     function deployCdpSpoke(
         SpokeDef calldata def
     ) external returns (address spoke);
@@ -332,7 +332,7 @@ interface IMarketRegistry is IAccessManaged, IMarketRegistryBase, IMarketRegistr
     /// @notice Vault-token factory, the chain's one integration registry (implementation immutable).
     function VAULT_TOKEN_FACTORY() external view returns (address factory);
 
-    /// @notice RiskModule fixed proxy address (implementation immutable).
+    /// @notice LegacyRiskModule fixed proxy address (implementation immutable).
     function RISK_MODULE() external view returns (address riskModule);
 
     /// @notice Aave Adapter fixed proxy address (implementation immutable).

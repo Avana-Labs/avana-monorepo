@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {MarketDynamicCap} from "../parameter-store/types/ParameterStoreTypes.sol";
+import {MarketDynamicCap} from "../../policy/parameter-store/types/ParameterStoreTypes.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title DynamicCapMath

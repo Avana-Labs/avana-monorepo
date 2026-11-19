@@ -3,14 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {IRiskModuleErrors} from "../../src/legacy/risk-module/IRiskModuleErrors.sol";
+import {PledgeCharge} from "../../src/legacy/risk-module/types/RiskModuleTypes.sol";
 import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {stdError} from "forge-std/StdError.sol";
 
 /// @title RiskModulePledgeRowsFuzzTest
-/// @notice The reviewed RiskModule's `checkPledge` on the real MarketRegistry (the fixture's market `MID`, 18-decimal
+/// @notice The reviewed LegacyRiskModule's `checkPledge` on the real MarketRegistry (the fixture's market `MID`, 18-decimal
 /// vault token, stress floor $1.00, `minPledgeUsd` $10, `marketUsdCap` $1,000,000): its rounding sites (TEST-070), its
 /// arithmetic at the listing bounds (TEST-071), and that a pledge it admits stays within the caps and the minimum
 /// (TEST-097).
@@ -84,7 +84,7 @@ contract RiskModulePledgeRowsFuzzTest is RiskModuleFixture {
 
     // TEST-097 verifies: INV-027, INV-028, INV-069, REQ-RISK-021, REQ-RISK-057
     // Sources: MATH-UO-25, HYP-10, HYP-55
-    /// @notice Whatever the counters Collateralization passes, a pledge the RiskModule admits leaves the market's
+    /// @notice Whatever the counters Collateralization passes, a pledge the LegacyRiskModule admits leaves the market's
     /// regular counter within `marketUsdCap` and had a value of at least `minPledgeUsd` at the served price.
     function testFuzz_TEST_097_admittedPledgeStaysWithinTheCaps(
         uint128 units,

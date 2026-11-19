@@ -116,7 +116,7 @@ struct AccountGateStatus {
     bool statusUnavailable;
 }
 
-/// @notice Reason codes of the RiskModule's Aave configuration drift check.
+/// @notice Reason codes of the LegacyRiskModule's Aave configuration drift check.
 /// @dev Append only: existing ordinal values never change.
 enum DriftReason {
     None,

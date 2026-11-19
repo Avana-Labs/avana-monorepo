@@ -29,7 +29,7 @@ library AvanaAccess {
         MarketRegistry,
         LPVaultSwap,
         VaultTokenFactory,
-        RiskModule,
+        LegacyRiskModule,
         AaveAdapter,
         LpVault,
         FirstLossReserve
@@ -231,7 +231,7 @@ library AvanaAccess {
         b[n++] = Binding(Kind.LPVaultSwap, UUPSUpgradeable.upgradeToAndCall.selector, g);
         b[n++] = Binding(Kind.VaultTokenFactory, ILegacyVaultTokenFactory.registerIntegration.selector, g);
         b[n++] = Binding(Kind.VaultTokenFactory, ILegacyVaultTokenFactory.deployVaultToken.selector, g);
-        b[n++] = Binding(Kind.RiskModule, UUPSUpgradeable.upgradeToAndCall.selector, g);
+        b[n++] = Binding(Kind.LegacyRiskModule, UUPSUpgradeable.upgradeToAndCall.selector, g);
         b[n++] = Binding(Kind.AaveAdapter, UUPSUpgradeable.upgradeToAndCall.selector, g);
         b[n++] = Binding(Kind.LpVault, ILegacyLPVault.returnStray.selector, g);
         b[n++] =

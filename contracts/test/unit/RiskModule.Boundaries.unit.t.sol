@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
+import {IRiskModuleErrors} from "../../src/legacy/risk-module/IRiskModuleErrors.sol";
 import {AccountGateStatus} from "../../src/types/MarketTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";

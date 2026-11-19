@@ -218,7 +218,7 @@ interface ICollateralization is ICollateralizationBase {
     /// @notice Returns LPVaultSwap, the only caller of the seizure and pending functions.
     function LP_VAULT_SWAP() external view returns (address lpVaultSwap);
 
-    /// @notice Returns the RiskModule called by `pledge`.
+    /// @notice Returns the LegacyRiskModule called by `pledge`.
     function RISK_MODULE() external view returns (address riskModule);
 
     /// @notice Returns the chain's Lock.

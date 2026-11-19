@@ -4,21 +4,21 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
+import {LegacyRiskModule} from "../../../src/legacy/risk-module/LegacyRiskModule.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
-import {RiskModule} from "../../../src/policy/risk-module/RiskModule.sol";
 import {PriceState} from "../../../src/types/OracleTypes.sol";
 import {RiskLPOracleMock, RiskSpokeMock, RiskSwapMock, RiskTokenMock} from "../../utils/mocks/RiskModuleMocks.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title RiskModuleHandler
 /// @notice Random sequences of Aave, oracle, issuer and keeper changes, time steps and borrow-side pre-checks against
-/// the real RiskModule and MarketRegistry. Every pre-check that passes is compared with an independent reading of the
+/// the real LegacyRiskModule and MarketRegistry. Every pre-check that passes is compared with an independent reading of the
 /// gates of 2.7; a pass while a gate is closed is a violation.
 /// @dev Steered: three pre-checks in four first open every gate the handler controls, and half of those then close
 /// exactly one, chosen by the seed, so each gate is tested alone at its boundary; the fourth runs on whatever state the
 /// sequence left. A pre-check refused with every modelled gate open is counted (`refusedWhileClear`). The tokens and
 /// leg feeds the oracle reports are set once in the constructor: an external setter was a fuzz target, and a call that
-/// set every leg feed to address(0) left the RiskModule no feed age to check (an unused leg is skipped, 2.7 step (5)),
+/// set every leg feed to address(0) left the LegacyRiskModule no feed age to check (an unused leg is skipped, 2.7 step (5)),
 /// so a stale-feed gate the handler closed by warping could not be seen.
 contract RiskModuleHandler is Test {
     /// @notice A call that found nothing to act on, or that the contract refused: reverting keeps it out of the
@@ -26,7 +26,7 @@ contract RiskModuleHandler is Test {
     error Skipped();
 
     struct World {
-        RiskModule rm;
+        LegacyRiskModule rm;
         MarketRegistry registry;
         RiskSpokeMock spoke;
         RiskLPOracleMock oracle;
@@ -191,7 +191,7 @@ contract RiskModuleHandler is Test {
         }
     }
 
-    /// @dev Every gate of 2.7 Borrow-side checks, read independently of the RiskModule's code.
+    /// @dev Every gate of 2.7 Borrow-side checks, read independently of the LegacyRiskModule's code.
     function _clear(
         bool isBorrow
     ) internal view returns (bool) {

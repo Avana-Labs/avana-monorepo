@@ -3,13 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {IRiskModuleErrors} from "../../src/legacy/risk-module/IRiskModuleErrors.sol";
+import {PledgeCharge} from "../../src/legacy/risk-module/types/RiskModuleTypes.sol";
 import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @title RiskModuleNoRestrictionUnitTest
-/// @notice The RiskModule holds no restriction of its own, and the minimum pledge value is exact at its boundary, on
+/// @notice The LegacyRiskModule holds no restriction of its own, and the minimum pledge value is exact at its boundary, on
 /// the real MarketRegistry.
 contract RiskModuleNoRestrictionUnitTest is RiskModuleFixture {
     bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
@@ -19,8 +19,8 @@ contract RiskModuleNoRestrictionUnitTest is RiskModuleFixture {
     }
 
     // TEST-168 verifies: REQ-RISK-035, REQ-RISK-037, Q-226, Q-227
-    // Sources: 5.1 TEST-168 (pause location: the RiskModule holds no restriction storage or selector)
-    /// @notice Neither the RiskModule proxy nor its implementation answers any pause, per-function pause, market
+    // Sources: 5.1 TEST-168 (pause location: the LegacyRiskModule holds no restriction storage or selector)
+    /// @notice Neither the LegacyRiskModule proxy nor its implementation answers any pause, per-function pause, market
     /// freeze, pool-broken flag, keeper suspension, quarantine, incident clock or tolerance override selector.
     function test_TEST_168_noRestrictionSelectorOrState() public {
         string[12] memory absent = [

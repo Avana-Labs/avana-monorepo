@@ -4,15 +4,15 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
+import {IRiskModuleErrors} from "../../src/legacy/risk-module/IRiskModuleErrors.sol";
+import {PledgeCharge} from "../../src/legacy/risk-module/types/RiskModuleTypes.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
-import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
 import {AccountGateStatus, DriftReason} from "../../src/types/MarketTypes.sol";
 import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @title RiskModuleDriftActionsUnitTest
-/// @notice Per-action table of every Aave configuration drift the RiskModule detects: the drift check, a new-account
+/// @notice Per-action table of every Aave configuration drift the LegacyRiskModule detects: the drift check, a new-account
 /// pledge, a borrow and a withdraw-with-debt revert `ConfigDrift(marketId, reason)` with the reason's market (0 for a
 /// Spoke-wide reason); a top-up of an indebted account passes (REQ-RISK-069: never top-ups); the account status reports
 /// the reason and both actions refused; the market breaker reports `CONFIG_DRIFT` live; `pokeConfig` reports it and

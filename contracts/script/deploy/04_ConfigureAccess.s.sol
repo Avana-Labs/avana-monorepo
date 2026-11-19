@@ -42,7 +42,7 @@ interface IFactoryRegistration {
 /// @notice Step 13 and the chain wiring, in two files for the two actors:
 /// - `access-config`, sent by the DAO (the AccessManager's admin and the Aave governance executor) at once: the
 ///   labels and guardians of the Avana roles, the role of every governed function (`AvanaAccess`) on the chain's
-///   ParameterStore, MarketRegistry, LPVaultSwap, VaultTokenFactory, RiskModule, AaveAdapter and LPVaults, and the role
+///   ParameterStore, MarketRegistry, LPVaultSwap, VaultTokenFactory, LegacyRiskModule, AaveAdapter and LPVaults, and the role
 ///   grants: the governance Safe holds the tighten role (12 hours) and the governance role (the config's
 ///   `timelockNormalDelay` when it lies between 4 and 5 days, else 4 days), and the Joint Configuration Safe, the
 ///   risk steward, holds the tighten role with no delay. The DAO is the guardian of every role, so it can cancel any
@@ -114,7 +114,7 @@ contract ConfigureAccess is AccessOperations {
         _bind(op, m, AvanaAccess.Kind.MarketRegistry, vm.parseJsonAddress(out, ".marketRegistry.proxy"));
         _bind(op, m, AvanaAccess.Kind.LPVaultSwap, vm.parseJsonAddress(out, ".lpVaultSwap.proxy"));
         _bind(op, m, AvanaAccess.Kind.VaultTokenFactory, vm.parseJsonAddress(out, ".vaultTokenFactory"));
-        _bind(op, m, AvanaAccess.Kind.RiskModule, vm.parseJsonAddress(out, ".riskModule.proxy"));
+        _bind(op, m, AvanaAccess.Kind.LegacyRiskModule, vm.parseJsonAddress(out, ".riskModule.proxy"));
         _bind(op, m, AvanaAccess.Kind.AaveAdapter, vm.parseJsonAddress(out, ".aaveAdapter.proxy"));
         for (uint256 i = 0; i < lpVaults.length; ++i) {
             _bind(op, m, AvanaAccess.Kind.LpVault, lpVaults[i]);

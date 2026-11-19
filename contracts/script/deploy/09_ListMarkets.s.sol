@@ -367,7 +367,7 @@ contract ListMarkets is ListingBase {
         return true;
     }
 
-    /// @notice `listing.tokens[k].issuerProbe`: how the RiskModule watches the issuer (`PausedFlag` for a pausable token
+    /// @notice `listing.tokens[k].issuerProbe`: how the LegacyRiskModule watches the issuer (`PausedFlag` for a pausable token
     /// such as USDC, `UsdtFeeRate` or `UsdtFeeRateAndPaused` for USDT's fee switch); `None` when absent.
     function _issuerProbe(
         string memory k

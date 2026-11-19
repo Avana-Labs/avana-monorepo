@@ -14,7 +14,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 /// own pool, tokens (2 to 8, any decimals), range, unwind composition and pool depth. It keeps the custody rules
 /// Collateralization relies on (`CollLPVaultMock`: Collateralization-only value moves under a Lock member, a position
 /// taken only from its owner and returned only to its depositor, principal of exactly the removed units paid to the
-/// named recipient, fees only to the depositor) and answers the views the RiskModule and the Lens read
+/// named recipient, fees only to the depositor) and answers the views the LegacyRiskModule and the Lens read
 /// (`riskStatus`, `composition`, `clMarket`, `unitsOf`, `depositorOf`, `AMM_PROTOCOL`).
 /// @dev Principal per removed unit of market `m` is `rate[m][i] / 1e18` raw units of token `i`, rounded down; the vault
 /// holds a float of every token and pays from it. The storage of `CollLPVaultMock` comes first, slot for slot, so a
@@ -260,7 +260,7 @@ contract IntegLPVaultMock is ILegacyLPVaultBase {
         return positions[key].owner;
     }
 
-    // ─── Views of the RiskModule and the Lens ───
+    // ─── Views of the LegacyRiskModule and the Lens ───
 
     function riskStatus(
         uint256 marketId,

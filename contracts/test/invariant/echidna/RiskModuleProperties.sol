@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RiskModuleMath} from "../../../src/policy/risk-module/RiskModuleMath.sol";
+import {RiskModuleMath} from "../../../src/legacy/risk-module/RiskModuleMath.sol";
 
 /// @title RiskModuleProperties
-/// @notice Echidna and Medusa properties of the RiskModule's formulas (`RiskModuleMath`), in the units of 2.7: the
+/// @notice Echidna and Medusa properties of the LegacyRiskModule's formulas (`RiskModuleMath`), in the units of 2.7: the
 /// worked examples of SPEC-CAP-001, SPEC-CAP-003, SPEC-CF-001, SPEC-CF-005 and REQ-RISK-089 hold, and for every bounded
 /// input the charge rounds up and the value down, the cap split keeps the regular part within its room, the rescue
 /// exclusion never raises the health factor, the required level is the maximum of its two terms and the exemption

@@ -6,12 +6,12 @@ pragma solidity 0.8.28;
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../legacy/ICollateralization.sol";
 import {ILegacyVaultToken} from "../../legacy/ILegacyVaultToken.sol";
+import {ILegacyRiskModule} from "../../legacy/risk-module/ILegacyRiskModule.sol";
 import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {DeleverageRequest} from "../../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {PositionRef} from "../../types/PositionTypes.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
-import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
@@ -49,7 +49,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         (address proxy, AdapterAccount memory account) = _accountOf(msg.sender, marketId);
         _checkIntegration(marketId, account.vaultToken, position.integrationId);
         bool debtFree = _borrowCount(account.spoke, proxy) == 0;
-        if (!debtFree) IRiskModule(_RISK_MODULE).preWithdrawCheck(proxy);
+        if (!debtFree) ILegacyRiskModule(_RISK_MODULE).preWithdrawCheck(proxy);
         uint256 hf;
         (amounts, hf) = _reduce(proxy, account, position.positionKey, units, minAmounts, debtFree, minHealthFactor);
         emit CollateralReduced(
@@ -77,8 +77,8 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (debtFree) {
             _cleanup(proxy, account.spoke, reserveId);
         } else {
-            IRiskModule(_RISK_MODULE).checkRemainingRecord(account.marketId, remaining);
-            hf = IRiskModule(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
+            ILegacyRiskModule(_RISK_MODULE).checkRemainingRecord(account.marketId, remaining);
+            hf = ILegacyRiskModule(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
         }
         _checkGap(account.vaultToken, gapBefore);
     }

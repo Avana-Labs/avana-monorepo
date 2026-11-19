@@ -31,7 +31,7 @@ interface ICollateralizationBase {
     /// @notice A position's units exceed `type(uint120).max`.
     error LiquidityAboveBound();
 
-    /// @notice The RiskModule's charge is zero, out of bounds or inconsistent with the units credited.
+    /// @notice The LegacyRiskModule's charge is zero, out of bounds or inconsistent with the units credited.
     error InvalidCharge();
 
     error RecordNotFound();

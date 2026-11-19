@@ -4,9 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
+import {ILegacyRiskModule} from "../../src/legacy/risk-module/ILegacyRiskModule.sol";
+import {IRiskModuleErrors} from "../../src/legacy/risk-module/IRiskModuleErrors.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
-import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
-import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {DriftReason, Market} from "../../src/types/MarketTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
@@ -119,7 +119,7 @@ contract RiskModuleDriftUnitTest is RiskModuleFixture {
         assertFalse(current);
         _expectDrift(0, DriftReason.SpokeImplementation);
         vm.expectEmit(address(riskModule));
-        emit IRiskModule.ConfigDriftDetected(address(spoke), DriftReason.SpokeImplementation);
+        emit ILegacyRiskModule.ConfigDriftDetected(address(spoke), DriftReason.SpokeImplementation);
         riskModule.pokeConfig(address(spoke));
     }
 
@@ -203,7 +203,7 @@ contract RiskModuleDriftUnitTest is RiskModuleFixture {
         assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(DriftReason.None));
         _vtConfig(true, false, false);
         vm.expectEmit(address(riskModule));
-        emit IRiskModule.ConfigDriftDetected(address(spoke), DriftReason.ReceiveSharesOn);
+        emit ILegacyRiskModule.ConfigDriftDetected(address(spoke), DriftReason.ReceiveSharesOn);
         assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(DriftReason.ReceiveSharesOn));
         assertEq(riskModule.getBreakerStatus(mid), BreakerReasons.CONFIG_DRIFT);
         vm.expectRevert(
@@ -304,7 +304,7 @@ contract RiskModuleDriftUnitTest is RiskModuleFixture {
     function test_TEST_268_pokeConfigSpokeWideDrift() public {
         rSpoke.setImplSlot(bytes32(uint256(uint160(makeAddr("upgraded")))));
         vm.expectEmit(address(riskModule));
-        emit IRiskModule.ConfigDriftDetected(address(spoke), DriftReason.SpokeImplementation);
+        emit ILegacyRiskModule.ConfigDriftDetected(address(spoke), DriftReason.SpokeImplementation);
         assertEq(uint8(riskModule.pokeConfig(address(spoke))), uint8(DriftReason.SpokeImplementation));
         // The market breaker reads the same drift as a live reason.
         assertEq(riskModule.getBreakerStatus(mid), BreakerReasons.CONFIG_DRIFT);

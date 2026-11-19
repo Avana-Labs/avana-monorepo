@@ -39,7 +39,7 @@ struct MarketRegistryImmutables {
     address proxyManager;
     // The ParameterStore fixed proxy.
     address parameterStore;
-    // The RiskModule fixed proxy.
+    // The LegacyRiskModule fixed proxy.
     address riskModule;
     // The LPVaultSwap fixed proxy.
     address lpVaultSwap;
@@ -114,7 +114,7 @@ struct TokenDef {
     address[] primaryRoute;
     // Chainlink aggregator proxies of the alternate route.
     address[] alternateRoute;
-    // Issuer-action probe the RiskModule runs for this token (`UsdtFeeRateAndPaused` runs both reads).
+    // Issuer-action probe the LegacyRiskModule runs for this token (`UsdtFeeRateAndPaused` runs both reads).
     IssuerProbe issuerProbe;
     // Peg module (GSM or PSM) of the token that a backup swap route must avoid, or address(0).
     address pegModule;

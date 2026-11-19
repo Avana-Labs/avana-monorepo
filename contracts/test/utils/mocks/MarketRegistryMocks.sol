@@ -122,7 +122,7 @@ contract RegistryParameterStoreMock {
 }
 
 /// @title RegistryRiskModuleMock
-/// @notice The RiskModule calls of the MarketRegistry: the drift check (reverting on demand), the Hub-share check and
+/// @notice The LegacyRiskModule calls of the MarketRegistry: the drift check (reverting on demand), the Hub-share check and
 /// the expected collateral factor.
 contract RegistryRiskModuleMock {
     bool public driftReverts;

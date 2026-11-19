@@ -13,7 +13,7 @@ import {VmSafe} from "forge-std/Vm.sol";
 /// @notice The collateral supply step run through a real PositionProxy on the standard CDP Spoke of the real local
 /// Aave V4: a top-up of an indebted account below health factor 1 supplies through `execute` with no check of its own,
 /// and every call the proxy makes in the step goes to the target the Adapter named (the vault token and the Spoke),
-/// so no LPOracle, RiskModule, MarketRegistry or other state source is reached from the proxy.
+/// so no LPOracle, LegacyRiskModule, MarketRegistry or other state source is reached from the proxy.
 /// @dev The AaveAdapter is a pranked address (its contract comes later); the Adapter's own checks around the step
 /// (`ZeroAmount`, `BalanceDeltaMismatch`, `CollateralNotEnabled`) join this step with the AaveAdapter.
 contract PositionProxySupplyStepIntegrationTest is VaultTokenAaveV4Base {
@@ -57,7 +57,7 @@ contract PositionProxySupplyStepIntegrationTest is VaultTokenAaveV4Base {
     /// @notice A top-up of an indebted account below health factor 1 supplies through the proxy: the step checks no
     /// health factor, price state or pause state, the supplied shares rise by the units, and the proxy keeps no units
     /// and no allowance. Every call the proxy makes in the step is to the vault token or the Spoke the Adapter named;
-    /// the proxy calls no LPOracle (no `poke()`), no RiskModule and no MarketRegistry.
+    /// the proxy calls no LPOracle (no `poke()`), no LegacyRiskModule and no MarketRegistry.
     /// @dev Kills: a health-factor, price or registry check added to `execute`, or any call from the proxy to a
     /// contract other than its `target` (the account-access check fails).
     // TEST-032 verifies: REQ-PROXY-010, REQ-PROXY-011, REQ-PROXY-045, REQ-PROXY-078, INV-016

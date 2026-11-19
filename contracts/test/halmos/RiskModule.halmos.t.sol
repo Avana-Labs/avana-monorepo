@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RiskModuleDriftLogic} from "../../src/policy/risk-module/RiskModuleDriftLogic.sol";
-import {RiskModuleMath} from "../../src/policy/risk-module/RiskModuleMath.sol";
-import {RiskModuleImmutables} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {RiskModuleDriftLogic} from "../../src/legacy/risk-module/RiskModuleDriftLogic.sol";
+import {RiskModuleMath} from "../../src/legacy/risk-module/RiskModuleMath.sol";
+import {RiskModuleImmutables} from "../../src/legacy/risk-module/types/RiskModuleTypes.sol";
 import {DriftReason} from "../../src/types/MarketTypes.sol";
 import {RiskModuleMathHarness} from "../utils/harness/RiskModuleMathHarness.sol";
 import {Test} from "forge-std/Test.sol";
@@ -33,7 +33,7 @@ contract HalmosImplementationRegistry {
 }
 
 /// @title RiskModuleHalmosTest
-/// @notice Symbolic checks of the RiskModule's formulas and decision steps, exactly the internal functions the pledge
+/// @notice Symbolic checks of the LegacyRiskModule's formulas and decision steps, exactly the internal functions the pledge
 /// and health checks run: the minimum pledge and the rescue rule (PROP-062), the rescue-excluded health factor and its
 /// floor (PROP-067), and the stress-floor booking against the Hub `addCap` (PROP-030).
 /// @dev The checks call `RiskModuleMath` through a harness or directly as internal library code, so the code verified
@@ -42,7 +42,7 @@ contract HalmosImplementationRegistry {
 /// proves the formula's inequality (each such check names its model). The reads around them (accepted price, ParameterStore values, Spoke account data,
 /// Collateralization rescue units) are symbolic inputs, as the PROP rows allow. Inputs are bounded to the listing
 /// bounds (`L < 2^128`, `price8 < 2^64`, `d` 6 or 18, `minPledgeUsd <= 100,000e8`) so the nonlinear products stay
-/// tractable; the fuzz twins in `test/fuzz/RiskModule.fuzz.t.sol` cover the full ranges. The implementation binding of
+/// tractable; the fuzz twins in `test/fuzz/LegacyRiskModule.fuzz.t.sol` cover the full ranges. The implementation binding of
 /// the drift check (PROP-078) runs the real `RiskModuleDriftLogic` against a registry whose implementation status is
 /// symbolic.
 contract RiskModuleHalmosTest is Test {

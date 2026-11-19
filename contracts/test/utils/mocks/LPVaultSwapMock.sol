@@ -64,7 +64,7 @@ contract LPVaultSwapMock is ILPVaultSwapBase {
     uint32 public relIntegration;
     uint128 public relUnits;
     uint256[] internal _relMins;
-    /// @dev The committed-operator count the RiskModule reads (REQ-RISK liquidation halt); 0 halts liquidation.
+    /// @dev The committed-operator count the LegacyRiskModule reads (REQ-RISK liquidation halt); 0 halts liquidation.
     uint256 public activeKeeperCount = 1;
     /// @dev `LOCK.holder()` read right after both callbacks returned (REQ-LOCK-030: no inner callee releases it).
     address public holderAfterCallbacks;

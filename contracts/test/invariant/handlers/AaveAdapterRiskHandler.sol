@@ -46,7 +46,7 @@ struct RiskWorld {
 }
 
 /// @title AaveAdapterRiskHandler
-/// @notice Random changes of everything the reviewed RiskModule reads (the market's price state, its feed ages, the
+/// @notice Random changes of everything the reviewed LegacyRiskModule reads (the market's price state, its feed ages, the
 /// USDC DebtOracle, a live breaker condition (no pool depth), `Offboarding`, an Aave freeze of the vault-token reserve,
 /// a drift the DAO introduces), interleaved with borrows, withdrawals that leave debt and exits through the Adapter.
 /// The handler keeps its own copy of each condition; a borrow or a withdrawal with debt that completes while a
@@ -236,7 +236,7 @@ contract AaveAdapterRiskHandler is Test {
 
     // ─── The handler's copy of the gates ───
 
-    /// @dev Every condition the reviewed RiskModule applies to a withdrawal that leaves debt: the market Live and
+    /// @dev Every condition the reviewed LegacyRiskModule applies to a withdrawal that leaves debt: the market Live and
     /// borrowable, both feeds within their maximum age, the USDC DebtOracle Live and fresh, no breaker, no drift.
     function _withDebtClean() internal view returns (bool) {
         bool priceOk = priceState == PriceState.Live && priceBorrowAllowed && reportedAt <= block.timestamp

@@ -9,7 +9,7 @@ import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 /// @title IRiskModuleStatusLogic
 /// @notice The non-reverting account gate status.
 interface IRiskModuleStatusLogic is IRiskModuleLogic {
-    /// @notice Body of `IRiskModule.getAccountGateStatus`.
+    /// @notice Body of `ILegacyRiskModule.getAccountGateStatus`.
     function getAccountGateStatus(
         address proxy
     ) external view returns (AccountGateStatus memory status);

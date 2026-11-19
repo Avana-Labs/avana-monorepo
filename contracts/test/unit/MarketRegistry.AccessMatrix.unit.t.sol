@@ -12,7 +12,7 @@ import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol
 import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /// @notice Role and caller matrix over every external write of the MarketRegistry: each selector against each caller
-/// class (stranger, Emergency Guardian, Aave governance executor, RiskModule, governor), with the exact access error
+/// class (stranger, Emergency Guardian, Aave governance executor, LegacyRiskModule, governor), with the exact access error
 /// for every refused pair and no access error for every admitted pair.
 contract MarketRegistryAccessMatrixUnitTest is MarketRegistryFixture {
     /// @dev Access classes of the writes (REQ-MREG-004, REQ-MREG-028, REQ-CONFIG-080, REQ-CONFIG-081).

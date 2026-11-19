@@ -10,7 +10,7 @@ import {PledgeCharge} from "./types/RiskModuleTypes.sol";
 /// @title IRiskModulePledgeLogic
 /// @notice The pledge check, its preview, the restore amount and the remaining-record minimum.
 interface IRiskModulePledgeLogic is IRiskModuleLogic {
-    /// @notice Body of `IRiskModule.checkPledge`.
+    /// @notice Body of `ILegacyRiskModule.checkPledge`.
     function checkPledge(
         address depositor,
         address proxy,
@@ -22,19 +22,19 @@ interface IRiskModulePledgeLogic is IRiskModuleLogic {
         bool requireRescue
     ) external view returns (PledgeCharge memory charge);
 
-    /// @notice Body of `IRiskModule.previewPledge`.
+    /// @notice Body of `ILegacyRiskModule.previewPledge`.
     function previewPledge(
         address depositor,
         uint256 marketId,
         bytes32 positionKey
     ) external view returns (PledgePreview memory preview);
 
-    /// @notice Body of `IRiskModule.usdToRestore`.
+    /// @notice Body of `ILegacyRiskModule.usdToRestore`.
     function usdToRestore(
         address proxy
     ) external view returns (uint256 usd);
 
-    /// @notice Body of `IRiskModule.checkRemainingRecord`.
+    /// @notice Body of `ILegacyRiskModule.checkRemainingRecord`.
     function checkRemainingRecord(
         uint256 marketId,
         uint128 remainingUnits

@@ -21,7 +21,7 @@ import {
 } from "./MarketRegistryMocks.sol";
 
 /// @title RiskHubMock
-/// @notice The Aave V4 Hub reads of the MarketRegistry and the RiskModule, backed by settable storage.
+/// @notice The Aave V4 Hub reads of the MarketRegistry and the LegacyRiskModule, backed by settable storage.
 contract RiskHubMock is RegistryHubMock {
     // Spokes listed on a Hub asset.
     mapping(uint256 => mapping(address => bool)) public spokeListed;
@@ -131,7 +131,7 @@ contract RiskHubMock is RegistryHubMock {
 }
 
 /// @title RiskSpokeMock
-/// @notice The Aave V4 Spoke reads of the MarketRegistry and the RiskModule: reserves and per-account state.
+/// @notice The Aave V4 Spoke reads of the MarketRegistry and the LegacyRiskModule: reserves and per-account state.
 contract RiskSpokeMock is RegistrySpokeMock {
     uint256 public reserveCount;
     mapping(address => IAaveV4Spoke.UserAccountData) internal _account;
@@ -271,7 +271,7 @@ contract RiskTokenMock is RegistryTokenMock {
 }
 
 /// @title RiskStoreMock
-/// @notice The ParameterStore views of the MarketRegistry and the RiskModule, backed by settable storage.
+/// @notice The ParameterStore views of the MarketRegistry and the LegacyRiskModule, backed by settable storage.
 contract RiskStoreMock is RegistryParameterStoreMock {
     mapping(address => uint16) public tokenCollateralFactorBps;
     mapping(address => mapping(address => uint256)) public tokenUsdCap;
@@ -386,7 +386,7 @@ struct RiskPriceReport {
 }
 
 /// @title RiskLPOracleMock
-/// @notice An LPOracle for the MarketRegistry and the RiskModule: seed and binding, a settable price-state report, the
+/// @notice An LPOracle for the MarketRegistry and the LegacyRiskModule: seed and binding, a settable price-state report, the
 /// accepted price and a poke counter.
 contract RiskLPOracleMock {
     uint8 public decimals = 8;
@@ -510,7 +510,7 @@ contract RiskLPOracleMock {
 }
 
 /// @title RiskDebtOracleMock
-/// @notice A DebtOracle for the MarketRegistry and the RiskModule: identity, a settable report and a poke counter.
+/// @notice A DebtOracle for the MarketRegistry and the LegacyRiskModule: identity, a settable report and a poke counter.
 contract RiskDebtOracleMock is RegistryDebtOracleMock {
     uint256 public pokes;
     uint32 public borrowPriceMaxAge = 88_200;
@@ -556,7 +556,7 @@ contract RiskDebtOracleMock is RegistryDebtOracleMock {
 }
 
 /// @title RiskLPVaultMock
-/// @notice The AMM integration as the MarketRegistry and the RiskModule see it: binding, depth, owner and validation.
+/// @notice The AMM integration as the MarketRegistry and the LegacyRiskModule see it: binding, depth, owner and validation.
 contract RiskLPVaultMock is RegistryLPVaultMock {
     uint256 public depth = 2e13;
     bool public depthAvailable = true;
@@ -629,7 +629,7 @@ contract RiskLPVaultMock is RegistryLPVaultMock {
 }
 
 /// @title RiskCollateralizationMock
-/// @notice Collateralization views the RiskModule reads: rescue units, pool units, counters and record counts.
+/// @notice Collateralization views the LegacyRiskModule reads: rescue units, pool units, counters and record counts.
 contract RiskCollateralizationMock is RegistryCollateralizationMock {
     mapping(address => uint256) public rescueOf;
     mapping(address => uint256) public openRecords;

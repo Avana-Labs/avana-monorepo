@@ -15,7 +15,7 @@ struct PledgeCharge {
     uint128 rescueUnits;
 }
 
-/// @notice Implementation immutables of the RiskModule and of each of its logic contracts, all per chain.
+/// @notice Implementation immutables of the LegacyRiskModule and of each of its logic contracts, all per chain.
 struct RiskModuleImmutables {
     address marketRegistry;
     address parameterStore;
@@ -27,8 +27,8 @@ struct RiskModuleImmutables {
     address lpVaultSwap;
 }
 
-/// @notice The six immutable logic contracts the RiskModule calls for its check bodies.
-/// @dev The RiskModule constructor checks every `logicConfig()`.
+/// @notice The six immutable logic contracts the LegacyRiskModule calls for its check bodies.
+/// @dev The LegacyRiskModule constructor checks every `logicConfig()`.
 struct RiskModuleLogics {
     address drift;
     address breaker;
