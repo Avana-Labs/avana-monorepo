@@ -7,14 +7,14 @@ import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFi
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../legacy/ICollateralization.sol";
+import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
+import {ILegacyVaultToken} from "../../legacy/ILegacyVaultToken.sol";
 import {ILock} from "../../legacy/ILock.sol";
-import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {SettlementReport} from "../../types/PositionTypes.sol";
-import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {ILPVaultSwapLogic} from "./ILPVaultSwapLogic.sol";
 import {LPVaultSwapSettlement} from "./LPVaultSwapSettlement.sol";
 import {LPVaultSwapStorage} from "./LPVaultSwapStorage.sol";
@@ -96,7 +96,7 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         }
         c.m = _loadMarket(p.marketId);
         if (p.minAmounts.length != 0 && p.minAmounts.length != c.m.tokens.length) revert InvalidAmount();
-        if (!IVaultToken(c.m.vaultToken).isValidProxy(p.proxy)) revert UnknownProxy();
+        if (!ILegacyVaultToken(c.m.vaultToken).isValidProxy(p.proxy)) revert UnknownProxy();
         c.d = _loadDebtReserve(c.m.spoke, p.debtReserveId);
         _requireSharesEqualAssets(c.m.hub, c.m.hubAssetId);
         _checkCollateralPrice(c.m.lpOracle);
@@ -203,7 +203,7 @@ contract LPVaultSwapLiquidationLogic is LPVaultSwapSettlement, ILPVaultSwapLogic
         c.s = SettlementMath.effectiveSlippage(c.bNet, ps.getMarketParams(p.marketId).slippageAllowanceBps);
         // Only the leg prices are used; the decimals come from the market record.
         // forge-lint: disable-next-line(unused-return)
-        (uint256[] memory prices,) = ILPOracle(c.m.lpOracle).getTokenPrices();
+        (uint256[] memory prices,) = ILegacyLPOracle(c.m.lpOracle).getTokenPrices();
         l = LegArgs({
             marketId: p.marketId,
             asset: c.d.asset,

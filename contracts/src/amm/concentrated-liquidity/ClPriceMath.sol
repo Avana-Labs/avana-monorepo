@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {LegacyPriceMath} from "../../legacy/LegacyPriceMath.sol";
 import {LPPriceMath} from "../../oracle/LPPriceMath.sol";
 import {ClTickMath} from "./ClTickMath.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -17,7 +18,7 @@ library ClPriceMath {
     /// @notice Decades of headroom the pool's unit exponent leaves below its reference range.
     uint8 internal constant UNIT_EXP_HEADROOM = 2;
     /// @notice Largest reference exponent searched, so `k <= MAX_UNIT_EXP`.
-    uint8 internal constant MAX_REFERENCE_EXP = LPPriceMath.MAX_VAULT_DECIMALS + MAX_UNIT_EXP - UNIT_EXP_HEADROOM;
+    uint8 internal constant MAX_REFERENCE_EXP = LegacyPriceMath.MAX_VAULT_DECIMALS + MAX_UNIT_EXP - UNIT_EXP_HEADROOM;
 
     /// @notice The listing prices of a binding: the price vector, the token decimals and the oracle square-root price.
     struct Valuation {
@@ -49,10 +50,10 @@ library ClPriceMath {
     ) internal pure returns (bool found, uint8 k) {
         (int24 refLower, int24 refUpper) = referenceRange(v.sO, tickSpacing);
         uint8 e;
-        (found, e) = firstWorthOneDollar(v, refLower, refUpper, LPPriceMath.MIN_VAULT_DECIMALS, MAX_REFERENCE_EXP);
+        (found, e) = firstWorthOneDollar(v, refLower, refUpper, LegacyPriceMath.MIN_VAULT_DECIMALS, MAX_REFERENCE_EXP);
         // e <= MAX_REFERENCE_EXP = 34, so k = e + 2 - 18 <= MAX_UNIT_EXP = 18.
-        if (found && e + UNIT_EXP_HEADROOM > LPPriceMath.MAX_VAULT_DECIMALS) {
-            k = e + UNIT_EXP_HEADROOM - LPPriceMath.MAX_VAULT_DECIMALS;
+        if (found && e + UNIT_EXP_HEADROOM > LegacyPriceMath.MAX_VAULT_DECIMALS) {
+            k = e + UNIT_EXP_HEADROOM - LegacyPriceMath.MAX_VAULT_DECIMALS;
         }
     }
 
@@ -66,7 +67,7 @@ library ClPriceMath {
     ) internal pure returns (bool found, uint8 d) {
         uint8 e;
         (found, e) = firstWorthOneDollar(
-            v, tickLower, tickUpper, LPPriceMath.MIN_VAULT_DECIMALS + k, LPPriceMath.MAX_VAULT_DECIMALS + k
+            v, tickLower, tickUpper, LegacyPriceMath.MIN_VAULT_DECIMALS + k, LegacyPriceMath.MAX_VAULT_DECIMALS + k
         );
         if (found) d = e - k;
     }
@@ -85,8 +86,8 @@ library ClPriceMath {
         for (e = from; e <= to; ++e) {
             uint256[] memory a = new uint256[](2);
             (a[0], a[1]) = ClPriceMath.amountsForLiquidity(s, sa, sb, 10 ** e);
-            (bool valid, uint256 price8) = LPPriceMath.lpPrice(a, v.prices, v.decs);
-            if (valid && price8 >= LPPriceMath.PRICE_UNIT) return (true, e);
+            (bool valid, uint256 price8) = LegacyPriceMath.lpPrice(a, v.prices, v.decs);
+            if (valid && price8 >= LegacyPriceMath.PRICE_UNIT) return (true, e);
         }
         return (false, 0);
     }
@@ -141,12 +142,7 @@ library ClPriceMath {
         uint8 d0,
         uint8 d1
     ) internal pure returns (uint160) {
-        (uint256 raw, bool high) = _rawOracleSqrt(p0, p1, d0, d1);
-        if (high) return MAX_SQRT_RATIO - 1;
-        if (raw < MIN_SQRT_RATIO) return MIN_SQRT_RATIO;
-        // Not high, so raw < MAX_SQRT_RATIO < 2^160.
-        // forge-lint: disable-next-line(unsafe-typecast)
-        return uint160(raw);
+        return LPPriceMath.sqrtPriceX96(p0, p1, d0, d1);
     }
 
     /// @notice Whether `oracleSqrtPrice` moved the price to a bound.
@@ -156,7 +152,7 @@ library ClPriceMath {
         uint8 d0,
         uint8 d1
     ) internal pure returns (bool) {
-        (uint256 raw, bool high) = _rawOracleSqrt(p0, p1, d0, d1);
+        (uint256 raw, bool high) = LPPriceMath.rawSqrtPrice(p0, p1, d0, d1);
         return high || raw < MIN_SQRT_RATIO;
     }
 
@@ -231,21 +227,6 @@ library ClPriceMath {
         // The divisor is below 2^192 and non-zero here.
         liquidity = Math.mulDiv(window, type(uint160).max, uint256(secondsPerLiquidityDelta) << 32);
         return (Math.min(liquidity, type(uint128).max), true);
-    }
-
-    /// @dev Three branches by `num / den` so no `mulDiv` result exceeds 2^256; `den < 2^188`, so `den << 64` fits.
-    function _rawOracleSqrt(
-        uint256 p0,
-        uint256 p1,
-        uint8 d0,
-        uint8 d1
-    ) private pure returns (uint256 raw, bool high) {
-        uint256 num = p0 * 10 ** d1;
-        uint256 den = p1 * 10 ** d0;
-        if (num < den << 64) return (Math.sqrt(Math.mulDiv(num, Q192, den)), false);
-        if (num >> 128 >= den) return (0, true);
-        raw = Math.sqrt(Math.mulDiv(num, Q128, den)) << 32;
-        high = raw >= MAX_SQRT_RATIO;
     }
 
     /// @dev Token0 that `units` hold over `[x, y]`, floored; `(y - x) << 96` fits since `y - x < 2^160`.

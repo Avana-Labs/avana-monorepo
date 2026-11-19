@@ -5,10 +5,10 @@ pragma solidity 0.8.28;
 
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-/// @title IVaultToken
+/// @title ILegacyVaultToken
 /// @notice Collateral-only ERC-20 of one market; one base unit equals one position unit Collateralization credited.
 /// @dev Units move only between proxies, the Hub and LPVaultSwap. Assumes the reserve's `liquidationFee` is 0.
-interface IVaultToken is IERC20Metadata {
+interface ILegacyVaultToken is IERC20Metadata {
     event ProxyAdded(address indexed proxy);
 
     error OnlyAdapter();

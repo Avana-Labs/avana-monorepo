@@ -6,12 +6,12 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ChainlinkPrice} from "../../oracle/ChainlinkPrice.sol";
-import {ILPOracle} from "../../oracle/ILPOracle.sol";
+import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
+import {ILegacyVaultToken} from "../../legacy/ILegacyVaultToken.sol";
+import {LegacyChainlinkPrice} from "../../legacy/LegacyChainlinkPrice.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {Market} from "../../types/MarketTypes.sol";
-import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IPayoutEscrow} from "../payout-escrow/IPayoutEscrow.sol";
 import {ISettlementRoute} from "../settlement-routes/ISettlementRoute.sol";
 import {LPVaultSwapStorage} from "./LPVaultSwapStorage.sol";
@@ -61,8 +61,8 @@ abstract contract LPVaultSwapSettlement is LPVaultSwapStorage {
         m = IMarketRegistry(_MARKET_REGISTRY).getMarket(marketId);
         address vt = m.vaultToken;
         if (
-            vt == address(0) || IVaultToken(vt).hub() != m.hub || IVaultToken(vt).spoke() != m.spoke
-                || IVaultToken(vt).marketId() != marketId
+            vt == address(0) || ILegacyVaultToken(vt).hub() != m.hub || ILegacyVaultToken(vt).spoke() != m.spoke
+                || ILegacyVaultToken(vt).marketId() != marketId
         ) revert UnknownMarket();
     }
 
@@ -89,7 +89,7 @@ abstract contract LPVaultSwapSettlement is LPVaultSwapStorage {
     function _checkCollateralPrice(
         address lpOracle
     ) internal view {
-        if (!ILPOracle(lpOracle).getPriceStatus().liquidationFresh) revert StalePrice();
+        if (!ILegacyLPOracle(lpOracle).getPriceStatus().liquidationFresh) revert StalePrice();
     }
 
     function _checkDebtPrice(
@@ -98,7 +98,9 @@ abstract contract LPVaultSwapSettlement is LPVaultSwapStorage {
     ) internal view {
         if (def.fixedPrice) return;
         if (def.priceSource == address(0)) revert DebtPriceStale(reserveId);
-        if (!ChainlinkPrice.read(def.priceSource, _PARAMETER_STORE).liquidationFresh) revert DebtPriceStale(reserveId);
+        if (!LegacyChainlinkPrice.read(def.priceSource, _PARAMETER_STORE).liquidationFresh) {
+            revert DebtPriceStale(reserveId);
+        }
     }
 
     /// @dev The smaller of the AaveOracle price of the collateral reserve and the LPOracle's served price.
@@ -106,7 +108,7 @@ abstract contract LPVaultSwapSettlement is LPVaultSwapStorage {
         Market memory m
     ) internal view returns (uint256 price) {
         price = IAaveV4Oracle(IAaveV4Spoke(m.spoke).ORACLE()).getReservePrice(m.reserveId);
-        int256 lp = ILPOracle(m.lpOracle).latestAnswer();
+        int256 lp = ILegacyLPOracle(m.lpOracle).latestAnswer();
         if (lp <= 0) return 0;
         // lp > 0 is checked above (a non-positive answer is stale); the cast is of a positive int256.
         // forge-lint: disable-next-line(unsafe-typecast)

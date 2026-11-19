@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 
 import {RiskStatus} from "../../../src/amm/types/AmmTypes.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPOracle} from "../../../src/oracle/ILPOracle.sol";
+import {ILegacyLPOracle} from "../../../src/legacy/ILegacyLPOracle.sol";
 import {MarketDynamicCap} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {PriceState} from "../../../src/types/OracleTypes.sol";
 import {PledgeCounters} from "../../../src/types/PositionTypes.sol";
@@ -484,7 +484,7 @@ contract RiskLPOracleMock {
 
     /// @notice The stateless oracle's report: fresh to borrow while Live and allowed, to liquidate while Live or
     /// Drifting.
-    function getPriceStatus() external view returns (ILPOracle.PriceStatus memory s) {
+    function getPriceStatus() external view returns (ILegacyLPOracle.PriceStatus memory s) {
         s.answer = _pv.answer;
         s.updatedAt = uint64(block.timestamp);
         s.borrowFresh = _pv.state == PriceState.Live && _pv.borrowAllowed && _legsFresh();

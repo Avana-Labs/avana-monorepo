@@ -5,13 +5,13 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../../src/legacy/ICollateralization.sol";
+import {ILegacyVaultToken} from "../../../src/legacy/ILegacyVaultToken.sol";
 import {ILock} from "../../../src/legacy/ILock.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {DeleverageRequest} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IAaveAdapterBase} from "../../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {PositionProxy} from "../../../src/proxy/position-proxy/PositionProxy.sol";
 import {PositionRef} from "../../../src/types/PositionTypes.sol";
-import {IVaultToken} from "../../../src/vault-token/vault-token/IVaultToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -117,9 +117,9 @@ contract AaveAdapterMock is IAaveAdapterBase {
     ) external returns (uint256 recordId, uint128 credited) {
         Binding memory b = _binding[proxy];
         ILock(lock).acquire();
-        if (!IVaultToken(b.vaultToken).isValidProxy(proxy)) IVaultToken(b.vaultToken).addValidProxy(proxy);
+        if (!ILegacyVaultToken(b.vaultToken).isValidProxy(proxy)) ILegacyVaultToken(b.vaultToken).addValidProxy(proxy);
         (recordId, credited) = ICollateralization(collateralization).pledge(depositor, proxy, b.vaultToken, key, false);
-        IVaultToken(b.vaultToken).mint(proxy, credited);
+        ILegacyVaultToken(b.vaultToken).mint(proxy, credited);
         _exec(proxy, b.vaultToken, abi.encodeCall(IERC20.approve, (b.spoke, credited)));
         _exec(proxy, b.spoke, abi.encodeCall(IAaveV4Spoke.supply, (b.reserveId, credited, proxy)));
         _exec(proxy, b.spoke, abi.encodeCall(IAaveV4Spoke.setUsingAsCollateral, (b.reserveId, true, proxy)));
@@ -161,7 +161,7 @@ contract AaveAdapterMock is IAaveAdapterBase {
         if (units == 0) revert ZeroAmount();
         ++burnCalls;
         lastBurnUnits = units;
-        IVaultToken(vaultToken).burn(lpVaultSwap, units);
+        ILegacyVaultToken(vaultToken).burn(lpVaultSwap, units);
         emit SeizedUnitsBurned(marketId, vaultToken, units);
     }
 
@@ -209,7 +209,7 @@ contract AaveAdapterMock is IAaveAdapterBase {
         _session.released = true;
         Binding memory b = _binding[proxy];
         _exec(proxy, b.spoke, abi.encodeCall(IAaveV4Spoke.withdraw, (b.reserveId, units, proxy)));
-        IVaultToken(b.vaultToken).burn(proxy, units);
+        ILegacyVaultToken(b.vaultToken).burn(proxy, units);
         (amounts, closed) = ICollateralization(collateralization)
             .releaseForDeleverage(proxy, b.vaultToken, position.positionKey, units, minAmounts);
     }

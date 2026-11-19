@@ -32,8 +32,8 @@ import {
     GlobalParams,
     ParameterStoreLogics
 } from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {AvanaTest} from "../AvanaTest.sol";
+import {LegacyVaultTokenFactory as VaultTokenFactory} from "../legacy/LegacyVaultTokenFactory.sol";
 import {CallRecorder} from "../mocks/CallRecorder.sol";
 import {
     RegistryAaveOracleMock,

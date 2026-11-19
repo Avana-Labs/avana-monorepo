@@ -7,6 +7,7 @@ import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
 import {IClIntegration} from "../../src/legacy/IClIntegration.sol";
 import {ILegacyLPVault} from "../../src/legacy/ILegacyLPVault.sol";
+import {ILegacyVaultTokenFactory} from "../../src/legacy/ILegacyVaultTokenFactory.sol";
 import {DexHop, HopKind, RouteConfig} from "../../src/liquidation/settlement-routes/types/SettlementRouteTypes.sol";
 import {ILPOracle} from "../../src/oracle/ILPOracle.sol";
 import {LPOracle} from "../../src/oracle/LPOracle.sol";
@@ -25,7 +26,6 @@ import {
 } from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketDef} from "../../src/types/MarketTypes.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
-import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {IAccessManagerOps} from "./lib/AccessOperations.sol";
 import {AvanaAccess} from "./lib/AvanaAccess.sol";
 import {ChainInputs} from "./lib/DeployTypes.sol";
@@ -476,7 +476,7 @@ contract ListMarkets is ListingBase {
         uint256 n = _cfgCount(".listing.markets");
         starts = new uint256[](n);
         uint256 newMarkets;
-        IVaultTokenFactory f = IVaultTokenFactory(vm.parseJsonAddress(avanaJson, ".vaultTokenFactory"));
+        ILegacyVaultTokenFactory f = ILegacyVaultTokenFactory(vm.parseJsonAddress(avanaJson, ".vaultTokenFactory"));
         // Routes the config adds to listed markets come first: enabling a debt reserve on a Spoke requires every live
         // market of that Spoke to have its primary and backup routes into the asset (REQ-MREG-032).
         for (uint256 i = 0; i < n; ++i) {
@@ -724,7 +724,7 @@ contract ListMarkets is ListingBase {
     /// @notice The VaultTokenFactory market key of config market `i`: integration, pool (or v4 pool ID) and position
     /// shape.
     function _marketKeyOf(
-        IVaultTokenFactory f,
+        ILegacyVaultTokenFactory f,
         uint256 i
     ) private view returns (bytes32) {
         string memory key = _at("markets", i);
@@ -904,26 +904,26 @@ contract ListMarkets is ListingBase {
         revert(string.concat("no debt reserve for ", spokeLabel));
     }
 
-    /// @notice `MKT-019`: the market's stateless LPOracle, valuing its vault token from each token's primary Chainlink
-    /// route and the LPVault's composition.
+    /// @notice `MKT-019`: the market's stateless LPOracle, pricing one band unit from each token's primary Chainlink
+    /// route; the band and tokens are read from the LPVault's market. The listing steps are rewritten in step 9.
     function _deployLpOracle(
         Mkt memory m
     ) private {
         address[2] memory toks = [m.token0, m.token1];
-        ILPOracle.TokenRoute[] memory routes = new ILPOracle.TokenRoute[](2);
+        ILPOracle.TokenFeeds[2] memory routes;
         for (uint256 i = 0; i < 2; ++i) {
-            address[] memory primary = registry.getToken(toks[i]).primaryRoute;
-            routes[i] = ILPOracle.TokenRoute({
-                token: toks[i], isUsdStable: _bool(string.concat(_tokenKey(toks[i]), ".isUsdStable")), feeds: primary
+            routes[i] = ILPOracle.TokenFeeds({
+                feeds: registry.getToken(toks[i]).primaryRoute,
+                usdStable: _bool(string.concat(_tokenKey(toks[i]), ".isUsdStable"))
             });
         }
         ILPOracle.Params memory p = ILPOracle.Params({
+            lpVault: m.lpVault,
             marketId: m.marketId,
-            integration: m.lpVault,
-            parameterStore: address(store),
-            description: _str(string.concat(m.key, ".name")),
-            vaultDecimals: m.decimals,
-            routes: routes
+            unitDecimals: m.decimals,
+            token0: routes[0],
+            token1: routes[1],
+            description: _str(string.concat(m.key, ".name"))
         });
         vm.broadcast(deployerOf());
         m.lpOracle = _deploy(
@@ -1030,7 +1030,7 @@ contract ListMarkets is ListingBase {
     function _listMarket(
         Operation memory op,
         Mkt memory m,
-        IVaultTokenFactory f,
+        ILegacyVaultTokenFactory f,
         bool deployToken
     ) private returns (address[] memory routes) {
         string memory id = vm.toString(m.marketId);
@@ -1080,7 +1080,7 @@ contract ListMarkets is ListingBase {
         string memory id
     ) private pure returns (bytes memory) {
         return abi.encodeCall(
-            IVaultTokenFactory.deployVaultToken,
+            ILegacyVaultTokenFactory.deployVaultToken,
             (
                 m.integrationId,
                 m.pool,
@@ -1249,7 +1249,7 @@ contract ListMarkets is ListingBase {
 
     /// @notice `MKT-022`, `MKT-026`: every listed LPOracle poked (it must be Live), then `activateMarket` for each.
     function _activate() private view returns (Operation memory op) {
-        IVaultTokenFactory f = IVaultTokenFactory(vm.parseJsonAddress(avanaJson, ".vaultTokenFactory"));
+        ILegacyVaultTokenFactory f = ILegacyVaultTokenFactory(vm.parseJsonAddress(avanaJson, ".vaultTokenFactory"));
         uint256 n = _cfgCount(".listing.markets");
         op = _newOperation("listing-activate", n);
         // The config's markets that are listed and still Registered: each LPOracle poked Live, then `activateMarket`.

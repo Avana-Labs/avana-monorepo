@@ -12,7 +12,7 @@ pragma solidity 0.8.28;
 import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {IAaveV4ExtSload} from "../../interfaces/external/aave/IAaveV4ExtSload.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
-import {ILPOracle} from "../../oracle/ILPOracle.sol";
+import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {FeedDef} from "../parameter-store/types/ParameterStoreTypes.sol";
@@ -374,8 +374,8 @@ abstract contract MarketRegistryStorage is IMarketRegistryBase {
     function _oracleLive(
         address lpOracle
     ) internal view returns (bool) {
-        (bool ok, bytes memory ret) = lpOracle.staticcall(abi.encodeCall(ILPOracle.getPriceStatus, ()));
+        (bool ok, bytes memory ret) = lpOracle.staticcall(abi.encodeCall(ILegacyLPOracle.getPriceStatus, ()));
         if (!ok || ret.length != 128) return false;
-        return abi.decode(ret, (ILPOracle.PriceStatus)).liquidationFresh;
+        return abi.decode(ret, (ILegacyLPOracle.PriceStatus)).liquidationFresh;
     }
 }

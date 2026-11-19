@@ -27,7 +27,7 @@ import {
 import {PositionProxy} from "../../../src/proxy/position-proxy/PositionProxy.sol";
 import {MarketDef} from "../../../src/types/MarketTypes.sol";
 import {PledgeCounters, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
-import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
+import {LegacyVaultTokenFactory as VaultTokenFactory} from "../legacy/LegacyVaultTokenFactory.sol";
 import {RegistryAaveOracleMock, RegistrySpokeImplMock} from "../mocks/MarketRegistryAaveMocks.sol";
 import {
     RegistryAvanaFirstLossReserveMock,

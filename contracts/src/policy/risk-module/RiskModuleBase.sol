@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPOracle} from "../../oracle/ILPOracle.sol";
+import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
@@ -86,7 +86,7 @@ abstract contract RiskModuleBase is IRiskModuleErrors {
     function _served(
         address lpOracle
     ) internal view returns (uint256 price8) {
-        int256 a = ILPOracle(lpOracle).latestAnswer();
+        int256 a = ILegacyLPOracle(lpOracle).latestAnswer();
         // `latestAnswer` is at least 1 in every state; a non-positive value reads as 1.
         // forge-lint: disable-next-line(unsafe-typecast)
         price8 = a > 0 ? uint256(a) : 1;

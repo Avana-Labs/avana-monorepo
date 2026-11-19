@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
+import {ILegacyVaultTokenFactory} from "../../src/legacy/ILegacyVaultTokenFactory.sol";
 import {IMarketRegistryBase} from "../../src/policy/market-registry/IMarketRegistryBase.sol";
 import {
     DebtReserveDef,
@@ -13,7 +14,6 @@ import {
 } from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketDef} from "../../src/types/MarketTypes.sol";
 import {PositionShape, ShapeKind} from "../../src/types/PositionTypes.sol";
-import {IVaultTokenFactory} from "../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {MarketRegistryFixture} from "../utils/fixtures/MarketRegistryFixture.sol";
 import {RegistryAaveOracleMock, RegistryHubMock, RegistrySpokeMock} from "../utils/mocks/MarketRegistryAaveMocks.sol";
 import {RegistryAvanaFirstLossReserveMock, RegistryLPOracleMock} from "../utils/mocks/MarketRegistryMocks.sol";
@@ -152,7 +152,7 @@ contract MarketRegistrySpecExamplesUnitTest is MarketRegistryFixture {
         // A second token for the first Spoke and the same key is refused at the factory.
         RegistryLPOracleMock o3 = new RegistryLPOracleMock(next + 1, address(lpVault));
         vm.prank(governor);
-        vm.expectRevert(IVaultTokenFactory.TokenExistsForMarket.selector);
+        vm.expectRevert(ILegacyVaultTokenFactory.TokenExistsForMarket.selector);
         factory.deployVaultToken(
             V3, pool, bytes32(0), _shape(), address(hub), address(spoke), next + 1, address(o3), 18, "Avana 3", "av3"
         );

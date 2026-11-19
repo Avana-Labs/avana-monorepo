@@ -23,8 +23,8 @@ import {
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketDef} from "../../../src/types/MarketTypes.sol";
 import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
-import {VaultTokenFactory} from "../../../src/vault-token/vault-token-factory/VaultTokenFactory.sol";
 import {AvanaTest} from "../AvanaTest.sol";
+import {LegacyVaultTokenFactory as VaultTokenFactory} from "../legacy/LegacyVaultTokenFactory.sol";
 import {CallRecorder} from "../mocks/CallRecorder.sol";
 import {
     RegistryAaveOracleMock,

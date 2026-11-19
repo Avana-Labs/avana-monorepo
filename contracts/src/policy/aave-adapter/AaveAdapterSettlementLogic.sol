@@ -5,10 +5,10 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../legacy/ICollateralization.sol";
+import {ILegacyVaultToken} from "../../legacy/ILegacyVaultToken.sol";
+import {ILegacyVaultTokenFactory} from "../../legacy/ILegacyVaultTokenFactory.sol";
 import {ILock} from "../../legacy/ILock.sol";
 import {PositionRef} from "../../types/PositionTypes.sol";
-import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
-import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
@@ -40,11 +40,11 @@ contract AaveAdapterSettlementLogic is AaveAdapterSteps, IAaveAdapterLogic {
         _onlyDelegated();
         if (msg.sender != _LP_VAULT_SWAP || ILock(_LOCK).holder() != _LP_VAULT_SWAP) revert NotLPVaultSwap();
         if (
-            !IVaultTokenFactory(_VAULT_TOKEN_FACTORY).isVaultToken(vaultToken)
-                || IVaultToken(vaultToken).marketId() != marketId
+            !ILegacyVaultTokenFactory(_VAULT_TOKEN_FACTORY).isVaultToken(vaultToken)
+                || ILegacyVaultToken(vaultToken).marketId() != marketId
         ) revert UnknownMarket(marketId);
         if (units == 0) revert ZeroAmount();
-        IVaultToken(vaultToken).burn(_LP_VAULT_SWAP, units);
+        ILegacyVaultToken(vaultToken).burn(_LP_VAULT_SWAP, units);
         emit SeizedUnitsBurned(marketId, vaultToken, units);
     }
 
@@ -101,7 +101,7 @@ contract AaveAdapterSettlementLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (
             sProxy == address(0) || sProxy != proxy || sKey != position.positionKey || sUnits != units
                 || sMins != keccak256(abi.encode(minAmounts)) || steps != STEP_REPAID
-                || IVaultToken(vaultToken).integrationId() != position.integrationId
+                || ILegacyVaultToken(vaultToken).integrationId() != position.integrationId
         ) revert NoDeleverageSession();
     }
 }

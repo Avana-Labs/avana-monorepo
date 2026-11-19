@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPOracle} from "../../../src/oracle/ILPOracle.sol";
+import {ILegacyLPOracle} from "../../../src/legacy/ILegacyLPOracle.sol";
 import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {FeedDef} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
@@ -309,7 +309,7 @@ contract LVSLPOracleMock {
     }
 
     /// @notice Fresh to liquidate while Live or Drifting, not paused, and every leg within the store's age.
-    function getPriceStatus() external view returns (ILPOracle.PriceStatus memory s) {
+    function getPriceStatus() external view returns (ILegacyLPOracle.PriceStatus memory s) {
         s.answer = latestAnswer;
         s.updatedAt = uint64(block.timestamp);
         bool ok = (state == PriceState.Live || state == PriceState.Drifting) && !liquidationPaused

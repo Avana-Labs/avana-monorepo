@@ -3,16 +3,17 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {VaultTokenBindings} from "../../types/MarketTypes.sol";
-import {IVaultToken} from "./IVaultToken.sol";
+import {ILegacyVaultToken} from "../../../src/legacy/ILegacyVaultToken.sol";
+import {VaultTokenBindings} from "../../../src/types/MarketTypes.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-/// @title VaultToken
+/// @title LegacyVaultToken
 /// @notice Collateral-only ERC-20 of one market. Only the AaveAdapter mints, burns and registers proxies.
-/// @dev Not upgradeable, no owner. `_update` enforces the transfer path rule on every balance change.
-contract VaultToken is ERC20, IVaultToken {
+/// @dev Test stand-in for the pre-refactor token, kept so the legacy MarketRegistry and RiskModule tests run until
+/// step 4 replaces them. Not upgradeable, no owner. `_update` enforces the transfer path rule on every balance change.
+contract LegacyVaultToken is ERC20, ILegacyVaultToken {
     uint8 private constant MIN_DECIMALS = 6;
     uint8 private constant MAX_DECIMALS = 18;
 
@@ -29,7 +30,7 @@ contract VaultToken is ERC20, IVaultToken {
     address private immutable COLLATERALIZATION;
     uint8 private immutable DECIMALS;
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     mapping(address account => bool valid) public override isValidProxy;
 
     constructor(
@@ -60,7 +61,7 @@ contract VaultToken is ERC20, IVaultToken {
         _;
     }
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     function mint(
         address to,
         uint256 amount
@@ -69,7 +70,7 @@ contract VaultToken is ERC20, IVaultToken {
         _mint(to, amount);
     }
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     function burn(
         address from,
         uint256 amount
@@ -78,7 +79,7 @@ contract VaultToken is ERC20, IVaultToken {
         _burn(from, amount);
     }
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     function addValidProxy(
         address proxy
     ) external override onlyAdapter {
@@ -116,14 +117,14 @@ contract VaultToken is ERC20, IVaultToken {
         return DECIMALS;
     }
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     function isAllowedRecipient(
         address account
     ) external view override returns (bool allowed) {
         allowed = account == HUB || account == LP_VAULT_SWAP || isValidProxy[account];
     }
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     function isAllowedTransfer(
         address from,
         address to
@@ -131,52 +132,52 @@ contract VaultToken is ERC20, IVaultToken {
         allowed = (to == HUB && isValidProxy[from]) || (from == HUB && (isValidProxy[to] || to == LP_VAULT_SWAP));
     }
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     function marketKey() external view override returns (bytes32 key) {
         key = MARKET_KEY;
     }
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     function integrationId() external view override returns (uint32 id) {
         id = INTEGRATION_ID;
     }
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     function integration() external view override returns (address lpVault) {
         lpVault = INTEGRATION;
     }
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     function hub() external view override returns (address hubAddress) {
         hubAddress = HUB;
     }
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     function spoke() external view override returns (address spokeAddress) {
         spokeAddress = SPOKE;
     }
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     function marketId() external view override returns (uint256 id) {
         id = MARKET_ID;
     }
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     function lpOracle() external view override returns (address oracle) {
         oracle = LP_ORACLE;
     }
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     function adapter() external view override returns (address adapterAddress) {
         adapterAddress = ADAPTER;
     }
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     function lpVaultSwap() external view override returns (address lpVaultSwapAddress) {
         lpVaultSwapAddress = LP_VAULT_SWAP;
     }
 
-    /// @inheritdoc IVaultToken
+    /// @inheritdoc ILegacyVaultToken
     function collateralization() external view override returns (address collateralizationAddress) {
         collateralizationAddress = COLLATERALIZATION;
     }

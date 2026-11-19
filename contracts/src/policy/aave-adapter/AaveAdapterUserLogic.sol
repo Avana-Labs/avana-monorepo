@@ -6,11 +6,11 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../legacy/ICollateralization.sol";
+import {ILegacyVaultToken} from "../../legacy/ILegacyVaultToken.sol";
+import {ILegacyVaultTokenFactory} from "../../legacy/ILegacyVaultTokenFactory.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {PositionRef} from "../../types/PositionTypes.sol";
-import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
-import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {DebtReserveDef} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModule} from "../risk-module/IRiskModule.sol";
@@ -70,7 +70,7 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         uint256 reserveId,
         bytes32 positionKey
     ) private returns (uint256 recordId, uint128 credited) {
-        IVaultToken vt = IVaultToken(m.vaultToken);
+        ILegacyVaultToken vt = ILegacyVaultToken(m.vaultToken);
         if (!vt.isValidProxy(proxy)) vt.addValidProxy(proxy);
         int256 gapBefore = _gap(m.vaultToken);
         (recordId, credited) =
@@ -87,9 +87,9 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
         m = IMarketRegistry(_MARKET_REGISTRY).getMarket(marketId);
         address vt = m.vaultToken;
         if (
-            vt == address(0) || !IVaultTokenFactory(_VAULT_TOKEN_FACTORY).isVaultToken(vt)
-                || IVaultToken(vt).marketId() != marketId || IVaultToken(vt).spoke() != m.spoke
-                || IVaultToken(vt).hub() != m.hub
+            vt == address(0) || !ILegacyVaultTokenFactory(_VAULT_TOKEN_FACTORY).isVaultToken(vt)
+                || ILegacyVaultToken(vt).marketId() != marketId || ILegacyVaultToken(vt).spoke() != m.spoke
+                || ILegacyVaultToken(vt).hub() != m.hub
         ) revert UnknownMarket(marketId);
     }
 
@@ -154,7 +154,7 @@ contract AaveAdapterUserLogic is AaveAdapterSteps, IAaveAdapterLogic {
             || receiver == _PROXY_MANAGER;
         if (!refused) {
             address reg = _MARKET_REGISTRY;
-            refused = IVaultTokenFactory(_VAULT_TOKEN_FACTORY).integrationIdOf(receiver) != 0
+            refused = ILegacyVaultTokenFactory(_VAULT_TOKEN_FACTORY).integrationIdOf(receiver) != 0
                 || receiver == IMarketRegistry(reg).PAYOUT_ESCROW() || receiver == IMarketRegistry(reg).flashSource()
                 || IMarketRegistry(reg).isRecordedHub(receiver) || IMarketRegistry(reg).getSpoke(receiver).approved
                 || IAaveV4Hub(def.fundingHub).isSpokeListed(def.hubAssetId, receiver)

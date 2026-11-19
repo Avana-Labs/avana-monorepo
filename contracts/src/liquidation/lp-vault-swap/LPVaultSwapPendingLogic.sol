@@ -6,8 +6,8 @@ pragma solidity 0.8.28;
 import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {ICollateralization} from "../../legacy/ICollateralization.sol";
+import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
 import {ILock} from "../../legacy/ILock.sol";
-import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
@@ -144,7 +144,7 @@ contract LPVaultSwapPendingLogic is LPVaultSwapSettlement, ILPVaultSwapLogic {
         IParameterStore ps = IParameterStore(_PARAMETER_STORE);
         // Only the leg prices are used; the decimals come from the market record.
         // forge-lint: disable-next-line(unused-return)
-        (uint256[] memory prices,) = ILPOracle(c.m.lpOracle).getTokenPrices();
+        (uint256[] memory prices,) = ILegacyLPOracle(c.m.lpOracle).getTokenPrices();
         l = LegArgs({
             marketId: marketId,
             asset: c.d.asset,

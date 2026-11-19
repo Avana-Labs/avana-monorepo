@@ -3,14 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PoolKeying} from "../../amm/types/AmmTypes.sol";
-import {VaultTokenBindings} from "../../types/MarketTypes.sol";
-import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
+import {PoolKeying} from "../amm/types/AmmTypes.sol";
+import {VaultTokenBindings} from "../types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../types/PositionTypes.sol";
 
-/// @title IVaultTokenFactory
+/// @title ILegacyVaultTokenFactory
 /// @notice Registry of AMM integrations and vault tokens; one vault token per (CDP Spoke, market key), via CREATE3.
 /// @dev Both registries are append-only; only the AccessManager's governance role writes them.
-interface IVaultTokenFactory {
+interface ILegacyVaultTokenFactory {
     event IntegrationRegistered(
         uint32 indexed integrationId,
         address indexed lpVault,

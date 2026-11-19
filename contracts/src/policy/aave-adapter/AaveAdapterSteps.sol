@@ -6,8 +6,8 @@ pragma solidity 0.8.28;
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../legacy/ICollateralization.sol";
+import {ILegacyVaultToken} from "../../legacy/ILegacyVaultToken.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
-import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {AdapterAccount} from "./types/AaveAdapterTypes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -38,7 +38,7 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         address vaultToken,
         uint32 integrationId
     ) internal view {
-        if (IVaultToken(vaultToken).integrationId() != integrationId) {
+        if (ILegacyVaultToken(vaultToken).integrationId() != integrationId) {
             revert IntegrationMismatch(marketId, integrationId);
         }
     }
@@ -46,9 +46,9 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
     function _reserveIdOf(
         address vaultToken
     ) internal view returns (uint256 reserveId) {
-        address hub = IVaultToken(vaultToken).hub();
-        reserveId =
-            IAaveV4Spoke(IVaultToken(vaultToken).spoke()).getReserveId(hub, IAaveV4Hub(hub).getAssetId(vaultToken));
+        address hub = ILegacyVaultToken(vaultToken).hub();
+        reserveId = IAaveV4Spoke(ILegacyVaultToken(vaultToken).spoke())
+            .getReserveId(hub, IAaveV4Hub(hub).getAssetId(vaultToken));
     }
 
     function _borrowCount(
@@ -62,7 +62,7 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         address vaultToken
     ) internal view returns (uint256 supply, uint256 credited, uint256 pending) {
         ICollateralization coll = ICollateralization(_COLLATERALIZATION);
-        supply = IVaultToken(vaultToken).totalSupply();
+        supply = ILegacyVaultToken(vaultToken).totalSupply();
         credited = coll.getTotalCredited(vaultToken);
         pending = coll.getPending(vaultToken).units;
     }
@@ -162,7 +162,7 @@ abstract contract AaveAdapterSteps is AaveAdapterStorage {
         uint256 balanceAfter = IERC20(vaultToken).balanceOf(proxy);
         uint256 received = balanceAfter > balanceBefore ? balanceAfter - balanceBefore : 0;
         if (received != units) revert UnitsMismatch(units, received);
-        IVaultToken(vaultToken).burn(proxy, units);
+        ILegacyVaultToken(vaultToken).burn(proxy, units);
     }
 
     function _cleanup(

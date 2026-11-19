@@ -15,13 +15,13 @@ pragma solidity 0.8.28;
 import {IntegrationCapabilities, PoolKeying} from "../../amm/types/AmmTypes.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAggregatorV3} from "../../interfaces/external/chainlink/IAggregatorV3.sol";
+import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
 import {ILegacyLPVault} from "../../legacy/ILegacyLPVault.sol";
-import {ILPOracle} from "../../oracle/ILPOracle.sol";
+import {ILegacyVaultToken} from "../../legacy/ILegacyVaultToken.sol";
+import {ILegacyVaultTokenFactory} from "../../legacy/ILegacyVaultTokenFactory.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {Market, MarketDef} from "../../types/MarketTypes.sol";
 import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
-import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
-import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
@@ -60,11 +60,11 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         Layout storage l = _s();
         if (
             def.vaultToken == address(0)
-                || IVaultTokenFactory(_VAULT_TOKEN_FACTORY).tokenOf(def.spoke, key) != def.vaultToken
+                || ILegacyVaultTokenFactory(_VAULT_TOKEN_FACTORY).tokenOf(def.spoke, key) != def.vaultToken
         ) {
             revert VaultTokenMismatch();
         }
-        marketId = IVaultToken(def.vaultToken).marketId();
+        marketId = ILegacyVaultToken(def.vaultToken).marketId();
         if (marketId == l.marketCount + 1) return (marketId, false);
         if (
             marketId == 0 || marketId > l.marketCount || l.markets[marketId].status != MarketStatus.Cancelled
@@ -80,7 +80,7 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         address lpVault,
         uint8 unitDecimals
     ) internal view {
-        IVaultToken t = IVaultToken(def.vaultToken);
+        ILegacyVaultToken t = ILegacyVaultToken(def.vaultToken);
         if (
             t.marketKey() != key || t.integrationId() != def.integrationId || t.integration() != lpVault
                 || t.hub() != def.hub || t.spoke() != def.spoke || t.marketId() != marketId
@@ -142,7 +142,7 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         uint256 marketId,
         address lpVault
     ) internal view {
-        ILPOracle o = ILPOracle(lpOracle);
+        ILegacyLPOracle o = ILegacyLPOracle(lpOracle);
         if (lpOracle == address(0) || o.decimals() != _ORACLE_DECIMALS || o.latestAnswer() <= 0) {
             revert ListingCheckFailed("lpOracle");
         }
@@ -264,12 +264,13 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         Layout storage l = _s();
         SpokeDef storage sp = l.spokes[def.spoke];
         if (!sp.approved || sp.hub != def.hub) revert InvalidSpoke(def.spoke);
-        lpVault = IVaultTokenFactory(_VAULT_TOKEN_FACTORY).lpVaultOf(def.integrationId);
+        lpVault = ILegacyVaultTokenFactory(_VAULT_TOKEN_FACTORY).lpVaultOf(def.integrationId);
         if (sp.integrationId != def.integrationId || lpVault == address(0)) {
             revert IMarketRegistry.InvalidIntegration(def.integrationId);
         }
         _checkShape(lpVault, def);
-        key = IVaultTokenFactory(_VAULT_TOKEN_FACTORY).marketKeyOf(def.integrationId, def.pool, def.poolId, def.shape);
+        key = ILegacyVaultTokenFactory(_VAULT_TOKEN_FACTORY)
+            .marketKeyOf(def.integrationId, def.pool, def.poolId, def.shape);
         if (
             !_keyFree(l.marketOfKey[key]) || !_keyFree(l.marketOfVaultToken[def.vaultToken])
                 || !_keyFree(l.marketOfLpOracle[def.lpOracle])

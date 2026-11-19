@@ -3,22 +3,24 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {PoolKeying} from "../../amm/types/AmmTypes.sol";
-import {ICollateralization} from "../../legacy/ICollateralization.sol";
-import {ILegacyLPVault} from "../../legacy/ILegacyLPVault.sol";
-import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
-import {VaultTokenBindings} from "../../types/MarketTypes.sol";
-import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
-import {IVaultToken} from "../vault-token/IVaultToken.sol";
-import {VaultToken} from "../vault-token/VaultToken.sol";
-import {IVaultTokenFactory} from "./IVaultTokenFactory.sol";
+import {PoolKeying} from "../../../src/amm/types/AmmTypes.sol";
+import {ICollateralization} from "../../../src/legacy/ICollateralization.sol";
+import {ILegacyLPVault} from "../../../src/legacy/ILegacyLPVault.sol";
+import {ILegacyVaultToken} from "../../../src/legacy/ILegacyVaultToken.sol";
+import {ILegacyVaultTokenFactory} from "../../../src/legacy/ILegacyVaultTokenFactory.sol";
+import {RouteMath} from "../../../src/liquidation/settlement-routes/RouteMath.sol";
+import {VaultTokenBindings} from "../../../src/types/MarketTypes.sol";
+import {PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
+import {LegacyVaultToken} from "./LegacyVaultToken.sol";
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {CREATE3} from "solady/utils/CREATE3.sol";
 
-/// @title VaultTokenFactory
+/// @title LegacyVaultTokenFactory
 /// @notice Append-only registry of AMM integrations and vault tokens; the only deployer of vault tokens (CREATE3).
-contract VaultTokenFactory is IVaultTokenFactory, AccessManaged {
+/// @dev Test stand-in for the pre-refactor factory, kept so the legacy MarketRegistry and RiskModule tests run until
+/// step 4 folds vault-token deployment into the RiskModule.
+contract LegacyVaultTokenFactory is ILegacyVaultTokenFactory, AccessManaged {
     uint8 private constant MIN_DECIMALS = 6;
     uint8 private constant MAX_DECIMALS = 18;
     uint256 private constant MARKET_ID_LIMIT = 1 << 32;
@@ -55,7 +57,7 @@ contract VaultTokenFactory is IVaultTokenFactory, AccessManaged {
                 || authority == address(0) || marketRegistry == address(0)
         ) revert ZeroAddress();
         if (adapter == lpVaultSwap || adapter == collateralization || lpVaultSwap == collateralization) {
-            revert IVaultToken.InvalidBinding();
+            revert ILegacyVaultToken.InvalidBinding();
         }
         _ADAPTER = adapter;
         _LP_VAULT_SWAP = lpVaultSwap;
@@ -63,7 +65,7 @@ contract VaultTokenFactory is IVaultTokenFactory, AccessManaged {
         _MARKET_REGISTRY = marketRegistry;
     }
 
-    /// @inheritdoc IVaultTokenFactory
+    /// @inheritdoc ILegacyVaultTokenFactory
     /// @dev A getter that reverts, returns a malformed answer or has no code fails closed.
     function registerIntegration(
         uint32 integrationId,
@@ -85,7 +87,7 @@ contract VaultTokenFactory is IVaultTokenFactory, AccessManaged {
         emit IntegrationRegistered(integrationId, lpVault, ammProtocol, keying, kind);
     }
 
-    /// @inheritdoc IVaultTokenFactory
+    /// @inheritdoc ILegacyVaultTokenFactory
     /// @dev `public` with `name` and `symbol` in memory: the calldata decoder of eleven parameters overflows the stack.
     function deployVaultToken(
         uint32 integrationId,
@@ -112,7 +114,7 @@ contract VaultTokenFactory is IVaultTokenFactory, AccessManaged {
         vaultToken = _deployToken(b, pool, poolId, shape);
     }
 
-    /// @inheritdoc IVaultTokenFactory
+    /// @inheritdoc ILegacyVaultTokenFactory
     function marketKeyOf(
         uint32 integrationId,
         address pool,
@@ -122,7 +124,7 @@ contract VaultTokenFactory is IVaultTokenFactory, AccessManaged {
         marketKey = _marketKey(integrationId, pool, poolId, shape);
     }
 
-    /// @inheritdoc IVaultTokenFactory
+    /// @inheritdoc ILegacyVaultTokenFactory
     function tokenOf(
         address spoke,
         bytes32 marketKey
@@ -130,28 +132,28 @@ contract VaultTokenFactory is IVaultTokenFactory, AccessManaged {
         vaultToken = _tokenOf[spoke][marketKey];
     }
 
-    /// @inheritdoc IVaultTokenFactory
+    /// @inheritdoc ILegacyVaultTokenFactory
     function isVaultToken(
         address vaultToken
     ) external view override returns (bool deployed) {
         deployed = _isVaultToken[vaultToken];
     }
 
-    /// @inheritdoc IVaultTokenFactory
+    /// @inheritdoc ILegacyVaultTokenFactory
     function lpVaultOf(
         uint32 integrationId
     ) external view override returns (address lpVault) {
         lpVault = _lpVaultOf[integrationId];
     }
 
-    /// @inheritdoc IVaultTokenFactory
+    /// @inheritdoc ILegacyVaultTokenFactory
     function integrationIdOf(
         address lpVault
     ) external view override returns (uint32 integrationId) {
         integrationId = _integrationIdOf[lpVault];
     }
 
-    /// @inheritdoc IVaultTokenFactory
+    /// @inheritdoc ILegacyVaultTokenFactory
     function integrationKindOf(
         uint32 integrationId
     ) external view override returns (PoolKeying poolKeying, ShapeKind shapeKind) {
@@ -159,7 +161,7 @@ contract VaultTokenFactory is IVaultTokenFactory, AccessManaged {
         shapeKind = _shapeKindOf[integrationId];
     }
 
-    /// @inheritdoc IVaultTokenFactory
+    /// @inheritdoc ILegacyVaultTokenFactory
     function predictAddress(
         address spoke,
         bytes32 marketKey
@@ -167,22 +169,22 @@ contract VaultTokenFactory is IVaultTokenFactory, AccessManaged {
         predicted = _predict(_salt(spoke, marketKey));
     }
 
-    /// @inheritdoc IVaultTokenFactory
+    /// @inheritdoc ILegacyVaultTokenFactory
     function ADAPTER() external view override returns (address adapter) {
         adapter = _ADAPTER;
     }
 
-    /// @inheritdoc IVaultTokenFactory
+    /// @inheritdoc ILegacyVaultTokenFactory
     function LP_VAULT_SWAP() external view override returns (address lpVaultSwap) {
         lpVaultSwap = _LP_VAULT_SWAP;
     }
 
-    /// @inheritdoc IVaultTokenFactory
+    /// @inheritdoc ILegacyVaultTokenFactory
     function COLLATERALIZATION() external view override returns (address collateralization) {
         collateralization = _COLLATERALIZATION;
     }
 
-    /// @inheritdoc IVaultTokenFactory
+    /// @inheritdoc ILegacyVaultTokenFactory
     function MARKET_REGISTRY() external view override returns (address marketRegistry) {
         marketRegistry = _MARKET_REGISTRY;
     }
@@ -237,7 +239,7 @@ contract VaultTokenFactory is IVaultTokenFactory, AccessManaged {
         // forge-lint: disable-start(reentrancy-events)
         emit VaultTokenDeployed(predicted, b.marketId, b.spoke, b, pool, poolId, shape);
         // forge-lint: disable-end(reentrancy-events)
-        vaultToken = CREATE3.deployDeterministic(bytes.concat(type(VaultToken).creationCode, abi.encode(b)), salt);
+        vaultToken = CREATE3.deployDeterministic(bytes.concat(type(LegacyVaultToken).creationCode, abi.encode(b)), salt);
     }
 
     function _checkShape(
@@ -361,7 +363,7 @@ contract VaultTokenFactory is IVaultTokenFactory, AccessManaged {
         if (
             hub == spoke || hub == lpOracle || spoke == lpOracle || _isBoundElsewhere(hub, lpVault, token)
                 || _isBoundElsewhere(spoke, lpVault, token) || _isBoundElsewhere(lpOracle, lpVault, token)
-        ) revert IVaultToken.InvalidBinding();
+        ) revert ILegacyVaultToken.InvalidBinding();
     }
 
     function _isBoundElsewhere(
