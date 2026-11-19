@@ -21,7 +21,7 @@ const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as Address;
 const POLICY: FeePolicy = { minTipUrgent: GWEI, minTipScheduled: GWEI / 10n, minTipLazy: GWEI / 100n, lazyBaseFeeMax: 5n * GWEI, lazyMaxWaitSeconds: 3_600n };
 
 const plan = (jobClass: JobClass, n = 1): TxPlan => ({
-  job: jobClass === "urgent" ? "liquidation" : jobClass === "scheduled" ? "breakerPoke" : "settlePending",
+  job: jobClass === "urgent" ? "liquidation" : "settlePending",
   jobClass,
   subject: `1:${addr(0x100 + n)}`,
   to: addr(0xf1),

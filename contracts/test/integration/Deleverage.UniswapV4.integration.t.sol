@@ -63,5 +63,4 @@ contract DeleverageUniswapV4IntegrationTest is RealStackUniswapV4Journeys {
         assertEq(v4posm.ownerOf(uint256(k2)), alice, "the NFT returned to its depositor");
         _assertBacked(vtS);
     }
-
 }

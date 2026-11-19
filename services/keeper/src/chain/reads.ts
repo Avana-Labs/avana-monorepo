@@ -5,9 +5,9 @@
 // reader: a second ask for the same read at the same block returns the first answer, so the chain loop can issue the
 // pass's reads together up front (one batched eth_call through the client, chain/client.ts) and the jobs then read the
 // same values as before without another request. Simulations of state-changing calls are never batched with other
-// reads; the breaker pokes of all markets share one simulation (`breakerPokes`, which says why that is safe).
+// reads.
 
-import { type Address, type Hex, type PublicClient, decodeFunctionResult, encodeFunctionData, keccak256, multicall3Abi, parseAbi } from "viem";
+import { type Address, type Hex, type PublicClient, keccak256, parseAbi } from "viem";
 import {
   aaveV4SpokeAbi,
   collateralizationAbi,
@@ -15,7 +15,6 @@ import {
   lensAbi,
   lpVaultSwapAbi,
   marketRegistryAbi,
-  riskModuleAbi,
 } from "@avana/protocol/abis";
 import { MULTICALL3_ADDRESS } from "@avana/services-common/chains";
 
@@ -107,16 +106,15 @@ export function createChainReader(client: PublicClient, manifest: { avana: { len
     approvedSpokes: () =>
       once("approvedSpokes", () => client.readContract({ ...at, address: manifest.avana.marketRegistry.address, abi: marketRegistryAbi, functionName: "getSpokes" })),
 
-    /** Registry and freeze status of this instance's helper (REQ-SWAP-105, Q-404). */
+    /** Registry status of this instance's helper (REQ-SWAP-105, Q-404). */
     operatorStatus: (helper: Address) =>
       once(`operatorStatus:${helper}`, async () => {
         const swap = manifest.avana.lpVaultSwap.address;
-        const [approved, active, frozen] = await Promise.all([
+        const [approved, active] = await Promise.all([
           client.readContract({ ...at, address: swap, abi: lpVaultSwapAbi, functionName: "isApprovedKeeper", args: [helper] }),
           client.readContract({ ...at, address: swap, abi: lpVaultSwapAbi, functionName: "activeKeeperCount" }),
-          client.readContract({ ...at, address: lens, abi: lensAbi, functionName: "isFrozenAddress", args: [helper] }),
         ]);
-        return { approved, activeKeeperCount: active, frozen };
+        return { approved, activeKeeperCount: active };
       }),
 
     /** Flash capacity and premium the helper would pay for `amount` of `asset`. */
@@ -175,28 +173,6 @@ export function createChainReader(client: PublicClient, manifest: { avana: { len
      */
     callAt: (to: Address, data: Hex, from?: Address) => client.call({ ...at, to, data, account: from, batch: false }),
 
-    /**
-     * `RiskModule.pokeBreakers(marketId)` for each market at this block, simulated in one `eth_call` of Multicall3's
-     * aggregate3, in order: the raw return per market, null for an entry that reverted (the caller simulates that one
-     * alone, for its revert). Each entry sees the writes of the entries before it, which leaves its result unchanged:
-     * the earlier entries write only breach records, which the live conditions `pokeBreakers` returns do not read (the
-     * oracles are stateless). Memoized per block, like a view.
-     */
-    breakerPokes: (riskModule: Address, marketIds: readonly bigint[]): Promise<ReadonlyMap<bigint, Hex | null>> =>
-      once(`breakerPokes:${riskModule}:${marketIds.join(",")}`, async () => {
-        const out = new Map<bigint, Hex | null>();
-        if (marketIds.length === 0) return out;
-        const data = encodeFunctionData({
-          abi: multicall3Abi,
-          functionName: "aggregate3",
-          args: [marketIds.map((id) => ({ target: riskModule, allowFailure: true, callData: encodeFunctionData({ abi: riskModuleAbi, functionName: "pokeBreakers", args: [id] }) }))],
-        });
-        const { data: ret } = await client.call({ ...at, to: MULTICALL3_ADDRESS, data, batch: false });
-        if (!ret) return out;
-        const results = decodeFunctionResult({ abi: multicall3Abi, functionName: "aggregate3", data: ret });
-        marketIds.forEach((id, i) => out.set(id, results[i]?.success ? results[i]!.returnData : null));
-        return out;
-      }),
 
     async implementationOf(proxy: Address): Promise<Address> {
       const word = await client.getStorageAt({ ...at, address: proxy, slot: IMPLEMENTATION_SLOT });

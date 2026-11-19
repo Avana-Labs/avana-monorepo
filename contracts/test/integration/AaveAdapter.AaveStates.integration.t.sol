@@ -239,7 +239,6 @@ contract AaveAdapterAaveStatesIntegrationTest is RealStackFlows {
         _withdrawVia(carol, mA, kC, _credited(kC));
         assertEq(_ownerOf(kC), carol, "debt-free withdrawal");
     }
-
 }
 
 interface IWethDeficitView {

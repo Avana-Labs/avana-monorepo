@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { type Abi, type Address, encodeAbiParameters, encodeEventTopics, type Hex } from "viem";
-import { avanaTimelockAbi } from "@avana/protocol/abis";
+import { collateralizationAbi } from "@avana/protocol/abis";
 import type { ServiceManifest } from "@avana/services-common";
 import { AlertBook } from "../src/alertBook.ts";
 import { snapshotProbe } from "../src/confirm.ts";
@@ -23,15 +23,16 @@ import type { Notice } from "../src/types.ts";
 import { EMPTY_MANIFEST, fakeChain, fakeProvider, fixtureSnapshot, on } from "./fakeChain.ts";
 
 const TIMELOCK = "0x0000000000000000000000000000000000000071" as Address;
+const COLL = "0x0000000000000000000000000000000000000074" as Address;
 const SAFE = "0x00000000000000000000000000000000000005af" as Address;
-const manifest = { ...EMPTY_MANIFEST, avana: { ...EMPTY_MANIFEST.avana, timelock: { address: TIMELOCK }, riskModule: { address: "0x0000000000000000000000000000000000000073" }, collateralization: { address: "0x0000000000000000000000000000000000000074" }, lpVaultSwap: { address: "0x0000000000000000000000000000000000000075" }, aaveAdapter: { address: "0x0000000000000000000000000000000000000076" }, lpVaults: [] }, aave: { hubs: [], lendSpokes: [], borrowSpokes: [] } } as unknown as ServiceManifest;
+const manifest = { ...EMPTY_MANIFEST, avana: { ...EMPTY_MANIFEST.avana, riskModule: { address: "0x0000000000000000000000000000000000000073" }, collateralization: { address: COLL }, lpVaultSwap: { address: "0x0000000000000000000000000000000000000075" }, aaveAdapter: { address: "0x0000000000000000000000000000000000000076" }, lpVaults: [] }, aave: { hubs: [], lendSpokes: [], borrowSpokes: [] } } as unknown as ServiceManifest;
 
-function scheduled(block: bigint, n: number): RawLog {
-  const ev = (avanaTimelockAbi as Abi).find((e) => e.type === "event" && e.name === "CallScheduled") as Extract<Abi[number], { type: "event" }>;
-  const topics = encodeEventTopics({ abi: [ev], eventName: "CallScheduled", args: { id: `0x${"11".repeat(32)}`, index: 0n } } as never) as Hex[];
+function saturated(block: bigint, n: number): RawLog {
+  const ev = (collateralizationAbi as Abi).find((e) => e.type === "event" && e.name === "CounterSaturated") as Extract<Abi[number], { type: "event" }>;
+  const values: Record<string, unknown> = { counterKind: 1, hub: TIMELOCK, key: TIMELOCK, valueBefore: 5n, subtracted: 9n };
+  const topics = encodeEventTopics({ abi: [ev], eventName: "CounterSaturated", args: Object.fromEntries(ev.inputs.filter((i) => i.indexed).map((i) => [i.name!, values[i.name!]])) } as never) as Hex[];
   const plain = ev.inputs.filter((i) => !i.indexed);
-  const values: Record<string, unknown> = { target: TIMELOCK, value: 0n, data: "0x12345678", predecessor: `0x${"00".repeat(32)}`, delay: 1n };
-  return { address: TIMELOCK, topics, data: encodeAbiParameters(plain, plain.map((i) => values[i.name!])), blockNumber: block, transactionHash: `0x${n.toString(16).padStart(64, "0")}`, logIndex: 0 };
+  return { address: COLL, topics, data: encodeAbiParameters(plain, plain.map((i) => values[i.name!])), blockNumber: block, transactionHash: `0x${n.toString(16).padStart(64, "0")}`, logIndex: 0 };
 }
 
 function monitor() {
@@ -57,15 +58,15 @@ describe("restart through the state file", () => {
     expect((await runRound(chain, first.deps)).map((n) => n.alert.signal)).toEqual(["M-01"]);
     store.save(collect(first.parts, 1));
 
-    // Down for blocks 101..110: a call is scheduled at 105 and a Safe owner is swapped.
-    p.logs.push(scheduled(105n, 1));
+    // Down for blocks 101..110: a counter saturates at 105 and a Safe owner is swapped.
+    p.logs.push(saturated(105n, 1));
     owners = ["0xa", "0xc"];
     block = 110n;
 
     const second = monitor();
     apply(second.parts, store.load()!);
     const ns = await runRound(chain, second.deps);
-    expect(ns.map((n) => `${n.transition}:${n.alert.signal}`)).toEqual(["event:M-22", "event:M-23"]);
+    expect(ns.map((n) => `${n.transition}:${n.alert.signal}`)).toEqual(["event:M-21", "event:M-23"]);
     expect(second.deps.book.open().map((a) => a.signal)).toEqual(["M-01"]);
   });
 

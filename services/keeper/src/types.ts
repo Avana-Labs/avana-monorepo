@@ -7,7 +7,7 @@ import type { ChainConfig } from "./config.ts";
 import type { ChainReader } from "./chain/reads.ts";
 import type { Revert } from "./jobs/failureReasons.ts";
 
-export type JobKind = "liquidation" | "settlePending" | "breakerPoke" | "configPoke";
+export type JobKind = "liquidation" | "settlePending";
 
 /**
  * Fee class of a transaction, declared by its job (keeper DESIGN.md, Fees):
@@ -29,7 +29,6 @@ export type SkipReason =
   | "marketNotLiquidatable"
   | "priceTooOld"
   | "disagreementPause"
-  | "graceAboveThreshold"
   | "noPricedDebtReserve"
   | "previewGateFalse"
   | "nothingPending"

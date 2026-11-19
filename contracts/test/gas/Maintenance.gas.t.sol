@@ -75,5 +75,4 @@ contract MaintenanceGasTest is RealStackFlows, GasCalibration {
         vm.snapshotValue("Maintenance", "refreshDebtMark_clears", used);
         emit log_named_uint("refreshDebtMark (clears the mark)", used);
     }
-
 }

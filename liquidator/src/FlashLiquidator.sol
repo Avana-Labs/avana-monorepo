@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IParameterStore} from "avana/policy/parameter-store/IParameterStore.sol";
 import {FlashLiquidatorBase} from "./FlashLiquidatorBase.sol";
+import {IParameterStore} from "avana/policy/parameter-store/IParameterStore.sol";
 
 /// @title FlashLiquidator
 /// @notice The chain's public flash liquidation helper: anyone may call it, and it pulls funds only from its caller and

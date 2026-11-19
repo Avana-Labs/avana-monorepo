@@ -34,9 +34,6 @@ describe("marketGate", () => {
     disagreementPauseActive: false,
     disagreementExpired: false,
     now: 1_000n,
-    graceEndsAt: 0n,
-    graceHealthFactor: (95n * WAD) / 100n,
-    healthFactor: (99n * WAD) / 100n,
   };
 
   it("allows Live and Drifting, refuses Cached and Expired", () => {
@@ -50,15 +47,6 @@ describe("marketGate", () => {
     expect(marketGate({ ...live, disagreementPauseActive: true })).toBe("disagreementPause");
     expect(marketGate({ ...live, disagreementExpired: true })).toBe("disagreementPause");
   });
-
-  it("inside a grace window acts only below the grace health factor", () => {
-    const grace = { ...live, graceEndsAt: 1_001n };
-    expect(marketGate(grace)).toBe("graceAboveThreshold");
-    expect(marketGate({ ...grace, healthFactor: grace.graceHealthFactor })).toBe("graceAboveThreshold");
-    expect(marketGate({ ...grace, healthFactor: grace.graceHealthFactor - 1n })).toBeNull();
-    // The window has ended at `graceEndsAt` itself.
-    expect(marketGate({ ...grace, now: 1_001n })).toBeNull();
-  });
 });
 
 describe("previewGate", () => {
@@ -66,8 +54,6 @@ describe("previewGate", () => {
     aaveLiquidatable: true,
     pricesUsable: true,
     debtPriceFresh: true,
-    inGrace: false,
-    belowGraceHealthFactor: false,
     vaultTokenReservePaused: false,
     debtReservePaused: false,
     debtToCover: 1n,
@@ -80,8 +66,6 @@ describe("previewGate", () => {
   it("names the first failing gate", () => {
     expect(previewGate({ ...ok, aaveLiquidatable: false })?.reason).toBe("healthy");
     expect(previewGate({ ...ok, debtPriceFresh: false })?.reason).toBe("priceTooOld");
-    expect(previewGate({ ...ok, inGrace: true })?.reason).toBe("graceAboveThreshold");
-    expect(previewGate({ ...ok, inGrace: true, belowGraceHealthFactor: true })).toBeNull();
     expect(previewGate({ ...ok, debtReservePaused: true })?.reason).toBe("previewGateFalse");
     expect(previewGate({ ...ok, debtToCover: 0n })?.detail).toBe("preview sized nothing");
   });

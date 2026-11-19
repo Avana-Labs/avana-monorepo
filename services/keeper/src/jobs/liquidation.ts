@@ -79,9 +79,6 @@ export function liquidationJob(d: LiquidationDeps): Job<CachedAccount, Decision>
         disagreementPauseActive: pv.disagreementPauseActive,
         disagreementExpired: pv.disagreementExpired,
         now: ctx.blockTimestamp,
-        graceEndsAt: pv.graceEndsAt,
-        graceHealthFactor: pv.graceHealthFactor,
-        healthFactor: a.lastHealthFactor ?? 0n,
       });
       if (gate) return { act: false, reason: gate };
 

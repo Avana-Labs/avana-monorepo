@@ -8,7 +8,6 @@ import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.s
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
 
-
 /// @dev The Aave V4 Hub's drawn index of an asset, RAY.
 interface IHubDrawnIndex {
     function getAssetDrawnIndex(
