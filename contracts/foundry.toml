@@ -45,6 +45,8 @@ fs_permissions = [
   { access = "read", path = "../deployments" },
   { access = "read-write", path = "./deployments-local" },
   { access = "read", path = "./script/deploy/config" },
+  # 03_DeployAvana deploys the operator FlashLiquidator from the liquidator package's build.
+  { access = "read", path = "../liquidator/out" },
 ]
 gas_reports = ["*"]
 # Extra compiler profiles the restrictions below select: via-IR at 200 runs, and the legacy pipeline at 200 runs. The

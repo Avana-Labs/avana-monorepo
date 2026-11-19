@@ -121,6 +121,7 @@
     "maxMarketCount": 16,
     "keeperFloor": 1,
     "timelockNormalDelay": 432000,
+    "coverageRatioBps": 30,
     "globals": {
       "maxFlashFeeBps": 10,
       "avanaFeeShareBps": 2000,
@@ -1545,7 +1546,8 @@
               "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The pool's price must agree with the Chainlink prices within 0.5%."
             }
           ]
-        }
+        },
+        "eModeLtvBps": 9300
       },
       {
         "name": "slip-wstETH-WETH-cl1",
@@ -1612,7 +1614,8 @@
               "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The pool's price must agree with the Chainlink prices within 0.5%."
             }
           ]
-        }
+        },
+        "eModeLtvBps": 9300
       },
       {
         "name": "univ4-USDC-USDT-100",
@@ -1814,7 +1817,8 @@
               "answer": "From the Chainlink prices of both tokens and the position's liquidity and range. The price of the Uniswap v3 pool of the same pair must agree with the Chainlink prices within 0.5%."
             }
           ]
-        }
+        },
+        "eModeLtvBps": 9300
       }
     ],
     "pools": {

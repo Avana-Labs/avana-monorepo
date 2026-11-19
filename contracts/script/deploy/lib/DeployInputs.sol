@@ -3,15 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {
-    AaveInputs,
-    ChainInputs,
-    GlobalParams,
-    GovernanceInputs,
-    HubInput,
-    IntegrationInput,
-    OperatorHelperInput
-} from "./DeployTypes.sol";
+import {ChainInputs, CoreParams, GovernanceInputs, IntegrationInput, OperatorHelperInput} from "./DeployTypes.sol";
 import {Script} from "forge-std/Script.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -81,12 +73,8 @@ abstract contract DeployInputs is Script {
             aaveGovernanceExecutor: _addr(json, ".governance.aaveGovernanceExecutor"),
             jointConfigSafe: _addr(json, ".governance.jointConfigSafe")
         });
-        c.aave = _aave(json);
-        c.blockTime = uint32(vm.parseJsonUint(json, ".chain.blockTime"));
-        c.globals = _globals(json);
-        c.maxMarketCount = vm.parseJsonUint(json, ".parameters.maxMarketCount");
-        c.keeperFloor = vm.parseJsonUint(json, ".parameters.keeperFloor");
-        c.timelockNormalDelay = vm.parseJsonUint(json, ".parameters.timelockNormalDelay");
+        c.v3Pool = vm.keyExistsJson(json, ".aave.v3Pool") ? _addr(json, ".aave.v3Pool") : address(0);
+        c.params = _params(json);
         c.keepers = _addrs(json, ".keepers");
         c.operatorHelpers = _helpers(json);
         c.integrations = _integrations(json);
@@ -234,30 +222,15 @@ abstract contract DeployInputs is Script {
         return true;
     }
 
-    function _aave(
+    /// @notice `.parameters`: `timelockNormalDelay`, `coverageRatioBps` and the fee of `.globals`
+    /// (`avanaFeeShareBps`, `feeRecipient`).
+    function _params(
         string memory json
-    ) private view returns (AaveInputs memory a) {
-        a.accessManager = _addr(json, ".aave.accessManager");
-        a.standardSpokeImplementation = _addr(json, ".aave.standardSpokeImplementation");
-        a.v3Pool = _addr(json, ".aave.v3Pool");
-        uint256 n = _count(json, ".aave.hubs");
-        a.hubs = new HubInput[](n);
-        for (uint256 i = 0; i < n; ++i) {
-            string memory k = string.concat(".aave.hubs[", vm.toString(i), "]");
-            a.hubs[i] = HubInput(
-                _addr(json, string.concat(k, ".hub")), uint8(vm.parseJsonUint(json, string.concat(k, ".tier")))
-            );
-        }
-    }
-
-    function _globals(
-        string memory json
-    ) private view returns (GlobalParams memory g) {
-        string memory p = ".parameters.globals";
-        g.maxFlashFeeBps = uint16(vm.parseJsonUint(json, string.concat(p, ".maxFlashFeeBps")));
-        g.avanaFeeShareBps = uint16(vm.parseJsonUint(json, string.concat(p, ".avanaFeeShareBps")));
-        g.feeRecipient = _addr(json, string.concat(p, ".feeRecipient"));
-        g.maxShortfallBps = uint16(vm.parseJsonUint(json, string.concat(p, ".maxShortfallBps")));
+    ) private view returns (CoreParams memory p) {
+        p.feeShareBps = uint16(vm.parseJsonUint(json, ".parameters.globals.avanaFeeShareBps"));
+        p.feeRecipient = _addr(json, ".parameters.globals.feeRecipient");
+        p.coverageRatioBps = uint16(vm.parseJsonUint(json, ".parameters.coverageRatioBps"));
+        p.timelockNormalDelay = vm.parseJsonUint(json, ".parameters.timelockNormalDelay");
     }
 
     function _helpers(

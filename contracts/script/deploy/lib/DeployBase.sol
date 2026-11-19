@@ -227,6 +227,12 @@ abstract contract DeployBase is DeployInputs {
             if (vm.exists(path)) return path;
         }
         path = string.concat(dir, name, ".json");
+        // A contract another profile also compiles (for example AccessManager, which the RiskModule's restricted
+        // build imports) has one artifact per profile: the default profile's is `<Contract>.default.json`.
+        if (bytes(profile).length == 0 && !vm.exists(path)) {
+            string memory byProfile = string.concat(dir, name, ".default.json");
+            if (vm.exists(byProfile)) path = byProfile;
+        }
     }
 
     function _artifactIn(
@@ -283,11 +289,11 @@ abstract contract DeployBase is DeployInputs {
     }
 
     /// @notice The `additional_compiler_profiles` name a deployable file is restricted to in `foundry.toml`, or "" for
-    /// the default profile. Mirrors `compilation_restrictions`: via-IR at 200 runs (the LPVaultSwap logic contracts).
+    /// the default profile. Mirrors `compilation_restrictions`: the RiskModule at 200 runs (the `clvault` settings).
     function _profileOf(
         string memory file
     ) internal pure returns (string memory) {
-        if (_startsWith(file, "LPVaultSwap") && _endsWith(file, "Logic.sol")) return "collateralization";
+        if (_eq(file, "RiskModule.sol")) return "clvault";
         return "";
     }
 
