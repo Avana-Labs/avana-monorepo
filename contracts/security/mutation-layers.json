@@ -10,7 +10,7 @@
       {"src": "src/liquidation/lp-vault-swap", "tests": "test/{unit,fuzz,integration}/{SettlementMath,LPVaultSwap,AaveAdapter.LPVaultSwap}*"},
       {"src": "src/policy/parameter-store", "tests": "test/{unit,fuzz}/ParameterStore*"},
       {"src": "src/policy/market-registry", "tests": "test/unit/MarketRegistry*"},
-      {"src": "src/vault-token", "tests": "test/{unit,integration}/VaultToken.*"},
+      {"src": "src/vault-token", "tests": "test/{unit,integration}/VaultToken.*"}
     ],
     "2.2": [
       {"src": "src/amm/concentrated-liquidity", "files": ["ClPriceMath", "ClTickMath"], "tests": "test/{unit,fuzz}/ClPriceMath.*"},
