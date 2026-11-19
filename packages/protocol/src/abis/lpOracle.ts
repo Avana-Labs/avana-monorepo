@@ -5,6 +5,24 @@
 export const lpOracleAbi = [
   {
     "type": "function",
+    "name": "band",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "bandLower",
+        "type": "int24",
+        "internalType": "int24"
+      },
+      {
+        "name": "bandUpper",
+        "type": "int24",
+        "internalType": "int24"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "decimals",
     "inputs": [],
     "outputs": [
@@ -50,66 +68,41 @@ export const lpOracleAbi = [
   },
   {
     "type": "function",
-    "name": "getPriceStatus",
+    "name": "getPrices",
     "inputs": [],
     "outputs": [
       {
-        "name": "status",
-        "type": "tuple",
-        "internalType": "struct ILPOracle.PriceStatus",
-        "components": [
-          {
-            "name": "answer",
-            "type": "int256",
-            "internalType": "int256"
-          },
-          {
-            "name": "updatedAt",
-            "type": "uint64",
-            "internalType": "uint64"
-          },
-          {
-            "name": "borrowFresh",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "liquidationFresh",
-            "type": "bool",
-            "internalType": "bool"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getTokenPrices",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "prices",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
+        "name": "price0",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
-        "name": "updatedAt",
-        "type": "uint64",
-        "internalType": "uint64"
+        "name": "price1",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "sqrtPriceX96",
+        "type": "uint160",
+        "internalType": "uint160"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "integration",
+    "name": "getUnitAmounts",
     "inputs": [],
     "outputs": [
       {
-        "name": "amm",
-        "type": "address",
-        "internalType": "address"
+        "name": "amount0",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount1",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -129,33 +122,13 @@ export const lpOracleAbi = [
   },
   {
     "type": "function",
-    "name": "latestRoundData",
+    "name": "lpVault",
     "inputs": [],
     "outputs": [
       {
-        "name": "roundId",
-        "type": "uint80",
-        "internalType": "uint80"
-      },
-      {
-        "name": "answer",
-        "type": "int256",
-        "internalType": "int256"
-      },
-      {
-        "name": "startedAt",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "updatedAt",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "answeredInRound",
-        "type": "uint80",
-        "internalType": "uint80"
+        "name": "vault",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -175,11 +148,16 @@ export const lpOracleAbi = [
   },
   {
     "type": "function",
-    "name": "parameterStore",
+    "name": "tokens",
     "inputs": [],
     "outputs": [
       {
-        "name": "store",
+        "name": "token0",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "token1",
         "type": "address",
         "internalType": "address"
       }
@@ -188,20 +166,7 @@ export const lpOracleAbi = [
   },
   {
     "type": "function",
-    "name": "tokens",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "list",
-        "type": "address[]",
-        "internalType": "address[]"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "vaultDecimals",
+    "name": "unitDecimals",
     "inputs": [],
     "outputs": [
       {
@@ -214,25 +179,8 @@ export const lpOracleAbi = [
   },
   {
     "type": "error",
-    "name": "InvalidComposition",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "InvalidMarket",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
+    "name": "InvalidParams",
+    "inputs": []
   },
   {
     "type": "error",

@@ -55,7 +55,7 @@ function chain(o: { depth: () => bigint; gsm?: { cap: bigint; held: bigint }; th
     snapshot: (b) => fixtureSnapshot(b, (s) => ({ ...s, markets: [{ ...s.markets[0]!, status: 2 }] })),
     call: caller(o.depth),
     handlers: [
-      on("getTokenPrices", () => [[100_000_000n, 100_000_000n], 0n, 0]),
+      on("getPrices", () => [100_000_000n, 100_000_000n, 0n]),
       on("getMarketParams", () => ({ slippageAllowanceBps: 100 })),
       on("getRoute", (args) => (args[3] === 0 ? [ROUTE, true] : ["0x0000000000000000000000000000000000000000", false])),
       on("routeDepthThreshold", () => o.threshold ?? T),
