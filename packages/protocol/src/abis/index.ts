@@ -40,7 +40,7 @@ export const ABI_ARTIFACTS = {
   parameterStoreAbi: "IParameterStore",
   payoutEscrowAbi: "IPayoutEscrow",
   proxyManagerAbi: "IProxyManager",
-  riskModuleAbi: "IRiskModule",
+  riskModuleAbi: "ILegacyRiskModule",
   vaultTokenAbi: "IVaultToken",
   vaultTokenFactoryAbi: "IVaultTokenFactory",
 } as const;
