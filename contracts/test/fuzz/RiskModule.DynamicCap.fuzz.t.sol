@@ -4,18 +4,18 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {MarketDynamicCap} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {DynamicCapMath} from "../../src/policy/risk-module/DynamicCapMath.sol";
-import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {DynamicCap} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {DynamicCapMath} from "../../src/legacy/risk-module/DynamicCapMath.sol";
+import {IRiskModuleErrors} from "../../src/legacy/risk-module/IRiskModuleErrors.sol";
+import {DynamicCap} from "../../src/legacy/risk-module/types/RiskModuleTypes.sol";
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @title RiskModuleDynamicCapFuzzTest
-/// @notice On the real RiskModule, borrows split across four accounts with random gaps, amounts and repays follow a
+/// @notice On the real LegacyRiskModule, borrows split across four accounts with random gaps, amounts and repays follow a
 /// reference model of the rule exactly: the first borrow of each interval fixes `C = D_start + L(D_start)`, a borrow
 /// passes iff the debt after it is at most `C`, and a refused borrow stores nothing. A direct call by any address
 /// other than the AaveAdapter never stores an interval.
-/// @dev World: the RiskModule fixture, GHO at $1.00 (18 decimals, so the USD value is the amount over 1e10), tau =
+/// @dev World: the LegacyRiskModule fixture, GHO at $1.00 (18 decimals, so the USD value is the amount over 1e10), tau =
 /// 3,600 s, alpha 25 % within $250,000 .. $2,500,000, the Spoke owing 1,000,000 GHO at the start.
 contract RiskModuleDynamicCapFuzzTest is RiskModuleFixture {
     uint256 internal constant TAU = 3600;

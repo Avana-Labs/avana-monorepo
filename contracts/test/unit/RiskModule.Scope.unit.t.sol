@@ -5,16 +5,16 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILegacyLPOracle} from "../../src/legacy/ILegacyLPOracle.sol";
-import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
-import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {RiskModule} from "../../src/policy/risk-module/RiskModule.sol";
-import {PledgeCharge} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {ILegacyRiskModule} from "../../src/legacy/risk-module/ILegacyRiskModule.sol";
+import {IRiskModuleErrors} from "../../src/legacy/risk-module/IRiskModuleErrors.sol";
+import {LegacyRiskModule} from "../../src/legacy/risk-module/LegacyRiskModule.sol";
+import {PledgeCharge} from "../../src/legacy/risk-module/types/RiskModuleTypes.sol";
 import {PledgeCounters} from "../../src/types/PositionTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {VmSafe} from "forge-std/Vm.sol";
 
 /// @title RiskModuleScopeUnitTest
-/// @notice What the RiskModule does not do: it keeps the `checkPledge` interface the immutable Collateralization calls
+/// @notice What the LegacyRiskModule does not do: it keeps the `checkPledge` interface the immutable Collateralization calls
 /// across upgrades (REQ-RISK-001), it stores no exposure counter (REQ-RISK-004), it leaves the `drawCap`, a debt
 /// reserve's freeze and any daily limit to Aave (REQ-ADAPTER-023), and it evaluates no price-drop breaker
 /// (SPEC-BRK-001).
@@ -32,7 +32,7 @@ contract RiskModuleScopeUnitTest is RiskModuleFixture {
         PledgeCounters memory k
     ) internal view returns (bytes memory) {
         return abi.encodeCall(
-            IRiskModule.checkPledge, (wallet, address(proxy), mid, V3, bytes32(uint256(1)), UNITS, k, false)
+            ILegacyRiskModule.checkPledge, (wallet, address(proxy), mid, V3, bytes32(uint256(1)), UNITS, k, false)
         );
     }
 
@@ -42,10 +42,10 @@ contract RiskModuleScopeUnitTest is RiskModuleFixture {
     /// `PledgeCharge`, and after an upgrade through the timelock the same proxy address gives the same answer to the
     /// same call, and the same revert to a refused one.
     /// @dev Kills: any change to the `checkPledge` argument list, the `PledgeCounters` fields or the `PledgeCharge`
-    /// fields (the pinned signature and the 128-byte answer), and an upgrade path that moves the RiskModule's address.
+    /// fields (the pinned signature and the 128-byte answer), and an upgrade path that moves the LegacyRiskModule's address.
     function test_TEST_062_checkPledgeInterfaceStableAcrossUpgrades() public {
         assertEq(
-            IRiskModule.checkPledge.selector,
+            ILegacyRiskModule.checkPledge.selector,
             bytes4(
                 keccak256(
                     "checkPledge(address,address,uint256,uint32,bytes32,uint128,"
@@ -70,7 +70,7 @@ contract RiskModuleScopeUnitTest is RiskModuleFixture {
 
         bytes32 implSlot = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
         bytes32 implBefore = vm.load(at, implSlot);
-        RiskModule next = new RiskModule(rmIm, rmLogics);
+        LegacyRiskModule next = new LegacyRiskModule(rmIm, rmLogics);
         vm.prank(governor);
         riskModule.upgradeToAndCall(address(next), "");
         assertEq(vm.load(at, implSlot), bytes32(uint256(uint160(address(next)))), "new implementation");
@@ -87,7 +87,7 @@ contract RiskModuleScopeUnitTest is RiskModuleFixture {
     // Sources: 2.7 REQ-RISK-004 (Collateralization keeps the counters and passes them as PledgeCounters)
     /// @notice `checkPledge` writes no storage anywhere, so it keeps no counter: the same pledge passes or fails only by
     /// the counters its caller passes, and a passing call leaves every counter it was given for the caller to update.
-    /// @dev Kills: a storage write added to the pledge path (an exposure counter kept in the RiskModule), and a pledge
+    /// @dev Kills: a storage write added to the pledge path (an exposure counter kept in the LegacyRiskModule), and a pledge
     /// check that reads its own record of usage instead of the `PledgeCounters` argument.
     function test_TEST_012_checkPledgeWritesNoCounter() public {
         PledgeCounters memory k = _counters();
@@ -115,7 +115,7 @@ contract RiskModuleScopeUnitTest is RiskModuleFixture {
 
     // TEST-028 verifies: REQ-ADAPTER-023, REQ-RISK-077, Q-118, Q-197, Q-314
     // Sources: 2.7 REQ-ADAPTER-023 (Aave enforces the drawCap and the freeze inside Spoke.borrow; the only amount gate
-    // of the RiskModule is the dynamic borrow cap)
+    // of the LegacyRiskModule is the dynamic borrow cap)
     /// @notice `preBorrowCheck` of a same-Hub reserve passes whatever the reserve's `drawCap` and drawn amount, with the
     /// debt reserve frozen on the Spoke, and for any number of checks of any size within the dynamic borrow cap in one
     /// block: those limits are Aave's, checked inside `Spoke.borrow`. The fixture's store leaves the cap open

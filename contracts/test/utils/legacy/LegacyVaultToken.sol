@@ -11,7 +11,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 
 /// @title LegacyVaultToken
 /// @notice Collateral-only ERC-20 of one market. Only the AaveAdapter mints, burns and registers proxies.
-/// @dev Test stand-in for the pre-refactor token, kept so the legacy MarketRegistry and RiskModule tests run until
+/// @dev Test stand-in for the pre-refactor token, kept so the legacy MarketRegistry and LegacyRiskModule tests run until
 /// step 4 replaces them. Not upgradeable, no owner. `_update` enforces the transfer path rule on every balance change.
 contract LegacyVaultToken is ERC20, ILegacyVaultToken {
     uint8 private constant MIN_DECIMALS = 6;

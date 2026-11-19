@@ -10,7 +10,7 @@ import {IAaveAdapter} from "../../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreTighten} from "../../../src/policy/parameter-store/IParameterStoreTighten.sol";
-import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
+import {IRiskModuleErrors} from "../../../src/legacy/risk-module/IRiskModuleErrors.sol";
 import {PledgeCounters, PositionRef} from "../../../src/types/PositionTypes.sol";
 import {ClTestToken} from "../../utils/fixtures/ClPoolFixture.sol";
 import {FullStackLPVaultMock} from "../../utils/mocks/FullStackLPVaultMock.sol";
@@ -173,7 +173,7 @@ contract FullStackHandler is CommonBase, StdUtils {
         (address wallet, uint256 market, address proxy) = _withProxy(walletSeed, marketSeed, false);
         if (proxy == address(0)) revert Skipped();
         uint256 r = reserveSeed % 2;
-        // $1 to $3,000 of the asset ($1.00 each); a borrow beyond the account's room is refused by Aave or the RiskModule.
+        // $1 to $3,000 of the asset ($1.00 each); a borrow beyond the account's room is refused by Aave or the LegacyRiskModule.
         uint256 amount = bound(shareSeed, 1, 3000) * 10 ** w.debtAssets[r].decimals();
         // The Spoke's owed amount (drawn + premium) and deficit on the asset in this block, before the draw.
         (uint256 owedBefore, uint256 deficit) = _spokeOwed(r);

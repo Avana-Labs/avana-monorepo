@@ -12,7 +12,7 @@ import {ITetherFee} from "../../interfaces/external/tether/ITetherFee.sol";
 import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {FeedDef} from "../parameter-store/types/ParameterStoreTypes.sol";
-import {RiskModuleMath} from "../risk-module/RiskModuleMath.sol";
+import {RiskModuleMath} from "../../legacy/risk-module/RiskModuleMath.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
 import {IssuerProbes} from "./types/IssuerProbe.sol";
@@ -100,7 +100,7 @@ abstract contract MarketRegistryDebtChecks is MarketRegistryStorage {
         }
     }
 
-    /// @dev Reads `basisPointsRate()` as the RiskModule's breaker does; only exactly one zero word counts as zero.
+    /// @dev Reads `basisPointsRate()` as the LegacyRiskModule's breaker does; only exactly one zero word counts as zero.
     function _feeRateZero(
         address token
     ) internal view returns (bool zero) {

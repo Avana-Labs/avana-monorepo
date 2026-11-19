@@ -10,7 +10,7 @@ import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILegacyVaultTokenFactory} from "../../legacy/ILegacyVaultTokenFactory.sol";
-import {IRiskModule} from "../risk-module/IRiskModule.sol";
+import {ILegacyRiskModule} from "../../legacy/risk-module/ILegacyRiskModule.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {MarketRegistryDebtChecks} from "./MarketRegistryDebtChecks.sol";
@@ -124,7 +124,7 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
             l.spokeList.push(spoke);
         }
         // The drift check reads the record just written; a failure reverts the whole call.
-        try IRiskModule(_RISK_MODULE).checkAaveConfig(spoke, new uint256[](0)) {}
+        try ILegacyRiskModule(_RISK_MODULE).checkAaveConfig(spoke, new uint256[](0)) {}
         catch {
             revert InvalidSpoke(spoke);
         }

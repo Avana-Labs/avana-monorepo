@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../legacy/ICollateralization.sol";
 import {PositionRef} from "../../types/PositionTypes.sol";
-import {IRiskModule} from "../risk-module/IRiskModule.sol";
+import {ILegacyRiskModule} from "../../legacy/risk-module/ILegacyRiskModule.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";
@@ -42,7 +42,7 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
         if (units == 0) revert ZeroAmount();
         _checkIntegration(marketId, account.vaultToken, position.integrationId);
         bool debtFree = _borrowCount(account.spoke, proxy) == 0;
-        if (!debtFree) IRiskModule(_RISK_MODULE).preWithdrawCheck(proxy);
+        if (!debtFree) ILegacyRiskModule(_RISK_MODULE).preWithdrawCheck(proxy);
         _withdrawRecord(proxy, account, position.positionKey, units, debtFree, minHealthFactor);
         _release();
     }
@@ -104,7 +104,7 @@ contract AaveAdapterExitLogic is AaveAdapterSteps, IAaveAdapterLogic {
         ICollateralization(_COLLATERALIZATION).release(proxy, account.vaultToken, positionKey, units);
         uint256 hf = type(uint256).max;
         if (debtFree) _cleanup(proxy, account.spoke, reserveId);
-        else hf = IRiskModule(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
+        else hf = ILegacyRiskModule(_RISK_MODULE).postHealthCheck(proxy, minHealthFactor);
         _checkGap(account.vaultToken, gapBefore);
         emit CollateralWithdrawn(msg.sender, account.marketId, account.vaultToken, positionKey, units, !debtFree, hf);
     }

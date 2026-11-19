@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RiskModuleMath} from "../../../src/policy/risk-module/RiskModuleMath.sol";
+import {RiskModuleMath} from "../../../src/legacy/risk-module/RiskModuleMath.sol";
 
 /// @title RiskModuleMathHarness
 /// @notice External entry points over `RiskModuleMath` and `RiskModuleMath` for the fuzz, Halmos and Echidna suites.

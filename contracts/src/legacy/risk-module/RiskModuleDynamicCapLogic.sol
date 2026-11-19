@@ -7,10 +7,10 @@ import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {Market} from "../../types/MarketTypes.sol";
-import {DebtReserveDef} from "../market-registry/types/MarketRegistryTypes.sol";
-import {MarketDynamicCap} from "../parameter-store/types/ParameterStoreTypes.sol";
+import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
+import {MarketDynamicCap} from "../../policy/parameter-store/types/ParameterStoreTypes.sol";
 import {DynamicCapMath} from "./DynamicCapMath.sol";
-import {IRiskModule} from "./IRiskModule.sol";
+import {ILegacyRiskModule} from "./ILegacyRiskModule.sol";
 import {IRiskModuleDynamicCapLogic} from "./IRiskModuleDynamicCapLogic.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";
@@ -19,7 +19,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title RiskModuleDynamicCapLogic
 /// @notice The per-market dynamic borrow cap: the market's debt, the interval's cap and the borrow check.
-/// @dev Reads the stored interval from the caller's `getDynamicCap`; only the RiskModule proxy stores it.
+/// @dev Reads the stored interval from the caller's `getDynamicCap`; only the LegacyRiskModule proxy stores it.
 // View calls in loops over a Spoke's debt reserves, bounded by listings.
 // forge-lint: disable-start(calls-loop)
 contract RiskModuleDynamicCapLogic is RiskModuleBase, IRiskModuleDynamicCapLogic {
@@ -69,7 +69,7 @@ contract RiskModuleDynamicCapLogic is RiskModuleBase, IRiskModuleDynamicCapLogic
         uint256 debt
     ) internal view returns (DynamicCap memory d) {
         MarketDynamicCap memory terms = _store().marketDynamicCap(marketId);
-        d = IRiskModule(msg.sender).getDynamicCap(marketId);
+        d = ILegacyRiskModule(msg.sender).getDynamicCap(marketId);
         if (DynamicCapMath.opensInterval(d.intervalStart, terms.capInterval, block.timestamp)) {
             // Block timestamps stay far below 2^64 seconds.
             // forge-lint: disable-next-line(unsafe-typecast)

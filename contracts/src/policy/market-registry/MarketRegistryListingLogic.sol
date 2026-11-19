@@ -23,7 +23,7 @@ import {AmmConstants} from "../../types/AmmConstants.sol";
 import {Market, MarketDef} from "../../types/MarketTypes.sol";
 import {PositionShape, ShapeKind} from "../../types/PositionTypes.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
-import {IRiskModule} from "../risk-module/IRiskModule.sol";
+import {ILegacyRiskModule} from "../../legacy/risk-module/ILegacyRiskModule.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {MarketRegistryRouteChecks} from "./MarketRegistryRouteChecks.sol";
@@ -249,7 +249,7 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
             // A relisted market starts clean: a new route epoch hides old routes.
             l.routeEpoch[marketId] += 1;
         }
-        try IRiskModule(_RISK_MODULE).checkAaveConfig(def.spoke, new uint256[](0)) {}
+        try ILegacyRiskModule(_RISK_MODULE).checkAaveConfig(def.spoke, new uint256[](0)) {}
         catch {
             revert ActivationCheckFailed(marketId, "aaveConfig");
         }
@@ -368,7 +368,7 @@ contract MarketRegistryListingLogic is MarketRegistryRouteChecks, IMarketRegistr
         address lpOracle
     ) private view returns (bytes32 failed) {
         if (!_commonModeHolds(tokens)) return "commonMode";
-        uint256 cfLp = IRiskModule(_RISK_MODULE).expectedCollateralFactorBps(marketId);
+        uint256 cfLp = ILegacyRiskModule(_RISK_MODULE).expectedCollateralFactorBps(marketId);
         if (!_listingMarginHolds(cfLp, tokens)) return "listingMargin";
         if (!_oracleConfigPasses(lpOracle)) return "oracleConfig";
     }

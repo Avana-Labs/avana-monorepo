@@ -217,7 +217,7 @@ interface IParameterStore is
         address token
     ) external view returns (uint256 value);
 
-    /// @notice Minimum value of one pledge into a market; the RiskModule reverts `BelowMinPledge` below it.
+    /// @notice Minimum value of one pledge into a market; the LegacyRiskModule reverts `BelowMinPledge` below it.
     /// @return value 8-decimal USD.
     function minPledgeUsd(
         uint256 marketId

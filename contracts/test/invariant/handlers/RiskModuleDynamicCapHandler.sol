@@ -3,19 +3,19 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {RiskModule} from "../../../src/policy/risk-module/RiskModule.sol";
-import {DynamicCap} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {IRiskModuleErrors} from "../../../src/legacy/risk-module/IRiskModuleErrors.sol";
+import {LegacyRiskModule} from "../../../src/legacy/risk-module/LegacyRiskModule.sol";
+import {DynamicCap} from "../../../src/legacy/risk-module/types/RiskModuleTypes.sol";
 import {RiskHubMock, RiskLPOracleMock} from "../../utils/mocks/RiskModuleMocks.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title RiskModuleDynamicCapHandler
 /// @notice Random borrows by many accounts, repays, withdrawals with debt and time steps against the real
-/// RiskModule's dynamic borrow cap. Every passing borrow is logged with the market's debt after it and the interval
-/// the RiskModule stored; every refusal must be a cap error; every exit must pass whatever the cap holds.
+/// LegacyRiskModule's dynamic borrow cap. Every passing borrow is logged with the market's debt after it and the interval
+/// the LegacyRiskModule stored; every refusal must be a cap error; every exit must pass whatever the cap holds.
 contract RiskModuleDynamicCapHandler is Test {
     struct World {
-        RiskModule rm;
+        LegacyRiskModule rm;
         RiskHubMock hub;
         RiskLPOracleMock oracle;
         address adapter;
@@ -78,7 +78,7 @@ contract RiskModuleDynamicCapHandler is Test {
         }
     }
 
-    /// @notice A repay on the Spoke (no RiskModule call) and a withdrawal with debt, which must pass.
+    /// @notice A repay on the Spoke (no LegacyRiskModule call) and a withdrawal with debt, which must pass.
     function repayAndWithdraw(
         uint256 actor,
         uint256 amount

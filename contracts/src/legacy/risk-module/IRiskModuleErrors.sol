@@ -7,7 +7,7 @@ import {DriftReason} from "../../types/MarketTypes.sol";
 import {PriceState} from "../../types/OracleTypes.sol";
 
 /// @title IRiskModuleErrors
-/// @notice Errors of the RiskModule's pledge check and borrow-side checks.
+/// @notice Errors of the LegacyRiskModule's pledge check and borrow-side checks.
 interface IRiskModuleErrors {
     /// @notice The market is not Active in the MarketRegistry.
     error MarketNotActive(uint256 marketId);

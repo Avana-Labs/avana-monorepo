@@ -18,8 +18,8 @@ import {CREATE3} from "solady/utils/CREATE3.sol";
 
 /// @title LegacyVaultTokenFactory
 /// @notice Append-only registry of AMM integrations and vault tokens; the only deployer of vault tokens (CREATE3).
-/// @dev Test stand-in for the pre-refactor factory, kept so the legacy MarketRegistry and RiskModule tests run until
-/// step 4 folds vault-token deployment into the RiskModule.
+/// @dev Test stand-in for the pre-refactor factory, kept so the legacy MarketRegistry and LegacyRiskModule tests run until
+/// step 4 folds vault-token deployment into the LegacyRiskModule.
 contract LegacyVaultTokenFactory is ILegacyVaultTokenFactory, AccessManaged {
     uint8 private constant MIN_DECIMALS = 6;
     uint8 private constant MAX_DECIMALS = 18;

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
+import {IRiskModuleErrors} from "../../src/legacy/risk-module/IRiskModuleErrors.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {PledgeCounters, PledgePreview} from "../../src/types/PositionTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";

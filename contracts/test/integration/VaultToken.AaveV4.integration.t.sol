@@ -389,7 +389,7 @@ contract VaultTokenAaveV4IntegrationTest is VaultTokenAaveV4Base {
 /// fee-only liquidation then succeeds and moves the borrower's shares without any unit leaving the Hub, and in
 /// the LiquidationModule's own liquidation the share drop exceeds the units it receives, so the fee units stay in the Hub for
 /// good: the fee receiver can never withdraw them (the Hub can pay only registered proxies and the LiquidationModule).
-/// @dev Same listing as the base suite except the fee. The drift check that refuses such a reserve is the RiskModule's
+/// @dev Same listing as the base suite except the fee. The drift check that refuses such a reserve is the LegacyRiskModule's
 /// (`TEST-268`); this suite shows the Aave behaviour that makes 0 the only listed value.
 contract VaultTokenAaveV4LiquidationFeeIntegrationTest is VaultTokenAaveV4Base {
     function setUp() public override {

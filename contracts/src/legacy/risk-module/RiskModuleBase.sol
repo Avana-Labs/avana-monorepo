@@ -7,14 +7,14 @@ import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
 import {Market} from "../../types/MarketTypes.sol";
-import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
-import {IParameterStore} from "../parameter-store/IParameterStore.sol";
+import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
+import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
 import {IRiskModuleErrors} from "./IRiskModuleErrors.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 
 /// @title RiskModuleBase
-/// @notice Implementation immutables and the reads shared by the RiskModule and its logic contracts.
+/// @notice Implementation immutables and the reads shared by the LegacyRiskModule and its logic contracts.
 /// @dev Holds no state.
 abstract contract RiskModuleBase is IRiskModuleErrors {
     address internal immutable _MARKET_REGISTRY;
@@ -22,7 +22,7 @@ abstract contract RiskModuleBase is IRiskModuleErrors {
     address internal immutable _COLLATERALIZATION;
     address internal immutable _ADAPTER;
     address internal immutable _LP_VAULT_SWAP;
-    /// @dev `keccak256(abi.encode(im))`, compared between the RiskModule and its logic contracts.
+    /// @dev `keccak256(abi.encode(im))`, compared between the LegacyRiskModule and its logic contracts.
     bytes32 internal immutable _IMMUTABLES_HASH;
 
     constructor(

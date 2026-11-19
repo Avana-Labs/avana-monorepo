@@ -3,13 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RiskModuleMath} from "../../src/policy/risk-module/RiskModuleMath.sol";
+import {RiskModuleMath} from "../../src/legacy/risk-module/RiskModuleMath.sol";
 import {RiskModuleMathHarness} from "../utils/harness/RiskModuleMathHarness.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title RiskModuleFuzzTest
-/// @notice Stateless properties of the RiskModule formulas: rounding direction, overflow inside listing bounds, the cap
+/// @notice Stateless properties of the LegacyRiskModule formulas: rounding direction, overflow inside listing bounds, the cap
 /// split, the rescue exclusion and the exemption step.
 contract RiskModuleFuzzTest is Test {
     uint256 internal constant WAD = 1e18;

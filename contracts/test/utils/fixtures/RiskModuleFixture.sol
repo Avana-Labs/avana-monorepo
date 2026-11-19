@@ -12,18 +12,18 @@ import {
     MarketRegistryImmutables,
     RiskTier
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {RiskModule} from "../../../src/policy/risk-module/RiskModule.sol";
-import {RiskModuleBorrowLogic} from "../../../src/policy/risk-module/RiskModuleBorrowLogic.sol";
-import {RiskModuleBreakerLogic} from "../../../src/policy/risk-module/RiskModuleBreakerLogic.sol";
-import {RiskModuleDriftLogic} from "../../../src/policy/risk-module/RiskModuleDriftLogic.sol";
-import {RiskModuleDynamicCapLogic} from "../../../src/policy/risk-module/RiskModuleDynamicCapLogic.sol";
-import {RiskModulePledgeLogic} from "../../../src/policy/risk-module/RiskModulePledgeLogic.sol";
-import {RiskModuleStatusLogic} from "../../../src/policy/risk-module/RiskModuleStatusLogic.sol";
+import {LegacyRiskModule} from "../../../src/legacy/risk-module/LegacyRiskModule.sol";
+import {RiskModuleBorrowLogic} from "../../../src/legacy/risk-module/RiskModuleBorrowLogic.sol";
+import {RiskModuleBreakerLogic} from "../../../src/legacy/risk-module/RiskModuleBreakerLogic.sol";
+import {RiskModuleDriftLogic} from "../../../src/legacy/risk-module/RiskModuleDriftLogic.sol";
+import {RiskModuleDynamicCapLogic} from "../../../src/legacy/risk-module/RiskModuleDynamicCapLogic.sol";
+import {RiskModulePledgeLogic} from "../../../src/legacy/risk-module/RiskModulePledgeLogic.sol";
+import {RiskModuleStatusLogic} from "../../../src/legacy/risk-module/RiskModuleStatusLogic.sol";
 import {
     PledgeCharge,
     RiskModuleImmutables,
     RiskModuleLogics
-} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
+} from "../../../src/legacy/risk-module/types/RiskModuleTypes.sol";
 import {PositionProxy} from "../../../src/proxy/position-proxy/PositionProxy.sol";
 import {MarketDef} from "../../../src/types/MarketTypes.sol";
 import {PledgeCounters, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
@@ -50,7 +50,7 @@ import {MarketRegistryFixture} from "./MarketRegistryFixture.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @title RiskModuleFixture
-/// @notice The real RiskModule (five logic contracts, implementation, ERC-1967 proxy) wired to the real MarketRegistry,
+/// @notice The real LegacyRiskModule (five logic contracts, implementation, ERC-1967 proxy) wired to the real MarketRegistry,
 /// the real VaultTokenFactory and vault token, and real PositionProxies; settable mocks stand for the Aave V4 Hub,
 /// Spoke and AaveOracle reads, the ParameterStore views (its market listing writes need the full listing world: pool
 /// observations and the LPOracle's own configuration), the market's LPOracle and AMM integration, Collateralization's
@@ -63,7 +63,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
     uint256 internal constant T0 = 1_762_650_000;
     uint32 internal constant FEED_AGE = 88_200;
 
-    RiskModule internal riskModule;
+    LegacyRiskModule internal riskModule;
     RiskModuleImmutables internal rmIm;
     RiskModuleLogics internal rmLogics;
     RiskStoreMock internal store;
@@ -100,7 +100,7 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         _account();
     }
 
-    /// @dev MarketRegistry and RiskModule, each at the address the other was built with.
+    /// @dev MarketRegistry and LegacyRiskModule, each at the address the other was built with.
     function _deployContracts() internal {
         coll = new RiskCollateralizationMock(lockAddr);
         collat = coll;
@@ -118,13 +118,13 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         vm.revertToState(dryRun);
         _deployFactoryRegistryAndRisk(registryAddress);
         _bindAccess(AvanaAccess.Kind.MarketRegistry, address(registry));
-        _bindAccess(AvanaAccess.Kind.RiskModule, address(riskModule));
+        _bindAccess(AvanaAccess.Kind.LegacyRiskModule, address(riskModule));
         _bindAccess(AvanaAccess.Kind.VaultTokenFactory, address(factory));
         vm.label(address(registry), "MarketRegistry");
-        vm.label(address(riskModule), "RiskModule");
+        vm.label(address(riskModule), "LegacyRiskModule");
     }
 
-    /// @dev The VaultTokenFactory (naming `marketRegistry_`), the MarketRegistry and the RiskModule, each at the address
+    /// @dev The VaultTokenFactory (naming `marketRegistry_`), the MarketRegistry and the LegacyRiskModule, each at the address
     /// the other was built with.
     function _deployFactoryRegistryAndRisk(
         address marketRegistry_
@@ -167,9 +167,9 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
             lpVaultSwap: address(swap)
         });
         rmLogics = _deployRiskLogics(rmIm);
-        RiskModule rmImpl = new RiskModule(rmIm, rmLogics);
-        riskModule = RiskModule(
-            address(new ERC1967Proxy(address(rmImpl), abi.encodeCall(RiskModule.initialize, (address(accessManager)))))
+        LegacyRiskModule rmImpl = new LegacyRiskModule(rmIm, rmLogics);
+        riskModule = LegacyRiskModule(
+            address(new ERC1967Proxy(address(rmImpl), abi.encodeCall(LegacyRiskModule.initialize, (address(accessManager)))))
         );
         require(address(riskModule) == predictedRisk, "risk module prediction");
     }

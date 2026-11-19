@@ -46,7 +46,7 @@ const CONTRACTS = [
   ["parameterStoreAbi", "avana", "IParameterStore"],
   ["payoutEscrowAbi", "avana", "IPayoutEscrow"],
   ["proxyManagerAbi", "avana", "IProxyManager"],
-  ["riskModuleAbi", "avana", "IRiskModule"],
+  ["riskModuleAbi", "avana", "ILegacyRiskModule"],
   ["vaultTokenAbi", "avana", "IVaultToken"],
   ["vaultTokenFactoryAbi", "kept", "IVaultTokenFactory"],
 ];

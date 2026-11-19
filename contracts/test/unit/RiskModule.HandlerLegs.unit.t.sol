@@ -11,7 +11,7 @@ import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 /// contracts run 43653564553 (commit `48864ef`, ci shard 9/30 and the deep campaign) and run 43692185561 (commit
 /// `adc7673`, ci shard 9/30, seed 0x6af96a6f). In each the fuzzer first called the handler's `setLegs` setup helper with
 /// leg feeds 0; then `withdraw(2)`, `withdraw(3235)` or `withdraw(31200000000000000000000000000)` opened every gate and
-/// closed the stale-feed gate by warping past the feed age. The RiskModule skips a leg whose feed is address 0 (an
+/// closed the stale-feed gate by warping past the feed age. The LegacyRiskModule skips a leg whose feed is address 0 (an
 /// unused second leg, 2.7 step (5)), so its pre-check passed while the handler counted the gate closed. The handler now
 /// takes the legs in its constructor and has no setter; with the market's own feeds the stale-feed gate refuses both
 /// pre-checks.

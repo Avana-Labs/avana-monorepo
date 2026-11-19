@@ -4,17 +4,17 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {MarketDynamicCap} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {DynamicCap} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {DynamicCap} from "../../src/legacy/risk-module/types/RiskModuleTypes.sol";
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {RiskModuleDynamicCapHandler} from "./handlers/RiskModuleDynamicCapHandler.sol";
 
 /// @title RiskModuleDynamicCapInvariantTest
 /// @notice Borrows by six accounts, repays, withdrawals with debt and time steps of up to two intervals, against the
-/// real RiskModule. After every call: the market's debt after each passing borrow is within the cap of the interval it
+/// real LegacyRiskModule. After every call: the market's debt after each passing borrow is within the cap of the interval it
 /// was made in; the borrows of one interval share one cap; stored intervals start at least tau apart; every refusal is
 /// a cap error; every withdrawal with debt passed.
-/// @dev World: the RiskModule fixture, GHO (fixed $1.00) borrowed, tau = 3,600 s, alpha 2,500 bps within $250,000 ..
+/// @dev World: the LegacyRiskModule fixture, GHO (fixed $1.00) borrowed, tau = 3,600 s, alpha 2,500 bps within $250,000 ..
 /// $2,500,000 on the Spoke's GHO debt (starting at 1,000,000 GHO, raised by each borrow and lowered by each repay).
 contract RiskModuleDynamicCapInvariantTest is RiskModuleFixture {
     uint256 internal constant TAU = 3600;

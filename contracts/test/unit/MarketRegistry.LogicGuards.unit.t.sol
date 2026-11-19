@@ -84,7 +84,7 @@ contract MarketRegistryLogicGuardsUnitTest is MarketRegistryFixture {
 
     // TEST-168 verifies: REQ-CONFIG-001, REQ-CONFIG-005, REQ-MREG-004
     // Sources: 5.1 TEST-168
-    // A direct call to any logic body reverts Unauthorized(caller), for the timelock, a guardian, the RiskModule and a
+    // A direct call to any logic body reverts Unauthorized(caller), for the timelock, a guardian, the LegacyRiskModule and a
     // stranger alike: the bodies run only inside the registry, after its caller check.
     function test_TEST_168_everyLogicBodyRefusesADirectCall() public {
         Body[] memory b = _bodies();

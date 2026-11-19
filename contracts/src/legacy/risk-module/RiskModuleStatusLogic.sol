@@ -11,7 +11,7 @@ import {LegacyPriceMath} from "../../legacy/LegacyPriceMath.sol";
 import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {AccountGateStatus, MarketGateStatus} from "../../types/MarketTypes.sol";
 import {PriceState} from "../../types/OracleTypes.sol";
-import {DebtReserveDef, MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
+import {DebtReserveDef, MarketStatus} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleBorrowLogic} from "./IRiskModuleBorrowLogic.sol";
 import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
 import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";

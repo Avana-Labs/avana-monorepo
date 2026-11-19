@@ -190,7 +190,7 @@ interface IAaveAdapter is IAaveAdapterBase, IAccessManaged {
     /// @notice Returns Collateralization (implementation immutable).
     function COLLATERALIZATION() external view returns (address collateralization);
 
-    /// @notice Returns the RiskModule (implementation immutable).
+    /// @notice Returns the LegacyRiskModule (implementation immutable).
     function RISK_MODULE() external view returns (address riskModule);
 
     /// @notice Returns the MarketRegistry (implementation immutable).

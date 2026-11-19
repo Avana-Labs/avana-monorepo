@@ -4,13 +4,13 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
-import {RiskModule} from "../../src/policy/risk-module/RiskModule.sol";
-import {RiskModuleBorrowLogic} from "../../src/policy/risk-module/RiskModuleBorrowLogic.sol";
-import {RiskModuleBreakerLogic} from "../../src/policy/risk-module/RiskModuleBreakerLogic.sol";
-import {RiskModulePledgeLogic} from "../../src/policy/risk-module/RiskModulePledgeLogic.sol";
-import {RiskModuleStatusLogic} from "../../src/policy/risk-module/RiskModuleStatusLogic.sol";
-import {RiskModuleImmutables, RiskModuleLogics} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {IRiskModuleErrors} from "../../src/legacy/risk-module/IRiskModuleErrors.sol";
+import {LegacyRiskModule} from "../../src/legacy/risk-module/LegacyRiskModule.sol";
+import {RiskModuleBorrowLogic} from "../../src/legacy/risk-module/RiskModuleBorrowLogic.sol";
+import {RiskModuleBreakerLogic} from "../../src/legacy/risk-module/RiskModuleBreakerLogic.sol";
+import {RiskModulePledgeLogic} from "../../src/legacy/risk-module/RiskModulePledgeLogic.sol";
+import {RiskModuleStatusLogic} from "../../src/legacy/risk-module/RiskModuleStatusLogic.sol";
+import {RiskModuleImmutables, RiskModuleLogics} from "../../src/legacy/risk-module/types/RiskModuleTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
@@ -33,7 +33,7 @@ contract RiskModuleAccessUnitTest is RiskModuleFixture {
 
     // TEST-242 verifies: REQ-RISK-002, REQ-RISK-054, PROP-034, REQ-ACCESS-015, REQ-ACCESS-031
     function test_TEST_242_upgradeNeedsTheGovernanceRole() public {
-        RiskModule next = new RiskModule(rmIm, rmLogics);
+        LegacyRiskModule next = new LegacyRiskModule(rmIm, rmLogics);
         address other = makeAddr("other");
         vm.prank(other);
         vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, other));
@@ -47,7 +47,7 @@ contract RiskModuleAccessUnitTest is RiskModuleFixture {
     function test_TEST_242_initializeOnce() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         riskModule.initialize(address(accessManager));
-        RiskModule impl = new RiskModule(rmIm, rmLogics);
+        LegacyRiskModule impl = new LegacyRiskModule(rmIm, rmLogics);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         impl.initialize(address(accessManager));
     }
@@ -57,12 +57,12 @@ contract RiskModuleAccessUnitTest is RiskModuleFixture {
         RiskModuleLogics memory l = rmLogics;
         (l.drift, l.breaker) = (rmLogics.breaker, rmLogics.drift);
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.InvalidLogic.selector, rmLogics.breaker));
-        new RiskModule(rmIm, l);
+        new LegacyRiskModule(rmIm, l);
         // A logic contract built with other immutables is refused.
         l = _deployRiskLogics(rmIm);
         rmIm.adapter = makeAddr("otherAdapter");
         vm.expectRevert(abi.encodeWithSelector(IRiskModuleErrors.InvalidLogic.selector, l.drift));
-        new RiskModule(rmIm, l);
+        new LegacyRiskModule(rmIm, l);
     }
 
     // TEST-062 verifies: REQ-RISK-002

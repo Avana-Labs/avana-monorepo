@@ -7,7 +7,7 @@ import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {DriftReason, Market} from "../../types/MarketTypes.sol";
-import {DebtReserveDef, MarketStatus, SpokeDef} from "../market-registry/types/MarketRegistryTypes.sol";
+import {DebtReserveDef, MarketStatus, SpokeDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {IRiskModuleDriftLogic} from "./IRiskModuleDriftLogic.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";

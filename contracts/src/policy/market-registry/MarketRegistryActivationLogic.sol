@@ -8,7 +8,7 @@ import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {DriftReason, Market} from "../../types/MarketTypes.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {MarketParams} from "../parameter-store/types/ParameterStoreTypes.sol";
-import {IRiskModule} from "../risk-module/IRiskModule.sol";
+import {ILegacyRiskModule} from "../../legacy/risk-module/ILegacyRiskModule.sol";
 import {IMarketRegistryDriftLogic} from "./IMarketRegistryDriftLogic.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";
@@ -86,13 +86,13 @@ contract MarketRegistryActivationLogic is MarketRegistryStorage, IMarketRegistry
         l.marketOfReserve[m.spoke][reserveId] = marketId;
         uint256[] memory ids = new uint256[](1);
         ids[0] = marketId;
-        IRiskModule rm = IRiskModule(_RISK_MODULE);
+        ILegacyRiskModule rm = ILegacyRiskModule(_RISK_MODULE);
         try rm.checkAaveConfig(m.spoke, ids) {}
         catch {
             revert ActivationCheckFailed(marketId, "aaveConfig");
         }
         if (!rm.isHubSharesEqualAssets(marketId)) revert ActivationCheckFailed(marketId, "hubShares");
-        uint256 cfLp = IRiskModule(_RISK_MODULE).expectedCollateralFactorBps(marketId);
+        uint256 cfLp = ILegacyRiskModule(_RISK_MODULE).expectedCollateralFactorBps(marketId);
         _checkReserve(marketId, m, cfLp);
         _checkParams(marketId);
         _checkOracleAndRoutes(marketId, m, cfLp);

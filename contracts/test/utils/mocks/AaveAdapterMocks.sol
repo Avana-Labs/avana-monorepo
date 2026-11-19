@@ -12,7 +12,7 @@ import {
     SpokeDef,
     TokenDef
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {IRiskModuleErrors} from "../../../src/policy/risk-module/IRiskModuleErrors.sol";
+import {IRiskModuleErrors} from "../../../src/legacy/risk-module/IRiskModuleErrors.sol";
 import {IPositionProxy} from "../../../src/proxy/position-proxy/IPositionProxy.sol";
 import {Market} from "../../../src/types/MarketTypes.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -25,7 +25,7 @@ contract AdapterPlaceholder is UUPSUpgradeable {
     ) internal override {}
 }
 
-/// @notice MarketRegistry stand-in with the views the AaveAdapter and the RiskModule read. `setBroken(true)` makes
+/// @notice MarketRegistry stand-in with the views the AaveAdapter and the LegacyRiskModule read. `setBroken(true)` makes
 /// every view revert, standing in for a faulty or hostile registry implementation; `reads` counts every view call.
 contract AdapterRegistryMock {
     error RegistryBroken();
@@ -60,7 +60,7 @@ contract AdapterRegistryMock {
         marketOfReserveMap[m.spoke][m.reserveId] = marketId;
     }
 
-    // ─── Views the RiskModule reads (an Adapter-only test never sets them) ───
+    // ─── Views the LegacyRiskModule reads (an Adapter-only test never sets them) ───
 
     mapping(uint256 => bool) internal _marketKnown;
     mapping(address => uint256[]) internal _spokeMarkets;
@@ -134,7 +134,7 @@ contract AdapterRegistryMock {
         return _spokeList;
     }
 
-    /// @dev Sets the issuer probe `getToken` reports for `token`, so the RiskModule's live ISSUER condition can hold.
+    /// @dev Sets the issuer probe `getToken` reports for `token`, so the LegacyRiskModule's live ISSUER condition can hold.
     function setIssuerProbe(
         address token,
         IssuerProbe probe
@@ -311,10 +311,10 @@ contract AdapterRegistryMock {
     }
 }
 
-/// @notice The RiskModule surface the AaveAdapter calls. `postHealthCheck` reads the real Spoke's health factor (and,
-/// like the reviewed RiskModule, Collateralization's `getAccountRescueUnits`, which answers the Adapter's Lock) and
+/// @notice The LegacyRiskModule surface the AaveAdapter calls. `postHealthCheck` reads the real Spoke's health factor (and,
+/// like the reviewed LegacyRiskModule, Collateralization's `getAccountRescueUnits`, which answers the Adapter's Lock) and
 /// requires `hf >= max(1e18, minHealthFactor)`; `setBroken(true)` makes every function revert (a faulty or
-/// hostile RiskModule); `refuse` makes the pre-checks revert with a RiskModule error. Every call is counted.
+/// hostile LegacyRiskModule); `refuse` makes the pre-checks revert with a LegacyRiskModule error. Every call is counted.
 contract AdapterRiskModuleMock {
     error RiskModuleBroken();
 
@@ -397,7 +397,7 @@ contract AdapterRiskModuleMock {
     ) external view returns (uint256 healthFactor) {
         if (broken) revert RiskModuleBroken();
         if (vaultToken != address(0)) {
-            // The reviewed RiskModule reads the account's rescue units here, under the Adapter's Lock.
+            // The reviewed LegacyRiskModule reads the account's rescue units here, under the Adapter's Lock.
             ICollateralization(COLLATERALIZATION).getAccountRescueUnits(proxy, vaultToken);
         }
         healthFactor = IAaveV4Spoke(SPOKE).getUserAccountData(proxy).healthFactor;

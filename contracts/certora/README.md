@@ -198,7 +198,7 @@ To also generate the Gambit mutants locally (Gambit compiles each file with the 
 
 ### RiskModuleDrift.spec — `RiskModuleDrift.conf`
 
-- **Contracts**: `src/policy/risk-module/RiskModule.sol:RiskModule`.
+- **Contracts**: `src/legacy/risk-module/LegacyRiskModule.sol:LegacyRiskModule`.
 - **Covers**: `PROP-078`: `checkAaveConfig` reverts whenever it reads `receiveSharesEnabled = true`, a non-zero `liquidationFee` or a reinvestment controller on the vault-token asset.
 - **Summaries**: `getReserveConfig`, `getDynamicReserveConfig` and `getAssetConfig` return arbitrary values and record whether a drifted value was read.
 
@@ -220,7 +220,7 @@ To also generate the Gambit mutants locally (Gambit compiles each file with the 
 
 ### RiskModule.spec — `RiskModule.conf`
 
-- **Contracts**: `src/policy/risk-module/RiskModule.sol:RiskModule` (verified implementation).
+- **Contracts**: `src/legacy/risk-module/LegacyRiskModule.sol:LegacyRiskModule` (verified implementation).
 - **Covers**: `PROP-030` and `PROP-067` (Halmos primary: the `hfEx` arithmetic is restated, and the implementation rules show that `postHealthCheck` returns at least the required floor and at most Aave's health factor), `PROP-031` (gates half), `PROP-034`, `PROP-044` (restated), `PROP-046`, `PROP-050`, `PROP-061` (drift-check half), `PROP-062`, `PROP-066` (RiskModule half), `PROP-070`; `INV-019`, `INV-023`, `INV-025`, `INV-028`, `INV-030`, `INV-043`, `INV-045`, `INV-051`, `INV-060`, `INV-069`, `INV-073`, `INV-081`, `INV-082`, `INV-084`.
 - **Summaries**: the Spoke by `AaveModel` (`getUserAccountData` returns a ghost health factor, debt value and borrow count; each reserve's `borrowable` flag is uninterpreted); the MarketRegistry by `RegistryModel`, with market records, `marketOfReserve`, `getSpoke` and `getDebtReserve` uninterpreted and `getDebtReserveIds` returning at most four entries, exactly the enabled set; LPOracles by `PriceStateModel`; `hardHealthFloor(marketId)`, `minPledgeUsd`, Collateralization's `getAccountRescueUnits` and LPVaultSwap's `activeKeeperCount` uninterpreted; NFPM, pool, Hub-configuration and `getBuyRoute` reads NONDET.
 - **Assumptions**: the price rules use a debt scope of GHO reserves (`fixedPrice`); the LPOracle's and the DebtOracle's `getPriceState()` share one selector with different return types, so one wildcard summary serves the LPOracle.

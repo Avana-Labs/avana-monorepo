@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {IntegrationCapabilities, PoolKeying} from "../../../src/amm/types/AmmTypes.sol";
 import {ILegacyLPVaultBase} from "../../../src/legacy/ILegacyLPVaultBase.sol";
 import {ILock} from "../../../src/legacy/ILock.sol";
-import {PledgeCharge} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {PledgeCharge} from "../../../src/legacy/risk-module/types/RiskModuleTypes.sol";
 import {PledgeCounters, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -418,12 +418,12 @@ contract CollLPVaultMock is ILegacyLPVaultBase {
     }
 }
 
-/// @notice RiskModule stand-in: `checkPledge` charges `ceil(units * price8 / 10^6)` (a 6-decimal vault token), books
+/// @notice LegacyRiskModule stand-in: `checkPledge` charges `ceil(units * price8 / 10^6)` (a 6-decimal vault token), books
 /// `sliceUsd` of it in the slice and the matching rescue units, or returns an exact override, or reverts with
 /// `Refused(units)`.
 contract CollRiskModuleMock {
     error Refused(uint128 units);
-    /// @dev Stands in for the RiskModule's `NotRescueTopUp` when `enforceRescue` is on and the pledge must be a rescue.
+    /// @dev Stands in for the LegacyRiskModule's `NotRescueTopUp` when `enforceRescue` is on and the pledge must be a rescue.
     error RescueRequired();
 
     bool public enforceRescue;

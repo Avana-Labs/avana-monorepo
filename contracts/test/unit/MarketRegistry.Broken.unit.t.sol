@@ -6,7 +6,7 @@ pragma solidity 0.8.28;
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @title MarketRegistryBrokenUnitTest
-/// @notice A broken MarketRegistry (every call to it reverts) on the real RiskModule: the new-activity checks that read
+/// @notice A broken MarketRegistry (every call to it reverts) on the real LegacyRiskModule: the new-activity checks that read
 /// it, the pledge check, the borrow pre-check and the withdraw-with-debt pre-check, fail closed with the registry's
 /// error, and pass again once the registry answers.
 /// @dev The registry's revert is a mocked revert of every call to its proxy, as a broken implementation would give.
@@ -19,7 +19,7 @@ contract MarketRegistryBrokenUnitTest is RiskModuleFixture {
         _deployRiskWorld();
     }
 
-    /// @dev Kills: a RiskModule read of the registry wrapped in a try/catch that lets the check pass on a revert.
+    /// @dev Kills: a LegacyRiskModule read of the registry wrapped in a try/catch that lets the check pass on a revert.
     // TEST-243 verifies: REQ-CONFIG-069
     function test_TEST_243_brokenRegistryFailsNewActivityClosed() public {
         bytes memory broken = bytes("registry broken");

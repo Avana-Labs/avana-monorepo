@@ -10,8 +10,8 @@ import {AaveAdapterImmutables} from "../../../src/policy/aave-adapter/types/Aave
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
-import {IRiskModule} from "../../../src/policy/risk-module/IRiskModule.sol";
-import {RiskModuleImmutables} from "../../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {ILegacyRiskModule} from "../../../src/legacy/risk-module/ILegacyRiskModule.sol";
+import {RiskModuleImmutables} from "../../../src/legacy/risk-module/types/RiskModuleTypes.sol";
 import {DeployBase} from "./DeployBase.sol";
 import {ChainInputs, UpgradeableDeployment} from "./DeployTypes.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
@@ -48,7 +48,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         p.accessManager = _predict("AccessManager");
         p.marketRegistry = _predict("MarketRegistry");
         p.parameterStore = _predict("ParameterStore");
-        p.riskModule = _predict("RiskModule");
+        p.riskModule = _predict("LegacyRiskModule");
         p.aaveAdapter = _predict("AaveAdapter");
         p.lpVaultSwap = _predict("LPVaultSwap");
         p.lock = _predict("Lock");
@@ -140,7 +140,7 @@ abstract contract AvanaCoreDeploy is DeployBase {
         );
     }
 
-    /// @notice RiskModule: drift, breaker, pledge, borrow, status and dynamic cap logic, the router, the proxy.
+    /// @notice LegacyRiskModule: drift, breaker, pledge, borrow, status and dynamic cap logic, the router, the proxy.
     function _deployRiskModule(
         Predicted memory p
     ) internal returns (UpgradeableDeployment memory d) {
@@ -184,8 +184,8 @@ abstract contract AvanaCoreDeploy is DeployBase {
         // RiskModuleLogics{drift, breaker, pledge, borrow, status, dynamicCap}.
         bytes memory logics = abi.encode(d.logics[0], d.logics[1], d.logics[2], d.logics[3], d.logics[4], d.logics[5]);
         d.implementation =
-            _deploy("RiskModuleImplementation", bytes.concat(_artifact("RiskModule.sol", "RiskModule"), im, logics));
-        d.proxy = _proxy("RiskModule", d.implementation, abi.encodeCall(IRiskModule.initialize, (p.accessManager)));
+            _deploy("RiskModuleImplementation", bytes.concat(_artifact("LegacyRiskModule.sol", "LegacyRiskModule"), im, logics));
+        d.proxy = _proxy("LegacyRiskModule", d.implementation, abi.encodeCall(ILegacyRiskModule.initialize, (p.accessManager)));
     }
 
     /// @notice AaveAdapter: user, exit, collateral and settlement logic, the router, the proxy.

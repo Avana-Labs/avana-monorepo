@@ -4,14 +4,14 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
+import {IRiskModuleErrors} from "../../src/legacy/risk-module/IRiskModuleErrors.sol";
 import {DriftReason} from "../../src/types/MarketTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 
 /// @title RiskModuleBreakerRecoveryUnitTest
 /// @notice A paused vault-token reserve kept to its own market (REQ-RISK-014, REQ-RISK-088) and the cap charge at the
-/// fresh price (REQ-RISK-026, SPEC-CAP-001), on the real RiskModule and MarketRegistry.
+/// fresh price (REQ-RISK-026, SPEC-CAP-001), on the real LegacyRiskModule and MarketRegistry.
 contract RiskModuleBreakerRecoveryUnitTest is RiskModuleFixture {
     uint128 internal constant TEN_K = 10_000e18; // $20,000 at $2.00 per whole token
 

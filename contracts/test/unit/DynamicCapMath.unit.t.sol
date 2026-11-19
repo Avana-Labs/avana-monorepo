@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {MarketDynamicCap} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-import {DynamicCapMath} from "../../src/policy/risk-module/DynamicCapMath.sol";
+import {DynamicCapMath} from "../../src/legacy/risk-module/DynamicCapMath.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 
 /// @title DynamicCapMathUnitTest

@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 /// @title IRiskModuleLogic
-/// @notice Identity of a RiskModule logic contract.
+/// @notice Identity of a LegacyRiskModule logic contract.
 /// @dev Stateless; its only state-changing calls are LPOracle and DebtOracle `poke()`.
 interface IRiskModuleLogic {
     /// @notice The logic contract's kind and the hash of its implementation immutables.

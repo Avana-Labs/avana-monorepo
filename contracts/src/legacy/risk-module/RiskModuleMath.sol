@@ -7,7 +7,7 @@ import {IRiskModuleErrors} from "./IRiskModuleErrors.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title RiskModuleMath
-/// @notice The RiskModule's pure formulas: caps, restore amount, debt value and health factors.
+/// @notice The LegacyRiskModule's pure formulas: caps, restore amount, debt value and health factors.
 /// @dev Every rounding is against the borrower.
 library RiskModuleMath {
     /// @notice Static call with explicit gas, copying at most `maxLength` bytes of return data.

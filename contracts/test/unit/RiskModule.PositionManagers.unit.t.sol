@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {RiskTier, SpokeDef} from "../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {RiskModuleDriftLogic} from "../../src/policy/risk-module/RiskModuleDriftLogic.sol";
-import {RiskModuleImmutables} from "../../src/policy/risk-module/types/RiskModuleTypes.sol";
+import {RiskModuleDriftLogic} from "../../src/legacy/risk-module/RiskModuleDriftLogic.sol";
+import {RiskModuleImmutables} from "../../src/legacy/risk-module/types/RiskModuleTypes.sol";
 import {IPositionProxy} from "../../src/proxy/position-proxy/IPositionProxy.sol";
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
 import {DriftReason} from "../../src/types/MarketTypes.sol";

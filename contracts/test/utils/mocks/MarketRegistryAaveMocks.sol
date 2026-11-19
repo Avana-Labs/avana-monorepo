@@ -247,7 +247,7 @@ contract RegistryAaveOracleMock {
         getReserveSource[reserveId] = source;
     }
 
-    // Reserve prices for the RiskModule's dynamic borrow cap: a set price, else the source's `latestAnswer()` as the
+    // Reserve prices for the LegacyRiskModule's dynamic borrow cap: a set price, else the source's `latestAnswer()` as the
     // AaveOracle reads it, else $1.00 for a source without one (the registry's feed mocks serve rounds only).
     mapping(uint256 => uint256) public priceOverride;
 

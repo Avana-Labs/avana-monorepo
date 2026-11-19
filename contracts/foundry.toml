@@ -69,6 +69,9 @@ compilation_restrictions = [
   { paths = "test/invariant/echidna/AaveAdapterBorrowProperties.sol", via_ir = false, optimizer_runs = 200 },
   { paths = "test/invariant/echidna/LPVaultSwapLiquidationProperties.sol", via_ir = true, optimizer_runs = 200 },
   { paths = "src/liquidation/lp-vault-swap/LPVaultSwap*Logic.sol", via_ir = true, optimizer_runs = 200 },
+  # The RiskModule inlines the tick, floor-credit and listing-price math; at 10,000 runs it is 25.7 kB, past EIP-170,
+  # at 200 runs 22.5 kB. Its calls are governance listings and views, where the extra gas does not matter.
+  { paths = "src/policy/risk-module/RiskModule.sol", via_ir = false, optimizer_runs = 200 },
 ]
 
 [profile.default.fuzz]
