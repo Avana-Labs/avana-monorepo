@@ -3,11 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ILegacyVaultTokenFactory} from "../../legacy/ILegacyVaultTokenFactory.sol";
 import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
 import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
 import {IProxyManager} from "../../proxy/proxy-manager/IProxyManager.sol";
 import {Market} from "../../types/MarketTypes.sol";
-import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {DebtReserveDef} from "../market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStoreLogic} from "./IParameterStoreLogic.sol";
@@ -164,7 +164,7 @@ contract ParameterStoreAdminRiskLogic is ParameterStoreRisk, IParameterStoreLogi
         address r
     ) private view returns (bool) {
         address factory = reg.VAULT_TOKEN_FACTORY();
-        return factory.code.length != 0 && IVaultTokenFactory(factory).integrationIdOf(r) != 0;
+        return factory.code.length != 0 && ILegacyVaultTokenFactory(factory).integrationIdOf(r) != 0;
     }
 
     // Loop lengths are the registry's size, which only governed operations grow.

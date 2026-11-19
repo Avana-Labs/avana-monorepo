@@ -10,8 +10,8 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../legacy/ICollateralization.sol";
+import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
 import {ILegacyLPVault} from "../../legacy/ILegacyLPVault.sol";
-import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {AmmConstants} from "../../types/AmmConstants.sol";
 import {DriftReason, Market} from "../../types/MarketTypes.sol";
 import {PriceState} from "../../types/OracleTypes.sol";
@@ -232,7 +232,7 @@ contract RiskModulePledgeLogic is RiskModuleBase, IRiskModulePledgeLogic {
         c.topUp = a.borrowCount > 0;
         c.hf = c.topUp ? a.healthFactor : type(uint256).max;
         c.debtRay = a.totalDebtValueRay;
-        ILPOracle.PriceStatus memory st = ILPOracle(c.m.lpOracle).getPriceStatus();
+        ILegacyLPOracle.PriceStatus memory st = ILegacyLPOracle(c.m.lpOracle).getPriceStatus();
         if (!st.liquidationFresh) revert PriceNotAccepted(uint8(PriceState.Cached));
         // `getPriceStatus` serves at least 1.
         // forge-lint: disable-next-line(unsafe-typecast)

@@ -6,6 +6,7 @@ pragma solidity 0.8.28;
 import {IAvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {ILegacyLPVault} from "../../../src/legacy/ILegacyLPVault.sol";
+import {ILegacyVaultTokenFactory} from "../../../src/legacy/ILegacyVaultTokenFactory.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../../src/policy/market-registry/IMarketRegistryRoutes.sol";
@@ -13,7 +14,6 @@ import {IParameterStore} from "../../../src/policy/parameter-store/IParameterSto
 import {IParameterStoreListing} from "../../../src/policy/parameter-store/IParameterStoreListing.sol";
 import {IParameterStoreLoosen} from "../../../src/policy/parameter-store/IParameterStoreLoosen.sol";
 import {IParameterStoreTighten} from "../../../src/policy/parameter-store/IParameterStoreTighten.sol";
-import {IVaultTokenFactory} from "../../../src/vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title AvanaAccess
@@ -229,8 +229,8 @@ library AvanaAccess {
         b[n++] = Binding(Kind.LPVaultSwap, ILPVaultSwap.removeKeeper.selector, t);
         b[n++] = Binding(Kind.LPVaultSwap, ILPVaultSwap.addKeeper.selector, g);
         b[n++] = Binding(Kind.LPVaultSwap, UUPSUpgradeable.upgradeToAndCall.selector, g);
-        b[n++] = Binding(Kind.VaultTokenFactory, IVaultTokenFactory.registerIntegration.selector, g);
-        b[n++] = Binding(Kind.VaultTokenFactory, IVaultTokenFactory.deployVaultToken.selector, g);
+        b[n++] = Binding(Kind.VaultTokenFactory, ILegacyVaultTokenFactory.registerIntegration.selector, g);
+        b[n++] = Binding(Kind.VaultTokenFactory, ILegacyVaultTokenFactory.deployVaultToken.selector, g);
         b[n++] = Binding(Kind.RiskModule, UUPSUpgradeable.upgradeToAndCall.selector, g);
         b[n++] = Binding(Kind.AaveAdapter, UUPSUpgradeable.upgradeToAndCall.selector, g);
         b[n++] = Binding(Kind.LpVault, ILegacyLPVault.returnStray.selector, g);

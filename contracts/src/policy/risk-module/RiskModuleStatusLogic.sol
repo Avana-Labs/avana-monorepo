@@ -5,10 +5,10 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
+import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
+import {LegacyChainlinkPrice} from "../../legacy/LegacyChainlinkPrice.sol";
+import {LegacyPriceMath} from "../../legacy/LegacyPriceMath.sol";
 import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {ChainlinkPrice} from "../../oracle/ChainlinkPrice.sol";
-import {ILPOracle} from "../../oracle/ILPOracle.sol";
-import {LPPriceMath} from "../../oracle/LPPriceMath.sol";
 import {AccountGateStatus, MarketGateStatus} from "../../types/MarketTypes.sol";
 import {PriceState} from "../../types/OracleTypes.sol";
 import {DebtReserveDef, MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
@@ -106,9 +106,9 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
     ) internal view returns (MarketGateStatus memory g) {
         g.marketId = s.marketId;
         g.reserveId = s.m.reserveId;
-        ILPOracle.PriceStatus memory st = ILPOracle(s.m.lpOracle).getPriceStatus();
+        ILegacyLPOracle.PriceStatus memory st = ILegacyLPOracle(s.m.lpOracle).getPriceStatus();
         g.priceState = st.liquidationFresh ? PriceState.Live : PriceState.Cached;
-        g.oldestFeedAge = LPPriceMath.age(st.updatedAt);
+        g.oldestFeedAge = LegacyPriceMath.age(st.updatedAt);
         g.feedTooOld = !st.borrowFresh;
         g.offboarding = s.m.status == MarketStatus.Offboarding;
         g.hubSharesEqualAssets = IRiskModuleDriftLogic(_DRIFT).isHubSharesEqualAssets(s.marketId);
@@ -149,7 +149,7 @@ contract RiskModuleStatusLogic is RiskModuleBorrowScope, IRiskModuleStatusLogic 
         address source = IAaveV4Oracle(oracle).getReserveSource(r);
         if (source != s.defs[i].priceSource) return true;
         if (s.defs[i].fixedPrice) return false;
-        return !ChainlinkPrice.read(source, address(_store())).borrowFresh;
+        return !LegacyChainlinkPrice.read(source, address(_store())).borrowFresh;
     }
 
     function _passes(

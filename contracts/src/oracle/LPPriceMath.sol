@@ -3,103 +3,107 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AmmConstants} from "../types/AmmConstants.sol";
+import {ClTickMath} from "../amm/concentrated-liquidity/ClTickMath.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {SqrtPriceMath} from "@uniswap/v4-core/src/libraries/SqrtPriceMath.sol";
 
 /// @title LPPriceMath
-/// @notice Pure arithmetic of the LP price: Chainlink answers to 8 decimals, the stable ceiling, the value of a
-/// composition and the age rules the borrow and liquidation gates apply.
-/// @dev Fails closed (0 or `valid = false`) instead of reverting; prices round down.
+/// @notice Pure arithmetic of the band-unit price: Chainlink answers to 8 decimals, the fair square-root price of two
+/// USD prices, and the value of band liquidity at that price.
+/// @dev Pool-neutral: ticks, prices and decimals in, numbers out. Every step rounds down, so the value never exceeds
+/// what the liquidity holds. The amounts are Uniswap v4-core `SqrtPriceMath`'s, the same the LPVault credits with.
 library LPPriceMath {
+    /// @notice Decimals of every price here and of the answer.
     uint8 internal constant DECIMALS = 8;
     uint256 internal constant PRICE_UNIT = 1e8;
-    uint256 internal constant BPS = 10_000;
-    uint256 internal constant STABLE_CEILING_USD = 1e8;
-    /// @notice Largest token price the oracle serves; small enough that no price-path product overflows.
-    uint256 internal constant MAX_ROUTE_ANSWER = 1e18;
-    /// @notice Exclusive upper bound of a raw answer and of a composition amount.
+    /// @notice A USD stablecoin is valued at most $1.
+    uint256 internal constant STABLE_CEILING = 1e8;
+    /// @notice Largest token price served ($10^10): small enough that no product below overflows.
+    uint256 internal constant MAX_PRICE = 1e18;
+    /// @notice Largest token or feed decimals accepted.
+    uint8 internal constant MAX_DECIMALS = 18;
+    /// @notice Exclusive bound of a raw Chainlink answer.
     uint256 internal constant ANSWER_BOUND = 2 ** 128;
-    uint8 internal constant MIN_VAULT_DECIMALS = 6;
-    uint8 internal constant MAX_VAULT_DECIMALS = 18;
-    /// @notice Largest token decimals `lpPrice` accepts: `10^77 < 2^256 < 10^78`.
-    uint8 internal constant MAX_TOKEN_DECIMALS = 77;
-    /// @notice Value of a bound or product that would need more than 256 bits.
-    uint256 internal constant SATURATED = type(uint256).max;
 
-    /// @notice `timestamp − updatedAt`, 0 for a timestamp in the future.
-    function age(
-        uint256 updatedAt
-    ) internal view returns (uint256) {
-        return block.timestamp > updatedAt ? block.timestamp - updatedAt : 0;
-    }
+    uint256 internal constant Q128 = 2 ** 128;
+    uint256 internal constant Q192 = 2 ** 192;
 
-    /// @notice Borrow-side age rule: not in the future and `age ≤ maxAge`.
-    function borrowFresh(
-        uint256 updatedAt,
-        uint256 maxAge
-    ) internal view returns (bool) {
-        return updatedAt <= block.timestamp && block.timestamp - updatedAt <= maxAge;
-    }
-
-    /// @notice Liquidation-side age rule: `age ≤ maxAge`, with a future timestamp counted as age 0.
-    function liquidationFresh(
-        uint256 updatedAt,
-        uint256 maxAge
-    ) internal view returns (bool) {
-        return age(updatedAt) <= maxAge;
-    }
-
-    /// @notice 8-decimal value of a signed Chainlink answer with `decimals` decimals, rounded down.
-    /// @dev 0 (a failure, never a price) for `answer <= 0` or `answer >= 2^128`.
-    function normalizeAnswer(
+    /// @notice 8-decimal value of a Chainlink answer with `feedDecimals` decimals, rounded down.
+    /// @dev 0, which the caller treats as a failed feed, for `answer <= 0` or `answer >= 2^128`. `feedDecimals` is at
+    /// most `MAX_DECIMALS` (checked at construction).
+    function normalize(
         int256 answer,
-        uint8 decimals
-    ) internal pure returns (uint256 normalized) {
+        uint8 feedDecimals
+    ) internal pure returns (uint256) {
         if (answer <= 0) return 0;
-        uint256 a = SafeCast.toUint256(answer);
+        // answer > 0, so the conversion is exact.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint256 a = uint256(answer);
         if (a >= ANSWER_BOUND) return 0;
-        if (decimals <= DECIMALS) return a * 10 ** (DECIMALS - decimals);
-        return decimals - DECIMALS > MAX_TOKEN_DECIMALS ? 0 : a / 10 ** (decimals - DECIMALS);
+        if (feedDecimals <= DECIMALS) return a * 10 ** (DECIMALS - feedDecimals);
+        return a / 10 ** (feedDecimals - DECIMALS);
     }
 
-    /// @notice The price a token is valued at: its quote, capped at $1 for a USD stablecoin.
-    function valuationPrice(
-        uint256 quote,
-        bool isUsdStable
-    ) internal pure returns (uint256 price) {
-        return isUsdStable && quote > STABLE_CEILING_USD ? STABLE_CEILING_USD : quote;
+    /// @notice Q64.96 square root of the fair raw token1-per-token0 price `(p0 / 10^d0) / (p1 / 10^d1)`, rounded
+    /// down and kept inside `[MIN_SQRT_PRICE, MAX_SQRT_PRICE)`.
+    /// @dev Requires `0 < p0, p1 <= MAX_PRICE` and `d0, d1 <= MAX_DECIMALS`.
+    function sqrtPriceX96(
+        uint256 p0,
+        uint256 p1,
+        uint8 d0,
+        uint8 d1
+    ) internal pure returns (uint160) {
+        (uint256 raw, bool high) = rawSqrtPrice(p0, p1, d0, d1);
+        if (high) return ClTickMath.MAX_SQRT_PRICE - 1;
+        if (raw < ClTickMath.MIN_SQRT_PRICE) return ClTickMath.MIN_SQRT_PRICE;
+        // Not high, so raw < MAX_SQRT_PRICE < 2^160.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        return uint160(raw);
     }
 
-    /// @notice Price of one whole vault token from its composition: `max(1, sum_i floor((a_i - 1) * v_i / 10^d_i))`.
-    /// @dev Rounds down, so the price never exceeds the holdings' value. `valid = false` for malformed inputs.
-    function lpPrice(
-        uint256[] memory amounts,
-        uint256[] memory prices,
-        uint8[] memory tokenDecimals
-    ) internal pure returns (bool valid, uint256 price8) {
-        uint256 n = amounts.length;
-        if (n < AmmConstants.MIN_POOL_TOKENS || n > AmmConstants.MAX_POOL_TOKENS) return (false, 0);
-        if (prices.length != n || tokenDecimals.length != n) return (false, 0);
-        for (uint256 i = 0; i < n; ++i) {
-            uint256 a = amounts[i];
-            uint8 d = tokenDecimals[i];
-            if (a >= ANSWER_BOUND || prices[i] == 0 || prices[i] > MAX_ROUTE_ANSWER || d > MAX_TOKEN_DECIMALS) {
-                return (false, 0);
-            }
-            if (a > 1) price8 += Math.mulDiv(a - 1, prices[i], 10 ** d);
-        }
-        return (true, price8 == 0 ? 1 : price8);
+    /// @notice The unbounded square root of `sqrtPriceX96`, and whether it reaches `MAX_SQRT_PRICE`.
+    /// @dev Three branches by `num / den` so no `mulDiv` result exceeds 2^256; requires `den < 2^188`, so `den << 64`
+    /// fits (here `num, den <= 10^36 < 2^120`).
+    function rawSqrtPrice(
+        uint256 p0,
+        uint256 p1,
+        uint8 d0,
+        uint8 d1
+    ) internal pure returns (uint256 raw, bool high) {
+        uint256 num = p0 * 10 ** d1;
+        uint256 den = p1 * 10 ** d0;
+        if (num < den << 64) return (Math.sqrt(Math.mulDiv(num, Q192, den)), false);
+        if (num >> 128 >= den) return (0, true);
+        raw = Math.sqrt(Math.mulDiv(num, Q128, den)) << 32;
+        high = raw >= ClTickMath.MAX_SQRT_PRICE;
     }
 
-    /// @notice Observation buffer a pool needs for a window: `ceil(window / blockTime) + 1`.
-    /// @dev A block time of 0 saturates, so the listing check fails closed.
-    function minObservations(
-        uint256 window,
-        uint256 blockTime
-    ) internal pure returns (uint256 observations) {
-        if (blockTime == 0) return SATURATED;
-        uint256 k = Math.ceilDiv(window, blockTime);
-        return k == SATURATED ? SATURATED : k + 1;
+    /// @notice Raw token amounts `units` of liquidity on `[sqrtLower, sqrtUpper]` hold at the square-root price `s`,
+    /// with `s` clamped to the band first, each rounded down.
+    /// @dev Below the band the liquidity is all token0, above it all token1, as in the AMM. Requires
+    /// `0 < sqrtLower < sqrtUpper`.
+    function amounts(
+        uint160 s,
+        uint160 sqrtLower,
+        uint160 sqrtUpper,
+        uint128 units
+    ) internal pure returns (uint256 amount0, uint256 amount1) {
+        if (s < sqrtLower) s = sqrtLower;
+        else if (s > sqrtUpper) s = sqrtUpper;
+        amount0 = SqrtPriceMath.getAmount0Delta(s, sqrtUpper, units, false);
+        amount1 = SqrtPriceMath.getAmount1Delta(sqrtLower, s, units, false);
+    }
+
+    /// @notice 8-decimal USD value of raw amounts at 8-decimal prices, each term rounded down.
+    /// @dev Amounts below 2^192 and prices at most `MAX_PRICE` keep each product inside `mulDiv`'s 512 bits.
+    function value(
+        uint256 amount0,
+        uint256 amount1,
+        uint256 p0,
+        uint256 p1,
+        uint8 d0,
+        uint8 d1
+    ) internal pure returns (uint256) {
+        return Math.mulDiv(amount0, p0, 10 ** d0) + Math.mulDiv(amount1, p1, 10 ** d1);
     }
 }

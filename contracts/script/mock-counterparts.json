@@ -14,6 +14,7 @@
         "utils/mocks/ChainlinkCostMocks.sol:EacProxyMock",
         "utils/mocks/ChainlinkCostMocks.sol:OcrAggregatorMock",
         "utils/mocks/LPOracleMocks.sol:OracleFeedMock",
+        "utils/mocks/BandOracleMocks.sol:BandTestFeed",
         "utils/mocks/MarketRegistryMocks.sol:RegistryFeedMock",
         "utils/mocks/MarketRegistryMocks.sol:RegistryDebtOracleMock",
         "utils/mocks/RiskModuleMocks.sol:RiskDebtOracleMock",

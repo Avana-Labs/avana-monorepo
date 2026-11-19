@@ -149,23 +149,6 @@ To also generate the Gambit mutants locally (Gambit compiles each file with the 
 - **Assumptions**: distinct keys name distinct NFTs (`distinctNfts`, required of the second key of a parametric call): the Slipstream constructor refuses equal managers (`REQ-AMM-SLIP-006`), which the prover sees only as unknown immutables.
 - **Loop bound**: 2. Every custody function acts on one tokenId; `bindMarket` values the market's range over the two pool tokens (`LPPriceMath.lpPrice`), so it completes only with two unrollings. Its first binding of a pool (the reference-range search through `ClPriceMath.tickAtSqrtRatio`) needs more and is not covered; a pool already bound is.
 
-### VaultToken.spec — `VaultToken.conf`
-
-- **Contracts**: `src/vault-token/vault-token/VaultToken.sol:VaultToken`.
-- **Covers**: `PROP-005`, `PROP-008` (recipient part), `PROP-009` (append-only part), `PROP-043`, `PROP-055`; `INV-009`, `INV-010`, `INV-011`, `INV-012`.
-- **Hooks**: OpenZeppelin v5.1.0 `_balances` summed against `_totalSupply`; registry writes on `isValidProxy`.
-- **Definitions**: `allowedPath(from, to)` is the `REQ-VTOKEN-040` formula (proxy to Hub, Hub to proxy, Hub to LPVaultSwap); `isBinding(a)` is the seven address bindings and the token itself, which `addValidProxy` refuses (`REQ-VTOKEN-047`).
-- **Summaries**: none; the token holds its own registry and makes no external call, so every rule holds for any Adapter.
-- **Assumptions**: the supply rules start from a state where `totalSupply` is the sum of balances (`totalSupplyIsSumOfBalances`, required), because OpenZeppelin's burn lowers `_totalSupply` unchecked.
-- **Loop bound**: 7, the constructor's pairwise check of the seven address bindings.
-
-### VaultTokenFactory.spec — `VaultTokenFactory.conf`
-
-- **Contracts**: `src/vault-token/vault-token-factory/VaultTokenFactory.sol:VaultTokenFactory`.
-- **Covers**: `PROP-099`: only the AvanaTimelock registers an integration or deploys a token (`registerOnlyByTimelock`, `deployOnlyByTimelock`), `lpVaultOf(id)` and `tokenOf(spoke, marketKey)` are written once (`lpVaultOfIsWriteOnce`, `tokenOfIsWriteOnce`), `isVaultToken(t)` only turns true, each (CDP Spoke, market key) gets one token at `predictAddress(spoke, marketKey)` (`deployLandsAtThePredictedAddress`, `secondDeployForAMarketReverts`), the factory's bindings never change, and `timelockCanRegister` and `timelockCanDeploy` show both paths reachable; `INV-009`, `INV-012`, `INV-051`.
-- **Summaries**: the LPVault and Collateralization reads of `registerIntegration` are length-checked low-level `STATICCALL`s, which the prover treats as returning arbitrary data, so every identity rule holds for any answer (the methods block also binds `INTEGRATION_ID`, `COLLATERALIZATION` and `LOCK` to ghost functions of the called contract); the VaultToken constructor runs inside the CREATE3 deployment, whose bytecode the prover creates with `dynamic_bound` 1.
-- **Loop bound**: 7: the 32-byte words of names and symbols up to 64 bytes, and the VaultToken constructor's pairwise check of its seven bindings, which runs inside the CREATE3 deployment.
-
 ### AaveAdapter.spec — `AaveAdapter.conf`
 
 - **Contracts**: `src/policy/aave-adapter/AaveAdapter.sol:AaveAdapter` (reviewed Adapter, the router) with its logic contracts `AaveAdapterUserLogic`, `AaveAdapterExitLogic`, `AaveAdapterCollateralLogic` and `AaveAdapterSettlementLogic` linked (each delegatecall resolves to the real code) and `src/custody/collateralization/Collateralization.sol:Collateralization` linked.

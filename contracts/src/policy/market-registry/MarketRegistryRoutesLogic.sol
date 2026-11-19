@@ -4,9 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILegacyLPVault} from "../../legacy/ILegacyLPVault.sol";
+import {ILegacyVaultTokenFactory} from "../../legacy/ILegacyVaultTokenFactory.sol";
 import {ISettlementRoute} from "../../liquidation/settlement-routes/ISettlementRoute.sol";
 import {Market} from "../../types/MarketTypes.sol";
-import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {IMarketRegistryRoutes} from "./IMarketRegistryRoutes.sol";
@@ -225,7 +225,7 @@ contract MarketRegistryRoutesLogic is MarketRegistryRouteChecks, IMarketRegistry
     function _integrationRecordKey(
         uint32 integrationId
     ) private view returns (bytes32) {
-        address lpVault = IVaultTokenFactory(_VAULT_TOKEN_FACTORY).lpVaultOf(integrationId);
+        address lpVault = ILegacyVaultTokenFactory(_VAULT_TOKEN_FACTORY).lpVaultOf(integrationId);
         if (lpVault == address(0)) revert IMarketRegistry.InvalidIntegration(integrationId);
         ILegacyLPVault v = ILegacyLPVault(lpVault);
         return

@@ -6,10 +6,10 @@ pragma solidity 0.8.28;
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../legacy/ICollateralization.sol";
+import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
+import {LegacyChainlinkPrice} from "../../legacy/LegacyChainlinkPrice.sol";
+import {LegacyPriceMath} from "../../legacy/LegacyPriceMath.sol";
 import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {ChainlinkPrice} from "../../oracle/ChainlinkPrice.sol";
-import {ILPOracle} from "../../oracle/ILPOracle.sol";
-import {LPPriceMath} from "../../oracle/LPPriceMath.sol";
 import {DriftReason, Market} from "../../types/MarketTypes.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {MarketStatus} from "../market-registry/types/MarketRegistryTypes.sol";
@@ -133,8 +133,8 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
     function _collateralPrice(
         Scope memory s
     ) internal view {
-        ILPOracle.PriceStatus memory st = ILPOracle(s.m.lpOracle).getPriceStatus();
-        if (!st.borrowFresh) revert PriceTooOld(s.m.lpOracle, LPPriceMath.age(st.updatedAt));
+        ILegacyLPOracle.PriceStatus memory st = ILegacyLPOracle(s.m.lpOracle).getPriceStatus();
+        if (!st.borrowFresh) revert PriceTooOld(s.m.lpOracle, LegacyPriceMath.age(st.updatedAt));
     }
 
     function _debtPrices(
@@ -148,9 +148,9 @@ contract RiskModuleBorrowLogic is RiskModuleBorrowScope, IRiskModuleBorrowLogic 
             // forge-lint: disable-next-line(require-revert-in-loop)
             if (source != s.defs[i].priceSource) revert UnexpectedDebtPriceSource(r, source);
             if (s.defs[i].fixedPrice) continue;
-            ChainlinkPrice.Reading memory p = ChainlinkPrice.read(source, address(_store()));
+            LegacyChainlinkPrice.Reading memory p = LegacyChainlinkPrice.read(source, address(_store()));
             // forge-lint: disable-next-line(require-revert-in-loop)
-            if (!p.borrowFresh) revert DebtPriceTooOld(r, source, LPPriceMath.age(p.updatedAt));
+            if (!p.borrowFresh) revert DebtPriceTooOld(r, source, LegacyPriceMath.age(p.updatedAt));
         }
     }
 

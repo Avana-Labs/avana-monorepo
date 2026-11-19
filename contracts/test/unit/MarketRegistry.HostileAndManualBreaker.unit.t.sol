@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
+import {ILegacyVaultToken} from "../../src/legacy/ILegacyVaultToken.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -27,7 +27,7 @@ contract HostileMarketRegistry {
         address to,
         uint256 amount
     ) external {
-        IVaultToken(vaultToken).mint(to, amount);
+        ILegacyVaultToken(vaultToken).mint(to, amount);
     }
 
     fallback(
@@ -52,7 +52,7 @@ contract MarketRegistryHostileAndManualBreakerUnitTest is RiskModuleFixture {
     /// Collateralization; the account's proxy keeps its Spoke and market; a mint from the registry's address reverts;
     /// and the registry holds no vault token or ETH.
     function test_TEST_133_hostileRegistryChangesNoBindingAndMintsNothing() public {
-        IVaultToken vtk = IVaultToken(vaultToken);
+        ILegacyVaultToken vtk = ILegacyVaultToken(vaultToken);
         address[7] memory before = [
             vtk.hub(),
             vtk.spoke(),

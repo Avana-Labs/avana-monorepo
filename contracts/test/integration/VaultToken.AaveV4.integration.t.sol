@@ -5,10 +5,10 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {VaultTokenBindings} from "../../src/types/MarketTypes.sol";
-import {IVaultToken} from "../../src/vault-token/vault-token/IVaultToken.sol";
-import {VaultToken} from "../../src/vault-token/vault-token/VaultToken.sol";
+import {IVaultToken} from "../../src/vault-token/IVaultToken.sol";
+import {VaultToken} from "../../src/vault-token/VaultToken.sol";
 import {AaveV4Fixture} from "../utils/fixtures/AaveV4Fixture.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -121,14 +121,14 @@ contract VaultTokenTestDebtAsset is ERC20 {
 /// @title VaultTokenAaveV4Base
 /// @notice The vault token listed as a collateral reserve of the standard CDP Spoke on the real local Aave V4 (pinned
 /// release), with one proxy, one debt asset and the 2.1 listing settings; `liquidationFeeBps` is the reserve's fee.
-/// @dev The AaveAdapter and LPVaultSwap are pranked addresses; the proxy is a pranked address registered by the Adapter.
+/// @dev The AaveAdapter and the LiquidationModule are pranked addresses; the proxy is a pranked address registered by the Adapter.
 abstract contract VaultTokenAaveV4Base is AaveV4Fixture {
     uint8 internal constant VT_DECIMALS = 6;
     uint256 internal constant UNITS = 5_000_000_000; // 5,000 whole tokens at $2.00
     uint256 internal constant BORROWED = 7000e18;
 
     address internal adapter = makeAddr("aaveAdapter");
-    address internal lpVaultSwap = makeAddr("lpVaultSwap");
+    address internal liquidationModule = makeAddr("liquidationModule");
     address internal proxy = makeAddr("proxy");
 
     VaultToken internal token;
@@ -142,23 +142,24 @@ abstract contract VaultTokenAaveV4Base is AaveV4Fixture {
 
     function setUp() public virtual {
         _deployAaveV4();
+        AccessManager vtAuthority = new AccessManager(address(this));
         token = new VaultToken(
-            VaultTokenBindings({
-                marketKey: keccak256("avana.test.market.usdc-usdt.full-range"),
-                integrationId: 1,
-                integration: makeAddr("lpVault"),
-                hub: aave.hub,
-                spoke: aave.cdpSpoke,
-                marketId: 1,
-                lpOracle: makeAddr("lpOracle"),
-                adapter: adapter,
-                lpVaultSwap: lpVaultSwap,
-                collateralization: makeAddr("collateralization"),
-                decimals: VT_DECIMALS,
+            IVaultToken.Params({
                 name: "Avana USDC/USDT Uniswap v3 Full Range",
-                symbol: "avUSDC-USDT-v3"
+                symbol: "avUSDC-USDT-v3",
+                decimals: VT_DECIMALS,
+                marketId: 1,
+                hub: aave.hub,
+                liquidationModule: liquidationModule,
+                authority: address(vtAuthority)
             })
         );
+        bytes4[] memory selectors = new bytes4[](3);
+        selectors[0] = IVaultToken.mint.selector;
+        selectors[1] = IVaultToken.burn.selector;
+        selectors[2] = IVaultToken.addValidProxy.selector;
+        vtAuthority.setTargetFunctionRole(address(token), selectors, 1);
+        vtAuthority.grantRole(1, adapter, 0);
         debt = new VaultTokenTestDebtAsset();
         vtPrice = new VaultTokenTestPriceSource(2e8);
         debtPrice = new VaultTokenTestPriceSource(1e8);
@@ -256,8 +257,8 @@ abstract contract VaultTokenAaveV4Base is AaveV4Fixture {
 /// @notice The vault token listed as a collateral reserve of the standard CDP Spoke on the real local Aave V4 (pinned
 /// release): `Spoke.supply` moves units proxy → Hub through `transferFrom` on the proxy's exact allowance,
 /// `Spoke.withdraw` pays the proxy from the Hub, and `Spoke.liquidationCall` with `receiveShares = false` pays the
-/// liquidator from the Hub, so every liquidator other than LPVaultSwap reverts on the token transfer.
-/// @dev The AaveAdapter and LPVaultSwap are pranked addresses (their contracts come later); the proxy is a pranked
+/// liquidator from the Hub, so every liquidator other than the LiquidationModule reverts on the token transfer.
+/// @dev The AaveAdapter and the LiquidationModule are pranked addresses (their contracts come later); the proxy is a pranked
 /// address registered by the Adapter. The listing follows the 2.1 required settings of a vault-token reserve
 /// (`receiveSharesEnabled = false`, `liquidationFee = 0`, not borrowable, no reinvestment controller, `drawCap = 0`).
 contract VaultTokenAaveV4IntegrationTest is VaultTokenAaveV4Base {
@@ -314,23 +315,23 @@ contract VaultTokenAaveV4IntegrationTest is VaultTokenAaveV4Base {
     }
 
     // TEST-022 verifies: REQ-VTOKEN-006, REQ-VTOKEN-014, REQ-VTOKEN-017, INV-010, INV-011, Q-116, Q-255
-    /// @notice LPVaultSwap's `liquidationCall(…, false)` receives the seized units from the Hub; the share drop equals
-    /// the units received, and the Adapter's burn from LPVaultSwap retires them.
-    function test_TEST_022_lpVaultSwapLiquidationReceivesSeizedUnits() public {
+    /// @notice The LiquidationModule's `liquidationCall(…, false)` receives the seized units from the Hub; the share drop equals
+    /// the units received, and the Adapter's burn from the LiquidationModule retires them.
+    function test_TEST_022_liquidationModuleLiquidationReceivesSeizedUnits() public {
         _pledgeAndBorrowUnderwater();
         uint256 sharesBefore = IAaveV4Spoke(aave.cdpSpoke).getUserSuppliedShares(vtReserveId, proxy);
-        debt.mint(lpVaultSwap, 1000e18);
-        vm.startPrank(lpVaultSwap);
+        debt.mint(liquidationModule, 1000e18);
+        vm.startPrank(liquidationModule);
         debt.approve(aave.cdpSpoke, 1000e18);
         IAaveV4Spoke(aave.cdpSpoke).liquidationCall(vtReserveId, debtReserveId, proxy, 1000e18, false);
         vm.stopPrank();
-        uint256 seized = token.balanceOf(lpVaultSwap);
+        uint256 seized = token.balanceOf(liquidationModule);
         assertGt(seized, 0, "nothing seized");
         assertEq(
             sharesBefore - IAaveV4Spoke(aave.cdpSpoke).getUserSuppliedShares(vtReserveId, proxy), seized, "share drop"
         );
         vm.prank(adapter);
-        token.burn(lpVaultSwap, seized);
+        token.burn(liquidationModule, seized);
         assertEq(token.totalSupply(), UNITS - seized, "supply");
         assertEq(token.balanceOf(aave.hub), IAaveV4Hub(aave.hub).getAssetLiquidity(_vtAssetId()), "hub = liquidity");
     }
@@ -386,8 +387,8 @@ contract VaultTokenAaveV4IntegrationTest is VaultTokenAaveV4Base {
 /// @notice Why every vault-token reserve has `liquidationFee = 0` with no alternative: with a 10% fee on the real
 /// local Aave V4, Aave pays the fee as Hub shares moved to the fee receiver with no token transfer. A third party's
 /// fee-only liquidation then succeeds and moves the borrower's shares without any unit leaving the Hub, and in
-/// LPVaultSwap's own liquidation the share drop exceeds the units it receives, so the fee units stay in the Hub for
-/// good: the fee receiver can never withdraw them (the Hub can pay only registered proxies and LPVaultSwap).
+/// the LiquidationModule's own liquidation the share drop exceeds the units it receives, so the fee units stay in the Hub for
+/// good: the fee receiver can never withdraw them (the Hub can pay only registered proxies and the LiquidationModule).
 /// @dev Same listing as the base suite except the fee. The drift check that refuses such a reserve is the RiskModule's
 /// (`TEST-268`); this suite shows the Aave behaviour that makes 0 the only listed value.
 contract VaultTokenAaveV4LiquidationFeeIntegrationTest is VaultTokenAaveV4Base {
@@ -420,22 +421,22 @@ contract VaultTokenAaveV4LiquidationFeeIntegrationTest is VaultTokenAaveV4Base {
     }
 
     // TEST-185 verifies: REQ-VTOKEN-025, INV-008, INV-093, ATTACK-014
-    /// @notice In LPVaultSwap's liquidation with a fee the borrower's share drop exceeds the units LPVaultSwap
+    /// @notice In the LiquidationModule's liquidation with a fee the borrower's share drop exceeds the units the LiquidationModule
     /// receives; the difference stays in the Hub as fee-receiver shares that no unit can ever leave the Hub for.
-    function test_TEST_185_feeLeavesUnitsLPVaultSwapCanNeverBurn() public {
+    function test_TEST_185_feeLeavesUnitsLiquidationModuleCanNeverBurn() public {
         _pledgeAndBorrowUnderwater();
         uint256 sharesBefore = IAaveV4Spoke(aave.cdpSpoke).getUserSuppliedShares(vtReserveId, proxy);
-        debt.mint(lpVaultSwap, 1000e18);
-        vm.startPrank(lpVaultSwap);
+        debt.mint(liquidationModule, 1000e18);
+        vm.startPrank(liquidationModule);
         debt.approve(aave.cdpSpoke, 1000e18);
         IAaveV4Spoke(aave.cdpSpoke).liquidationCall(vtReserveId, debtReserveId, proxy, 1000e18, false);
         vm.stopPrank();
         uint256 drop = sharesBefore - IAaveV4Spoke(aave.cdpSpoke).getUserSuppliedShares(vtReserveId, proxy);
-        uint256 seized = token.balanceOf(lpVaultSwap);
-        assertGt(drop, seized, "fee units left the borrower without reaching LPVaultSwap");
+        uint256 seized = token.balanceOf(liquidationModule);
+        assertGt(drop, seized, "fee units left the borrower without reaching the LiquidationModule");
         uint256 feeShares = IAaveV4Hub(aave.hub).getSpokeAddedShares(_vtAssetId(), aave.treasurySpoke);
         assertEq(drop - seized, feeShares, "fee receiver holds the difference");
-        // The fee receiver's units can never leave the Hub: the Hub may pay only registered proxies and LPVaultSwap.
-        assertFalse(token.isAllowedRecipient(aave.treasurySpoke), "fee receiver can hold units");
+        // The fee receiver's units can never leave the Hub: the Hub may pay only registered proxies and the LiquidationModule.
+        assertFalse(token.isAllowedTransfer(aave.hub, aave.treasurySpoke), "fee receiver can hold units");
     }
 }

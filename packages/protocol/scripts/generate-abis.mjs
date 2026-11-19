@@ -26,7 +26,7 @@ const ABI_DIR = join(PKG, "src/abis");
  * which carries its events and errors, except where the interface leaves out events the deployed contract emits; that
  * one comes from the contract itself. IAvanaFirstLossReserve does not inherit IAvanaFirstLossReserveAdmin
  * (BorrowSpokeAllowlistUpdated, FirstLossReserveMinimumUpdated). A "kept" ABI belongs to a contract no longer in
- * contracts/ (the Lens, the gas vault, the flash liquidator): its committed file is read as it is, for the services
+ * contracts/ (the Lens, the gas vault, the flash liquidator, the vault-token factory): its committed file is read as it is, for the services
  * that still import it, and is not rewritten.
  */
 const CONTRACTS = [
@@ -48,7 +48,7 @@ const CONTRACTS = [
   ["proxyManagerAbi", "avana", "IProxyManager"],
   ["riskModuleAbi", "avana", "IRiskModule"],
   ["vaultTokenAbi", "avana", "IVaultToken"],
-  ["vaultTokenFactoryAbi", "avana", "IVaultTokenFactory"],
+  ["vaultTokenFactoryAbi", "kept", "IVaultTokenFactory"],
 ];
 
 const SOURCE = { avana: "contracts/out", aave: "contracts/out-aave (Aave V4, pinned commit)" };

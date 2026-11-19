@@ -9,7 +9,7 @@ import {IAaveV4ExtSload} from "../../interfaces/external/aave/IAaveV4ExtSload.so
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {IVaultTokenFactory} from "../../vault-token/vault-token-factory/IVaultTokenFactory.sol";
+import {ILegacyVaultTokenFactory} from "../../legacy/ILegacyVaultTokenFactory.sol";
 import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {IMarketRegistry} from "./IMarketRegistry.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
@@ -110,7 +110,7 @@ contract MarketRegistryHubsLogic is MarketRegistryDebtChecks, IMarketRegistryLog
         } else {
             if (
                 l.hubTier[def.hub] != def.riskTier || def.riskTier == RiskTier.None
-                    || IVaultTokenFactory(_VAULT_TOKEN_FACTORY).lpVaultOf(def.integrationId) == address(0)
+                    || ILegacyVaultTokenFactory(_VAULT_TOKEN_FACTORY).lpVaultOf(def.integrationId) == address(0)
             ) revert InvalidSpoke(spoke);
             l.spokes[spoke] = SpokeDef({
                 approved: true,

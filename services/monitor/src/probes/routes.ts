@@ -72,19 +72,19 @@ export function routesProbe(intervalSeconds = 86_400): Probe<RoutesInput> {
     const store = m.avana.parameterStore.address;
     const markets = ctx.snapshot.markets.filter((x) => x.status === 2 || x.status === 3);
     const pre = await some(ctx.views, markets.flatMap((x) => [
-      { address: x.lpOracle, abi: lpOracleAbi, functionName: "getTokenPrices" },
+      { address: x.lpOracle, abi: lpOracleAbi, functionName: "getPrices" },
       { address: store, abi: parameterStoreAbi, functionName: "getMarketParams", args: [BigInt(x.marketId)] },
     ]));
     type Plan = { marketId: string; token: Address; tokenDecimals: number; tokenPrice: bigint; debt: { asset: Address; decimals: number; price: bigint }; kind: number; slippageBps: bigint };
     const plans: Plan[] = [];
     markets.forEach((x, k) => {
-      const prices = pre[2 * k] as readonly [readonly bigint[], bigint] | null;
+      const prices = pre[2 * k] as readonly [bigint, bigint, bigint] | null;
       const params = pre[2 * k + 1] as { slippageAllowanceBps: number } | null;
       const debts = ctx.snapshot.spokeReserves.filter((r) => r.spoke.toLowerCase() === x.spoke.toLowerCase());
       x.tokens.forEach((token, i) => {
         for (const d of debts) {
           if (d.asset.toLowerCase() === token.toLowerCase()) continue; // a pool token that is the debt asset needs no route
-          for (const kind of [0, 1]) plans.push({ marketId: x.marketId, token, tokenDecimals: x.tokenDecimals[i]!, tokenPrice: prices ? asBig(prices[0][i]) : 0n, debt: { asset: d.asset, decimals: d.decimals, price: BigInt(d.debtPrice) }, kind, slippageBps: params ? BigInt(params.slippageAllowanceBps) : -1n });
+          for (const kind of [0, 1]) plans.push({ marketId: x.marketId, token, tokenDecimals: x.tokenDecimals[i]!, tokenPrice: prices ? asBig(prices[i]) : 0n, debt: { asset: d.asset, decimals: d.decimals, price: BigInt(d.debtPrice) }, kind, slippageBps: params ? BigInt(params.slippageAllowanceBps) : -1n });
         }
       });
     });

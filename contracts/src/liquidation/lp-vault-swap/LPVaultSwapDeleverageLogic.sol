@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {IFlashSource} from "../../flash/IFlashSource.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
+import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
 import {ILock} from "../../legacy/ILock.sol";
-import {ILPOracle} from "../../oracle/ILPOracle.sol";
 import {IAaveAdapter} from "../../policy/aave-adapter/IAaveAdapter.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {DebtReserveDef} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
@@ -203,7 +203,7 @@ contract LPVaultSwapDeleverageLogic is LPVaultSwapSettlement, ILPVaultSwapLogic 
         fc.tokenDecimals = m.tokenDecimals;
         // Only the leg prices are used; the decimals come from the market record.
         // forge-lint: disable-next-line(unused-return)
-        (fc.prices,) = ILPOracle(m.lpOracle).getTokenPrices();
+        (fc.prices,) = ILegacyLPOracle(m.lpOracle).getTokenPrices();
         uint256 value = SettlementMath.seizedValue(r.units, _collateralPrice(m), m.decimals, d.decimals, fc.assetPrice);
         uint256 cap = SettlementMath.deleverageCap(
             value, fc.slippage, _unitSum(_legArgs(fc, new uint256[](0))), fc.allowance, fc.maxFlashFeeBps

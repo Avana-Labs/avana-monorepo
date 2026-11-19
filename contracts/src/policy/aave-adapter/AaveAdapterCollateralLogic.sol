@@ -5,11 +5,11 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../legacy/ICollateralization.sol";
+import {ILegacyVaultToken} from "../../legacy/ILegacyVaultToken.sol";
 import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {DeleverageRequest} from "../../liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {PositionRef} from "../../types/PositionTypes.sol";
-import {IVaultToken} from "../../vault-token/vault-token/IVaultToken.sol";
 import {IMarketRegistry} from "../market-registry/IMarketRegistry.sol";
 import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
@@ -116,7 +116,7 @@ contract AaveAdapterCollateralLogic is AaveAdapterSteps, IAaveAdapterLogic {
         (added, rescueUnits) = ICollateralization(_COLLATERALIZATION)
             .recredit(msg.sender, proxy, account.vaultToken, positionKey, topUp, false);
         if (added == 0) revert ZeroAmount();
-        IVaultToken(account.vaultToken).mint(proxy, added);
+        ILegacyVaultToken(account.vaultToken).mint(proxy, added);
         _supply(proxy, account.spoke, account.vaultToken, reserveId, account.marketId, added);
         _checkGap(account.vaultToken, gapBefore);
     }

@@ -29,7 +29,7 @@ describe("protocol names the probes read", () => {
     ["ParameterStore", parameterStoreAbi as Abi, "getMarketParams", ["slippageAllowanceBps"]],
     ["ParameterStore", parameterStoreAbi as Abi, "routeDepthThreshold", ["value"]],
     ["MarketRegistry", marketRegistryAbi as Abi, "getRoute", ["route", "usable"]],
-    ["LPOracle", lpOracleAbi as Abi, "getTokenPrices", ["prices"]],
+    ["LPOracle", lpOracleAbi as Abi, "getPrices", ["price0", "price1"]],
     ["ParameterStore", parameterStoreAbi as Abi, "borrowPriceMaxAge", ["age"]],
     ["ParameterStore", parameterStoreAbi as Abi, "liquidationPriceMaxAge", ["age"]],
   ];

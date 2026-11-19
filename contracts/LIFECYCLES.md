@@ -10,7 +10,7 @@ Each flow lists who calls what, in order. Every step links the contract's walkth
 | Policy | [AaveAdapter](src/policy/aave-adapter/LIFECYCLE.md), [RiskModule](src/policy/risk-module/LIFECYCLE.md), [MarketRegistry](src/policy/market-registry/LIFECYCLE.md), [ParameterStore](src/policy/parameter-store/LIFECYCLE.md) |
 | Liquidation | [LPVaultSwap](src/liquidation/lp-vault-swap/LIFECYCLE.md), [Swap routes](src/liquidation/settlement-routes/LIFECYCLE.md), [Payout escrow](src/liquidation/payout-escrow/LIFECYCLE.md), [Flash source](src/flash/LIFECYCLE.md) |
 | Oracles | [LPOracle and debt feeds](src/oracle/LIFECYCLE.md) |
-| Accounts and tokens | [PositionProxy](src/proxy/position-proxy/LIFECYCLE.md), [ProxyManager](src/proxy/proxy-manager/LIFECYCLE.md), [VaultToken](src/vault-token/vault-token/LIFECYCLE.md), [VaultTokenFactory](src/vault-token/vault-token-factory/LIFECYCLE.md) |
+| Accounts and tokens | [PositionProxy](src/proxy/position-proxy/LIFECYCLE.md), [ProxyManager](src/proxy/proxy-manager/LIFECYCLE.md), [VaultToken](src/vault-token/LIFECYCLE.md) |
 | AMM parts | [Uniswap v3, Uniswap v4, Aerodrome Slipstream](src/amm/LIFECYCLE.md) |
 | Infrastructure | [Lens](src/lens/lens/LIFECYCLE.md), [AvanaTimelock](src/governance/timelock/LIFECYCLE.md) |
 
@@ -68,9 +68,9 @@ Carol pledges an unstaked Slipstream NFT `key1` with `L = 10,000,000,000` (about
 
 1. App → [Lens](src/lens/lens/LIFECYCLE.md) [`getPriceState`](src/lens/lens/ILens.sol#L81)`(3)` (Live), [`getCapHeadroom`](src/lens/lens/ILensMarket.sol#L32)`(3, Carol)` ($4,000,000 room, minimum $10), [`predictProxy`](src/lens/lens/ILensAccount.sol#L13)`(Carol, 3)`.
 2. Carol approves the Slipstream LPVault on the NFPM, then → [AaveAdapter](src/policy/aave-adapter/LIFECYCLE.md) [`pledge`](src/policy/aave-adapter/IAaveAdapter.sol#L78)`(3, (integrationId, key1), now + 600)`.
-3. AaveAdapter → [ProxyManager](src/proxy/proxy-manager/LIFECYCLE.md) [`deployProxy`](src/proxy/proxy-manager/IProxyManager.sol#L32)`(Carol, S, 3)` → proxy `P`; → [VaultToken](src/vault-token/vault-token/LIFECYCLE.md) [`addValidProxy`](src/vault-token/vault-token/IVaultToken.sol#L50)`(P)`.
+3. AaveAdapter → [ProxyManager](src/proxy/proxy-manager/LIFECYCLE.md) [`deployProxy`](src/proxy/proxy-manager/IProxyManager.sol#L32)`(Carol, S, 3)` → proxy `P`; → [VaultToken](src/vault-token/LIFECYCLE.md) [`addValidProxy`](src/vault-token/IVaultToken.sol)`(P)`.
 4. AaveAdapter → [Collateralization](src/custody/collateralization/LIFECYCLE.md) [`pledge`](src/custody/collateralization/ICollateralization.sol#L17)`(Carol, P, VT, key1, false)` → [LPVault](src/custody/lp-vault/LIFECYCLE.md) [`receivePosition`](src/custody/lp-vault/ILPVault.sol#L72) (exact range, NFT into custody, 10,000,000,000 units) → [RiskModule](src/policy/risk-module/LIFECYCLE.md) [`checkPledge`](src/policy/risk-module/IRiskModule.sol#L31): value $20,000 ≥ $10, charge $20,000, record 1 of 16.
-5. AaveAdapter → VaultToken [`mint`](src/vault-token/vault-token/IVaultToken.sol#L24)`(P, 10,000,000,000)` → [PositionProxy](src/proxy/position-proxy/LIFECYCLE.md) [`execute`](src/proxy/position-proxy/IPositionProxy.sol#L25): `Spoke.supply`, `setUsingAsCollateral`.
+5. AaveAdapter → VaultToken [`mint`](src/vault-token/IVaultToken.sol)`(P, 10,000,000,000)` → [PositionProxy](src/proxy/position-proxy/LIFECYCLE.md) [`execute`](src/proxy/position-proxy/IPositionProxy.sol#L25): `Spoke.supply`, `setUsingAsCollateral`.
 6. Events: `ProxyDeployed`, `UserProxyCreated`, `ProxyAdded`, `PositionReceived`, `CollateralPledged`, `CollateralSupplied`, `CollateralAdded`. Lens [`getAccount`](src/lens/lens/ILensAccount.sol#L19): collateral $20,000, CF-weighted $6,240.
 7. Failures: an $8 NFT reverts `BelowMinPledge(800,000,000, 1,000,000,000)`; a 17th record `TooManyRecords`; a gauge-staked NFT `NotPositionOwner`; a `[−10, 10]` range `RangeMismatch`. The NFT stays with Carol.
 
@@ -99,7 +99,7 @@ Carol holds `key1` and a top-up `keyB` (2,500,000,000 units, $5,000): collateral
 1. App → Lens [`getAccount`](src/lens/lens/ILensAccount.sol#L19) and [`getPriceState`](src/lens/lens/ILens.sol#L81): removing `keyB` leaves HF 1.2481.
 2. Carol → AaveAdapter [`withdraw`](src/policy/aave-adapter/IAaveAdapter.sol#L113)`(3, (I, keyB), 2,500,000,000, now + 600, 1.20e18)`; `units` comes from Collateralization [`previewRelease`](src/custody/collateralization/ICollateralization.sol#L196).
 3. With debt: pause state None, Carol not frozen → RiskModule [`preWithdrawCheck`](src/policy/risk-module/IRiskModule.sol#L54) (sequencer Up, oracles Live, no breaker).
-4. PositionProxy [`execute`](src/proxy/position-proxy/IPositionProxy.sol#L25): `Spoke.withdraw(reserveId, 2,500,000,000, P)` → VaultToken [`burn`](src/vault-token/vault-token/IVaultToken.sol#L43)`(P, 2,500,000,000)`.
+4. PositionProxy [`execute`](src/proxy/position-proxy/IPositionProxy.sol#L25): `Spoke.withdraw(reserveId, 2,500,000,000, P)` → VaultToken [`burn`](src/vault-token/IVaultToken.sol)`(P, 2,500,000,000)`.
 5. Collateralization [`release`](src/custody/collateralization/ICollateralization.sol#L27)`(P, VT, keyB, 2,500,000,000)`: $5,000 charge released → LPVault [`returnPosition`](src/custody/lp-vault/ILPVault.sol#L76)`(keyB)`: NFT and its fees to Carol.
 6. RiskModule [`postHealthCheck`](src/policy/risk-module/IRiskModule.sol#L46): 1.2481. Events `PositionReturned`, `CollateralReleased`, `CollateralWithdrawn`.
 7. Debt-free exit: [`repayAllAndWithdraw`](src/policy/aave-adapter/IAaveAdapter.sol#L125)`(3, (I, keyB), 2,500,000,000, [r_USDC], [cap], now + 600)` repays and returns the NFT in one call, reading no pause state, breaker, freeze, price or sequencer gate. Withdrawing `key1` with debt instead leaves HF 0.3120 and Aave reverts `HealthFactorBelowThreshold`.
@@ -110,7 +110,7 @@ Same two-record account as flow 4 (HF 1.5602). Carol removes 2,000 whole tokens 
 
 1. Carol → AaveAdapter [`removeLiquidity`](src/policy/aave-adapter/IAaveAdapter.sol#L24)`(3, (I, key1), 2,000,000,000, [1,990e6, 1,990e6], now + 600, 1.20e18)`.
 2. With debt → RiskModule [`preWithdrawCheck`](src/policy/risk-module/IRiskModule.sol#L54).
-3. PositionProxy [`execute`](src/proxy/position-proxy/IPositionProxy.sol#L25): `Spoke.withdraw(…, 2,000,000,000, P)` → VaultToken [`burn`](src/vault-token/vault-token/IVaultToken.sol#L43).
+3. PositionProxy [`execute`](src/proxy/position-proxy/IPositionProxy.sol#L25): `Spoke.withdraw(…, 2,000,000,000, P)` → VaultToken [`burn`](src/vault-token/IVaultToken.sol).
 4. Collateralization [`releasePartial`](src/custody/collateralization/ICollateralization.sol#L36): record debited to 8,000,000,000 units, `$20,000 × 2 / 10 = $4,000` released → LPVault [`releaseToDepositor`](src/custody/lp-vault/ILPVault.sol#L120): about 2,000 USDC + 2,000 USDT to Carol, each ≥ 1,990.
 5. RiskModule [`checkRemainingRecord`](src/policy/risk-module/IRiskModule.sol#L93) ($16,000 ≥ $10) → [`postHealthCheck`](src/policy/risk-module/IRiskModule.sol#L46): collateral $21,000, CF-weighted $6,552, `6,552 / 4,999.50 = 1.3105 ≥ 1.20`.
 6. Events `RecordReduced`, `UnitsReleased`, `CollateralReduced`. Failures: `PartialRemovalTooLarge` for units ≥ credited, `BelowMinimum` under the minimums, `RecordBelowMinPledge`, `HealthFactorTooLow`. Debt-free, the call reads no MarketRegistry state, pause, freeze, breaker or price.

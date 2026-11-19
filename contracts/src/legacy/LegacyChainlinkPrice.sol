@@ -6,12 +6,12 @@ pragma solidity 0.8.28;
 import {IAggregatorV3} from "../interfaces/external/chainlink/IAggregatorV3.sol";
 import {IParameterStore} from "../policy/parameter-store/IParameterStore.sol";
 import {FeedDef} from "../policy/parameter-store/types/ParameterStoreTypes.sol";
-import {LPPriceMath} from "./LPPriceMath.sol";
+import {LegacyPriceMath} from "./LegacyPriceMath.sol";
 
-/// @title ChainlinkPrice
+/// @title LegacyChainlinkPrice
 /// @notice Reads a debt reserve's Chainlink price source, the same feed Aave reads, with the feed's borrow and
 /// liquidation age limits from the ParameterStore.
-library ChainlinkPrice {
+library LegacyChainlinkPrice {
     struct Reading {
         // 8 decimals; 0 when the answer is zero or below.
         uint256 price8;
@@ -30,9 +30,9 @@ library ChainlinkPrice {
         FeedDef memory d = IParameterStore(parameterStore).getFeed(feed);
         // forge-lint: disable-next-line(calls-loop, unused-return)
         (, int256 raw,, uint256 at,) = IAggregatorV3(feed).latestRoundData();
-        r.price8 = LPPriceMath.normalizeAnswer(raw, d.decimals);
+        r.price8 = LegacyPriceMath.normalizeAnswer(raw, d.decimals);
         r.updatedAt = at;
-        r.borrowFresh = r.price8 != 0 && LPPriceMath.borrowFresh(at, d.borrowPriceMaxAge);
-        r.liquidationFresh = r.price8 != 0 && LPPriceMath.liquidationFresh(at, d.liquidationPriceMaxAge);
+        r.borrowFresh = r.price8 != 0 && LegacyPriceMath.borrowFresh(at, d.borrowPriceMaxAge);
+        r.liquidationFresh = r.price8 != 0 && LegacyPriceMath.liquidationFresh(at, d.liquidationPriceMaxAge);
     }
 }

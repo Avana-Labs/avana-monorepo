@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
-import {ILPOracle} from "../../src/oracle/ILPOracle.sol";
+import {ILegacyLPOracle} from "../../src/legacy/ILegacyLPOracle.sol";
 import {FeedDef, MarketParams} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {ParameterStoreFixture} from "../utils/fixtures/ParameterStoreFixture.sol";
 import {HandlerReach} from "./handlers/HandlerReach.sol";

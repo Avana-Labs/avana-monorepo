@@ -5,9 +5,9 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../../src/legacy/ICollateralization.sol";
+import {ILegacyVaultToken} from "../../../src/legacy/ILegacyVaultToken.sol";
 import {ILock} from "../../../src/legacy/ILock.sol";
 import {IPositionProxy} from "../../../src/proxy/position-proxy/IPositionProxy.sol";
-import {IVaultToken} from "../../../src/vault-token/vault-token/IVaultToken.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -62,7 +62,7 @@ contract HostileAdapter is UUPSUpgradeable {
         address to,
         uint256 amount
     ) external {
-        IVaultToken(vaultToken).mint(to, amount);
+        ILegacyVaultToken(vaultToken).mint(to, amount);
     }
 
     function burnFrom(
@@ -70,14 +70,14 @@ contract HostileAdapter is UUPSUpgradeable {
         address from,
         uint256 amount
     ) external {
-        IVaultToken(vaultToken).burn(from, amount);
+        ILegacyVaultToken(vaultToken).burn(from, amount);
     }
 
     function register(
         address vaultToken,
         address account
     ) external {
-        IVaultToken(vaultToken).addValidProxy(account);
+        ILegacyVaultToken(vaultToken).addValidProxy(account);
     }
 
     /// @notice Takes the Lock as the Adapter and asks Collateralization to release a record's position.

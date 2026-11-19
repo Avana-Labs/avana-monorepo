@@ -5,19 +5,6 @@
 export const vaultTokenAbi = [
   {
     "type": "function",
-    "name": "adapter",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "adapterAddress",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "addValidProxy",
     "inputs": [
       {
@@ -116,19 +103,6 @@ export const vaultTokenAbi = [
   },
   {
     "type": "function",
-    "name": "collateralization",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "collateralizationAddress",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "decimals",
     "inputs": [],
     "outputs": [
@@ -149,51 +123,6 @@ export const vaultTokenAbi = [
         "name": "hubAddress",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "integration",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "lpVault",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "integrationId",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "id",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "isAllowedRecipient",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "allowed",
-        "type": "bool",
-        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -243,24 +172,11 @@ export const vaultTokenAbi = [
   },
   {
     "type": "function",
-    "name": "lpOracle",
+    "name": "liquidationModule",
     "inputs": [],
     "outputs": [
       {
-        "name": "oracle",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "lpVaultSwap",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "lpVaultSwapAddress",
+        "name": "module",
         "type": "address",
         "internalType": "address"
       }
@@ -276,19 +192,6 @@ export const vaultTokenAbi = [
         "name": "id",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "marketKey",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "key",
-        "type": "bytes32",
-        "internalType": "bytes32"
       }
     ],
     "stateMutability": "view"
@@ -320,19 +223,6 @@ export const vaultTokenAbi = [
         "name": "",
         "type": "string",
         "internalType": "string"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "spoke",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "spokeAddress",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -481,12 +371,7 @@ export const vaultTokenAbi = [
   },
   {
     "type": "error",
-    "name": "InvalidBinding",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "OnlyAdapter",
+    "name": "InvalidDeployment",
     "inputs": []
   },
   {
