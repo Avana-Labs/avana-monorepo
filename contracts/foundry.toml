@@ -70,11 +70,13 @@ additional_compiler_profiles = [
 # settlement steps; at 10,000 runs the liquidation and deleverage logic exceed EIP-170, at 200 runs they fit with margin.
 compilation_restrictions = [
   { paths = "src/custody/collateralization/Collateralization.sol", via_ir = true, optimizer_runs = 200 },
-  # These Echidna harnesses deploy the real ParameterStore tighten and loosen logic, or the real LPVaultSwap
-  # implementation, in their constructor; at 10,000 runs their initcode passed EIP-3860's 49,152 bytes. Optimizer
-  # runs change only bytecode size and gas, not behaviour; the deployable contracts keep their own settings.
+  # These Echidna harnesses deploy the real ParameterStore tighten and loosen logic, the real LPVaultSwap
+  # implementation or the real VaultTokenFactory, with an AccessManager, in their constructor; at 10,000 runs their
+  # initcode passed EIP-3860's 49,152 bytes, and the LPVaultSwap harness also needs the IR pipeline. Optimizer runs and
+  # the pipeline change only bytecode size and gas, not behaviour; the deployable contracts keep their own settings.
   { paths = "test/invariant/echidna/ParameterStoreProperties.sol", via_ir = false, optimizer_runs = 200 },
-  { paths = "test/invariant/echidna/LPVaultSwapProperties.sol", via_ir = false, optimizer_runs = 200 },
+  { paths = "test/invariant/echidna/LPVaultSwapProperties.sol", via_ir = true, optimizer_runs = 200 },
+  { paths = "test/invariant/echidna/VaultTokenFactoryProperties.sol", via_ir = false, optimizer_runs = 200 },
   # The borrow-path and liquidation-path harnesses deploy the real AaveAdapterUserLogic, or the real liquidation logic
   # and PayoutEscrow, in their constructor; at 10,000 runs their initcode was 50,583 and 54,097 bytes. The liquidation
   # harness takes the IR pipeline because LPVaultSwap*Logic is restricted to it.
