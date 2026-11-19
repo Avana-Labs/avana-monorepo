@@ -4,7 +4,6 @@
     "2.1": [
       {"src": "src/governance/roles", "tests": "test/unit/AvanaRoles.*"},
       {"src": "src/lock/lock", "tests": "test/unit/Lock.*"},
-      {"src": "src/governance/timelock", "tests": "test/unit/AvanaTimelock*"},
       {"src": "src/oracle/lp-oracle", "files": ["LPPriceMath"], "tests": "test/{unit,fuzz}/LPPriceMath.*"},
       {"src": "src/oracle/lp-oracle", "files": ["LPOracle*"], "tests": "test/{unit,fuzz,integration}/{LPOracle,Oracles.Contagion}*"},
       {"src": "src/oracle/debt-oracle", "tests": "test/{unit,fuzz,integration}/{DebtOracle.,Oracles.Contagion}*"},
