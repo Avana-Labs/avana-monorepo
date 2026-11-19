@@ -1,6 +1,6 @@
 # LP-vault floor credit: design
 
-How a concentrated-liquidity position becomes collateral in a band market, which markets a pool gets, what that means for a borrower, and how the math is checked. Lifecycle: [LIFECYCLE.md](LIFECYCLE.md). Proof: [4.5 Floor Credit Proof](../../../../docs/spec/04-security/05-floor-credit-proof.md).
+How a concentrated-liquidity position becomes collateral, which markets a pool gets, what that means for a borrower, and how the math is checked. Lifecycle: [LIFECYCLE.md](LIFECYCLE.md). Proof: [4.5 Floor Credit Proof](../../../../docs/spec/04-security/05-floor-credit-proof.md).
 
 ## 1. Decision
 
@@ -28,25 +28,28 @@ How a concentrated-liquidity position becomes collateral in a band market, which
 
 ## 2. Markets per pool
 
-| Market | Band | Who it serves |
+Each pool has two markets, named with Uniswap's own words:
+
+| Market | Band | Accepts |
 |---|---|---|
-| Full range | The lowest and highest usable ticks. A full-range position gets `credit = L`. | Full-range positions |
-| Wide | Uniswap's Wide preset, −50% / +100% around the price on listing day | Every narrower position inside it |
-| New Wide | A new Wide market, opened by a keeper when the price nears the current Wide band's edge, with the preset the DAO approved at listing | Positions around the new price |
+| Full range | The lowest and highest usable ticks | Full-range positions, credited `credit = L` |
+| Custom range | −50% / +100% around the price on listing day (Uniswap's Wide preset) | Any custom range inside the band |
 
-Uniswap's five price-range presets map onto these:
+When the price drifts toward the edge of a Custom range band, a keeper opens a new Custom range market around the new price, with the preset the DAO approved at listing.
 
-| Uniswap preset | Range | Market |
+Uniswap's presets are just examples of custom ranges:
+
+| Uniswap preset | Range | Avana market |
 |---|---|---|
 | Full range | all ticks | Full range |
-| Wide | −50% / +100% | Wide (credit = `L`) |
-| Stable | ±0.3% | Wide |
-| One-sided lower | −50% to the price | Wide |
-| One-sided upper | the price to +100% | Wide |
+| Wide | −50% / +100% | Custom range (equal to the band: credit = `L`) |
+| Stable | ±0.3% | Custom range |
+| One-sided lower | −50% to the price | Custom range |
+| One-sided upper | the price to +100% | Custom range |
 
 ## 3. Examples
 
-$10,000 position, 75% LTV, Base ETH/USDC Uniswap v3 0.05% at $1,803.33. Wide band $901.50 – $3,608.30. Borrowing power = credit × the band unit's value at the price × LTV. Ticks snap to the nearest usable tick (spacing 10), as Uniswap's interface does.
+$10,000 position, 75% LTV, Base ETH/USDC Uniswap v3 0.05% at $1,803.33. Custom range band $901.50 – $3,608.30; every row but Full range is in the Custom range market. Borrowing power = credit × the band unit's value at the price × LTV. Ticks snap to the nearest usable tick (spacing 10), as Uniswap's interface does.
 
 | Preset | Listing day | ETH −30% | ETH +50% |
 |---|---|---|---|
@@ -60,7 +63,7 @@ $10,000 position, 75% LTV, Base ETH/USDC Uniswap v3 0.05% at $1,803.33. Wide ban
 - Stable and one-sided positions get about 83% of full range on listing day (79–80% after the moves above): their credit is the band unit count at the worse of the two edges.
 - The borrowing power always stays below 75% of the position's value: after ETH −30% the Stable position is worth $7,007 and borrows $5,000.
 
-With real LTVs, for a $10,000 full-range or Wide position:
+With real LTVs, for a $10,000 position credited at its full value (Full range, or a custom range equal to its band):
 
 | Pair | LTV | Borrowing power |
 |---|---|---|
