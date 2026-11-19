@@ -25,18 +25,20 @@ const ABI_DIR = join(PKG, "src/abis");
  * [export name, build ("avana" | "aave"), artifact name], sorted by export name. Each ABI is the contract's interface,
  * which carries its events and errors, except where the interface leaves out events the deployed contract emits; that
  * one comes from the contract itself. IAvanaFirstLossReserve does not inherit IAvanaFirstLossReserveAdmin
- * (BorrowSpokeAllowlistUpdated, FirstLossReserveMinimumUpdated).
+ * (BorrowSpokeAllowlistUpdated, FirstLossReserveMinimumUpdated). A "kept" ABI belongs to a contract no longer in
+ * contracts/ (the Lens, the gas vault, the flash liquidator): its committed file is read as it is, for the services
+ * that still import it, and is not rewritten.
  */
 const CONTRACTS = [
   ["aaveAdapterAbi", "avana", "IAaveAdapter"],
   ["accessManagerAbi", "avana", "IAccessManager"],
   ["aaveV4HubAbi", "aave", "IHub"],
   ["aaveV4SpokeAbi", "aave", "ISpoke"],
-  ["avanaGasVaultAbi", "avana", "IAvanaGasVault"],
+  ["avanaGasVaultAbi", "kept", "IAvanaGasVault"],
   ["collateralizationAbi", "avana", "ICollateralization"],
   ["firstLossReserveAbi", "avana", "AvanaFirstLossReserve"],
-  ["flashLiquidatorAbi", "avana", "IFlashLiquidator"],
-  ["lensAbi", "avana", "ILens"],
+  ["flashLiquidatorAbi", "kept", "IFlashLiquidator"],
+  ["lensAbi", "kept", "ILens"],
   ["lpOracleAbi", "avana", "ILPOracle"],
   ["lpVaultAbi", "avana", "ILPVault"],
   ["lpVaultSwapAbi", "avana", "ILPVaultSwap"],
@@ -64,7 +66,15 @@ const fileOf = (exportName) => exportName.replace(/Abi$/, "");
 const abis = {};
 const files = new Map();
 for (const [exportName, build, artifact] of CONTRACTS) {
-  const path = join(outDirs[build], `${artifact}.sol`, `${artifact}.json`);
+  if (build === "kept") {
+    const text = readFileSync(join(ABI_DIR, `${fileOf(exportName)}.ts`), "utf8");
+    abis[artifact] = JSON.parse(text.slice(text.indexOf(" = ") + 3, text.lastIndexOf(" as const;")));
+    continue;
+  }
+  // A file restricted to other compiler profiles too is written per profile; the default profile's copy is the one.
+  const dir = join(outDirs[build], `${artifact}.sol`);
+  const plain = join(dir, `${artifact}.json`);
+  const path = existsSync(plain) ? plain : join(dir, `${artifact}.default.json`);
   if (!existsSync(path)) throw new Error(`missing artifact ${path}; build it first (see packages/protocol/README.md)`);
   const abi = JSON.parse(readFileSync(path, "utf8")).abi;
   if (!Array.isArray(abi) || abi.length === 0) throw new Error(`${path} has no ABI`);
