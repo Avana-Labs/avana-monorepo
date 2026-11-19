@@ -84,7 +84,7 @@ interface ILendSpoke {
 ///   reserve to be an approved debt reserve, and `enableDebtReserve` comes later); each CDP Spoke's liquidation
 ///   configuration (target health factor 1.10, the bonus curve).
 /// - `AvanaBootstrapSupply` (test networks): the DAO treasury's bootstrap supply of each Lend Spoke, from the executor.
-/// - `AvanaFlashBorrowers` (Aave V3): `FLASH_BORROWER` for Avana's flash source and the public flash liquidation helper.
+/// - `AvanaFlashBorrowers` (Aave V3): `FLASH_BORROWER` for Avana's operator FlashLiquidators (`avana.json`).
 /// @dev On Ethereum and Base the script writes the payloads' actions only (`aip-<name>.json`) for the AIP author; on
 /// test networks it deploys and executes them as the PayloadsController stand-in. First-Loss Reserves and the DAO
 /// deficit offsets are registered by their own AIP (`08_AaveLossLayersPayload`) once they are deployed.
@@ -362,9 +362,9 @@ contract AaveDeploymentPayload is AavePayloads {
         b = _newBuilder();
         string memory avana = vm.readFile(_outputPath("avana"));
         address acl = _addr(cfg, ".aavePayload.flashAcl");
-        address[2] memory borrowers =
-            [vm.parseJsonAddress(avana, ".flashSource"), vm.parseJsonAddress(avana, ".flashLiquidator")];
-        for (uint256 i = 0; i < 2; ++i) {
+        // The operator FlashLiquidators `03_DeployAvana` deployed (FlashloanRepay pays Aave V3's premium).
+        address[] memory borrowers = vm.parseJsonAddressArray(avana, ".flashBorrowers");
+        for (uint256 i = 0; i < borrowers.length; ++i) {
             if (IFlashAcl(acl).isFlashBorrower(borrowers[i])) continue;
             _postCall(b, acl, abi.encodeCall(IFlashAcl.addFlashBorrower, (borrowers[i])));
         }

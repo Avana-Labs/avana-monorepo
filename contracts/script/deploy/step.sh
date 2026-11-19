@@ -13,29 +13,21 @@
 #   00-factories                  Safe Singleton Factory and AvanaCreate3Factory
 #   01-aave-v4                    AAVE  Aave V4 and its config engine (test networks only)
 #   02-test-world                       tokens, Chainlink OCR2 feeds, Uniswap v3, Slipstream, Aave V3 (test networks)
-#   03-avana                      every Avana contract
-#   04-access-operations          writes, and on anvil schedules as the Safe, the guardian-roles and chain-wiring
-#   05-execute-access-operations  executes them once the timelock delay has passed
+#   03-avana                      Avana's AccessManager and one core stack per integration (LPVault, RiskModule,
+#                                 LiquidationModule, AaveAdapter, FlashloanRepay, operator FlashLiquidators), every
+#                                 role, the admin handed to the governance Safe
 #   06-aave-deployment-aip        AAVE  debt assets, Lend and CDP Spokes, bootstrap supply, FLASH_BORROWER
-#   07-deploy-first-loss-reserves     the Avana Umbrella of each (Hub, debt asset)
-#   08-aave-loss-layers-aip       AAVE  DAO deficit offsets and both loss layers' roles, caps and minimums
-#   07-fund-first-loss-reserves       Avana Labs funds each Umbrella to its minimum
-#   09-listing-setup              tokens, feeds, CDP Spokes, First-Loss Reserves, credit lines (timelock, normal delay)
+#   07-deploy-first-loss-reserves     Avana's First-Loss Reserve and the DAO Deficit Offset of each (Hub, debt asset)
+#   08-aave-loss-layers-aip       AAVE  both layers on their Hub, deficit eliminator, roles (withdraw 14 days), minimums
+#   07-fund-first-loss-reserves       Avana Labs funds its reserves to their minimums
+#   09-listing-setup              CDP Spokes, debt reserves, fee, coverage ratio, keepers (timelock, governance delay)
 #   09-execute-listing-setup
-#   09-debt-oracles               GHO's fixed source; every other debt asset's own Chainlink feed
-#   10-aave-debt-reserves-aip     AAVE  debt-reserve price sources, borrowable
-#   09-market-metadata            the listing metadata file (market and debt-reserve pages); its hash is the next salt
-#   09-listing-markets            LPOracles, swap routes, the listing batch (timelock, normal delay)
+#   09-listing-markets            listPool: each pool as a Full range and a Custom range market (timelock)
 #   09-execute-listing-markets
-#   10-aave-markets-aip           AAVE  vault-token assets and collateral reserves
-#   09-listing-activate           LPOracles poked, activateMarket (timelock, short delay)
+#   09-vault-tokens               each market's VaultToken and LPOracle, their roles (the DAO as admin)
+#   10-aave-markets-aip           AAVE  adapters as position managers, debt reserves borrowable, vault-token reserves
+#   09-listing-activate           activateMarket for each market (timelock)
 #   09-execute-listing-activate
-#
-# Changes to a live deployment (deploy recipe B8), any time after the first deployment:
-#   11-changes <file>             a JSON list of changes, each checked against its on-chain limit, run as one timelock
-#                                 operation, one guardian or risk-steward call, one AAVE AIP, or under a delegated Aave
-#                                 role (script/deploy/changes.ts; the format is at its top). Exit 2: refused by a limit
-#                                 check; 3: not available on this deployment (a role Aave has not granted)
 #
 # Signing: on anvil every sender is unlocked (anvil --auto-impersonate): the deployer is AVANA_DEPLOYER (default the
 # first anvil account) and the Safe, the Aave executor's PayloadsController and the faucet come from the network
@@ -62,18 +54,6 @@ step="${1:?usage: script/deploy/step.sh <step>; the steps are listed at the top 
 : "${AVANA_NETWORK:?set AVANA_NETWORK (anvil, sepolia, ethereum, base)}"
 : "${AVANA_RPC_URL:?set AVANA_RPC_URL}"
 export ETH_RPC_URL="$AVANA_RPC_URL"
-CONFIG="${AVANA_CONFIG:-script/deploy/config/$AVANA_NETWORK.json}"
-config() { node -e 'const c=require(process.argv[1]);console.log(process.argv[2].split(".").reduce((o,k)=>o[k],c))' "./$CONFIG" "$1"; }
-
-# Not a forge script: an operator's changes (deploy recipe B8), from a changes file.
-if [ "$step" = 11-changes ]; then
-  exec env AVANA_NETWORK="$AVANA_NETWORK" AVANA_RPC_URL="$AVANA_RPC_URL" node script/deploy/changes.ts "${2:?usage: step.sh 11-changes <file>}"
-fi
-
-# Not a forge script: the listing metadata file, written from the config's page text and the chain's IDs.
-if [ "$step" = 09-market-metadata ]; then
-  exec env AVANA_NETWORK="$AVANA_NETWORK" AVANA_RPC_URL="$AVANA_RPC_URL" node script/deploy/market-metadata.ts
-fi
 
 deployer="${AVANA_DEPLOYER:-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266}"
 schedule=0
@@ -83,19 +63,16 @@ case "$step" in
   01-aave-v4) script=01_DeployAaveV4.s.sol ;;
   02-test-world) script=02_DeployWorld.s.sol ;;
   03-avana) script=03_DeployAvana.s.sol ;;
-  04-access-operations) script=04_ConfigureAccess.s.sol; schedule=1 ;;
-  05-execute-access-operations) script=05_ExecuteOperations.s.sol; envs+=(AVANA_OPERATIONS=guardian-roles,chain-wiring) ;;
   06-aave-deployment-aip) script=06_AaveDeploymentPayload.s.sol ;;
-  07-deploy-first-loss-reserves) script=07_DeployAvanaFirstLossReserves.s.sol; envs+=(AVANA_COVERAGE_STEP=deploy) ;;
+  07-deploy-first-loss-reserves) script=07_DeployFirstLossReserves.s.sol; envs+=(AVANA_COVERAGE_STEP=deploy) ;;
   08-aave-loss-layers-aip) script=08_AaveLossLayersPayload.s.sol ;;
-  07-fund-first-loss-reserves) script=07_DeployAvanaFirstLossReserves.s.sol; envs+=(AVANA_COVERAGE_STEP=fund) ;;
+  07-fund-first-loss-reserves) script=07_DeployFirstLossReserves.s.sol; envs+=(AVANA_COVERAGE_STEP=fund) ;;
   09-listing-setup) script=09_ListMarkets.s.sol; envs+=(AVANA_LISTING_STEP=setup); schedule=1 ;;
   09-execute-listing-setup) script=05_ExecuteOperations.s.sol; envs+=(AVANA_OPERATIONS=listing-setup) ;;
-  09-debt-oracles) script=09_ListMarkets.s.sol; envs+=(AVANA_LISTING_STEP=oracles) ;;
-  10-aave-debt-reserves-aip) script=10_AaveListingPayload.s.sol; envs+=(AVANA_AAVE_STEP=debt) ;;
   09-listing-markets) script=09_ListMarkets.s.sol; envs+=(AVANA_LISTING_STEP=markets); schedule=1 ;;
   09-execute-listing-markets) script=05_ExecuteOperations.s.sol; envs+=(AVANA_OPERATIONS=listing-markets) ;;
-  10-aave-markets-aip) script=10_AaveListingPayload.s.sol; envs+=(AVANA_AAVE_STEP=vault-tokens) ;;
+  09-vault-tokens) script=09_ListMarkets.s.sol; envs+=(AVANA_LISTING_STEP=vault-tokens); schedule=1 ;;
+  10-aave-markets-aip) script=10_AaveListingPayload.s.sol ;;
   09-listing-activate) script=09_ListMarkets.s.sol; envs+=(AVANA_LISTING_STEP=activate); schedule=1 ;;
   09-execute-listing-activate) script=05_ExecuteOperations.s.sol; envs+=(AVANA_OPERATIONS=listing-activate) ;;
   *) echo "unknown step $step; the steps are listed at the top of script/deploy/step.sh" >&2; exit 2 ;;
@@ -105,8 +82,7 @@ local_net=0
 case "$(cast chain-id)" in 31337 | 31338) local_net=1 ;; esac
 if [ $local_net -eq 1 ]; then
   sender="$deployer"
-  # 04 broadcasts as the Safe itself; the other scheduling steps broadcast as the deployer and schedule as the Safe.
-  [ "$step" = 04-access-operations ] && sender="$(config governance.governanceSafe)"
+  # The scheduling steps broadcast as the deployer and schedule as the Safe (09-vault-tokens: send as the DAO).
   [ $schedule -eq 1 ] && envs+=(AVANA_SCHEDULE=1)
   signer=(--unlocked --sender "$sender")
   if [ -n "${AVANA_DEPLOYER_KEYSTORE:-}" ]; then
