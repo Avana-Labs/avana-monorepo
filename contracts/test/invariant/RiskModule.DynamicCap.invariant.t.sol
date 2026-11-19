@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {MarketDynamicCap} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {DynamicCap} from "../../src/legacy/risk-module/types/RiskModuleTypes.sol";
+import {MarketDynamicCap} from "../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {PositionProxy} from "../../src/proxy/position-proxy/PositionProxy.sol";
 import {RiskModuleFixture} from "../utils/fixtures/RiskModuleFixture.sol";
 import {RiskModuleDynamicCapHandler} from "./handlers/RiskModuleDynamicCapHandler.sol";

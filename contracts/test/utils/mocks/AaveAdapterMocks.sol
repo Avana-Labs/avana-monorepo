@@ -5,6 +5,7 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../../src/legacy/ICollateralization.sol";
+import {IRiskModuleErrors} from "../../../src/legacy/risk-module/IRiskModuleErrors.sol";
 import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
 import {
     DebtReserveDef,
@@ -12,7 +13,6 @@ import {
     SpokeDef,
     TokenDef
 } from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
-import {IRiskModuleErrors} from "../../../src/legacy/risk-module/IRiskModuleErrors.sol";
 import {IPositionProxy} from "../../../src/proxy/position-proxy/IPositionProxy.sol";
 import {Market} from "../../../src/types/MarketTypes.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";

@@ -4,9 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {IRiskModuleErrors} from "../../src/legacy/risk-module/IRiskModuleErrors.sol";
 import {PledgeCharge} from "../../src/legacy/risk-module/types/RiskModuleTypes.sol";
+import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {DriftReason} from "../../src/types/MarketTypes.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
 import {PledgeCounters} from "../../src/types/PositionTypes.sol";

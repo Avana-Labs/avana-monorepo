@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
-import {DriftReason, Market} from "../../types/MarketTypes.sol";
 import {DebtReserveDef, MarketStatus} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
+import {DriftReason, Market} from "../../types/MarketTypes.sol";
 import {RiskModuleBase} from "./RiskModuleBase.sol";
 import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";
 

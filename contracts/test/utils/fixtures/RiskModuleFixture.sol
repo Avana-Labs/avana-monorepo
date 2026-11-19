@@ -5,13 +5,6 @@ pragma solidity 0.8.28;
 
 import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
-import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
-import {
-    DebtReserveDef,
-    MarketRegistryImmutables,
-    RiskTier
-} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {LegacyRiskModule} from "../../../src/legacy/risk-module/LegacyRiskModule.sol";
 import {RiskModuleBorrowLogic} from "../../../src/legacy/risk-module/RiskModuleBorrowLogic.sol";
 import {RiskModuleBreakerLogic} from "../../../src/legacy/risk-module/RiskModuleBreakerLogic.sol";
@@ -24,6 +17,13 @@ import {
     RiskModuleImmutables,
     RiskModuleLogics
 } from "../../../src/legacy/risk-module/types/RiskModuleTypes.sol";
+import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
+import {IssuerProbe} from "../../../src/policy/market-registry/types/IssuerProbe.sol";
+import {
+    DebtReserveDef,
+    MarketRegistryImmutables,
+    RiskTier
+} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {PositionProxy} from "../../../src/proxy/position-proxy/PositionProxy.sol";
 import {MarketDef} from "../../../src/types/MarketTypes.sol";
 import {PledgeCounters, PositionShape, ShapeKind} from "../../../src/types/PositionTypes.sol";
@@ -169,7 +169,9 @@ abstract contract RiskModuleFixture is MarketRegistryFixture {
         rmLogics = _deployRiskLogics(rmIm);
         LegacyRiskModule rmImpl = new LegacyRiskModule(rmIm, rmLogics);
         riskModule = LegacyRiskModule(
-            address(new ERC1967Proxy(address(rmImpl), abi.encodeCall(LegacyRiskModule.initialize, (address(accessManager)))))
+            address(
+                new ERC1967Proxy(address(rmImpl), abi.encodeCall(LegacyRiskModule.initialize, (address(accessManager))))
+            )
         );
         require(address(riskModule) == predictedRisk, "risk module prediction");
     }

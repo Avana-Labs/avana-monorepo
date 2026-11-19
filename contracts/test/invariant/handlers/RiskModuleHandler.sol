@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {LegacyRiskModule} from "../../../src/legacy/risk-module/LegacyRiskModule.sol";
+import {MarketRegistry} from "../../../src/policy/market-registry/MarketRegistry.sol";
 import {PriceState} from "../../../src/types/OracleTypes.sol";
 import {RiskLPOracleMock, RiskSpokeMock, RiskSwapMock, RiskTokenMock} from "../../utils/mocks/RiskModuleMocks.sol";
 import {Test} from "forge-std/Test.sol";

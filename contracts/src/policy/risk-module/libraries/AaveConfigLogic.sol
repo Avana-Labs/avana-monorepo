@@ -51,7 +51,8 @@ library AaveConfigLogic {
         ILPOracle o = ILPOracle(lpOracle);
         if (
             lpOracle.code.length == 0 || o.lpVault() != lpVault || o.marketId() != marketId
-                || o.unitDecimals() != m.unitDecimals || keccak256(abi.encode(o.feedsOf(0), o.feedsOf(1))) != m.feedsHash
+                || o.unitDecimals() != m.unitDecimals
+                || keccak256(abi.encode(o.feedsOf(0), o.feedsOf(1))) != m.feedsHash
         ) _fail(marketId, "oracle");
         uint256 assetId;
         try IAaveV4Hub(hub).getAssetId(m.vaultToken) returns (uint256 a) {

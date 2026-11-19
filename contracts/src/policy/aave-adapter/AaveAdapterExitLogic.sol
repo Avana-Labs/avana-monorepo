@@ -5,8 +5,8 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../legacy/ICollateralization.sol";
-import {PositionRef} from "../../types/PositionTypes.sol";
 import {ILegacyRiskModule} from "../../legacy/risk-module/ILegacyRiskModule.sol";
+import {PositionRef} from "../../types/PositionTypes.sol";
 import {AaveAdapterSteps} from "./AaveAdapterSteps.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {IAaveAdapterLogic} from "./IAaveAdapterLogic.sol";

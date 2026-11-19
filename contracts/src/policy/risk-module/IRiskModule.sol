@@ -160,11 +160,21 @@ interface IRiskModule {
     event SpokeWidthSet(SpokeKind indexed kind, uint24 below, uint24 above);
     /// @notice A pool was listed as two markets.
     event PoolListed(
-        bytes32 indexed pool, address indexed spoke, uint256 fullRange, uint256 customRange, int24 listingTick, uint16 ltvBps
+        bytes32 indexed pool,
+        address indexed spoke,
+        uint256 fullRange,
+        uint256 customRange,
+        int24 listingTick,
+        uint16 ltvBps
     );
     /// @notice A band market was listed; its vault token must have `unitDecimals` decimals.
     event MarketListed(
-        uint256 indexed marketId, bytes32 indexed pool, MarketKind kind, int24 bandLower, int24 bandUpper, uint8 unitDecimals
+        uint256 indexed marketId,
+        bytes32 indexed pool,
+        MarketKind kind,
+        int24 bandLower,
+        int24 bandUpper,
+        uint8 unitDecimals
     );
     /// @notice A market's vault token, oracle and Aave reserve passed the activation check.
     event MarketActivated(uint256 indexed marketId, address vaultToken, uint256 reserveId, address lpOracle);

@@ -5,10 +5,10 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
-import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
-import {Market} from "../../types/MarketTypes.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {IParameterStore} from "../../policy/parameter-store/IParameterStore.sol";
+import {IPositionProxy} from "../../proxy/position-proxy/IPositionProxy.sol";
+import {Market} from "../../types/MarketTypes.sol";
 import {IRiskModuleErrors} from "./IRiskModuleErrors.sol";
 import {IRiskModuleLogic} from "./IRiskModuleLogic.sol";
 import {RiskModuleImmutables} from "./types/RiskModuleTypes.sol";

@@ -5,10 +5,10 @@ pragma solidity 0.8.28;
 
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
+import {ILegacyRiskModule} from "../../legacy/risk-module/ILegacyRiskModule.sol";
 import {DriftReason, Market} from "../../types/MarketTypes.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";
 import {MarketParams} from "../parameter-store/types/ParameterStoreTypes.sol";
-import {ILegacyRiskModule} from "../../legacy/risk-module/ILegacyRiskModule.sol";
 import {IMarketRegistryDriftLogic} from "./IMarketRegistryDriftLogic.sol";
 import {IMarketRegistryLogic} from "./IMarketRegistryLogic.sol";
 import {MarketRegistryStorage} from "./MarketRegistryStorage.sol";

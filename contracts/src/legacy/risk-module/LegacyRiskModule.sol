@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {BreakerReasons} from "../../policy/market-registry/types/Breaker.sol";
 import {AccountGateStatus, DriftReason} from "../../types/MarketTypes.sol";
 import {PledgeCounters, PledgePreview} from "../../types/PositionTypes.sol";
-import {BreakerReasons} from "../../policy/market-registry/types/Breaker.sol";
 import {ILegacyRiskModule} from "./ILegacyRiskModule.sol";
 import {IRiskModuleBorrowLogic} from "./IRiskModuleBorrowLogic.sol";
 import {IRiskModuleBreakerLogic} from "./IRiskModuleBreakerLogic.sol";
