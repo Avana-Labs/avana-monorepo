@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
-import {LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {
     LiquidationParams,
@@ -102,62 +101,6 @@ contract LiquidationCallerFundedIntegrationTest is RealStackFlows {
         (uint256 p0, uint256 p1) =
             p.token0() == address(usdt) ? (pUsdt, _usdPrice(address(usdc))) : (_usdPrice(address(usdc)), pUsdt);
         _swapTo(p, ClPriceMath.oracleSqrtPrice(p0, p1, 6, 6));
-    }
-
-    // TEST-047 verifies: REQ-SWAP-011, REQ-SWAP-015, REQ-SWAP-016, REQ-SWAP-020, REQ-SWAP-045, REQ-ADAPTER-070, REQ-SWAP-028, SPEC-LIQ-006, SPEC-LIQ-009, SPEC-LIQ-010, SPEC-LIQ-022, Q-060, Q-061, Q-404
-    // TEST-104 verifies: SPEC-LIQ-010, REQ-SWAP-073, INV-035, INV-038
-    function test_TEST_047_callerFundedSequenceThroughRealAdapter() public {
-        (address proxy,) = _bobAccount();
-        uint256 supplyBefore = IERC20(vt).totalSupply();
-        uint256 creditedBefore = coll.getTotalCredited(vt);
-        uint256 debtBefore = _debtOf(proxy, usdcReserveId);
-        uint256 sharesBefore = _sharesOf(proxy, mkt[mA].reserveId);
-        // The Lens sizes the repayment (Aave's close amount, about 862) and its seizure; the call repays all of it.
-        LiquidationPreview memory pv = lens.previewLiquidation(proxy, usdcReserveId, block.timestamp + 120);
-        (uint256 x, uint256 c) = (pv.params.debtToCover, pv.expectedUnitsSeized);
-        assertGt(x, X, "a close amount above 800");
-        LiquidationParams memory p = _liqParams(proxy, mA, usdcReserveId, x);
-        _fundCaller(keeper, p);
-        vm.expectEmit(true, true, false, true, adapter);
-        emit IAaveAdapterBase.SeizedUnitsBurned(mA, vt, c);
-        vm.prank(keeper);
-        LiquidationResult memory r = lvs.liquidate(p);
-        assertEq(r.debtRepaid, x, "D: Aave pulled the whole repayment");
-        assertEq(r.debtRepaid, pv.expectedDebtRepaid, "D as the Lens previewed");
-        assertEq(r.unitsSeized, c, "c = D x (1 + bonus) / the oracle price, as the Lens sized it");
-        _checkSettlement(r, x, _value(c, usdcReserveId), usdc);
-        assertGt(r.amountsOut[0], 0, "the real unwind returned token0");
-        assertGt(r.amountsOut[1], 0, "and token1");
-        assertEq(supplyBefore - IERC20(vt).totalSupply(), c, "the Adapter burned exactly the seized units");
-        assertEq(creditedBefore - coll.getTotalCredited(vt), c, "Collateralization debited them");
-        assertEq(sharesBefore - _sharesOf(proxy, mkt[mA].reserveId), c, "the proxy's shares fell by c");
-        assertEq(IERC20(vt).totalSupply(), coll.getTotalCredited(vt) + coll.getPending(vt).units, "supply = credited");
-        assertApproxEqAbs(debtBefore - _debtOf(proxy, usdcReserveId), x, 1, "debt fell by D (Aave rounds shares)");
-        assertEq(usdc.balanceOf(keeper), r.keeperOut, "keeperOut paid to the caller");
-        assertEq(usdc.balanceOf(feeRecipient), r.avanaFee, "fee paid to the fee recipient");
-        assertEq(usdc.balanceOf(bob), 5880e6 + r.borrowerSurplus, "surplus (if any) to the wallet");
-        assertGt(_hf(proxy), 0.984e18, "the account's health rose");
-    }
-
-    // TEST-047 verifies: REQ-SWAP-020, REQ-SWAP-045, REQ-ADAPTER-070, SPEC-LIQ-004, SPEC-LIQ-006, Q-233
-    function test_TEST_047_ghoDebtReserveThroughRealAdapter() public {
-        (address proxy,) = _account(bob, ghoReserveId);
-        _depegUsdt(93_000_000);
-        uint256 supplyBefore = IERC20(vt).totalSupply();
-        LiquidationPreview memory pv = lens.previewLiquidation(proxy, ghoReserveId, block.timestamp + 120);
-        (uint256 x, uint256 c) = (pv.params.debtToCover, pv.expectedUnitsSeized);
-        LiquidationParams memory p = _liqParams(proxy, mA, ghoReserveId, x);
-        _fundCaller(keeper, p);
-        vm.expectEmit(true, true, false, true, adapter);
-        emit IAaveAdapterBase.SeizedUnitsBurned(mA, vt, c);
-        vm.prank(keeper);
-        LiquidationResult memory r = lvs.liquidate(p);
-        assertEq(r.debtRepaid, x, "D in GHO, all of the Lens's close amount");
-        assertEq(r.unitsSeized, c, "seizure at GHO $1.00 as previewed");
-        _checkSettlement(r, x, _value(c, ghoReserveId), gho);
-        assertEq(supplyBefore - IERC20(vt).totalSupply(), c, "burned");
-        assertEq(usdc.balanceOf(lpVaultSwap), 0, "both legs swapped into GHO");
-        assertEq(gho.balanceOf(keeper), r.keeperOut, "keeperOut in GHO");
     }
 
     /// @notice A primary route that cannot meet its per-leg minimum fails over to the backup in `PrimaryThenBackup`;

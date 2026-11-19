@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {DrawHeadroom} from "../lens/lens/types/LensTypes.sol";
 import {MarketStatus} from "../policy/market-registry/types/MarketRegistryTypes.sol";
 import {PriceState} from "./OracleTypes.sol";
 import {PositionShape} from "./PositionTypes.sol";
@@ -115,24 +114,6 @@ struct AccountGateStatus {
     // Bitmap of the BreakerReasons of that debt reserve that hold now.
     uint32 breakerDebtReasons;
     bool statusUnavailable;
-}
-
-/// @notice Avana and Aave cap headroom for a market and depositor.
-/// @dev Rounding never overstates headroom.
-struct CapView {
-    uint256 blockNumber;
-    uint256 timestamp;
-    address hub;
-    address vaultToken;
-    address depositor;
-    uint256 minPledgeUsd;
-    uint256 marketHeadroomUsd;
-    uint256 sliceHeadroomUsd;
-    address[] tokens;
-    uint256[] tokenHeadroomUsd;
-    uint256 chargePricePerWholeToken;
-    uint256 vaultTokenAddHeadroom;
-    DrawHeadroom[] drawHeadroom;
 }
 
 /// @notice Reason codes of the RiskModule's Aave configuration drift check.

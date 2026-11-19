@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Timelock operations, implementations and roles of every upgradeable contract, ParameterStore and RiskModule
+// Implementations and roles of every upgradeable contract, ParameterStore and RiskModule
 // events, First-Loss Reserve balances, vault tokens and the factory.
 
 import { ponder } from "ponder:registry";
@@ -8,46 +8,6 @@ import schema from "ponder:schema";
 import { AAVE_HUB_SOURCES, AAVE_SPOKE_SOURCES, FIRST_LOSS_SOURCES } from "../config/aaveSources.ts";
 import { logOnly } from "../lib/logOnly.ts";
 import { recordLog } from "../lib/record.ts";
-
-/** AvanaTimelock `GRACE_PERIOD`: an operation not executed by `readyAt + 14 days` expires (REQ-ACCESS-108). */
-const GRACE_PERIOD_SECONDS = 14n * 24n * 3600n;
-
-ponder.on("AvanaTimelock:CallScheduled", async ({ event, context }) => {
-  const p = await recordLog(event, context, "AvanaTimelock.CallScheduled");
-  // A replayed log must not append its call to the operation again.
-  if (!p.fresh) return;
-  const { id, index, target, value, data, delay } = event.args;
-  const call = { index: Number(index), target: target.toLowerCase(), value: value.toString(10), data };
-  const readyAt = p.blockTimestamp + delay;
-  await context.db
-    .insert(schema.timelockOperation)
-    .values({
-      chainId: p.chainId,
-      timelockOperationId: id,
-      status: "Scheduled",
-      calls: [call],
-      readyAt,
-      expiresAt: readyAt + GRACE_PERIOD_SECONDS,
-      scheduledBlock: p.blockNumber,
-      lastBlock: p.blockNumber,
-    })
-    .onConflictDoUpdate((row) => ({ calls: [...(row.calls as unknown[]), call], lastBlock: p.blockNumber }));
-});
-
-for (const [name, status] of [
-  ["CallExecuted", "Executed"],
-  ["Cancelled", "Cancelled"],
-  ["ExpiredOperationCleaned", "Cleaned"],
-] as const) {
-  ponder.on(`AvanaTimelock:${name}`, async ({ event, context }) => {
-    const p = await recordLog(event, context, `AvanaTimelock.${name}`);
-    await context.db
-      .update(schema.timelockOperation, { chainId: p.chainId, timelockOperationId: event.args.id })
-      .set({ status, lastBlock: p.blockNumber });
-  });
-}
-
-logOnly("AvanaTimelock", ["CallSalt", "MinDelayChange", "NormalDelayChanged", "ShortDelaySelectorSet", "PublicExecutionToggled", "RoleAdminChanged"]);
 
 /**
  * Contracts whose ABI carries ERC-1967 `Upgraded` and AccessControl role events (src/config/abis.ts), each with the
@@ -83,22 +43,9 @@ for (const [contract, kind] of UPGRADEABLE) {
   });
 }
 
-// The timelock's own roles (it holds its DEFAULT_ADMIN_ROLE itself).
-for (const [name, granted] of [["RoleGranted", true], ["RoleRevoked", false]] as const) {
-  ponder.on(`AvanaTimelock:${name}`, async ({ event, context }) => {
-    const p = await recordLog(event, context, `AvanaTimelock.${name}`);
-    await context.db
-      .insert(schema.roleMember)
-      .values({ chainId: p.chainId, contract: event.log.address, role: event.args.role, account: event.args.account, granted, lastBlock: p.blockNumber })
-      .onConflictDoUpdate({ granted, lastBlock: p.blockNumber });
-  });
-}
-
 logOnly("ParameterStore", [
-  "SequencerSet",
-  "MarketSpeedLimitsSet",
-  "DebtSpeedLimitSet",
-  "SecondSourceSwitched",
+  "AuthorityUpdated",
+  "MarketDynamicCapSet",
   "ParameterTightened",
   "ParameterLoosened",
   "ParameterSet",
@@ -111,10 +58,10 @@ logOnly("ParameterStore", [
   "DebtAssetParamsSet",
 ]);
 
-logOnly("RiskModule", ["ConfigDriftDetected", "BreakersPoked"]);
+logOnly("RiskModule", ["AuthorityUpdated", "ConfigDriftDetected"]);
 
 for (const source of FIRST_LOSS_SOURCES) {
-  for (const name of ["ReserveFunded", "DeficitCovered", "WithdrawalExecuted"] as const) {
+  for (const name of ["ReserveFunded", "DeficitCovered", "ReserveWithdrawn"] as const) {
     ponder.on(`${source}:${name}`, async ({ event, context }) => {
       const p = await recordLog(event, context, `AvanaFirstLossReserve.${name}`);
       if (!p.fresh) return;
@@ -125,7 +72,7 @@ for (const source of FIRST_LOSS_SOURCES) {
         .onConflictDoUpdate(row);
     });
   }
-  logOnly(source, ["AuthorityUpdated", "ReserveBelowMinimum", "WithdrawalRequested", "WithdrawalCancelled", "BorrowSpokeAllowlistUpdated", "FirstLossReserveMinimumUpdated"], "AvanaFirstLossReserve");
+  logOnly(source, ["AuthorityUpdated", "ReserveBelowMinimum", "BorrowSpokeAllowlistUpdated", "FirstLossReserveMinimumUpdated"], "AvanaFirstLossReserve");
 }
 
 logOnly("VaultToken", ["Transfer", "ProxyAdded"]);

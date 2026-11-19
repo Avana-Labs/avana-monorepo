@@ -1,6 +1,6 @@
 # services/monitor
 
-Avana's monitoring service: the signals `M-01` to `M-36` of [services/README.md](../README.md#monitoring-and-alerting) at warn and page levels, each sent to its responders with its playbook, every page re-read on a second RPC provider at the same block before it goes out, every notice logged with its block (`EMG-075`).
+Avana's monitoring service: the signals `M-01` to `M-34` of [services/README.md](../README.md#monitoring-and-alerting) at warn and page levels, each sent to its responders with its playbook, every page re-read on a second RPC provider at the same block before it goes out, every notice logged with its block (`EMG-075`).
 
 ## How it works
 
@@ -52,8 +52,6 @@ Routing (services/README.md, Rules): warns reach the on-call engineer and the si
 | M-32 | keeper | As the keeper posts it, every block while it holds: a scheduled or lazy fee class at its rolling 24 h budget (`KEEPER_DAILY_BUDGET_WEI_{SCHEDULED,LAZY}_<CHAIN>`) has stopped sending; pages |
 | M-33 | keeper | As the keeper posts it, every block: the standby signer's gas balance below `KEEPER_STANDBY_MIN_BALANCE_WEI_<CHAIN>` warns |
 | M-34 | — | Retired: the stateless oracles are never poked, so no probe raises it |
-| M-35 | gasVault | The chain's AvanaGasVault balance (`getEthBalance` through Multicall3) against what it sent per day (`ToppedUp` logs from the vault's deployment block, over the last 30 days, never below `MONITOR_GAS_VAULT_DAILY_WEI`, `chain:wei`): under 30 days warns, under 14 days pages, confirmed on the second provider; judged once the log reads have caught up with the head. No vault in the manifest: nothing |
-| M-36 | gasVault | Each `ToppedUp` whose amount is below its `requested` and each `TopUpFailed` pages once, confirmed on the second provider over the same block range |
 
 The keeper posts `M-09`, `M-10`, `M-16`, `M-17`, `M-24`, `M-26`, `M-30`, `M-31`, `M-32` and `M-33` ([services/keeper/DESIGN.md](../keeper/DESIGN.md#monitoring-service)); the keeper confirms its block-cadence pages on chain state on its fallback provider (`M-31` and `M-32` judge its own spend log, which has nothing to confirm), and the monitor holds each alert open while it keeps arriving without reading it again.
 

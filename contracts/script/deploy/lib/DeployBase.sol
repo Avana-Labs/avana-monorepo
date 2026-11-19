@@ -284,7 +284,7 @@ abstract contract DeployBase is DeployInputs {
 
     /// @notice The `additional_compiler_profiles` name a deployable file is restricted to in `foundry.toml`, or "" for
     /// the default profile. Mirrors `compilation_restrictions`: via-IR at 200 runs (Collateralization, the LPVaultSwap
-    /// logic contracts, the Lens modules, the Uniswap v4 LPVault), 200 runs without IR (the Uniswap v3 and Slipstream
+    /// logic contracts, the Uniswap v4 LPVault), 200 runs without IR (the Uniswap v3 and Slipstream
     /// LPVaults).
     function _profileOf(
         string memory file
@@ -292,7 +292,6 @@ abstract contract DeployBase is DeployInputs {
         if (
             _eq(file, "Collateralization.sol") || _eq(file, "UniswapV4Integration.sol")
                 || (_startsWith(file, "LPVaultSwap") && _endsWith(file, "Logic.sol"))
-                || (_startsWith(file, "Lens") && _endsWith(file, "Module.sol"))
         ) return "collateralization";
         if (_eq(file, "UniswapV3Integration.sol") || _eq(file, "SlipstreamIntegration.sol")) return "clvault";
         return "";

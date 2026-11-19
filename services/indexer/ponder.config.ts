@@ -40,7 +40,6 @@ export default createConfig({
     MarketRegistry: { abi: abis.MarketRegistry, chain: perChain((m) => a(m.avana.marketRegistry)) },
     ParameterStore: { abi: abis.ParameterStore, chain: perChain((m) => a(m.avana.parameterStore)) },
     RiskModule: { abi: abis.RiskModule, chain: perChain((m) => a(m.avana.riskModule)) },
-    AvanaTimelock: { abi: abis.AvanaTimelock, chain: perChain((m) => a(m.avana.timelock)) },
     VaultTokenFactory: { abi: abis.VaultTokenFactory, chain: perChain((m) => a(m.avana.vaultTokenFactory)) },
     LPVault: {
       abi: abis.LPVault,

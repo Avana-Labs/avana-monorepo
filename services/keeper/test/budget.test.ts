@@ -23,7 +23,7 @@ const BUDGETS = { scheduled: 1_000n, lazy: 500n };
 const entry = (jobClass: JobClass, costWei: bigint, at: bigint, hub: Address | null = null) => ({ chainId: 1, jobClass, at, costWei, market: null, hub });
 
 const plan = (jobClass: JobClass, subject = `1:${addr(0xa1)}`): TxPlan => ({
-  job: jobClass === "urgent" ? "liquidation" : jobClass === "scheduled" ? "breakerPoke" : "settlePending",
+  job: jobClass === "urgent" ? "liquidation" : "settlePending",
   jobClass,
   subject,
   to: addr(0xf1),

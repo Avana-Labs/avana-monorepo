@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
 import {ILPVaultSwapBase} from "../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
 import {LiquidationParams, LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
@@ -34,60 +33,6 @@ contract LiquidationUniswapV4IntegrationTest is RealStackUniswapV4Journeys {
         p = _liqParams(proxy, mS, reserveId, debtToCover);
     }
 
-    // TEST-205 verifies: REQ-LENS-016, REQ-LENS-017, REQ-LENS-028, REQ-LENS-029, SPEC-LIQ-004, SPEC-LIQ-005
-    // TEST-047 verifies: REQ-SWAP-011, REQ-SWAP-020, REQ-ADAPTER-070, SPEC-LIQ-006, SPEC-LIQ-010, REQ-AMM-V4-004; shared: the executed preview is checked against every settlement identity
-    // TEST-208 verifies: REQ-ADAPTER-070, REQ-SWAP-092; shared: each executed preview checks the seized-unit burn and its event
-    function test_TEST_205_v4ParamsExecuteUnchangedForGhoAndUsdc() public {
-        (address ghoProxy, bytes32 ghoKey) = _stableAccount(alice, v4GhoReserveS, DEBT_GHO);
-        (address usdcProxy,) = _stableAccount(bob, v4UsdcReserveS, DEBT_USDC);
-        _depegUsdt4(93_000_000);
-        uint256[2] memory reserves = [v4GhoReserveS, v4UsdcReserveS];
-        address[2] memory proxies = [ghoProxy, usdcProxy];
-        ClTestToken[2] memory assets = [gho, usdc];
-        _washV4Market(mS, 1e12);
-        (uint256 f0, uint256 f1) = _feesOwed4(mS, ghoKey);
-        _executeAsPreviewed(proxies[0], reserves[0], assets[0], f0, f1);
-        _executeAsPreviewed(proxies[1], reserves[1], assets[1], 0, 0);
-    }
-
-    /// @dev The preview's parameters executed unchanged; the depositor alice receives `f0`, `f1` of fees when it is
-    /// her account (both zero otherwise).
-    function _executeAsPreviewed(
-        address proxy,
-        uint256 reserveId,
-        ClTestToken asset,
-        uint256 f0,
-        uint256 f1
-    ) internal {
-        LiquidationPreview memory p = lens.previewLiquidation(proxy, reserveId, block.timestamp + 120);
-        assertTrue(p.aaveLiquidatable && p.pricesUsable, "liquidatable with usable gates");
-        assertEq(p.params.marketId, mS, "the v4 market");
-        uint256[3] memory b = [
-            IERC20(vtS).totalSupply(),
-            _sharesOn(v4SpokeS, proxy, mkt[mS].reserveId),
-            _debtOn(v4SpokeS, proxy, reserveId)
-        ];
-        (uint256 a0, uint256 a1) = _pair4(mS, alice);
-        vm.recordLogs();
-        LiquidationResult memory r = _liquidateOn(v4SpokeS, keeper, p.params);
-        assertEq(_burnEvents(r.unitsSeized), 1, "one SeizedUnitsBurned of c");
-        assertEq(r.debtRepaid, p.expectedDebtRepaid, "D as previewed");
-        assertEq(r.unitsSeized, p.expectedUnitsSeized, "c as previewed");
-        assertEq(r.minOut, p.recoveryFloor, "recovery floor as previewed");
-        assertEq(r.avanaFee, p.expectedAvanaFee, "Avana fee as previewed");
-        _checkSettlement4(r, p.params.debtToCover, asset, vtS);
-        assertGt(r.amountsOut[0] + r.amountsOut[1], 0, "the real v4 unwind paid the principal");
-        assertEq(b[0] - IERC20(vtS).totalSupply(), r.unitsSeized, "supply drop = c");
-        assertEq(b[1] - _sharesOn(v4SpokeS, proxy, mkt[mS].reserveId), r.unitsSeized, "share drop = c");
-        assertApproxEqAbs(b[2] - _debtOn(v4SpokeS, proxy, reserveId), r.debtRepaid, 1, "debt fell by D");
-        if (f0 + f1 != 0) {
-            (uint256 c0, uint256 c1) = _pair4(mS, alice);
-            assertEq(c0 - a0, f0, "the seizure paid the depositor's token0 fees to the depositor");
-            assertEq(c1 - a1, f1, "and its token1 fees");
-        }
-        _assertBacked(vtS);
-    }
-
     function _burnEvents(
         uint256 c
     ) internal view returns (uint256 burns) {
@@ -101,27 +46,6 @@ contract LiquidationUniswapV4IntegrationTest is RealStackUniswapV4Journeys {
             assertEq(address(uint160(uint256(logs[k].topics[2]))), vtS, "event vault token");
             assertEq(abi.decode(logs[k].data, (uint256)), c, "event units = c");
         }
-    }
-
-    // TEST-205 verifies: REQ-LENS-029, REQ-SWAP-026
-    function test_TEST_205_v4RaisedMinPayoutIsEnforced() public {
-        (address proxy,) = _stableAccount(bob, v4UsdcReserveS, DEBT_USDC);
-        _depegUsdt4(93_000_000);
-        LiquidationPreview memory p = lens.previewLiquidation(proxy, v4UsdcReserveS, block.timestamp + 120);
-        LiquidationParams memory raised = p.params;
-        raised.minPayout = p.expectedPayout;
-        uint256 debtBefore = _debtOn(v4SpokeS, proxy, v4UsdcReserveS);
-        usdc.mint(keeper, raised.debtToCover);
-        vm.startPrank(keeper);
-        usdc.approve(lpVaultSwap, raised.debtToCover);
-        vm.expectPartialRevert(ILPVaultSwapBase.PayoutTooLow.selector);
-        lvs.liquidate(raised);
-        vm.stopPrank();
-        assertEq(_debtOn(v4SpokeS, proxy, v4UsdcReserveS), debtBefore, "nothing repaid");
-        raised.minPayout = p.expectedPayout - p.expectedAvanaFee;
-        LiquidationResult memory r = _liquidateOn(v4SpokeS, keeper, raised);
-        assertEq(r.unitsSeized, p.expectedUnitsSeized, "c as previewed");
-        assertGe(r.keeperOut, raised.minPayout, "the raised minimum held");
     }
 
     // TEST-193 verifies: REQ-ADAPTER-047, REQ-ADAPTER-071, REQ-PROXY-032, REQ-PROXY-035, INV-045, INV-067

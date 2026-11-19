@@ -21,10 +21,8 @@ function outputs(abi: Abi, fn: string): string[] {
 
 describe("protocol names the probes read", () => {
   const cases: [string, Abi, string, string[]][] = [
-    ["ParameterStore", parameterStoreAbi as Abi, "getOracleConfig", ["usdBandLow"]],
     ["ParameterStore", parameterStoreAbi as Abi, "getFeed", ["feedMaxAge"]],
     ["Lens", lensAbi as Abi, "getDebtPriceState", ["source", "state", "age", "fixedPrice"]],
-    ["Lens", lensAbi as Abi, "getCapHeadroom", ["poolShareBps", "poolShareMaxBps"]],
     ["Lens", lensAbi as Abi, "checkBacking", [...BACKING_FLAGS]],
     ["Lens", lensAbi as Abi, "getTailCoverage", ["funded", "minimum", "ratioBps", "deficitOffset", "offsetFunded"]],
     ["Lens", lensAbi as Abi, "getHubAsset", ["baseDrawnRateBps"]],

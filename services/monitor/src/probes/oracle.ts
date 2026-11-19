@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Oracle signals: M-01 for each non-GHO debt reserve's price (the LPOracle side is in the snapshot), M-03 the age of
-// every Chainlink leg the manifest lists, M-04 the debt price age against its feed's ParameterStore ages, M-05 the USD
-// band distance of markets whose tokens are all USD stablecoins (a market without a band has usdBandLow = 0 and is
-// skipped). M-02 is retired: the stateless LPOracle records no disagreement.
+// every Chainlink leg the manifest lists, M-04 the debt price age against its feed's ParameterStore ages. M-02 is retired: the stateless LPOracle records no disagreement.
 
-import { lensAbi, lpOracleAbi, parameterStoreAbi } from "@avana/protocol/abis";
+import { lensAbi, parameterStoreAbi } from "@avana/protocol/abis";
 import { some } from "@avana/services-common/views";
 import { type Address, parseAbi } from "viem";
 import { type Probe, text } from "../probe.ts";
@@ -14,16 +12,6 @@ import { PRICE_STATE } from "../rules/snapshot.ts";
 import type { Finding } from "../types.ts";
 
 const chainlinkAbi = parseAbi(["function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)"]);
-
-/** One LPOracle's band inputs. */
-export interface MarketOracle {
-  readonly marketId: string;
-  readonly name: string;
-  readonly lpOracle: Address;
-  /** 8 decimals; √(p0·p1) of `getTokenPrices` for two tokens, the lowest price otherwise. */
-  readonly usdLevel: bigint;
-  readonly usdBandLow: bigint;
-}
 
 export interface FeedAge {
   readonly feed: Address;
@@ -47,12 +35,10 @@ export interface DebtPrice {
 export interface OracleInput {
   readonly now: number;
   /** null: that subject's reads failed this round. */
-  readonly markets: ReadonlyMap<string, MarketOracle | null>;
   readonly feeds: ReadonlyMap<string, FeedAge | null>;
   readonly debts: ReadonlyMap<string, DebtPrice | null>;
 }
 
-export const marketSubject = (id: string, what: "band") => `market:${id}:${what}`;
 export const feedSubject = (feed: string) => `feed:${feed.toLowerCase()}`;
 export const debtSubject = (spoke: string, reserveId: string, what: "state" | "age") => `debt:${spoke.toLowerCase()}:${reserveId}:${what}`;
 
@@ -70,30 +56,6 @@ export function m04(d: DebtPrice): Level | null {
   return d.age > d.borrowPriceMaxAge ? "warn" : "ok";
 }
 
-/** M-05: the USD level below 0.95 warns, below 0.90 pages (8 decimals); none for a market without a band. */
-export function m05(m: MarketOracle): Level | null {
-  if (m.usdBandLow === 0n) return null;
-  return m.usdLevel < 90_000_000n ? "page" : m.usdLevel < 95_000_000n ? "warn" : "ok";
-}
-
-/** Integer square root, rounded down. */
-function isqrt(n: bigint): bigint {
-  if (n < 2n) return n;
-  let x = n;
-  let y = (x + 1n) / 2n;
-  while (y < x) {
-    x = y;
-    y = (x + n / x) / 2n;
-  }
-  return x;
-}
-
-/** The USD level M-05 judges from `getTokenPrices`: √(p0·p1) for two tokens, the lowest price otherwise. */
-export function usdLevelOf(prices: readonly bigint[]): bigint {
-  if (prices.length === 2) return isqrt(prices[0]! * prices[1]!);
-  return prices.reduce((a, b) => (b < a ? b : a), prices[0] ?? 0n);
-}
-
 const asBig = (x: unknown) => BigInt(x as bigint | number);
 
 export function oracleProbe(): Probe<OracleInput> {
@@ -103,11 +65,6 @@ export function oracleProbe(): Probe<OracleInput> {
     async read(ctx) {
       const store = ctx.manifest.avana.parameterStore.address;
       const lens = ctx.manifest.avana.lens.address;
-      const markets = ctx.snapshot.markets;
-      const marketCalls = markets.flatMap((m) => [
-        { address: m.lpOracle, abi: lpOracleAbi, functionName: "getTokenPrices" },
-        { address: store, abi: parameterStoreAbi, functionName: "getOracleConfig", args: [m.lpOracle] },
-      ]);
       const feeds = [...new Set([...ctx.manifest.markets.flatMap((m) => m.feeds), ...ctx.manifest.debtReserves.flatMap((d) => d.feeds)].map((f) => f.feed.toLowerCase() as Address))];
       const feedCalls = feeds.flatMap((feed) => [
         { address: feed, abi: chainlinkAbi, functionName: "latestRoundData" },
@@ -117,15 +74,9 @@ export function oracleProbe(): Probe<OracleInput> {
       // are that feed's ParameterStore ages, read once the source is known.
       const debts = ctx.manifest.debtReserves.filter((d) => !d.isGho);
       const debtCalls = debts.map((d) => ({ address: lens, abi: lensAbi, functionName: "getDebtPriceState", args: [d.spoke, d.debtReserveId] }));
-      const r = await some(ctx.views, [...marketCalls, ...feedCalls, ...debtCalls]);
+      const r = await some(ctx.views, [...feedCalls, ...debtCalls]);
       let i = 0;
 
-      const marketOut = new Map<string, MarketOracle | null>();
-      for (const m of markets) {
-        const tp = r[i++] as readonly [readonly unknown[], unknown] | null;
-        const cfg = r[i++] as { usdBandLow: bigint } | null;
-        marketOut.set(m.marketId, tp && cfg ? { marketId: m.marketId, name: m.name, lpOracle: m.lpOracle, usdLevel: usdLevelOf(tp[0].map(asBig)), usdBandLow: asBig(cfg.usdBandLow) } : null);
-      }
       const feedOut = new Map<string, FeedAge | null>();
       for (const feed of feeds) {
         const round = r[i++] as readonly unknown[] | null;
@@ -155,7 +106,7 @@ export function oracleProbe(): Probe<OracleInput> {
             : null,
         );
       }
-      return { now: ctx.block.timestamp, markets: marketOut, feeds: feedOut, debts: debtOut };
+      return { now: ctx.block.timestamp, feeds: feedOut, debts: debtOut };
     },
 
     evaluate(input) {
@@ -165,13 +116,6 @@ export function oracleProbe(): Probe<OracleInput> {
       };
       const unread = (signal: SignalId, subject: string) => out.push({ signal, kind: "unread", level: "ok", subject, detail: {} });
 
-      for (const [id, m] of input.markets) {
-        if (!m) {
-          unread("M-05", marketSubject(id, "band"));
-          continue;
-        }
-        push("M-05", marketSubject(id, "band"), m05(m), { market: m.name, usdLevel8: m.usdLevel.toString(10) });
-      }
       for (const [feed, f] of input.feeds) {
         if (!f) {
           unread("M-03", feedSubject(feed));
@@ -196,7 +140,6 @@ export function oracleProbe(): Probe<OracleInput> {
 
     evidence(input, subject) {
       const [kind, a, b] = subject.split(":");
-      if (kind === "market") return input.markets.get(a!) ? text(input.markets.get(a!)) : null;
       if (kind === "feed") return input.feeds.get(a!) ? text(input.feeds.get(a!)) : null;
       if (kind === "debt") return input.debts.get(`${a}:${b}`) ? text(input.debts.get(`${a}:${b}`)) : null;
       return null;

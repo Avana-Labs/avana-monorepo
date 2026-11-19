@@ -21,8 +21,6 @@ import type { RetryHint } from "../jobs/failureReasons.ts";
 import { createChainReader } from "../chain/reads.ts";
 import type { AccountCache } from "../discovery/accountCache.ts";
 import { type Head, ProcessedHeads, isReorg } from "../discovery/stream.ts";
-import { breakerPokeJob, configPokeJob } from "../jobs/breakerPoke.ts";
-import { gasTopUpJob } from "../jobs/gasTopUp.ts";
 import { liquidationJob } from "../jobs/liquidation.ts";
 import { settlePendingJob } from "../jobs/settlePending.ts";
 import { blocksFor } from "@avana/services-common";
@@ -80,7 +78,6 @@ export function chainLoop(d: ChainLoopDeps) {
     void d.alerts.send({ signal, level, chainId: d.cfg.chain.id, blockNumber, subject, detail });
   };
   const slowSeconds = d.keeper.slowJobSeconds;
-  const breakerJob = breakerPokeJob();
   const jobs: Job<any, any>[] = [
     liquidationJob({
       cache: d.cache,
@@ -106,12 +103,9 @@ export function chainLoop(d: ChainLoopDeps) {
       },
     }),
     settlePendingJob(),
-    breakerJob,
-    configPokeJob(),
-    gasTopUpJob(d.from),
   ];
   // Checked at every head; the others at the slow cadence.
-  const everyHead = new Set<Job<any, any>>([jobs[0]!, breakerJob]);
+  const everyHead = new Set<Job<any, any>>([jobs[0]!]);
   let lastSlowAt: bigint | null = null;
   const chainId = d.cfg.chain.id;
   const pipeline: PipelineDeps = {
@@ -174,12 +168,10 @@ export function chainLoop(d: ChainLoopDeps) {
       }),
     );
 
-    // The instance's own status: a frozen helper stops submissions and pages; an unregistered one only warns (Q-404).
-    // Between slow heads the last status holds.
+    // The instance's own status at the slow cadence; a slow head clears a stopped helper (Q-404).
     if (statusRead) {
-      const status = await statusRead;
-      if (status.frozen) d.safety.frozenHelperChains.add(chainId);
-      else d.safety.frozenHelperChains.delete(chainId);
+      await statusRead;
+      d.safety.frozenHelperChains.delete(chainId);
     }
 
     for (const [i, job] of active.entries()) {

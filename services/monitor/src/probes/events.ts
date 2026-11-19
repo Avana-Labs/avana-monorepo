@@ -6,13 +6,10 @@
 //         seized by LiquidationSettled (10 % in the hour warns, 20 % pages), the on-chain half beside the keeper's;
 //   M-20  Aave configuration events of every CDP Spoke (warn) and the RiskModule's ConfigDriftDetected (page);
 //   M-21  Collateralization CounterSaturated (page);
-//   M-22  Timelock CallScheduled (warn; page for role changes, upgrades, setShortDelaySelector, setNormalDelay,
-//         unfreezeAddress and restorePriceRoute), and role grants or revocations on the Timelock (page);
-//   M-24  MarketRegistry address freezes, the standby route switch and pause reasons (warn);
 //   M-25  a token issuer's blocklist naming LPVaultSwap, an LPVault, Collateralization or the AaveAdapter (page) or
 //         another Avana contract (warn).
 
-import { aaveV4SpokeAbi, avanaTimelockAbi, collateralizationAbi, lpVaultSwapAbi, marketRegistryAbi, riskModuleAbi } from "@avana/protocol/abis";
+import { aaveV4SpokeAbi, collateralizationAbi, lpVaultSwapAbi, marketRegistryAbi, riskModuleAbi } from "@avana/protocol/abis";
 import { type Abi, type Address, type Hex, decodeEventLog, parseAbi, toEventSelector, toFunctionSelector } from "viem";
 import { type Probe, type RawLog, text } from "../probe.ts";
 import type { Level, SignalId } from "../signals.ts";
@@ -27,22 +24,7 @@ const extraAbi = parseAbi([
 const MAX_RANGE = 2_000n;
 const HOUR = 3_600;
 
-/** Selectors whose scheduling pages M-22. */
-export const PAGE_SELECTORS: ReadonlyMap<Hex, string> = new Map(
-  [
-    "grantRole(bytes32,address)",
-    "revokeRole(bytes32,address)",
-    "renounceRole(bytes32,address)",
-    "upgradeTo(address)",
-    "upgradeToAndCall(address,bytes)",
-    "setShortDelaySelector(address,bytes4,bool)",
-    "setNormalDelay(uint256)",
-    "unfreezeAddress(address)",
-    "restorePriceRoute(address)",
-  ].map((sig) => [toFunctionSelector(sig), sig.slice(0, sig.indexOf("("))]),
-);
-
-type Rule = { readonly signal: SignalId; readonly from: "spokes" | "riskModule" | "collateralization" | "timelock" | "registry" | "lpVaultSwap" | "tokens" };
+type Rule = { readonly signal: SignalId; readonly from: "spokes" | "riskModule" | "collateralization" | "lpVaultSwap" | "tokens" };
 
 /** Event name → the signal it feeds and the contracts it is read from. */
 const EVENTS: Readonly<Record<string, Rule>> = {
@@ -56,21 +38,13 @@ const EVENTS: Readonly<Record<string, Rule>> = {
   Upgraded: { signal: "M-20", from: "spokes" },
   ConfigDriftDetected: { signal: "M-20", from: "riskModule" },
   CounterSaturated: { signal: "M-21", from: "collateralization" },
-  CallScheduled: { signal: "M-22", from: "timelock" },
-  RoleGranted: { signal: "M-22", from: "timelock" },
-  RoleRevoked: { signal: "M-22", from: "timelock" },
-  AddressFrozen: { signal: "M-24", from: "registry" },
-  AddressUnfrozen: { signal: "M-24", from: "registry" },
-  StandbyRouteActivated: { signal: "M-24", from: "registry" },
-  StandbySwitchCancelled: { signal: "M-24", from: "registry" },
-  PauseReasonChanged: { signal: "M-24", from: "registry" },
   RouteFailed: { signal: "M-10", from: "lpVaultSwap" },
   LiquidationSettled: { signal: "M-10", from: "lpVaultSwap" },
   Blacklisted: { signal: "M-25", from: "tokens" },
   AddedBlackList: { signal: "M-25", from: "tokens" },
 };
 
-const ABI = [...aaveV4SpokeAbi, ...riskModuleAbi, ...collateralizationAbi, ...avanaTimelockAbi, ...marketRegistryAbi, ...lpVaultSwapAbi, ...extraAbi] as Abi;
+const ABI = [...aaveV4SpokeAbi, ...riskModuleAbi, ...collateralizationAbi, ...marketRegistryAbi, ...lpVaultSwapAbi, ...extraAbi] as Abi;
 
 /** topic0 → event name, for the events above (first definition wins; the same signature has the same topic). */
 const TOPICS: ReadonlyMap<Hex, string> = new Map(
@@ -131,8 +105,6 @@ export function eventsProbe(): Probe<EventsInput> {
       add("spokes", [...m.aave.borrowSpokes.map((x) => x.address), ...ctx.snapshot.hubs.flatMap((h) => h.cdpSpokes)]);
       add("riskModule", [m.avana.riskModule.address]);
       add("collateralization", [m.avana.collateralization.address]);
-      add("timelock", [m.avana.timelock.address]);
-      add("registry", [m.avana.marketRegistry.address]);
       add("lpVaultSwap", [m.avana.lpVaultSwap.address]);
       add("tokens", [...ctx.snapshot.markets.flatMap((x) => x.tokens), ...m.debtReserves.map((d) => d.asset)]);
       const logs = from > to ? [] : await ctx.rpc.getLogs([...roles.keys()] as Address[], [...TOPICS.keys()], from, to);
@@ -162,17 +134,6 @@ export function eventsProbe(): Probe<EventsInput> {
             break;
           case "CounterSaturated":
             event("M-21", "page", l, { event: d.name, counterKind: s(a.counterKind), hub: s(a.hub), key: s(a.key), valueBefore: s(a.valueBefore), subtracted: s(a.subtracted) });
-            break;
-          case "CallScheduled": {
-            const data = String(a.data);
-            const selector = data.slice(0, 10).toLowerCase() as Hex;
-            const named = PAGE_SELECTORS.get(selector);
-            event("M-22", named ? "page" : "warn", l, { event: d.name, id: s(a.id), target: s(a.target), selector, ...(named ? { call: named } : {}), delay: s(a.delay) });
-            break;
-          }
-          case "RoleGranted":
-          case "RoleRevoked":
-            event("M-22", "page", l, { event: d.name, role: s(a.role), account: s(a.account), sender: s(a.sender) });
             break;
           case "RouteFailed": {
             const market = s(a.marketId);

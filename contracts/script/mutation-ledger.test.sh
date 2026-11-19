@@ -28,14 +28,14 @@ check() { # <description> <command...>: passes when the command exits 0
   fi
 }
 
-python3 script/mutation-ledger.py keys --contracts TimelockSelectors >"$TMP/keys.json"
-python3 script/mutation-ledger.py keys --contracts TimelockSelectors >"$TMP/keys2.json"
+python3 script/mutation-ledger.py keys --contracts Lock >"$TMP/keys.json"
+python3 script/mutation-ledger.py keys --contracts Lock >"$TMP/keys2.json"
 check "keys: the same tree gives the same keys" cmp "$TMP/keys.json" "$TMP/keys2.json"
 check "keys: slither-mutate, Gambit and Necessist entries" python3 -c "
 import json, sys
 k = json.load(open(sys.argv[1]))
-assert 'mutate:2.1:TimelockSelectors' in k and 'gambit:2.1:TimelockSelectors' in k, k
-assert any(e.startswith('necessist:2.1:test/unit/AvanaTimelock') for e in k), k
+assert 'mutate:2.1:Lock' in k and 'gambit:2.1:Lock' in k, k
+assert any(e.startswith('necessist:2.1:test/unit/Lock.') for e in k), k
 " "$TMP/keys.json"
 
 # An import closure outside the project tree: a.sol imports b.sol, which imports c.sol.
@@ -60,25 +60,25 @@ printf 'contract C { uint256 x; }\n' >"$TMP/sol/c.sol"
 after=$(closure_key)
 check "keys: editing an imported file changes the key" test "$before" != "$after"
 
-# A run of two shards of TimelockSelectors: one passed shard is not enough, both are.
-key=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['mutate:2.1:TimelockSelectors'])" "$TMP/keys.json")
+# A run of two shards of Lock: one passed shard is not enough, both are.
+key=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['mutate:2.1:Lock'])" "$TMP/keys.json")
 shard() { # <k>: a passed report of shard k of 2, as a mutate job uploads it
-  local d="$TMP/reports/mutate-2.1-TimelockSelectors-$1/2.1/TimelockSelectors"
+  local d="$TMP/reports/mutate-2.1-Lock-$1/2.1/Lock"
   mkdir -p "$d"
   printf 'index\tmutator\tkind\tline\toutcome\tseconds\toriginal\treplacement\n' >"$d/shard-$1.tsv"
-  python3 script/mutation-ledger.py done "$d" mutate:2.1:TimelockSelectors "$key" --shard "$1" --shards 2
+  python3 script/mutation-ledger.py done "$d" mutate:2.1:Lock "$key" --shard "$1" --shards 2
 }
-is_current() { python3 script/mutation-ledger.py current "$TMP/ledger" "$TMP/keys.json" | grep -q "mutate:2.1:TimelockSelectors"; }
-mkdir -p "$TMP/ledger/mutate/2.1/TimelockSelectors/0ld"
+is_current() { python3 script/mutation-ledger.py current "$TMP/ledger" "$TMP/keys.json" | grep -q "mutate:2.1:Lock"; }
+mkdir -p "$TMP/ledger/mutate/2.1/Lock/0ld"
 shard 1
 python3 script/mutation-ledger.py merge "$TMP/ledger" "$TMP/reports" "$TMP/keys.json" >/dev/null
 check "current: one of two shards passed, not current" bash -c "$(declare -f is_current); TMP=$TMP; ! is_current"
 shard 2
 python3 script/mutation-ledger.py merge "$TMP/ledger" "$TMP/reports" "$TMP/keys.json" >/dev/null
 check "current: both shards passed, current" bash -c "$(declare -f is_current); TMP=$TMP; is_current"
-check "merge: an earlier key of the target is dropped" test ! -e "$TMP/ledger/mutate/2.1/TimelockSelectors/0ld"
+check "merge: an earlier key of the target is dropped" test ! -e "$TMP/ledger/mutate/2.1/Lock/0ld"
 check "current: another key is not current" bash -c "
-python3 -c \"import json; k=json.load(open('$TMP/keys.json')); k['mutate:2.1:TimelockSelectors']='other'; json.dump(k, open('$TMP/keys3.json','w'))\"
-! python3 script/mutation-ledger.py current '$TMP/ledger' '$TMP/keys3.json' | grep -q TimelockSelectors"
+python3 -c \"import json; k=json.load(open('$TMP/keys.json')); k['mutate:2.1:Lock']='other'; json.dump(k, open('$TMP/keys3.json','w'))\"
+! python3 script/mutation-ledger.py current '$TMP/ledger' '$TMP/keys3.json' | grep -q Lock"
 
 exit $fail

@@ -19,7 +19,6 @@ import {
     LVSHarnessRoute,
     LVSHarnessToken
 } from "../../utils/harness/LPVaultSwapSettlementHarness.sol";
-import {LVSMarketRegistryMock} from "../../utils/mocks/LPVaultSwapMocks.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
@@ -74,7 +73,8 @@ contract LPVaultSwapProperties {
 
     ILPVaultSwap internal immutable LVS;
     AccessManager internal immutable MANAGER;
-    LVSMarketRegistryMock internal immutable REGISTRY;
+    /// @dev LPVaultSwap only records the MarketRegistry; the keeper paths never call it.
+    address internal constant REGISTRY = address(0x1004);
     LVSEchidnaOutsider internal immutable OUTSIDER;
     LPVaultSwapSettlementHarness internal immutable LEGS;
     LVSHarnessToken internal immutable USDC;
@@ -86,14 +86,13 @@ contract LPVaultSwapProperties {
     uint256 public sequences;
 
     constructor() {
-        REGISTRY = new LVSMarketRegistryMock();
         AccessManager manager = HalmosAccess.deploy(address(this));
         MANAGER = manager;
         LPVaultSwapImmutables memory im = LPVaultSwapImmutables({
             lock: address(0x1001),
             aaveAdapter: address(0x1002),
             collateralization: address(0x1003),
-            marketRegistry: address(REGISTRY),
+            marketRegistry: REGISTRY,
             parameterStore: address(0x1005),
             payoutEscrow: address(0x1006),
             keeperFloor: FLOOR
@@ -160,7 +159,7 @@ contract LPVaultSwapProperties {
 
     function property_onlyTheManagerAuthorizes() external view returns (bool) {
         (bool outsiderHolds,) = MANAGER.hasRole(AvanaRoles.GOVERNANCE_ROLE, address(OUTSIDER));
-        (bool registryHolds,) = MANAGER.hasRole(AvanaRoles.GOVERNANCE_ROLE, address(REGISTRY));
+        (bool registryHolds,) = MANAGER.hasRole(AvanaRoles.GOVERNANCE_ROLE, REGISTRY);
         return LVS.authority() == address(MANAGER) && !outsiderHolds && !registryHolds;
     }
 

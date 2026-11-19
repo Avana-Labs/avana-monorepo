@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import type { ServiceManifest } from "@avana/services-common";
 import { FIXTURE_U, FIXTURE_USDC, fixtureMarkets } from "@avana/services-common/fixtures";
-import { avanaTimelockAbi, collateralizationAbi, lpVaultSwapAbi, marketRegistryAbi, riskModuleAbi } from "@avana/protocol/abis";
+import { collateralizationAbi, lpVaultSwapAbi, riskModuleAbi } from "@avana/protocol/abis";
 import { type Abi, type Address, type Hex, encodeAbiParameters, encodeEventTopics, encodeFunctionData, parseAbi } from "viem";
 import { eventsProbe } from "../src/probes/events.ts";
 import type { RawLog } from "../src/probe.ts";
@@ -32,22 +32,15 @@ function log(abi: Abi, eventName: string, args: Record<string, unknown>, address
   return { address, topics, data, blockNumber: block, transactionHash: `0x${(++index).toString(16).padStart(64, "0")}`, logIndex: 0 };
 }
 
-const scheduled = (data: Hex, block: bigint) => log(avanaTimelockAbi as Abi, "CallScheduled", { id: `0x${"11".repeat(32)}`, index: 0n, target: REGISTRY, value: 0n, data, predecessor: `0x${"00".repeat(32)}`, delay: 172_800n }, TIMELOCK, block);
-const registryCall = (sig: string, args: unknown[]) => encodeFunctionData({ abi: parseAbi([`function ${sig}`] as unknown as readonly ["function f()"]), args } as never);
 
 describe("eventsProbe", () => {
   it("maps each event to its signal and level, from its own contract only", async () => {
     const p = fakeProvider();
     p.logs.push(
-      scheduled(registryCall("unfreezeAddress(address)", [A(9)]), 10n),
-      scheduled(registryCall("setStressFloor(uint256)", [1n]), 10n),
-      log(avanaTimelockAbi as Abi, "RoleGranted", { role: `0x${"22".repeat(32)}`, account: A(9), sender: A(8) }, TIMELOCK, 10n),
-      log(marketRegistryAbi as Abi, "RoleGranted", { role: `0x${"22".repeat(32)}`, account: A(9), sender: A(8) }, A(0x99), 10n), // not a watched contract
+      log(tokenAbi, "Upgraded", { implementation: A(5) }, A(0x99), 10n), // not a watched contract
       log(riskModuleAbi as Abi, "ConfigDriftDetected", { spoke: FIXTURE_U, reason: 2 }, RISK, 10n),
       log(tokenAbi, "Upgraded", { implementation: A(5) }, FIXTURE_U, 10n),
       log(collateralizationAbi as Abi, "CounterSaturated", { counterKind: 1, hub: A(1), key: A(2), valueBefore: 5n, subtracted: 9n }, COLL, 10n),
-      log(marketRegistryAbi as Abi, "AddressFrozen", { account: A(9), caller: A(8) }, REGISTRY, 10n),
-      log(marketRegistryAbi as Abi, "StandbyRouteActivated", { token: FIXTURE_USDC, slot: 1, caller: A(8) }, REGISTRY, 10n),
       log(tokenAbi, "Blacklisted", { _account: SWAP }, FIXTURE_USDC, 10n),
       log(tokenAbi, "AddedBlackList", { _user: ESCROW }, FIXTURE_USDC, 10n),
       log(tokenAbi, "Blacklisted", { _account: A(0x1234) }, FIXTURE_USDC, 10n),
@@ -56,14 +49,9 @@ describe("eventsProbe", () => {
     const ctx = await contextOf(p, { number: 10n, timestamp: 1_000 }, manifest);
     const fs = probe.evaluate(await probe.read(ctx), ctx.block);
     expect(fs.map((f) => `${f.signal}:${f.level}:${f.detail.event}${f.detail.call ? `:${f.detail.call}` : ""}`)).toEqual([
-      "M-22:page:CallScheduled:unfreezeAddress",
-      "M-22:warn:CallScheduled",
-      "M-22:page:RoleGranted",
       "M-20:page:ConfigDriftDetected",
       "M-20:warn:Upgraded",
       "M-21:page:CounterSaturated",
-      "M-24:warn:AddressFrozen",
-      "M-24:warn:StandbyRouteActivated",
       "M-25:page:Blacklisted",
       "M-25:warn:AddedBlackList",
     ]);

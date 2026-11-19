@@ -52,12 +52,11 @@ test("writes the network's section of all three pages from the deployment", () =
     assert.ok(addresses.includes("hookless stablecoin pools are collateral for borrowing GHO and USDC"));
     // Vault tokens, LPOracles and market IDs, one row per market.
     for (const x of m.markets) assert.ok(addresses.includes(`| ${x.marketId} | ${x.vaultToken.address} | ${x.lpOracle.address} |`));
-    // No gas vault in this deployment: the row stays, marked as not deployed.
-    assert.ok(addresses.includes("| AvanaGasVault | Holds the chain's native gas token and refills Avana's own keeper signers up to a per-signer cap over any 24 hours. Immutable. | Not deployed on this network |"));
     // The test network's GHO price stand-in; USDC is priced by its own Chainlink feed, with no oracle contract of Avana's.
     assert.ok(addresses.includes("| Fixed $1 price source, GHO |"));
     assert.ok(!addresses.includes("DebtOracle"));
     assert.ok(!addresses.includes("sequencer uptime feed"));
+    assert.ok(!addresses.includes("AvanaGasVault"));
 
     const parameters = w.read("parameters");
     assert.ok(parameters.includes("| Uniswap v3 Stable | USDC/USDT LP | 80% | 4% | No | 400 bps | 0% | Max | No |"));
@@ -82,7 +81,6 @@ test("writes the network's section of all three pages from the deployment", () =
     assert.ok(!access.includes("Standby keeper"));
     assert.ok(access.includes("| Short delay (`SHORT_DELAY`) | 60 s |"));
     assert.ok(access.includes("| Minimum normal delay (`MIN_NORMAL_DELAY`) | 60 s |"));
-    assert.ok(!access.includes("AvanaGasVault's `GUARDIAN`"));
 
     for (const page of ["addresses", "parameters", "access-controls"]) {
       const text = w.read(page);
@@ -90,26 +88,6 @@ test("writes the network's section of all three pages from the deployment", () =
       assert.ok(!/@\{|MISSING|undefined|NaN/.test(text), `${page} holds no unresolved value`);
       assert.ok(!/\blaunch\b|sandbox/i.test(text), `${page} avoids the excluded wording`);
     }
-  } finally {
-    w.done();
-  }
-});
-
-test("a gas vault in the manifest is listed with its roles", () => {
-  const w = workspace();
-  try {
-    const m = manifest();
-    const vault = "0xf200000000000000000000000000000000000001";
-    w.edit("manifest.json", (j) => {
-      j.avana.gasVault = { address: vault, codeHash: `0x${"ab".repeat(32)}`, startBlock: 1, artifact: "AvanaGasVault.sol:AvanaGasVault", treasury: j.feeRecipient, timelock: j.avana.timelock.address, guardian: j.roles.emergencyGuardian, maxSigners: 8 };
-    });
-    generate({ network: "ethereum-sepolia", deployment: w.dep, out: w.out, date: DATE });
-    assert.ok(w.read("addresses").includes(`| ${vault} |`));
-    const access = w.read("access-controls");
-    assert.ok(access.includes("and the AvanaGasVault's `GUARDIAN`"));
-    assert.ok(access.includes("The ParameterStore's `feeRecipient` and the AvanaGasVault's `TREASURY`"));
-    assert.ok(access.includes("Also the signer of the OperatorFlashLiquidator and a signer the AvanaGasVault refills."));
-    assert.ok(m.avana.gasVault === null);
   } finally {
     w.done();
   }

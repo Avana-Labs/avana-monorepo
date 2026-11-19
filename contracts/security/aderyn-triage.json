@@ -843,14 +843,6 @@
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "f617ade4761bef6f",
-      "check": "unchecked-return",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "FlashLiquidatorBase.flashLiquidate (F = 0 branch)",
-      "reason": "The internal _liquidate(asset, request.params) of the operator helper's no-loan path returns (keeperOut, unused, debtRepaid), which only the loan path's _runLoan needs, to size the repayment owed to a lender (_checkLoanNeed and _repay). With F = 0 nothing is owed and there is no lender: _liquidate itself stores keeperOut and debtRepaid in the transient context (KEEPER_OUT_SLOT, DEBT_REPAID_SLOT), _payOut reads them for the operator's outlay bound and the FlashLiquidated event, and the payout is the rise of the helper's T balance over the whole call, which already holds the unused shortfall budget (REQ-HELPER-006, REQ-HELPER-008, REQ-HELPER-011). No value is lost by not binding the returns. Replaces stale entry f64a71575f3db858 (an unused LiquidationResult inside _liquidate, which now reads result.debtRepaid). Covered by TEST-174 (FlashLiquidator.ZeroLoan: operatorZeroLoanFundedBySafe, operatorZeroLoanOutlayBound, operatorZeroLoanShortfall, operatorZeroLoanMinPayout, testFuzz operatorZeroLoanBounded).",
-      "approval": "approved (Josue, 2026-11-11; reviewed per call site: with F = 0, _liquidate stores keeperOut and debtRepaid in transient slots that _payOut reads; the payout is the measured balance rise)"
-    },
-    {
       "fingerprint": "14539534e56f1eb6",
       "check": "empty-block",
       "file": "src/policy/risk-module/RiskModule.sol",
@@ -858,24 +850,6 @@
       "reason": "The UUPS authorization hook: the onlyRole(APPLICATION_ADMIN) modifier is the whole check (REQ-RISK-002), as OpenZeppelin documents. Covered by TEST-242 (upgradeNeedsApplicationAdmin).",
       "approval": "approved by pattern (independent review 2026-11-11)",
       "review": "Pattern: same as the Josue-approved ParameterStore and MarketRegistry _authorizeUpgrade empty-block entries."
-    },
-    {
-      "fingerprint": "bfb3f99b4cbcc637",
-      "check": "empty-block",
-      "file": "src/periphery/flash-liquidator/FlashLiquidator.sol",
-      "function": "FlashLiquidator._checkLoanNeed",
-      "reason": "The public helper has no loan-size bound: anyone may borrow what the liquidation needs and pays its own premium (REQ-HELPER-007, REQ-HELPER-010); the operator variant bounds it in OperatorFlashLiquidator._checkLoanNeed. forge-lint suppression above the function with the same reason. Covered by TEST-174, TEST-289.",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group X (empty override of a variant hook): checked 2026-11-11, the abstract FlashLiquidatorBase calls the hook on every liquidation and the public variant specifies no bound there (REQ-HELPER-007, REQ-HELPER-010), while OperatorFlashLiquidator's override enforces its bounds; an empty body is the specified behaviour, not a missing check."
-    },
-    {
-      "fingerprint": "ed6c1761dd4c584c",
-      "check": "empty-block",
-      "file": "src/periphery/flash-liquidator/FlashLiquidator.sol",
-      "function": "FlashLiquidator._checkOutlay",
-      "reason": "The public helper has no outlay bound beyond maxTopUp and minPayout: the caller funds and keeps the result (REQ-HELPER-008, REQ-HELPER-010); the operator variant bounds it in OperatorFlashLiquidator._checkOutlay. forge-lint suppression above the function with the same reason. Covered by TEST-174, TEST-289.",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group X (empty override of a variant hook): checked 2026-11-11, the abstract FlashLiquidatorBase calls the hook on every liquidation and the public variant specifies no bound there (REQ-HELPER-007, REQ-HELPER-010), while OperatorFlashLiquidator's override enforces its bounds; an empty body is the specified behaviour, not a missing check."
     },
     {
       "fingerprint": "e2e0eb20ced28780",
@@ -1029,15 +1003,6 @@
       "reason": "One token over its USD cap refuses the whole pledge (CapExceeded(TOKEN), SPEC-CAP-002); at most 8 tokens. Covered by TEST-272 (tokenCaps).",
       "approval": "approved by pattern (independent review 2026-11-11)",
       "review": "Pattern: bounded loops in which one failing element must revert the whole call (fail closed), as in the Josue-approved CollateralizationPending and DexHops require-revert-in-loop entries."
-    },
-    {
-      "fingerprint": "8a8a3344aef851cf",
-      "check": "unused-import",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "IFlashLiquidator",
-      "reason": "Used by @inheritdoc IFlashLiquidator NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: unused import for @inheritdoc (same as the Josue-approved AvanaTimelock entries)."
     },
     {
       "fingerprint": "8fdd000312bf388a",
@@ -1711,286 +1676,6 @@
       "review": "Pattern: imports for @inheritdoc."
     },
     {
-      "fingerprint": "ced72c813be7d191",
-      "check": "reentrancy-state-change",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Constructor only: reads the nine modules' core getters (STATICCALL to contracts the deployer passes) before writing immutables; there is no state to re-enter and no later state change. Test: constructorRejectsMismatchedModules.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "df86f4a852f65be4",
-      "check": "reentrancy-state-change",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Constructor only: reads the nine modules' core getters (STATICCALL to contracts the deployer passes) before writing immutables; there is no state to re-enter and no later state change. Test: constructorRejectsMismatchedModules.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "2bb8ae4d3f3ba378",
-      "check": "yul-return",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "e57fac3aabcb1d45",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "032d13c5afd43710",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "158e40e7cc092a37",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "a30b72ec826dd4e1",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "742edef1ccbab1f5",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "56f5c64e721a40f4",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "090d493000fcf2ea",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "8922832beb654b8f",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "8cfbb775f2519d25",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "e8aef9a69c3ccbb6",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "c7b5f2aba11dc9ff",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "1da62f903fb15535",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "240f2caa9c397e10",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "724d78b90f80d307",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "087cdadf26fddca3",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "55351e381e27a5cc",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "c4979ea58e29c155",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "6c3dd4dac8c84f77",
-      "check": "require-revert-in-loop",
-      "file": "src/lens/lens/LensAccountModule.sol",
-      "reason": "getAccounts loops over the caller's own market list and an unlisted market ends the whole call with UnknownMarket (REQ-LENS-022, REQ-LENS-040); no partial answer is meaningful. Test: getAccountsUnknownMarketReverts.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "7f37f4c4c66317fa",
-      "check": "unused-import",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "98db742bba8267eb",
-      "check": "unused-import",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "97163492152c544f",
-      "check": "unused-import",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "1ae39cc32df12e71",
-      "check": "unused-import",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "93d7adfe36fc769b",
-      "check": "unused-import",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "2df3936c04af754e",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "7de31de13bfeb70c",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "f163ce31bc9103fa",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "bfb3a1ce08be009e",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "58c4922ebb3211d7",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "1c9cc441ae21bc12",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "47ac6272fe6a57f4",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "e10194e48f472495",
-      "check": "unused-import",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "3b0bbe59afb65324",
-      "check": "unused-import",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
       "fingerprint": "1419a04b8bbb6c7c",
       "check": "reentrancy-state-change",
       "file": "src/coverage/dao-deficit-offset/DaoDeficitOffset.sol",
@@ -2007,15 +1692,6 @@
       "reason": "The loss-order hook: the Avana Umbrella has no layer in front of it, so its hook accepts every call (REQ-FLR-048); DaoDeficitOffset._beforeCover overrides it with the FirstLossLayerNotExhausted check. An empty body is the specified behaviour, not a missing check. Covered by TEST-298 (offsetRefusedWhileAvanaLayerFunded; the deletion mutant of the hook call is killed) and TEST-128.",
       "approval": "approved by pattern",
       "review": "group X (empty override of a variant hook): same shape as FlashLiquidator._checkLoanNeed and _checkOutlay."
-    },
-    {
-      "fingerprint": "0f02c6bcba2a7971",
-      "check": "require-revert-in-loop",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "FlashLiquidatorBase._forwardTokens",
-      "reason": "The loop's safeTransfer of a watched token's rise to the recipient reverts the whole call when the recipient refuses it, the specified outcome for a payout the caller chose (REQ-HELPER-008); the bounded loop is over the market's tokens and their routes' intermediates. Covered by TEST-174.",
-      "approval": "pending review (approved pattern)",
-      "review": "fixmed (adversarial-review fixes 2026-11-12); pattern: bounded loops"
     },
     {
       "fingerprint": "e129dec5f52bb7e1",
@@ -2169,54 +1845,6 @@
       "review": "Pattern: a3325c90f300c483 (bounded storage writes, approved Josue 2026-11-10)"
     },
     {
-      "fingerprint": "18b627168a9bd0fe",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
-    },
-    {
-      "fingerprint": "b6391a31b8f98701",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
-    },
-    {
-      "fingerprint": "c85ae2bda80fe41e",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
-    },
-    {
-      "fingerprint": "e67cfe5a202d1b13",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
-    },
-    {
-      "fingerprint": "3b8bf92f479c259f",
-      "check": "redundant-statement",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Lens entry point (REQ-LENS-001): each view forwards its calldata unchanged by STATICCALL to one of nine immutable modules fixed and cross-checked in the constructor, and the assembly ends the call with the module's return or revert data unchanged; the declared return values are the module's ABI encoding of the same function, so they are never assigned in Solidity and the reference statement only names them. Tests: entryPointReturnsModuleAnswers, entryPointReturnsModuleRevertData, everyFunctionIsView, noStateChangingOpcode, LensProperties.checkRoute.",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2: new forwarded views, same entry-point pattern as e57fac3aabcb1d45"
-    },
-    {
-      "fingerprint": "24cbae04044a29c0",
-      "check": "require-revert-in-loop",
-      "file": "src/lens/lens/LensPriceModule.sol",
-      "reason": "The bisection loops of previewDeleverageTo (at most 2 x 128 steps) call the pure SettlementMath sizing, which reverts only for decimals above 36 (InvalidDecimals; no listed market has them) or an arithmetic overflow; zero prices return before it. Either one ends the whole preview, which has no meaningful partial answer (REQ-LENS-055). Tests: Lens.DeleverageTo (TEST-247).",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2, new reasoning"
-    },
-    {
       "fingerprint": "71d20022c358ec46",
       "check": "require-revert-in-loop",
       "file": "src/oracle/lp-oracle/LPOracle.sol",
@@ -2295,46 +1923,6 @@
       "reason": "The initialization logic's initializeMarket returns nothing, so the delegatecall's return data is empty; Address.functionDelegateCall reverts on failure and bubbles the logic's error (REQ-ORACLE-058, REQ-ORACLE-106).",
       "approval": "pending review (approved pattern)",
       "review": "Re-key of ca763563d74e6166 (approved Josue 2026-11-11): the call now goes to _INIT_LOGIC"
-    },
-    {
-      "fingerprint": "af5eac1e25abacb7",
-      "check": "unused-import",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens round 2: new interface pieces named by @inheritdoc; same reasoning as 7f37f4c4c66317fa"
-    },
-    {
-      "fingerprint": "9b4eb0d574df1b3a",
-      "check": "unused-import",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens round 2: new interface pieces named by @inheritdoc; same reasoning as 7f37f4c4c66317fa"
-    },
-    {
-      "fingerprint": "f87aa284615e0fd6",
-      "check": "unused-import",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens round 2: new interface pieces named by @inheritdoc; same reasoning as 7f37f4c4c66317fa"
-    },
-    {
-      "fingerprint": "f929ad7b45145717",
-      "check": "unused-import",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens round 2: new interface pieces named by @inheritdoc; same reasoning as 7f37f4c4c66317fa"
-    },
-    {
-      "fingerprint": "7bbba9b4c992dc72",
-      "check": "unused-import",
-      "file": "src/lens/lens/Lens.sol",
-      "reason": "Imported for `@inheritdoc` of the interface that declares each forwarded function (the entry point implements ILens through its five pieces). Test: everyFunctionIsView.",
-      "approval": "pending review (approved pattern)",
-      "review": "Lens round 2: new interface pieces named by @inheritdoc; same reasoning as 7f37f4c4c66317fa"
     },
     {
       "fingerprint": "9cdc1e1a9f793dfd",
@@ -2421,39 +2009,6 @@
       "file": "src/oracle/lp-oracle/LPOracleV4.sol",
       "reason": "Same as LPOracleCL: the only payable entry point is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by the timelock; no LPOracle function takes or holds ETH.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
-    },
-    {
-      "fingerprint": "feafd1a0cfc7cf0c",
-      "check": "costly-loop",
-      "file": "src/periphery/gas-vault/AvanaGasVault.sol",
-      "function": "topUpAll",
-      "reason": "At most MAX_SIGNERS <= 8 iterations; the storage writes are each paid signer's send record (needed for the 24 h cap) and, on a failed transfer only, its restore. Measured: 236,989 gas for 8 due signers (TEST-336).",
-      "approval": "approved (Josue, 2026-11-16)",
-      "reviewedFiles": {
-        "src/periphery/gas-vault/AvanaGasVault.sol": "9c0535e8ee61474db4f651150880c624f6329d90c927cfd16ee7af4150576e4d"
-      }
-    },
-    {
-      "fingerprint": "beaf37ce38f23c07",
-      "check": "contract-locks-ether",
-      "file": "src/periphery/gas-vault/AvanaGasVault.sol",
-      "function": "AvanaGasVault (withdraw, topUp, topUpAll)",
-      "reason": "ETH always has a way out: withdraw(amount) (TIMELOCK only, any amount up to the whole balance, open while paused and with no signer listed) sends to the immutable TREASURY, and topUp/topUpAll pay listed signers (REQ-GASV-012, REQ-GASV-004). Aderyn does not see the transfer because it is the gas-limited, no-copy CALL in _send (inline assembly, the LPVaultSwap payout pattern). Covered by TEST-333 (withdraw_onlyTreasury: the whole balance reaches TREASURY; retiredVaultReturnsAllEth: paused, no signers, ETH sent afterwards, all withdrawn), TEST-335 (fundedEqualsHeldPlusSentPlusWithdrawn, with withdraw in the handler), PROP-113 (withdrawOnlyToTreasury).",
-      "approval": "approved (Josue, 2026-11-16)",
-      "reviewedFiles": {
-        "src/periphery/gas-vault/AvanaGasVault.sol": "9c0535e8ee61474db4f651150880c624f6329d90c927cfd16ee7af4150576e4d"
-      }
-    },
-    {
-      "fingerprint": "72cbd52e8041ab62",
-      "check": "require-revert-in-loop",
-      "file": "src/periphery/gas-vault/AvanaGasVault.sol",
-      "function": "topUpAll",
-      "reason": "The only reverts reachable in the loop are SafeCast's in _record, which cannot fire: the amount is at most periodCap < 2^80 (_checkConfig) and block.timestamp < 2^48. A signer that cannot be paid (nothing to send, or a failed transfer) is skipped, never reverted (REQ-GASV-006). Covered by TEST-333 (topUpAll_skipsRefusingAndCappedSigners, transferGasIsBounded), TEST-335.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "reviewedFiles": {
-        "src/periphery/gas-vault/AvanaGasVault.sol": "9c0535e8ee61474db4f651150880c624f6329d90c927cfd16ee7af4150576e4d"
-      }
     }
   ]
 }

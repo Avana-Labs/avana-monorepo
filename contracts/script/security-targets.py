@@ -146,7 +146,6 @@ def profile_of(file: str) -> str:
     if (
         file == "Collateralization.sol"
         or (file.startswith("LPVaultSwap") and file.endswith("Logic.sol"))
-        or (file.startswith("Lens") and file.endswith("Module.sol"))
     ):
         return "collateralization"
     if file in ("UniswapV3Integration.sol", "SlipstreamIntegration.sol"):

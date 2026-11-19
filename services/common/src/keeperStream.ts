@@ -33,7 +33,7 @@ export const KEEPER_ACCOUNT_KINDS = [
 /** Events that drive `settlePending`. */
 export const KEEPER_PENDING_KINDS = ["Collateralization.SeizureReconciled", "Collateralization.PendingSettled"] as const;
 /** Events that change the keeper's own status. */
-export const KEEPER_STATUS_KINDS = ["LPVaultSwap.KeeperAdded", "LPVaultSwap.KeeperRemoved", "MarketRegistry.AddressFrozen", "MarketRegistry.AddressUnfrozen"] as const;
+export const KEEPER_STATUS_KINDS = ["LPVaultSwap.KeeperAdded", "LPVaultSwap.KeeperRemoved"] as const;
 
 /** Every kind the stream serves; any other `event_log` row is left out. */
 export const KEEPER_STREAM_KINDS: readonly string[] = [...KEEPER_ACCOUNT_KINDS, ...KEEPER_PENDING_KINDS, ...KEEPER_STATUS_KINDS];

@@ -4,10 +4,16 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
-import {ILensHubReads} from "../../src/lens/lens/ILensHubReads.sol";
 import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
 import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
 import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
+
+/// @dev The Aave V4 Hub's drawn index of an asset, RAY.
+interface IHubDrawnIndex {
+    function getAssetDrawnIndex(
+        uint256 assetId
+    ) external view returns (uint256 index);
+}
 
 /// @title AaveAdapterFuzzTest
 /// @notice Fuzzed AaveAdapter flows on the real local Aave V4 Spoke and Hub with the real Collateralization, vault
@@ -189,7 +195,7 @@ contract AaveAdapterFuzzTest is AaveAdapterFixture {
         uint256 debtNow,
         uint256 x
     ) internal view {
-        uint256 index = ILensHubReads(aave.hub).getAssetDrawnIndex(reserve == usdcReserveId ? usdcAssetId : ghoAssetId);
+        uint256 index = IHubDrawnIndex(aave.hub).getAssetDrawnIndex(reserve == usdcReserveId ? usdcAssetId : ghoAssetId);
         uint256 slack = (index + 1e27 - 1) / 1e27;
         uint256 debtAfter = _debtOf(p, reserve);
         assertGe(debtAfter, debtNow - x, "debt after at least D - x");

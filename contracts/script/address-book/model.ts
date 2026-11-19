@@ -156,8 +156,6 @@ export interface Model {
   readonly shortDelay: number;
   readonly maxMarketCount: number;
   readonly avanaFeeShareBps: number;
-  /** Signers the config gives the gas vault (lower-case). */
-  readonly gasVaultSigners: readonly string[];
 }
 
 export interface Deployment {
@@ -441,6 +439,5 @@ export function buildModel(d: Deployment, problems: string[]): Model {
     shortDelay,
     maxMarketCount: num("parameters.maxMarketCount", cfg.parameters?.maxMarketCount),
     avanaFeeShareBps: num("parameters.globals.avanaFeeShareBps", cfg.parameters?.globals?.avanaFeeShareBps),
-    gasVaultSigners: ((cfg.gasVault?.signers ?? []) as Json[]).map((s) => String(s.signer).toLowerCase()),
   };
 }

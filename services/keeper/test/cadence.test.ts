@@ -9,8 +9,7 @@
 // the same read, and an incremental sweep never starts above the head it read to.
 
 import { describe, expect, it, vi } from "vitest";
-import { type Address, type Hex, type PublicClient, decodeFunctionData, encodeFunctionResult, multicall3Abi } from "viem";
-import { MULTICALL3_ADDRESS } from "@avana/services-common/chains";
+import { type Address, type Hex, type PublicClient } from "viem";
 import { CHAINS } from "@avana/services-common";
 import { createChainReader } from "../src/chain/reads.ts";
 import { type ChainConfig, type KeeperConfig, SLOW_JOB_SECONDS, slowJobSeconds } from "../src/config.ts";
@@ -55,8 +54,6 @@ function node() {
           return true;
         case "activeKeeperCount":
           return 1n;
-        case "isFrozenAddress":
-          return false;
         case "getPendingSettlement":
           return { units: 0n, settleable: false, settleableUnits: 0n };
         case "getSpokes":
@@ -101,23 +98,12 @@ function loop(slowSeconds: number) {
 }
 
 describe("slow-cadence jobs", () => {
-  it("checks status, pending settlement and configuration pokes once per 60 s of block time, funding at the same heads", async () => {
+  it("checks status and pending settlement once per 60 s of block time, funding at the same heads", async () => {
     vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     const { run, reads, fundingAt } = loop(60);
     await run(10); // 12 s blocks: heads 1 and 6 are 60 s apart
-    expect(reads.get("isFrozenAddress")).toBe(2);
     expect(reads.get("getPendingSettlement")).toBe(2);
-    expect(reads.get("getSpokes")).toBe(2);
     expect(fundingAt).toEqual([true, false, false, false, false, true, false, false, false, false]);
-    vi.restoreAllMocks();
-  });
-
-  it("simulates the breaker pokes at every head", async () => {
-    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-    const { run, reads } = loop(60);
-    await run(10);
-    expect(reads.get("callAt")).toBe(10);
-    expect(reads.get("getPendingSettlement")).toBe(2);
     vi.restoreAllMocks();
   });
 
@@ -125,7 +111,6 @@ describe("slow-cadence jobs", () => {
     vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     const { run, reads, fundingAt } = loop(0);
     await run(5);
-    expect(reads.get("isFrozenAddress")).toBe(5);
     expect(reads.get("getPendingSettlement")).toBe(5);
     expect(fundingAt.every(Boolean)).toBe(true);
     vi.restoreAllMocks();
@@ -185,23 +170,6 @@ describe("block reader", () => {
     expect(calls[0]?.batch).toBe(false);
   });
 
-  it("simulates the breaker pokes of all markets in one unbatched eth_call, an entry that reverted as null", async () => {
-    const { client } = node();
-    const calls: { to?: Address; data?: Hex; batch?: boolean }[] = [];
-    (client as unknown as { call: (a: { to?: Address; data?: Hex; batch?: boolean }) => Promise<{ data: Hex }> }).call = async (a) => {
-      calls.push(a);
-      const { args } = decodeFunctionData({ abi: multicall3Abi, data: a.data! });
-      expect((args[0] as readonly unknown[]).length).toBe(2);
-      return { data: encodeFunctionResult({ abi: multicall3Abi, functionName: "aggregate3", result: [{ success: true, returnData: `0x${"4".padStart(64, "0")}` }, { success: false, returnData: "0x" }] }) };
-    };
-    const reader = createChainReader(client, manifest as never, 5n);
-    const [a, b] = await Promise.all([reader.breakerPokes(RISK, [1n, 2n]), reader.breakerPokes(RISK, [1n, 2n])]);
-    expect(a).toBe(b);
-    expect(calls).toHaveLength(1);
-    expect(calls[0]).toMatchObject({ to: MULTICALL3_ADDRESS, batch: false });
-    expect(a.get(1n)).toBe(`0x${"4".padStart(64, "0")}`);
-    expect(a.get(2n)).toBeNull();
-  });
 });
 
 describe("incremental sweep", () => {

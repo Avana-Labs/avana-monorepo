@@ -8,9 +8,7 @@ import {AvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/Avana
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {INonfungiblePositionManager} from "../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
-import {LiquidationPreview, TailCoverageView} from "../../src/lens/lens/types/LensTypes.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {FlashLiquidationRequest, IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
 import {BreakerReasons} from "../../src/policy/market-registry/types/Breaker.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
@@ -151,45 +149,6 @@ contract AaveAdapterAaveStatesIntegrationTest is RealStackFlows {
         assertEq(t1.balanceOf(wallet) - b1, owed1, "token1 fees collected");
     }
 
-    /// @dev A caller-funded liquidation of a WETH-debt account sized by the preview, USDT swapped into WETH.
-    function _liquidateFunded(
-        address proxy
-    ) internal {
-        address usdtWethPool = address(routePoolOf[address(usdt)][address(weth)][0]);
-        uint256 poolUsdt = usdt.balanceOf(usdtWethPool);
-        LiquidationPreview memory pv = lens.previewLiquidation(proxy, wethReserveId, block.timestamp + 60);
-        assertTrue(pv.aaveLiquidatable, "liquidatable");
-        pv.params.maxShortfall = pv.params.debtToCover / 20;
-        LiquidationResult memory r = _liquidateAs(keeper, pv.params);
-        assertEq(r.debtAsset, address(weth), "settled in WETH");
-        assertEq(r.debtRepaid, pv.expectedDebtRepaid, "sized by the preview");
-        assertGt(usdt.balanceOf(usdtWethPool), poolUsdt, "USDT swapped into WETH");
-        assertGt(r.keeperOut, 0, "keeperOut paid in WETH");
-        assertEq(weth.balanceOf(lpVaultSwap), 0, "everything paid out in WETH");
-        assertGt(_hf(proxy), 0.92e18, "health rose");
-    }
-
-    /// @dev A liquidation through the real FlashLiquidator, which borrows the WETH from the Aave V3 Pool stand-in.
-    function _liquidateByHelper(
-        address proxy
-    ) internal {
-        LiquidationPreview memory pv2 = lens.previewLiquidation(proxy, wethReserveId, block.timestamp + 60);
-        FlashLiquidationRequest memory q;
-        q.params = pv2.params;
-        q.flashAmount = pv2.params.debtToCover;
-        q.maxPremium = type(uint128).max;
-        q.maxTopUp = pv2.params.debtToCover / 20;
-        q.params.maxShortfall = q.maxTopUp;
-        weth.mint(stranger2, q.maxTopUp);
-        vm.startPrank(stranger2);
-        weth.approve(flashLiquidator, q.maxTopUp);
-        IFlashLiquidator(flashLiquidator).flashLiquidate(q);
-        vm.stopPrank();
-        assertGt(_hf(proxy), 0.92e18, "the helper's liquidation raised health");
-        assertEq(weth.balanceOf(flashLiquidator), 0, "the helper keeps no WETH");
-        assertEq(weth.balanceOf(lpVaultSwap), 0, "LPVaultSwap keeps no WETH");
-    }
-
     // TEST-169 verifies: REQ-ADAPTER-061, REQ-ADAPTER-062, REQ-RISK-061, Q-192, Q-202
     // Sources: 5.1 TEST-169 (Aave-side reserve pause on the real local Aave V4 Spoke)
     /// @notice The Aave Protocol Guardian pauses the vault-token reserve: a withdrawal and a liquidation in the market
@@ -279,112 +238,6 @@ contract AaveAdapterAaveStatesIntegrationTest is RealStackFlows {
         _collectRealFees(alice, kA);
         _withdrawVia(carol, mA, kC, _credited(kC));
         assertEq(_ownerOf(kC), carol, "debt-free withdrawal");
-    }
-
-    // TEST-235 verifies: REQ-RISK-047
-    // Sources: 2.7 REQ-RISK-047 (a failed pledge check reverts the whole pledge, custody included)
-    /// @notice While the market's pool-depth breaker holds (the LPVault reports no depth), an account at HF 1.05 tops
-    /// up: a charge within the restore amount (about $950) passes as a rescue; one above it reverts `BreakerTripped`
-    /// inside Collateralization's `checkPledge` call, and the whole pledge unwinds: the NFT stays with the wallet, no
-    /// record opens, nothing is credited and no vault token is minted or supplied.
-    function test_TEST_235_refusedTopUpMovesNothing() public {
-        (address pA,) = _account(alice, UNITS, 5714e6);
-        vm.mockCall(integration, abi.encodeWithSelector(ILPVault.riskStatus.selector), abi.encode(RiskStatus(0, false)));
-        _pledgeAs(alice, mA, 400e6);
-        uint256 records = lens.getRecords(pA, 0, 16).length;
-        uint256 credited = coll.getAccountCredited(pA, vt);
-        uint256 supply = IERC20(vt).totalSupply();
-        uint256 supplied = _sharesOf(pA, mkt[mA].reserveId);
-        bytes32 k = _mintPosition(alice, mA, 2000e6);
-        uint256 d = _deadline();
-        vm.expectRevert(
-            abi.encodeWithSelector(IRiskModuleErrors.BreakerTripped.selector, mA, BreakerReasons.POOL_DEPTH)
-        );
-        vm.prank(alice);
-        adapterC.pledge(mA, _ref(k), d);
-        assertEq(_ownerOf(k), alice, "the NFT never left the wallet");
-        assertEq(lens.getRecords(pA, 0, 16).length, records, "no record opened");
-        assertEq(coll.getAccountCredited(pA, vt), credited, "nothing credited");
-        assertEq(IERC20(vt).totalSupply(), supply, "no vault token minted");
-        assertEq(_sharesOf(pA, mkt[mA].reserveId), supplied, "nothing supplied to Aave");
-        assertFalse(lock.isLocked(), "Lock free");
-    }
-
-    // TEST-247 verifies: SPEC-CAP-008
-    // Sources: 2.7 SPEC-CAP-008 (tail coverage ratio)
-    /// @notice The Lens's tail coverage of GHO on the Stable LP Hub against the formula: per pool token other than GHO,
-    /// `tail = min(⌈(tokenUsdCap + Σ topUpSliceUsd) × CF / 10^4⌉, drawCapUsd)`, and the ratio
-    /// `⌊fundedUsd × 10^4 / max tail⌋`; the tail rounds up and the ratio down. The caps are tightened through the real
-    /// timelock and ParameterStore; the two markets are the full ranges of `poolA` and `poolB` (CF 30 %).
-    function test_TEST_247_tailCoverageMatchesTheSizingFormula() public {
-        uint256 mB = _addMarket(poolB);
-        _govern(
-            address(store),
-            abi.encodeCall(IParameterStoreTighten.tightenTokenUsdCap, (aave.hub, address(usdc), 300_000e8 + 1))
-        );
-        _govern(
-            address(store),
-            abi.encodeCall(IParameterStoreTighten.tightenTokenUsdCap, (aave.hub, address(usdt), 250_000e8))
-        );
-        _govern(address(store), abi.encodeCall(IParameterStoreTighten.tightenTopUpSliceUsd, (mA, 20_000e8)));
-        _govern(address(store), abi.encodeCall(IParameterStoreTighten.tightenTopUpSliceUsd, (mB, 10_000e8)));
-        AvanaFirstLossReserve ghoReserve = AvanaFirstLossReserve(firstLossReserveOf[address(gho)]);
-        gho.mint(address(this), 70_000e18);
-        gho.approve(address(ghoReserve), 70_000e18);
-        ghoReserve.fund(70_000e18);
-
-        TailCoverageView memory t = lens.getTailCoverage(aave.hub, address(gho));
-        uint256 capSum = uint256(IAaveV4Hub(aave.hub).getSpokeConfig(ghoAssetId, aave.cdpSpoke).drawCap);
-        assertEq(t.drawCapUsd, capSum * 1e8, "the draw cap at GHO's $1.00");
-        assertEq(t.fundedUsd, ghoReserve.fundedBalance() * 1e8 / 1e18, "funded at $1.00");
-        // USDC: ⌈(300,000.00000001 + 20,000 + 10,000) × 0.3⌉ = 99,000.00000001; USDT: (250,000 + 30,000) × 0.3.
-        uint256 usdcTail = Math.mulDiv(330_000e8 + 1, VT_CF, 1e4, Math.Rounding.Ceil);
-        assertEq(usdcTail, 99_000e8 + 1, "the tail rounds up");
-        assertLt(usdcTail, t.drawCapUsd, "below the draw cap");
-        assertEq(t.worstToken, address(usdc), "USDC has the largest tail");
-        assertEq(t.tailUsd, usdcTail, "tail");
-        assertEq(t.ratioBps, t.fundedUsd * 1e4 / usdcTail, "ratio rounds down");
-        assertLt(t.ratioBps * usdcTail, t.fundedUsd * 1e4, "strictly down here: never overstates coverage");
-    }
-
-    // TEST-202 verifies: Q-238, Q-233, Q-234, Q-235
-    // Sources: 5.1 TEST-202 (debt-asset price rally, WETH debt)
-    /// @notice Two accounts with stable-LP collateral and WETH debt opened at HF about 1.15 see every WETH feed rise
-    /// 25 % with every collateral price unchanged: each HF falls to about 0.92 (1.15 / 1.25), the RiskModule refuses a
-    /// new borrow, and LPVaultSwap liquidates one with WETH the caller funds and the other with WETH the real
-    /// FlashLiquidator borrows, each sized by the keeper preview, swapping the unwound USDC and USDT into WETH over the
-    /// real routes and paying out in WETH; no WETH deficit is left, so summed losses stay within the WETH First-Loss
-    /// Reserve's funded balance.
-    function test_TEST_202_wethPriceRallyBlocksBorrowAndLiquidates() public {
-        _addWethDebtReserve();
-        address[2] memory wallets = [carol, alice];
-        address[2] memory proxies;
-        // 10,000 units at $2.00 with CF 30 % carry $6,000; HF 1.15 is $5,217.39 of WETH at $3,000.
-        for (uint256 i = 0; i < 2; ++i) {
-            (, proxies[i]) = _pledgeAs(wallets[i], mA, UNITS);
-            _borrowAs(wallets[i], mA, wethReserveId, 1.7391e18);
-            assertApproxEqRel(_hf(proxies[i]), 1.15e18, 0.002e18, "opened at HF 1.15");
-        }
-
-        _moveToken(address(weth), 3750e8);
-        for (uint256 i = 0; i < 2; ++i) {
-            assertApproxEqRel(_hf(proxies[i]), 0.92e18, 0.002e18, "HF 1.15 / 1.25");
-        }
-        uint256 nonce = adapterC.borrowNonce(proxies[0]);
-        uint256 d = _deadline();
-        vm.expectRevert();
-        vm.prank(carol);
-        adapterC.borrow(mA, usdcReserveId, 1e6, carol, d, 0, nonce);
-
-        _liquidateFunded(proxies[0]);
-        _liquidateByHelper(proxies[1]);
-
-        uint256 deficit = IWethDeficitView(aave.hub).getSpokeDeficitRay(wethAssetId, aave.cdpSpoke) / 1e27;
-        assertLe(
-            deficit,
-            AvanaFirstLossReserve(firstLossReserveOf[address(weth)]).fundedBalance(),
-            "losses within the WETH First-Loss Reserve"
-        );
     }
 }
 

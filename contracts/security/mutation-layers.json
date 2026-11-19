@@ -4,7 +4,6 @@
     "2.1": [
       {"src": "src/governance/roles", "tests": "test/unit/AvanaRoles.*"},
       {"src": "src/lock/lock", "tests": "test/unit/Lock.*"},
-      {"src": "src/governance/timelock", "tests": "test/unit/AvanaTimelock*"},
       {"src": "src/oracle/lp-oracle", "files": ["LPPriceMath"], "tests": "test/{unit,fuzz}/LPPriceMath.*"},
       {"src": "src/oracle/lp-oracle", "files": ["LPOracle*"], "tests": "test/{unit,fuzz,integration}/{LPOracle,Oracles.Contagion}*"},
       {"src": "src/oracle/debt-oracle", "tests": "test/{unit,fuzz,integration}/{DebtOracle.,Oracles.Contagion}*"},
@@ -37,11 +36,7 @@
       {"src": "src/policy/risk-module", "files": ["SpeedLimitMath", "RiskModuleSpeed", "RiskModuleSpeedLogic"], "tests": "test/{unit,fuzz,invariant,integration}/{SpeedLimitMath,RiskModule.Speed,RiskModule.SpeedScopes,RiskModule.NetSpeed,AaveAdapter.Speed,AaveAdapter.NetSpeed}.*"},
       {"src": "src/coverage/first-loss-reserve", "tests": "test/{unit,integration}/{AvanaFirstLossReserve,DaoDeficitOffset}*"}
     ],
-    "2.6": [
-      {"src": "src/periphery/flash-liquidator", "tests": "test/{unit,fuzz,integration}/{FlashLiquidator.,LPVaultSwap.FlashHelper}*"},
-      {"src": "src/periphery/gas-vault", "tests": "test/{unit,fuzz,invariant}/AvanaGasVault.*"},
-      {"src": "src/lens/lens", "tests": "test/{unit,fuzz,integration}/Lens.*"}
-    ]
+    "2.6": []
   },
   "gambit": {
     "seed": 20261111,

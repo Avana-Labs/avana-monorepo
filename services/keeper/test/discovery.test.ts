@@ -132,8 +132,8 @@ describe("KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS", () => {
 describe("keeper signal table", () => {
   const README = readFileSync(new URL("../../README.md", import.meta.url), "utf8");
 
-  it("lists M-01 to M-36 once each, in order, as the services README table does", () => {
-    const ids = Array.from({ length: 36 }, (_, i) => `M-${String(i + 1).padStart(2, "0")}`);
+  it("lists M-01 to M-34 once each, in order, as the services README table does", () => {
+    const ids = Array.from({ length: 34 }, (_, i) => `M-${String(i + 1).padStart(2, "0")}`);
     expect(SIGNALS.map((s) => s.id)).toEqual(ids);
     expect([...README.matchAll(/^\| (M-\d\d) \|/gm)].map((m) => m[1])).toEqual(ids);
   });

@@ -30,7 +30,6 @@ abstract contract AvanaDeploy is AvanaPeripheryDeploy {
         d.aaveAdapter = _deployAaveAdapter(p);
         d.lpVaultSwap = _deployLPVaultSwap(c, p);
         _deployImmutables(c, p, d);
-        _deployLens(d);
         _checkPredictions(p, d);
         _checkBlockTime(c, d);
     }
@@ -92,7 +91,6 @@ abstract contract AvanaDeploy is AvanaPeripheryDeploy {
         require(d.lock == p.lock && d.collateralization == p.collateralization, "lock/collateralization");
         require(d.vaultTokenFactory == p.vaultTokenFactory && d.proxyManager == p.proxyManager, "factory/proxyManager");
         require(d.payoutEscrow == p.payoutEscrow && d.flashSource == p.flashSource, "escrow/flashSource");
-        require(d.flashLiquidator == p.flashLiquidator, "flashLiquidator");
         _expect(d.lock, "AAVE_ADAPTER()", p.aaveAdapter);
         _expect(d.lock, "LP_VAULT_SWAP()", p.lpVaultSwap);
         _expect(d.collateralization, "LOCK()", p.lock);

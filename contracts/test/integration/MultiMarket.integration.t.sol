@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AccountView, LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {RealStackVolatile} from "../utils/fixtures/RealStackVolatile.sol";
@@ -52,65 +51,6 @@ contract MultiMarketIntegrationTest is RealStackVolatile {
         cases.push(Case(wbtcEth, makeAddr("wbtcEth"), 60_000, spokeV, usdcReserveIdV));
         cases.push(Case(memeEth, makeAddr("memeEth"), 6000, spokeV, usdcReserveIdV));
         cases.push(Case(mStable, makeAddr("stable"), 0, aave.cdpSpoke, usdcReserveId));
-    }
-
-    function _open(
-        Case memory c
-    ) internal returns (address proxy) {
-        if (c.marketId == mStable) {
-            (, proxy) = _pledgeAs(c.wallet, c.marketId, UNITS);
-            _borrowAs(c.wallet, c.marketId, c.reserveId, 5880e6);
-            return proxy;
-        }
-        (, proxy) = _pledgeUsd(c.wallet, c.marketId, c.usd);
-        uint256 max = lens.previewBorrowMax(c.wallet, c.marketId, c.reserveId, _deadline());
-        _borrowAs(c.wallet, c.marketId, c.reserveId, max * 100 / 108);
-    }
-
-    // TEST-047 verifies: REQ-SWAP-011, REQ-SWAP-020, REQ-SWAP-022, REQ-ADAPTER-070, SPEC-LIQ-004, SPEC-LIQ-005, SPEC-LIQ-010, Q-233
-    // TEST-205 verifies: REQ-LENS-016, REQ-LENS-017, REQ-LENS-028, REQ-LENS-029
-    function test_TEST_047_everyMarketAndSpokeLiquidates() public {
-        address[] memory proxies = new address[](cases.length);
-        for (uint256 i = 0; i < cases.length; ++i) {
-            proxies[i] = _open(cases[i]);
-            (address spoke,,,) = adapterC.accountOf(proxies[i]);
-            assertEq(spoke, cases[i].spoke, "the market's own CDP Spoke");
-            assertGt(_hfOn(cases[i].spoke, proxies[i]), 1e18, "healthy after the borrow");
-        }
-        // Crash: WETH -20 %, WBTC -20 %, MEME -40 %, USDT -7 %, on every feed and in every market pool.
-        _publish(address(weth), 2400e8);
-        _publish(address(wbtc), 48_000e8);
-        _publish(address(meme), 18_000_000);
-        _publish(address(usdt), 93_000_000);
-        _repriceMarkets();
-        for (uint256 i = 0; i < cases.length; ++i) {
-            _liquidateCase(cases[i], proxies[i]);
-        }
-    }
-
-    function _liquidateCase(
-        Case memory c,
-        address proxy
-    ) internal {
-        assertLt(_hfOn(c.spoke, proxy), 1e18, "underwater after the crash");
-        LiquidationPreview memory p = lens.previewLiquidation(proxy, c.reserveId, block.timestamp + 60);
-        assertTrue(p.aaveLiquidatable && p.pricesUsable, "liquidatable with usable prices");
-        p.params.maxShortfall = p.params.debtToCover / 20;
-        uint256 debtBefore = _debtOn(c.spoke, proxy, c.reserveId);
-        LiquidationResult memory r = _liquidateOn(c.spoke, keeper, p.params);
-        assertEq(r.debtRepaid, p.expectedDebtRepaid, "D as previewed");
-        assertEq(r.unitsSeized, p.expectedUnitsSeized, "c as previewed");
-        assertApproxEqAbs(debtBefore - _debtOn(c.spoke, proxy, c.reserveId), r.debtRepaid, 1, "debt fell by D");
-        assertEq(
-            r.callerFunds + r.recovered + r.shortfall,
-            r.debtRepaid + r.avanaFee + r.borrowerSurplus + r.keeperOut,
-            "conservation"
-        );
-        assertGe(r.recovered + r.shortfall, r.minOut, "floor");
-        _assertNeutral();
-        AccountView memory a = lens.getAccount(c.wallet, c.marketId);
-        assertEq(a.healthFactor, _hfOn(c.spoke, proxy), "Lens HF = the market's Spoke");
-        assertEq(a.spoke, c.spoke, "Lens: the account's Spoke");
     }
 
     /// @notice A debt-free exit returns the NFT in every market, on either Spoke.

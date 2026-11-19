@@ -1859,23 +1859,5 @@
   },
   "coverage": {
     "funder": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-  },
-  "gasVault": {
-    "maxSigners": 8,
-    "fundWei": "100000000000000000000",
-    "signers": [
-      {
-        "signer": "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
-        "minBalanceWei": "3000000000000000000",
-        "targetBalanceWei": "10000000000000000000",
-        "periodCapWei": "10000000000000000000"
-      },
-      {
-        "signer": "0xBcd4042DE499D14e55001CcbB24a551F3b954096",
-        "minBalanceWei": "3000000000000000000",
-        "targetBalanceWei": "10000000000000000000",
-        "periodCapWei": "10000000000000000000"
-      }
-    ]
   }
 }

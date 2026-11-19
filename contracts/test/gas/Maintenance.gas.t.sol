@@ -6,8 +6,6 @@ pragma solidity 0.8.28;
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {LiquidationParams} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
-import {FlashLiquidationRequest, IFlashLiquidator} from "../../src/periphery/flash-liquidator/IFlashLiquidator.sol";
-import {OperatorFlashLiquidator} from "../../src/periphery/flash-liquidator/OperatorFlashLiquidator.sol";
 import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {GasCalibration} from "../utils/GasCalibration.sol";
@@ -59,33 +57,6 @@ contract MaintenanceGasTest is RealStackFlows, GasCalibration {
         _borrowAs(wallet, mA, ghoReserveId, 5700e18);
     }
 
-    // TEST-337 verifies: REQ-SWAP-066, TB-053
-    /// @notice `settlePending` of a market's pending units, one block after they were reconciled.
-    function test_TEST_337_settlePendingGas() public {
-        address proxy = _edgeAccount(alice);
-        _movePoolTokens(93_000_000);
-        // LPVaultSwap keeps the units of a direct seizure, as an earlier non-conforming implementation would have.
-        uint256 x = 50e18;
-        gho.mint(lpVaultSwap, x);
-        vm.startPrank(lpVaultSwap);
-        gho.approve(aave.cdpSpoke, x);
-        IAaveV4Spoke(aave.cdpSpoke).liquidationCall(mkt[mA].reserveId, ghoReserveId, proxy, x, false);
-        gho.approve(aave.cdpSpoke, 0);
-        vm.stopPrank();
-        uint256 kept = IERC20(vt).balanceOf(lpVaultSwap);
-        assertGt(kept, 0, "LPVaultSwap kept the seized units");
-        // The next honest liquidation reconciles them into pending.
-        _liquidateAs(keeper, lens.previewLiquidation(proxy, ghoReserveId, block.timestamp + 120).params);
-        assertEq(coll.getPending(vt).units, kept, "the kept units moved to pending");
-        _nextBlock();
-        uint256 reserve = registry.settlementReserve(mA);
-        uint256 used = _txGas(anyone, lpVaultSwap, abi.encodeCall(ILPVaultSwap.settlePending, (mA, reserve)));
-        assertEq(coll.getPending(vt).units, 0, "pending cleared");
-        vm.snapshotValue("Maintenance", "settlePending_1market", used);
-        emit log_named_uint("settlePending (one market, two-token unwind and one swap)", used);
-        assertLt(used, TX_GAS_CAP / 2, "within half the per-transaction gas limit");
-    }
-
     // TEST-337 verifies: REQ-ADAPTER-104, REQ-COLL-040
     /// @notice `refreshDebtMark` clearing the mark of an account whose last debt left while the Spoke read failed.
     function test_TEST_337_refreshDebtMarkGas() public {
@@ -103,39 +74,5 @@ contract MaintenanceGasTest is RealStackFlows, GasCalibration {
         assertTrue(coll.getMarketDebtFree(vt), "the refresh cleared it");
         vm.snapshotValue("Maintenance", "refreshDebtMark_clears", used);
         emit log_named_uint("refreshDebtMark (clears the mark)", used);
-    }
-
-    // TEST-337 verifies: REQ-HELPER-011, REQ-HELPER-003
-    /// @notice The operator flash liquidation over a plain `liquidate` of the same account from the same state.
-    function test_TEST_337_flashLiquidateOverheadGas() public {
-        address signer = makeAddr("operatorSigner");
-        address safe = makeAddr("operatorSafe");
-        OperatorFlashLiquidator op = new OperatorFlashLiquidator(
-            address(v3Pool), lpVaultSwap, address(registry), address(store), signer, safe, 100
-        );
-        address proxy = _edgeAccount(bob);
-        _movePoolTokens(93_000_000);
-        _nextBlock();
-        LiquidationParams memory p = lens.previewLiquidation(proxy, ghoReserveId, block.timestamp + 120).params;
-        uint256 snap = vm.snapshotState();
-        _fundCaller(keeper, p);
-        uint256 direct = _txGas(keeper, lpVaultSwap, abi.encodeCall(ILPVaultSwap.liquidate, (p)));
-        uint256 debtAfter = _debtOf(proxy, ghoReserveId);
-        vm.revertToStateAndDelete(snap);
-        FlashLiquidationRequest memory q;
-        q.params = p;
-        q.flashAmount = p.debtToCover;
-        q.maxPremium = type(uint128).max;
-        uint256 loans = v3Pool.flashLoanCalls();
-        uint256 flash = _txGas(signer, address(op), abi.encodeCall(IFlashLiquidator.flashLiquidate, (q)));
-        assertEq(v3Pool.flashLoanCalls(), loans + 1, "one Pool loan");
-        assertEq(_debtOf(proxy, ghoReserveId), debtAfter, "the same liquidation");
-        assertGt(gho.balanceOf(safe), 0, "the payout went to the Safe");
-        vm.snapshotValue("Maintenance", "liquidate_direct_1market", direct);
-        vm.snapshotValue("Maintenance", "flashLiquidate_operator_1market", flash);
-        vm.snapshotValue("Maintenance", "flashLiquidate_overhead", flash - direct);
-        emit log_named_uint("liquidate (keeper funds it)", direct);
-        emit log_named_uint("OperatorFlashLiquidator.flashLiquidate (F = X)", flash);
-        emit log_named_uint("flash overhead", flash - direct);
     }
 }

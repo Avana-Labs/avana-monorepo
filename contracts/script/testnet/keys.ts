@@ -7,7 +7,6 @@
 //   DEPLOYER, GOVERNANCE, PAYLOADS_CONTROLLER  the keystore (its file name in KEYSTORE_DIR) that signs as each role
 //   ORACLES                                    the four OCR2 oracles' keystores, comma-separated
 //   TREASURY, KEEPER, AAVE_PROTOCOL_GUARDIAN, EMERGENCY_GUARDIAN, JOINT_CONFIG_SAFE   addresses that sign nothing
-//   GAS_VAULT_FUND_WEI_SEPOLIA, GAS_VAULT_FUND_WEI_BASE_SEPOLIA   optional: the chain's gas vault funding (testnet.ts)
 // A keystore's address is read from it at run time, decrypted with the password file; no key is written anywhere.
 
 import { spawnSync } from "node:child_process";
@@ -149,8 +148,6 @@ export function testnetSignerEnv(): NodeJS.ProcessEnv {
   const oracles = [keystores.oracle0, keystores.oracle1, keystores.oracle2, keystores.oracle3];
   return {
     AVANA_DEPLOYER: s.deployer,
-    // The treasury signs nothing on a test network: the deployer funds the gas vault (12-fund-gas-vault).
-    AVANA_GAS_VAULT_FUNDER: s.deployer,
     AVANA_KEYSTORE_PATHS: SIGNER_ROLES.map((r) => keystores[r]).join(";"),
     AVANA_KEYSTORE_PASSWORD_FILE: passwordFile,
     AVANA_SCHEDULE_OPERATIONS: "1",

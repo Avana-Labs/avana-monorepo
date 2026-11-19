@@ -9,8 +9,6 @@ import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAva
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
 import {ILPVaultSwap} from "../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {AvanaGasVault} from "../../src/periphery/gas-vault/AvanaGasVault.sol";
-import {IAvanaGasVault} from "../../src/periphery/gas-vault/IAvanaGasVault.sol";
 import {IMarketRegistry} from "../../src/policy/market-registry/IMarketRegistry.sol";
 import {IParameterStore} from "../../src/policy/parameter-store/IParameterStore.sol";
 import {IParameterStoreTighten} from "../../src/policy/parameter-store/IParameterStoreTighten.sol";
@@ -22,7 +20,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeab
 
 /// @title AccessManagerRolesUnitTest
 /// @notice The role and delay mapping of `AvanaAccess` on the deployed stack: every governed function of the
-/// ParameterStore, MarketRegistry, LPVaultSwap, VaultTokenFactory, RiskModule, AaveAdapter, AvanaGasVault and a
+/// ParameterStore, MarketRegistry, LPVaultSwap, VaultTokenFactory, RiskModule, AaveAdapter and a
 /// First-Loss Reserve sits on the role the map names, and the governance Safe holds that role with its delay. A tighten
 /// setter executes only 12 hours after it is scheduled, a normal setter only after the governance delay (5 days), a
 /// First-Loss Reserve withdraw only after 14 days; the DAO can cancel each; an unscheduled call by the Safe reverts
@@ -30,15 +28,12 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeab
 /// forge-config: default.isolate = false
 contract AccessManagerRolesUnitTest is RealStackFlows {
     uint256 internal mA;
-    AvanaGasVault internal gasVault;
     AvanaFirstLossReserve internal reserve;
     address internal reserveRecipient = makeAddr("reserveRecipient");
 
     function setUp() public {
         _setUpFullStack();
         mA = _addMarket(poolA);
-        gasVault = new AvanaGasVault(makeAddr("treasury"), address(accessManager), emergencyGuardian, 8);
-        _bindAccess(AvanaAccess.Kind.GasVault, address(gasVault));
         reserve = new AvanaFirstLossReserve(aave.hub, address(gho), ghoAssetId, address(accessManager));
         uint24 maxRp = IAaveV4Hub(aave.hub).MAX_RISK_PREMIUM_THRESHOLD();
         vm.prank(aaveDao);
@@ -147,15 +142,6 @@ contract AccessManagerRolesUnitTest is RealStackFlows {
         }
     }
 
-    /// @notice The gas vault's governed functions take the governance delay.
-    // TEST-063 verifies: REQ-GASV-007, REQ-ACCESS-155
-    function test_TEST_063_gasVaultAddSignerTakesTheGovernanceDelay() public {
-        address signer = makeAddr("gasSigner");
-        bytes memory data = abi.encodeCall(IAvanaGasVault.addSigner, (signer, 0.3 ether, 1 ether, 1 ether));
-        _scheduleWaitAndCancelThenRun(address(gasVault), data, NORMAL_DELAY);
-        assertTrue(gasVault.isSigner(signer), "listed after the governance delay");
-    }
-
     // ─── First-Loss Reserve withdraw: 14 days ───
 
     // TEST-293 verifies: REQ-FLR-023, REQ-FLR-025, REQ-FLR-033, SPEC-FLR-003
@@ -244,7 +230,6 @@ contract AccessManagerRolesUnitTest is RealStackFlows {
         if (kind == AvanaAccess.Kind.VaultTokenFactory) return address(vtFactory);
         if (kind == AvanaAccess.Kind.RiskModule) return address(riskModule);
         if (kind == AvanaAccess.Kind.AaveAdapter) return adapter;
-        if (kind == AvanaAccess.Kind.GasVault) return address(gasVault);
         if (kind == AvanaAccess.Kind.LpVault) return integration;
         return address(reserve);
     }

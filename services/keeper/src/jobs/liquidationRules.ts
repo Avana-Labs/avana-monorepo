@@ -21,22 +21,16 @@ export interface MarketGateInput {
   readonly disagreementPauseActive: boolean;
   readonly disagreementExpired: boolean;
   readonly now: bigint;
-  /** End of the feed-recovery grace window; 0 when none. */
-  readonly graceEndsAt: bigint;
-  readonly graceHealthFactor: bigint;
-  readonly healthFactor: bigint;
 }
 
 /**
- * Step 3, the market gate from `Lens.getPriceState`: Live or Drifting, no disagreement pause, and inside a grace
- * window only accounts below `graceHealthFactor` (0.95). Input age is part of the preview (`previewGate`), which
- * re-evaluates every gate as LPVaultSwap does. The stateless oracles report no disagreement or grace window, so those
- * two conditions never hold; they are kept while the Lens still reports them.
+ * Step 3, the market gate from `Lens.getPriceState`: Live or Drifting and no disagreement pause. Input age is part of
+ * the preview (`previewGate`), which re-evaluates every gate as LPVaultSwap does. The stateless oracles report no
+ * disagreement, so that condition never holds; it is kept while the Lens still reports it.
  */
 export function marketGate(m: MarketGateInput): SkipReason | null {
   if (m.liquidationState !== 0 && m.liquidationState !== 1) return "marketNotLiquidatable";
   if (m.disagreementPauseActive || m.disagreementExpired) return "disagreementPause";
-  if (m.now < m.graceEndsAt && m.healthFactor >= m.graceHealthFactor) return "graceAboveThreshold";
   return null;
 }
 
@@ -46,8 +40,6 @@ export interface PreviewGateInput {
   /** Every input within `liquidationPriceMaxAge`. */
   readonly pricesUsable: boolean;
   readonly debtPriceFresh: boolean;
-  readonly inGrace: boolean;
-  readonly belowGraceHealthFactor: boolean;
   readonly vaultTokenReservePaused: boolean;
   readonly debtReservePaused: boolean;
   readonly debtToCover: bigint;
@@ -57,7 +49,6 @@ export function previewGate(p: PreviewGateInput): { reason: SkipReason; detail: 
   if (!p.aaveLiquidatable) return { reason: "healthy", detail: "Aave reports the account not liquidatable" };
   if (!p.pricesUsable) return { reason: "priceTooOld", detail: "collateral price unusable for liquidation" };
   if (!p.debtPriceFresh) return { reason: "priceTooOld", detail: "debt price stale" };
-  if (p.inGrace && !p.belowGraceHealthFactor) return { reason: "graceAboveThreshold", detail: "grace window" };
   if (p.vaultTokenReservePaused || p.debtReservePaused) return { reason: "previewGateFalse", detail: "Aave reserve paused" };
   if (p.debtToCover === 0n) return { reason: "previewGateFalse", detail: "preview sized nothing" };
   return null;

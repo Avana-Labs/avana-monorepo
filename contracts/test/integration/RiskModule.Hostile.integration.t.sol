@@ -222,7 +222,6 @@ contract RiskModuleHostileIntegrationTest is RealStackFlows {
         _install(address(new RevertingRiskModule()));
         // Five days pass without a feed round (the timelock delay); the depeg's TWAP wait outlasts any grace window.
         _depegUsdt(93_000_000);
-        assertFalse(lens.previewLiquidation(pB, usdcReserveId, block.timestamp + 120).inGrace, "past the grace window");
 
         _failsClosed(pA, kA2);
 

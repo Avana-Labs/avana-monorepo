@@ -8,6 +8,7 @@
 import { logOnly } from "../lib/logOnly.ts";
 
 logOnly("AaveAdapter", [
+  "AuthorityUpdated",
   "CollateralAdded",
   "Borrowed",
   "Repaid",

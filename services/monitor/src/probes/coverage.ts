@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Loss-layer, backing and pool signals: M-07 Avana's live share of each pool, M-13 the First-Loss Reserve and DAO
-// deficit offset balances against their minimums, M-14 the tail coverage ratio, M-21 the Lens backing check of each
+// Loss-layer, backing and pool signals: M-13 the First-Loss Reserve and DAO deficit offset balances against their
+// minimums, M-14 the tail coverage ratio, M-21 the Lens backing check of each
 // market, and M-28 liquidity leaving each listed pool (the pool's in-range liquidity, judged over the hour). A pool
 // keyed by identifier (pool address(0), a Uniswap v4 PoolId) is read through the manifest's PoolManager and keyed by
 // its poolId; it is unread when the manifest names no PoolManager.
@@ -32,8 +32,6 @@ export const BACKING_FLAGS = ["supplyEqualsCredited", "hubHoldsSupplied", "share
 
 export interface MarketCoverage {
   readonly name: string;
-  readonly poolShareBps: bigint;
-  readonly poolShareMaxBps: bigint;
   /** The backing flags that do not hold; empty when the market is backed. */
   readonly backingBroken: readonly string[];
 }
@@ -58,12 +56,6 @@ export interface CoverageInput {
 }
 
 export const tailKey = (hub: string, asset: string) => `${hub.toLowerCase()}:${asset.toLowerCase()}`;
-
-/** M-07: above 75 % of the pool-share breaker level warns (15 % at the default 20 %), above it pages. */
-export function m07(m: MarketCoverage): Level | null {
-  if (m.poolShareMaxBps === 0n) return null;
-  return ratioLevel(m.poolShareBps, m.poolShareMaxBps, [75n, 100n], [100n, 100n], "above");
-}
 
 /** M-13, First-Loss Reserve: below 150 % of its minimum warns, below 100 % pages; none without a minimum. */
 export function m13Reserve(t: Tail): Level | null {
@@ -107,7 +99,6 @@ export function coverageProbe(): Probe<CoverageInput> {
       const poolCalls = [...poolReads.values()].filter((c): c is ContractCall => c !== null);
       const r = await some(ctx.views, [
         ...markets.flatMap((m) => [
-          { address: lens, abi: lensAbi, functionName: "getCapHeadroom", args: [m.vaultToken, ZERO] },
           { address: lens, abi: lensAbi, functionName: "checkBacking", args: [m.vaultToken] },
         ]),
         ...tails.map((t) => ({ address: lens, abi: lensAbi, functionName: "getTailCoverage", args: [t.hub, t.asset] })),
@@ -116,9 +107,8 @@ export function coverageProbe(): Probe<CoverageInput> {
       let i = 0;
       const marketOut = new Map<string, MarketCoverage | null>();
       for (const m of markets) {
-        const caps = r[i++] as { poolShareBps: bigint; poolShareMaxBps: bigint } | null;
         const backing = r[i++] as Record<string, unknown> | null;
-        marketOut.set(m.marketId, caps && backing ? { name: m.name, poolShareBps: asBig(caps.poolShareBps), poolShareMaxBps: asBig(caps.poolShareMaxBps), backingBroken: BACKING_FLAGS.filter((k) => backing[k] !== true) } : null);
+        marketOut.set(m.marketId, backing ? { name: m.name, backingBroken: BACKING_FLAGS.filter((k) => backing[k] !== true) } : null);
       }
       const tailRows = tails.map((t) => ({ t, c: r[i++] as { funded: bigint; minimum: bigint; ratioBps: bigint; deficitOffset: Address; offsetFunded: bigint } | null }));
       const poolOut = new Map<string, bigint | null>();
@@ -148,11 +138,9 @@ export function coverageProbe(): Probe<CoverageInput> {
 
       for (const [id, m] of input.markets) {
         if (!m) {
-          unread("M-07", `market:${id}:poolShare`);
           unread("M-21", `market:${id}:backing`);
           continue;
         }
-        push("M-07", `market:${id}:poolShare`, m07(m), { market: m.name, poolShareBps: m.poolShareBps.toString(10), poolShareMaxBps: m.poolShareMaxBps.toString(10) });
         push("M-21", `market:${id}:backing`, m.backingBroken.length > 0 ? "page" : "ok", { market: m.name, ...(m.backingBroken.length > 0 ? { broken: m.backingBroken.join(",") } : {}) });
       }
       for (const [key, t] of input.tails) {
