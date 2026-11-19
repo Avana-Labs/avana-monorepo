@@ -22,6 +22,7 @@
  *   creditValueCovered{Below,Inside,Above}Position     every credit c with 0 <= c, c <= L * r1 and c <= L * r0 (so the
  *                                                      library's, by the two edge rules) is worth at most the position
  *                                                      at every price s in the band: c * V_band(s) <= L * V_position(s)
+ *                                                      (inside the position, through the lemmas before that rule)
  *
  * With V(s) the value in token1 of one unit of liquidity at square-root price s, inside the band
  * V_band(s) = (2 * s * Y - X * Y - s^2) / Y, and V_position(s) is s^2 * d / (x * y) below the position,
@@ -205,45 +206,128 @@ rule creditValueCoveredAbovePosition(mathint c, mathint L, mathint s, mathint x,
     assert c * bandNum(s, X, Y) <= L * (y - x) * Y, "the credit is worth more than the position";
 }
 
-// x < s < y: f(s) = L * posNum(s) * Y - c * bandNum(s) * y is a quadratic in s with leading coefficient c * y - L * Y <= 0,
-// non-negative at s = x and s = y (the two rules above at those prices), so non-negative between them:
-// f(s) * (y - x) = (y - s) * f(x) + (s - x) * f(y) - lead * (s - x) * (y - s) * (y - x).
+// x < s < y: f(s) = L * posNum(s) * Y - c * bandNum(s) * y is a quadratic in s with leading coefficient
+// lead = c * y - L * Y <= 0, non-negative at s = x and s = y (the two rules above at those prices), so non-negative
+// between them. As one rule the chain timed out (RUNS.md, 2026-11-19), so it is split into lemmas, each one polynomial
+// identity or one product sign over fresh variables. With fx = f(x), fy = f(y), fs = f(s), d = y - x, D = Y - X:
+//
+//   fx >= 0    creditValueCoveredBelowPosition at s = x gives (c * bandNum(x) * y) * x <= (L * x * d * Y) * x;
+//              cancelPositiveFactor (k = x) and positionEdgeValues (posNum(x) = x * d) give fx >= 0
+//   fy >= 0    creditValueCoveredAbovePosition at s = y gives L * d * Y - c * bandNum(y) >= 0; positionEdgeValues
+//              (posNum(y) = y * d) gives fy = y * (L * d * Y - c * bandNum(y)), >= 0 by productNonNegative
+//   lead <= 0  productNonNegative gives L * (D - d) >= 0, so c * D <= L * d <= L * D (edge bound) and c <= L by
+//              cancelPositiveFactor (k = D); productNonNegative on (L - c) * y and L * (Y - y) gives c * y <= L * Y
+//   signs      A = (y - s) * fx >= 0 and B = (s - x) * fy >= 0 (productNonNegative); (s - x) * (y - s) * d > 0
+//              (productPositive twice), so C = lead * ((s - x) * (y - s) * d) <= 0 (productNonPositive)
+//   identity   insideQuadraticIdentity: fs * d == A + B - C
+//   combine    insideCombination: fs >= 0
+//
+// creditValueCoveredInsidePosition applies each of these to its own terms as a `require` and checks the claim.
+
+definition fOf(mathint c, mathint L, mathint s, mathint x, mathint y, mathint X, mathint Y) returns mathint =
+    L * posNum(s, x, y) * Y - c * bandNum(s, X, Y) * y;
+
+// The quadratic f through its values at x and y (Lagrange form), with leading coefficient c * y - L * Y.
+rule insideQuadraticIdentity(mathint c, mathint L, mathint s, mathint x, mathint y, mathint X, mathint Y) {
+    mathint lead = c * y - L * Y;
+    assert fOf(c, L, s, x, y, X, Y) * (y - x)
+        == (y - s) * fOf(c, L, x, x, y, X, Y) + (s - x) * fOf(c, L, y, x, y, X, Y) - lead * (s - x) * (y - s) * (y - x),
+        "f is not the quadratic through f(x) and f(y)";
+}
+
+// The position's value numerator at its own edges.
+rule positionEdgeValues(mathint x, mathint y) {
+    assert posNum(x, x, y) == x * (y - x) && posNum(y, x, y) == y * (y - x), "posNum at the position edges";
+}
+
+rule productNonNegative(mathint a, mathint b) {
+    require a >= 0 && b >= 0;
+    assert a * b >= 0, "a product of non-negatives is negative";
+}
+
+rule productPositive(mathint a, mathint b) {
+    require a > 0 && b > 0;
+    assert a * b > 0, "a product of positives is not positive";
+}
+
+rule productNonPositive(mathint a, mathint b) {
+    require a <= 0 && b >= 0;
+    assert a * b <= 0, "a non-positive times a non-negative is positive";
+}
+
+rule cancelPositiveFactor(mathint p, mathint q, mathint k) {
+    require k > 0 && p * k <= q * k;
+    assert p <= q, "a positive factor did not cancel";
+}
+
+// fs * d == A + B - C with d > 0, A >= 0, B >= 0 and C <= 0.
+rule insideCombination(mathint fs, mathint d, mathint A, mathint B, mathint C) {
+    require d > 0 && A >= 0 && B >= 0 && C <= 0;
+    require fs * d == A + B - C;
+    assert fs >= 0, "the combination is negative";
+}
+
+// x < s < y. Each `require` below is a proven rule applied to this rule's terms (a rule proved for all values holds at
+// these), named on its line; the rule itself asserts only the claim, which is linear in the named terms.
 rule creditValueCoveredInsidePosition(mathint c, mathint L, mathint s, mathint x, mathint y, mathint X, mathint Y) {
     requireShape(L, x, y, X, Y);
     requireEdgeBounds(c, L, x, y, X, Y);
     require x < s && s < y;
     mathint d = y - x;
     mathint D = Y - X;
+    mathint bx = bandNum(x, X, Y);
+    mathint by = bandNum(y, X, Y);
+    mathint fx = fOf(c, L, x, x, y, X, Y);
+    mathint fy = fOf(c, L, y, x, y, X, Y);
+    mathint fs = fOf(c, L, s, x, y, X, Y);
+    mathint lead = c * y - L * Y;
+    mathint A = (y - s) * fx;
+    mathint B = (s - x) * fy;
+    mathint P = (s - x) * (y - s);
+    mathint C = lead * (P * d);
+
+    // positionEdgeValues
+    require posNum(x, x, y) == x * d && posNum(y, x, y) == y * d;
 
     // f(x) >= 0
-    assertCoveredBelow(c, L, x, x, y, X, Y);
-    assert posNum(x, x, y) == x * d;
-    assert c * bandNum(x, X, Y) * y * x <= L * x * d * Y * x;
-    assert c * bandNum(x, X, Y) * y <= L * x * d * Y;
-    mathint fx = L * posNum(x, x, y) * Y - c * bandNum(x, X, Y) * y;
-    assert fx >= 0;
+    // creditValueCoveredBelowPosition at s = x (X <= x <= x), factors regrouped
+    require (c * bx * y) * x <= (L * x * d * Y) * x;
+    // cancelPositiveFactor(p = c * bx * y, q = L * x * d * Y, k = x)
+    require (x > 0 && (c * bx * y) * x <= (L * x * d * Y) * x) => c * bx * y <= L * x * d * Y;
+    // with posNum(x, x, y) == x * d, fx = L * x * d * Y - c * bx * y
+    require fx == L * x * d * Y - c * bx * y;
 
     // f(y) >= 0
-    assertCoveredAbove(c, L, y, x, y, X, Y);
-    assert posNum(y, x, y) == y * d;
-    mathint fy = L * posNum(y, x, y) * Y - c * bandNum(y, X, Y) * y;
-    assert fy >= 0;
+    // creditValueCoveredAbovePosition at s = y (y <= y <= Y)
+    require c * by <= L * d * Y;
+    // with posNum(y, x, y) == y * d, fy = y * (L * d * Y - c * by)
+    require fy == y * (L * d * Y - c * by);
+    // productNonNegative(y, L * d * Y - c * by)
+    require (y >= 0 && L * d * Y - c * by >= 0) => y * (L * d * Y - c * by) >= 0;
 
-    // leading coefficient <= 0: c <= L since c * D <= L * d <= L * D
-    assert L * d <= L * D;
-    assert c * D <= L * D;
-    assert c <= L;
-    assert c * y <= L * y && L * y <= L * Y;
-    mathint lead = c * y - L * Y;
-    assert lead <= 0;
+    // lead <= 0
+    // productNonNegative(L, D - d)
+    require (L >= 0 && D - d >= 0) => L * (D - d) >= 0;
+    // cancelPositiveFactor(p = c, q = L, k = D), with c * D <= L * d (requireEdgeBounds) and L * d <= L * D
+    require (D > 0 && c * D <= L * D) => c <= L;
+    // productNonNegative(L - c, y) and productNonNegative(L, Y - y)
+    require (L - c >= 0 && y >= 0) => (L - c) * y >= 0;
+    require (L >= 0 && Y - y >= 0) => L * (Y - y) >= 0;
 
-    mathint fs = L * posNum(s, x, y) * Y - c * bandNum(s, X, Y) * y;
-    assert fs * d == (y - s) * fx + (s - x) * fy - lead * (s - x) * (y - s) * d;
-    assert (y - s) * fx >= 0 && (s - x) * fy >= 0;
-    assert (s - x) * (y - s) * d > 0;
-    assert lead * (s - x) * (y - s) * d <= 0;
-    assert fs * d >= 0;
-    assert fs >= 0;
+    // signs
+    // productNonNegative(y - s, fx) and productNonNegative(s - x, fy)
+    require (y - s >= 0 && fx >= 0) => A >= 0;
+    require (s - x >= 0 && fy >= 0) => B >= 0;
+    // productPositive(s - x, y - s), productPositive(P, d), productNonPositive(lead, P * d)
+    require (s - x > 0 && y - s > 0) => P > 0;
+    require (P > 0 && d > 0) => P * d > 0;
+    require (lead <= 0 && P * d >= 0) => C <= 0;
+
+    // insideQuadraticIdentity
+    require fs * d == A + B - C;
+    // insideCombination(fs, d, A, B, C)
+    require (d > 0 && A >= 0 && B >= 0 && C <= 0 && fs * d == A + B - C) => fs >= 0;
+
     assert c * bandNum(s, X, Y) * y <= L * posNum(s, x, y) * Y, "the credit is worth more than the position";
 }
 
