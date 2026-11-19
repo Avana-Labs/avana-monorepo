@@ -163,3 +163,23 @@ Still running from the morning: Collateralization `seizureListEntriesBelowNextId
 Cancelled to stop spending the monthly allowance on single stuck SMT tasks (logs kept): AvanaTimelock `executeBatchWindow` (`731940b165484f9bac6855e3bc19d498`, one task open for over two hours); MarketRegistry `pauseTransitions` (`df86d976031046debce0c1bc260cfcb3`) and `reasonIsNoneExactlyWhenNotPaused` (`2da17625cfdb4079bd1425566ed651fe`), each open only on `setPriceSource` for over 90 minutes.
 
 Not submitted: Certora refused further jobs with "Usage limit reached … each unfinished job is counted as 120 minutes against a 2120-minute submission limit (9 unfinished, 2066 minutes projected)". Waiting: ParameterStore `tightenLowersScalars`, `adminRolesOnlyTimelock`, `tightenGateRecoverySecondsIsSafer`; MarketRegistry `freezeGuardianCannotLift`, `onlyUnfreezeAddressLiftsAFreeze`, `noCallFreezesAProtectedAddress`, `activateMarketRunsTheDriftCheck`, `roleAdminsNeverChange`, `adminRolesOnlyTimelock`, `freezeAddressGates`, `appAdminAdministeredByDefaultAdmin`, then `pauseTransitions` and `reasonIsNoneExactlyWhenNotPaused` once the probe has located the `listCollateralMarket` check; AvanaTimelock `executeBatchWindow`; `routeBindingsSet` on the three route confs; the remaining 31 Collateralization rules.
+
+## 2026-11-19 — FloorCreditMath on the local Prover
+
+- **Scope**: `conf/FloorCreditMath.conf` (`specs/FloorCreditMath.spec` over `test/utils/harness/FloorCreditMathHarness.sol`), at the code merged in PR 314. Supplementary to the paper proof (`docs/spec/04-security/05-floor-credit-proof.md`); not a merge gate.
+- **Command** (WSL, from `contracts/`): `certoraRun.py certora/conf/FloorCreditMath.conf` with the locally built Prover (`$HOME/certora-build`, no key), after `--compilation_steps_only` (exit 0).
+- **Settings**: `-smt_nonLinearArithmetic true`, `smt_timeout 1200`, `-mediumTimeout 120`, `-depth 15`, `rule_sanity: basic`.
+- **Results** (seconds):
+
+| Rule | Result | Time |
+|---|---|---|
+| `creditAtMostToken1Ratio` | Verified | 2 |
+| `creditAtMostToken0Ratio` | Verified | 3 |
+| `creditMonotoneInLiquidity` | Verified | 1,205 |
+| `creditValueCoveredBelowPosition` | Verified | 1,203 |
+| `creditValueCoveredAbovePosition` | Verified | 1,203 |
+| `creditRevertsOutsideTheBand` | Verified | 73 |
+| `creditValueCoveredInsidePosition` | TIMEOUT (no counterexample) | 3,850 |
+
+- Every verified rule passed its vacuity check. The Prover exited 1 because of the timeout.
+- **Open**: `creditValueCoveredInsidePosition` (the concavity step of Section 1, prices inside the position) rests on the paper proof and on `testFuzz_valueCoversCreditAtAnyPrice`, which checks it exactly at random prices.

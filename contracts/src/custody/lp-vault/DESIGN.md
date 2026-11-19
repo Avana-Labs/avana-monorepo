@@ -85,7 +85,7 @@ Numbers from a short script of the formula in floating point; the library's inte
 | Halmos | The code computes the formula (`check_creditMatchesReference`, bounded) | [`test/halmos/FloorCreditMath.halmos.t.sol`](../../../test/halmos/FloorCreditMath.halmos.t.sol) |
 | Fuzz | Rounding and overflow over the whole tick and liquidity domain; the new code against the old ratio formula: never above it, below it by at most 2 base units of the token's value | [`test/fuzz/FloorCreditMath.fuzz.t.sol`](../../../test/fuzz/FloorCreditMath.fuzz.t.sol) |
 
-Certora rules (local Prover, 2026-11-19; supplementary, not a merge gate):
+Certora rules (local Prover, 2026-11-19; supplementary, not a merge gate; log in [`certora/RUNS.md`](../../../certora/RUNS.md)). 6 of 7 verified:
 
 | Rule | Shows | Result |
 |---|---|---|
@@ -94,7 +94,7 @@ Certora rules (local Prover, 2026-11-19; supplementary, not a merge gate):
 | `creditMonotoneInLiquidity` | more liquidity never earns less credit | Verified |
 | `creditValueCoveredBelowPosition` | value floor, prices below the position | Verified |
 | `creditValueCoveredAbovePosition` | value floor, prices above the position | Verified |
-| `creditValueCoveredInsidePosition` | value floor, prices inside the position | Running |
+| `creditValueCoveredInsidePosition` | value floor, prices inside the position | Timeout after 64 min, no counterexample: rests on the paper proof (concavity) and the fuzz test |
 | `creditRevertsOutsideTheBand` | a position outside its band gets no credit | Verified |
 
 Related lifecycles: [LP vault](LIFECYCLE.md), [Uniswap v3 integration](../../amm/uniswap-v3/LIFECYCLE.md), [oracle](../../oracle/LIFECYCLE.md), [risk module](../../policy/risk-module/LIFECYCLE.md).
