@@ -3,7 +3,17 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {GlobalParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
+/// @notice Chain-wide parameters of the old ParameterStore, kept for the deploy inputs until the deploy scripts are
+/// rebuilt for the core contracts.
+struct GlobalParams {
+    // Most flash premium the flash source may charge, bps of the amount lent.
+    uint16 maxFlashFeeBps;
+    // Avana share of realized liquidation surplus, bps.
+    uint16 avanaFeeShareBps;
+    address feeRecipient;
+    // Largest per-leg slippage raise a caller shortfall top-up can buy, bps.
+    uint16 maxShortfallBps;
+}
 
 /// @notice The chain's governance accounts (2.15 `REQ-ACCESS-027`, 1.4 role table).
 struct GovernanceInputs {

@@ -53,22 +53,7 @@ additional_compiler_profiles = [
   { name = "collateralization", optimizer = true, via_ir = true, optimizer_runs = 200 },
   { name = "clvault", optimizer = true, via_ir = false, optimizer_runs = 200 },
 ]
-# LPVaultSwap is its implementation (roles, the committed-operator registry, views and dispatch, at the default runs)
-# plus three logic contracts (liquidate, settlePending, deleverage with its flash callback), each carrying the shared
-# settlement steps; at 10,000 runs the liquidation and deleverage logic exceed EIP-170, at 200 runs they fit with margin.
 compilation_restrictions = [
-  # These Echidna harnesses deploy the real ParameterStore tighten and loosen logic, the real LPVaultSwap
-  # implementation, with an AccessManager, in their constructor; at 10,000 runs their
-  # initcode passed EIP-3860's 49,152 bytes, and the LPVaultSwap harness also needs the IR pipeline. Optimizer runs and
-  # the pipeline change only bytecode size and gas, not behaviour; the deployable contracts keep their own settings.
-  { paths = "test/invariant/echidna/ParameterStoreProperties.sol", via_ir = false, optimizer_runs = 200 },
-  { paths = "test/invariant/echidna/LPVaultSwapProperties.sol", via_ir = true, optimizer_runs = 200 },
-  # The borrow-path and liquidation-path harnesses deploy the real AaveAdapterUserLogic, or the real liquidation logic
-  # and PayoutEscrow, in their constructor; at 10,000 runs their initcode was 50,583 and 54,097 bytes. The liquidation
-  # harness takes the IR pipeline because LPVaultSwap*Logic is restricted to it.
-  { paths = "test/invariant/echidna/AaveAdapterBorrowProperties.sol", via_ir = false, optimizer_runs = 200 },
-  { paths = "test/invariant/echidna/LPVaultSwapLiquidationProperties.sol", via_ir = true, optimizer_runs = 200 },
-  { paths = "src/legacy/lp-vault-swap/LPVaultSwap*Logic.sol", via_ir = true, optimizer_runs = 200 },
   # The RiskModule inlines the tick, floor-credit and listing-price math; at 10,000 runs it is 25.7 kB, past EIP-170,
   # at 200 runs 22.5 kB. Its calls are governance listings and views, where the extra gas does not matter.
   { paths = "src/policy/risk-module/RiskModule.sol", via_ir = false, optimizer_runs = 200 },
@@ -408,8 +393,7 @@ fail_on_revert = false
 
 [profile.smt]
 # Solidity SMTChecker (PROP-043, PROP-044): no reachable overflow, underflow, division by zero or
-# failing assert in the immutable contracts, the LPOracle, DebtOracle, LPVaultSwap, the AaveAdapter (router and its four
-# logic contracts), the RiskModule, the ParameterStore and the swap route contracts.
+# failing assert in the core contracts.
 # CHC finds loop and cross-function counterexamples that BMC misses. The CI job builds only the target contract's
 # import graph; solc loads the Z3 library (libz3.so.4.12 for solc 0.8.28 on Linux) and the job fails when no solver ran.
 # The model checker reads the source, not the generated code, so the build keeps only the compilation restrictions a
@@ -449,12 +433,10 @@ solvers = ["z3"]
 show_unproved = true
 show_unsupported = true
 show_proved_safe = true
-# PROP-043: the immutable contracts (LPVault, Collateralization, vault token, VaultTokenFactory, ProxyManager,
-# PositionProxy, Lock, PayoutEscrow, the First-Loss Reserve), plus the MarketRegistry, which holds the pause
-# state. PROP-044: LPOracle (its deployable implementation LPOracleCL: the model checker skips abstract contracts), DebtOracle, LPVaultSwap (its implementation and three logic contracts), the AaveAdapter
-# router and its four logic contracts, the RiskModule, the ParameterStore and one contract per swap route type
-# (PegModule, DexPath, WrapperThenDex).
-contracts = { "src/amm/uniswap-v3/UniswapV3Integration.sol" = ["UniswapV3Integration"], "src/custody/collateralization/Collateralization.sol" = ["Collateralization"], "src/vault-token/VaultToken.sol" = ["VaultToken"], "src/proxy/proxy-manager/ProxyManager.sol" = ["ProxyManager"], "src/proxy/position-proxy/PositionProxy.sol" = ["PositionProxy"], "src/lock/lock/Lock.sol" = ["Lock"], "src/liquidation/payout-escrow/PayoutEscrow.sol" = ["PayoutEscrow"], "src/legacy/coverage/first-loss-reserve/AvanaFirstLossReserve.sol" = ["AvanaFirstLossReserve"], "src/policy/market-registry/MarketRegistry.sol" = ["MarketRegistry"], "src/policy/parameter-store/ParameterStore.sol" = ["ParameterStore"], "src/policy/risk-module/RiskModule.sol" = ["RiskModule"], "src/oracle/LPOracle.sol" = ["LPOracle"], "src/legacy/lp-vault-swap/LPVaultSwap.sol" = ["LPVaultSwap"], "src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol" = ["LPVaultSwapLiquidationLogic"], "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol" = ["LPVaultSwapPendingLogic"], "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol" = ["LPVaultSwapDeleverageLogic"], "src/legacy/aave-adapter/LegacyAaveAdapter.sol" = ["LegacyAaveAdapter"], "src/legacy/aave-adapter/AaveAdapterUserLogic.sol" = ["AaveAdapterUserLogic"], "src/legacy/aave-adapter/AaveAdapterExitLogic.sol" = ["AaveAdapterExitLogic"], "src/legacy/aave-adapter/AaveAdapterCollateralLogic.sol" = ["AaveAdapterCollateralLogic"], "src/legacy/aave-adapter/AaveAdapterSettlementLogic.sol" = ["AaveAdapterSettlementLogic"], "src/liquidation/settlement-routes/PegModuleRoute.sol" = ["PegModuleRoute"], "src/liquidation/settlement-routes/DexPathRoute.sol" = ["DexPathRoute"], "src/liquidation/settlement-routes/WrapperThenDexRoute.sol" = ["WrapperThenDexRoute"] }
+# PROP-043 and PROP-044: the core contracts (VaultToken, LPOracle, RiskModule, AaveAdapter, LiquidationModule,
+# FirstLossReserve) and the Uniswap v3 integration, which carries the abstract LPVault (the model checker skips abstract
+# contracts).
+contracts = { "src/amm/uniswap-v3/UniswapV3Integration.sol" = ["UniswapV3Integration"], "src/vault-token/VaultToken.sol" = ["VaultToken"], "src/oracle/LPOracle.sol" = ["LPOracle"], "src/policy/risk-module/RiskModule.sol" = ["RiskModule"], "src/policy/aave-adapter/AaveAdapter.sol" = ["AaveAdapter"], "src/liquidation/liquidation-module/LiquidationModule.sol" = ["LiquidationModule"], "src/coverage/first-loss-reserve/FirstLossReserve.sol" = ["FirstLossReserve"] }
 
 [profile.coverage]
 # Coverage builds without the optimizer and without via-IR so source maps stay exact. Fork,

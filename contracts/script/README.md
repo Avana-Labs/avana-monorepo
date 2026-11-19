@@ -191,7 +191,7 @@ From `contracts/`, after `script/install-security-tools.sh --python --gambit`:
 MUTATE_LAYERS=2.1 script/security-slow.sh mutate gambit necessist          # every mutation step of layer 2.1
 MUTATE_LAYERS=2.1 script/security-slow.sh gambit                           # Gambit only
 MUTATE_CONTRACTS=Lock MUTATE_SHARD=1/3 script/security-slow.sh mutate      # the first of three slither-mutate shards of Lock
-MUTATE_LAYERS=2.2 MUTATE_CONTRACTS=ClPriceMath GAMBIT_TIMEOUT=600 script/security-gambit.sh   # one file, longer budget
+MUTATE_LAYERS=2.2 MUTATE_CONTRACTS=ClTickMath GAMBIT_TIMEOUT=600 script/security-gambit.sh   # one file, longer budget
 script/mutation-targets.py gambit --layers 2.2                             # the files, tests, cap, seed and operators Gambit uses
 ```
 

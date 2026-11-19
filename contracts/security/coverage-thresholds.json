@@ -1,38 +1,6 @@
 {
   "floor": 80,
   "unreachable": {
-    "src/policy/parameter-store/ParameterStoreRisk.sol": [
-      {
-        "function": "_requireAddCap",
-        "branch": "floor == 0 reverts AddCapTooSmall",
-        "reason": "Every written stressFloorUsd is > 0 (setInitialMarketCaps and setStressFloorUsd refuse 0), and on a market whose caps were never written the callers fail first: loosenMarketUsdCap at its step (value x 10^4 <= 0 x 15,000) and loosenTopUpSliceUsd at value > cap = 0. The check keeps the division safe if a later caller or upgrade reaches it with an unwritten floor.",
-        "tests": "TEST-272 test_TEST_272_initialCaps and test_TEST_272_stressFloor (zero floor refused), TEST-225 test_TEST_225_marketCapStepAndAddCap (step and slice bounds)"
-      }
-    ],
-    "src/oracle/lp-oracle/LPOracleConfig.sol": [
-      {
-        "function": "_loadSeed",
-        "branch": "token count or marketId mismatch",
-        "reason": "checkConfig returns CHECK_TOKENS on the same condition (token count, market id 0 or another market) before _checkAtCurrentQuotes calls _loadSeed, and initialize stores $.tokens and $.marketId from the same configuration it then seeds (LPOracle._storeMarket reverts MarketMismatch otherwise); kept as a defensive check (Josue, 2026-11-11). The check stops being redundant if the initialization or upgrade flow changes (a reinitializer, a migration, or a caller of _loadSeed other than checkConfig and initializeMarket).",
-        "tests": "TEST-219 test_TEST_219_checkConfigRefusesAnotherMarketOrTokenCount, test_TEST_219_checkConfigRefusesOtherTokensInPlace, test_TEST_219_marketChecks; TEST-062 test_TEST_062_initializeRefusesAnotherMarketOrTokenList, test_TEST_062_initializeRefusesUnusableMarketData, test_TEST_062_initializeRefusesRepeatedToken"
-      }
-    ],
-    "src/policy/market-registry/MarketRegistryActivationLogic.sol": [
-      {
-        "function": "_checkOracleAndRoutes",
-        "branch": "!listed || !_commonModeHolds(tokens) reverts ActivationCheckFailed(marketId, \"registration\")",
-        "reason": "A Registered market's pool tokens were all listed and passed the common-mode guard at listCollateralMarket; the registry has no function that unlists a token, and setPriceSource re-runs the common-mode guard on every market that is not Cancelled or Closed (Registered included) and reverts on failure. So both halves hold at activation; the check is kept as defence in depth for a later upgrade that could change token records. The surviving Gambit mutant on the same loop (fingerprint 5a5e0df0ef1ffe86) is equivalent for the same reason.",
-        "tests": "TEST-139 test_TEST_139_firstUnlistedTokenReported and test_TEST_139_commonModeEveryPairing (listing refusals), TEST-231 test_TEST_231_priceSourceChangeGuardsARegisteredMarket (a route change that would break the guard is refused)"
-      }
-    ],
-    "src/policy/market-registry/MarketRegistryHubsLogic.sol": [
-      {
-        "function": "_removeId",
-        "branch": "at == n returns without removing",
-        "reason": "removeDebtReserve calls _removeId only for an approved reserve, and enableDebtReserve pushes the id into debtReserveIds in the same write that approves it, so the id is always present when _removeId runs.",
-        "tests": "TEST-213 test_TEST_213_removeFirstKeepsTheOrder, test_TEST_213_removeMiddleKeepsTheOrder, test_TEST_213_removeLastKeepsTheOrder, test_TEST_213_removalRefusals (UnknownDebtReserve before any removal)"
-      }
-    ],
     "src/amm/uniswap-v4/UniswapV4Integration.sol": [
       {
         "function": "_isEncumbered",
@@ -43,94 +11,12 @@
     ]
   },
   "files": {
-    "src/amm/concentrated-liquidity/ClPriceMath.sol": 98,
     "src/amm/concentrated-liquidity/ClTickMath.sol": 98,
     "src/amm/slipstream/SlipstreamIntegration.sol": 90,
     "src/amm/uniswap-v3/UniswapV3Integration.sol": 88,
-    "src/legacy/coverage/first-loss-reserve/AvanaFirstLossReserve.sol": 100,
-    "src/flash/AaveV3FlashSource.sol": 100,
-    "src/governance/timelock/AvanaTimelock.sol": 100,
-    "src/legacy/lp-vault-swap/LPVaultSwap.sol": 100,
-    "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol": 80,
-    "src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol": 80,
-    "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol": 80,
-    "src/legacy/lp-vault-swap/LPVaultSwapSettlement.sol": 81,
-    "src/legacy/lp-vault-swap/LPVaultSwapStorage.sol": 100,
-    "src/legacy/lp-vault-swap/SettlementMath.sol": 100,
-    "src/liquidation/payout-escrow/PayoutEscrow.sol": 100,
-    "src/liquidation/settlement-routes/DexHops.sol": 100,
-    "src/liquidation/settlement-routes/PegModuleRoute.sol": 100,
-    "src/liquidation/settlement-routes/RouteMath.sol": 100,
-    "src/liquidation/settlement-routes/SwapRouteBase.sol": 100,
-    "src/liquidation/settlement-routes/WrapperThenDexRoute.sol": 91,
-    "src/oracle/debt-oracle/DebtOracle.sol": 80,
-    "src/oracle/debt-oracle/DebtOracleEvaluation.sol": 81,
-    "src/oracle/debt-oracle/DebtOracleReads.sol": 80,
-    "src/oracle/debt-oracle/DebtOracleRecovery.sol": 80,
-    "src/oracle/lp-oracle/LPOracle.sol": 100,
-    "src/oracle/lp-oracle/LPOracleCL.sol": 100,
-    "src/oracle/lp-oracle/LPOracleCLInitLogic.sol": 100,
-    "src/oracle/lp-oracle/LPOracleCLModule.sol": 100,
-    "src/oracle/lp-oracle/LPOracleCLModuleCaller.sol": 100,
-    "src/oracle/lp-oracle/LPOracleCLModuleLogic.sol": 100,
-    "src/oracle/lp-oracle/LPOracleCLPool.sol": 100,
-    "src/oracle/lp-oracle/LPOracleCalls.sol": 100,
-    "src/oracle/lp-oracle/LPOracleConfig.sol": 90,
-    "src/oracle/lp-oracle/LPOracleListing.sol": 80,
-    "src/oracle/lp-oracle/LPOracleListingLogic.sol": 80,
-    "src/oracle/lp-oracle/LPOracleLogicBase.sol": 100,
-    "src/oracle/lp-oracle/LPOracleRecovery.sol": 80,
-    "src/oracle/lp-oracle/LPOracleStorage.sol": 80,
-    "src/oracle/lp-oracle/LPOracleViewLogic.sol": 100,
-    "src/oracle/lp-oracle/LPOracleViews.sol": 100,
-    "src/oracle/lp-oracle/LPPriceMath.sol": 100,
-    "src/legacy/aave-adapter/LegacyAaveAdapter.sol": 100,
-    "src/legacy/aave-adapter/AaveAdapterCollateralLogic.sol": 100,
-    "src/legacy/aave-adapter/AaveAdapterExitLogic.sol": 100,
-    "src/legacy/aave-adapter/AaveAdapterSettlementLogic.sol": 100,
-    "src/legacy/aave-adapter/AaveAdapterSteps.sol": 100,
-    "src/legacy/aave-adapter/AaveAdapterStorage.sol": 100,
-    "src/legacy/aave-adapter/AaveAdapterUserLogic.sol": 100,
-    "src/policy/market-registry/MarketRegistry.sol": 100,
-    "src/policy/market-registry/MarketRegistryActivationLogic.sol": 97,
-    "src/policy/market-registry/MarketRegistryDebtChecks.sol": 100,
-    "src/policy/market-registry/MarketRegistryHubsLogic.sol": 97,
-    "src/policy/market-registry/MarketRegistryListingLogic.sol": 100,
-    "src/policy/market-registry/MarketRegistryRouteChecks.sol": 100,
-    "src/policy/market-registry/MarketRegistryRoutesLogic.sol": 100,
-    "src/policy/market-registry/MarketRegistrySafetyLogic.sol": 100,
-    "src/policy/market-registry/MarketRegistryStorage.sol": 100,
-    "src/policy/market-registry/MarketRegistryViews.sol": 100,
-    "src/policy/market-registry/MarketRegistryWindDownLogic.sol": 100,
-    "src/policy/parameter-store/ParameterStore.sol": 100,
-    "src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol": 96,
-    "src/policy/parameter-store/ParameterStoreAdminRiskLogic.sol": 100,
-    "src/policy/parameter-store/ParameterStoreListingLogic.sol": 100,
-    "src/policy/parameter-store/ParameterStoreLoosenLogic.sol": 100,
-    "src/policy/parameter-store/ParameterStoreRisk.sol": 81,
-    "src/policy/parameter-store/ParameterStoreRouter.sol": 100,
-    "src/policy/parameter-store/ParameterStoreSpeedRules.sol": 100,
-    "src/policy/parameter-store/ParameterStoreStorage.sol": 100,
-    "src/policy/parameter-store/ParameterStoreTightenLogic.sol": 100,
     "src/policy/risk-module/RiskModule.sol": 100,
-    "src/policy/risk-module/RiskModuleBase.sol": 100,
-    "src/policy/risk-module/RiskModuleBorrowLogic.sol": 100,
-    "src/policy/risk-module/RiskModuleBorrowScope.sol": 100,
-    "src/policy/risk-module/RiskModuleBreakerLogic.sol": 100,
-    "src/policy/risk-module/RiskModuleDriftLogic.sol": 100,
-    "src/policy/risk-module/RiskModuleMath.sol": 100,
-    "src/policy/risk-module/RiskModulePledgeLogic.sol": 100,
-    "src/policy/risk-module/RiskModuleSpeedLogic.sol": 100,
-    "src/policy/risk-module/RiskModuleStatusLogic.sol": 100,
-    "src/policy/risk-module/SpeedLimitMath.sol": 100,
-    "src/proxy/position-proxy/PositionProxy.sol": 100,
-    "src/proxy/proxy-manager/ProxyManager.sol": 85,
     "src/vault-token/VaultToken.sol": 100,
-    "src/legacy/coverage/dao-deficit-offset/DaoDeficitOffset.sol": 100,
-    "src/governance/timelock/TimelockSelectors.sol": 100,
     "src/amm/uniswap-v4/UniswapV4Integration.sol": 100,
-    "src/amm/uniswap-v4/UniswapV4State.sol": 100,
-    "src/oracle/lp-oracle/LPOracleV4.sol": 100,
-    "src/oracle/lp-oracle/LPOracleV4Module.sol": 94
+    "src/amm/uniswap-v4/UniswapV4State.sol": 100
   }
 }

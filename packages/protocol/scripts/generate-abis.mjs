@@ -24,29 +24,30 @@ const ABI_DIR = join(PKG, "src/abis");
 /**
  * [export name, build ("avana" | "aave"), artifact name], sorted by export name. Each ABI is the contract's interface,
  * which carries its events and errors, except where the interface leaves out events the deployed contract emits; that
- * one comes from the contract itself. IAvanaFirstLossReserve does not inherit IAvanaFirstLossReserveAdmin
- * (BorrowSpokeAllowlistUpdated, FirstLossReserveMinimumUpdated). A "kept" ABI belongs to a contract no longer in
- * contracts/ (the Lens, the gas vault, the flash liquidator, the vault-token factory): its committed file is read as it is, for the services
- * that still import it, and is not rewritten.
+ * one comes from the contract itself. A "kept" ABI belongs to a contract no longer in contracts/ (the Lens, the gas
+ * vault, the flash liquidator, the vault-token factory, and the contracts the seven core contracts replaced: the old
+ * AaveAdapter, RiskModule and First-Loss Reserve, Collateralization, LPVaultSwap, MarketRegistry, ParameterStore,
+ * PayoutEscrow and ProxyManager): its committed file is read as it is, for the services that still import it, and is
+ * not rewritten.
  */
 const CONTRACTS = [
-  ["aaveAdapterAbi", "avana", "ILegacyAaveAdapter"],
+  ["aaveAdapterAbi", "kept", "ILegacyAaveAdapter"],
   ["accessManagerAbi", "avana", "IAccessManager"],
   ["aaveV4HubAbi", "aave", "IHub"],
   ["aaveV4SpokeAbi", "aave", "ISpoke"],
   ["avanaGasVaultAbi", "kept", "IAvanaGasVault"],
-  ["collateralizationAbi", "avana", "ICollateralization"],
-  ["firstLossReserveAbi", "avana", "AvanaFirstLossReserve"],
+  ["collateralizationAbi", "kept", "ICollateralization"],
+  ["firstLossReserveAbi", "kept", "AvanaFirstLossReserve"],
   ["flashLiquidatorAbi", "kept", "IFlashLiquidator"],
   ["lensAbi", "kept", "ILens"],
   ["lpOracleAbi", "avana", "ILPOracle"],
   ["lpVaultAbi", "avana", "ILPVault"],
-  ["lpVaultSwapAbi", "avana", "ILPVaultSwap"],
-  ["marketRegistryAbi", "avana", "IMarketRegistry"],
-  ["parameterStoreAbi", "avana", "IParameterStore"],
-  ["payoutEscrowAbi", "avana", "IPayoutEscrow"],
-  ["proxyManagerAbi", "avana", "IProxyManager"],
-  ["riskModuleAbi", "avana", "ILegacyRiskModule"],
+  ["lpVaultSwapAbi", "kept", "ILPVaultSwap"],
+  ["marketRegistryAbi", "kept", "IMarketRegistry"],
+  ["parameterStoreAbi", "kept", "IParameterStore"],
+  ["payoutEscrowAbi", "kept", "IPayoutEscrow"],
+  ["proxyManagerAbi", "kept", "IProxyManager"],
+  ["riskModuleAbi", "kept", "ILegacyRiskModule"],
   ["vaultTokenAbi", "avana", "IVaultToken"],
   ["vaultTokenFactoryAbi", "kept", "IVaultTokenFactory"],
 ];

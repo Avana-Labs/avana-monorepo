@@ -73,8 +73,7 @@ abstract contract AvanaTest is Test {
     /// execution delay, so its calls run at once.
     address internal governor = makeAddr("governor");
     /// @notice The Avana AccessManager every suite starts with: the DAO is its admin and the guardian of each role;
-    /// `governor` holds each role with no delay, `governanceMultisig` with the delay of the role. A suite maps the
-    /// functions of its contracts with `_bindAccess`.
+    /// `governor` holds each role with no delay, `governanceMultisig` with the delay of the role.
     AccessManager internal accessManager = _newAccessManager();
     /// @notice Aave DAO: admin of the Aave-side AccessManager, configurator admin and proxy admin owner.
     address internal aaveDao = makeAddr("aaveDao");
@@ -111,20 +110,6 @@ abstract contract AvanaTest is Test {
             manager.setRoleGuardian(ids[i], AvanaRoles.ADMIN_ROLE);
             manager.grantRole(ids[i], governor, 0);
             manager.grantRole(ids[i], governanceMultisig, AvanaAccess.roleDelay(ids[i], NORMAL_DELAY));
-        }
-        vm.stopPrank();
-    }
-
-    /// @notice Maps every governed function of `kind` on `target` to its role (`AvanaAccess`), as the DAO.
-    function _bindAccess(
-        AvanaAccess.Kind kind,
-        address target
-    ) internal {
-        uint64[] memory ids = AvanaAccess.roles();
-        vm.startPrank(aaveGovernanceExecutor);
-        for (uint256 i = 0; i < ids.length; ++i) {
-            bytes4[] memory selectors = AvanaAccess.selectorsOf(kind, ids[i]);
-            if (selectors.length != 0) accessManager.setTargetFunctionRole(target, selectors, ids[i]);
         }
         vm.stopPrank();
     }
