@@ -77,12 +77,6 @@ contract LiquidationTestSpoke is AdapterTestSpoke {
         return owed == 0 ? type(uint256).max : power * 1e18 / owed;
     }
 
-    function getUserAccountData(
-        address user
-    ) external view returns (IAaveV4Spoke.UserAccountData memory d) {
-        d.healthFactor = healthFactor(user);
-    }
-
     function getLiquidationBonus(
         uint256,
         address,

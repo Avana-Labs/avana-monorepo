@@ -70,7 +70,11 @@ sol "$TMP/policy/policy/risk-module/C.sol" 760
 expect "policy part over 1,500 fails" fail "$TMP/policy"
 
 tree "$TMP/stray" 100
-sol "$TMP/stray/periphery/P.sol" 1
+sol "$TMP/stray/misc/P.sol" 1
 expect "a file outside every listed folder fails" fail "$TMP/stray"
+
+tree "$TMP/periphery" 100
+sol "$TMP/periphery/periphery/flashloan-repay/P.sol" 900
+expect "a periphery helper is outside the count" pass "$TMP/periphery"
 
 exit "$fail"

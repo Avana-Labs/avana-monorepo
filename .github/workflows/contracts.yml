@@ -35,6 +35,9 @@ on:
     types: [opened, synchronize, reopened, labeled, unlabeled]
     paths:
       - "contracts/**"
+      - "liquidator/src/**"
+      - "liquidator/test/**"
+      - "liquidator/foundry.toml"
       - "docs/audit/**/*.sol"
       - "packages/protocol/src/abis/**"
       - "packages/protocol/scripts/generate-abis.mjs"
@@ -92,6 +95,7 @@ jobs:
     outputs:
       tests: ${{ steps.sort.outputs.tests }}
       build: ${{ steps.sort.outputs.build }}
+      liquidator: ${{ steps.sort.outputs.liquidator }}
     defaults:
       run:
         working-directory: .
@@ -106,12 +110,12 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$EVENT" != pull_request ]; then
-            echo "tests=true" >> "$GITHUB_OUTPUT"; echo "build=true" >> "$GITHUB_OUTPUT"; exit 0
+            { echo "tests=true"; echo "build=true"; echo "liquidator=true"; } >> "$GITHUB_OUTPUT"; exit 0
           fi
           # Listed first, so a failed API call fails the job instead of leaving an empty list that skips the tests.
           files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
           [ -n "$files" ] || { echo "::error::the pull request lists no changed files"; exit 1; }
-          tests=false build=false
+          tests=false build=false liquidator=false
           while IFS= read -r f; do
             case "$f" in
               *.md) kind=none ;;
@@ -122,14 +126,18 @@ jobs:
               contracts/echidna.yaml|contracts/medusa.json|contracts/slither.config.json|contracts/aderyn.toml) kind=none ;;
               contracts/requirements.txt|contracts/requirements-mythril.txt|contracts/package.json|contracts/package-lock.json) kind=none ;;
               contracts/Makefile) kind=none ;;
+              # The bot's TypeScript runs in services.yml; its Solidity here, against contracts/src.
+              liquidator/src/*|liquidator/test/*|liquidator/foundry.toml) kind=liquidator ;;
+              liquidator/*) kind=none ;;
               *) kind=tests ;;
             esac
             echo "$kind $f"
-            case "$kind" in tests) tests=true; build=true ;; build) build=true ;; esac
+            case "$kind" in tests) tests=true; build=true; liquidator=true ;; build) build=true ;; liquidator) liquidator=true ;; esac
           done <<< "$files"
           echo "tests=$tests" | tee -a "$GITHUB_OUTPUT"
           echo "build=$build" | tee -a "$GITHUB_OUTPUT"
-          { echo "### Changed files"; echo "forge tests: $tests; forge build: $build"; } >> "$GITHUB_STEP_SUMMARY"
+          echo "liquidator=$liquidator" | tee -a "$GITHUB_OUTPUT"
+          { echo "### Changed files"; echo "forge tests: $tests; forge build: $build; liquidator: $liquidator"; } >> "$GITHUB_STEP_SUMMARY"
 
   scripts:
     # Each runs its script on fixtures, with stand-ins on PATH for the tools it calls: check-sizes.test.sh,
@@ -156,6 +164,42 @@ jobs:
           set -o pipefail
           script/check-core-size.sh | tee core-size.txt
           { echo '### Core size'; echo '```'; cat core-size.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+  liquidator:
+    # The liquidation bot's contracts (liquidator/), which compile against contracts/src: format, lint and their own
+    # unit and fuzz tests. Due whenever contracts/src or liquidator/ Solidity changes.
+    name: liquidator contracts (fmt, lint, tests)
+    needs: changes
+    if: needs.changes.outputs.liquidator == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - name: Cache Soldeer dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - name: Install dependencies (soldeer.lock)
+        run: forge soldeer install
+
+      - name: Format, lint and test
+        working-directory: liquidator
+        run: |
+          forge fmt --check
+          forge lint
+          forge test
 
   build:
     name: fmt, lint, build
@@ -1261,7 +1305,8 @@ jobs:
 
   gate:
     # Passes only when every job and every leg of each matrix that is due in this run passed. Due: `changes` and
-    # `scripts` always; `build` when the changes need a forge build; tests, gas and ABIs when they need forge tests;
+    # `scripts` always; `liquidator` when contracts/src or the bot's Solidity changed; `build` when the changes need a
+    # forge build; tests, gas and ABIs when they need forge tests;
     # coverage and the fast security tier in the full and long suites; the long checks in the long suite (Certora only
     # while CERTORA_ENABLED is `true`); `hotfix-plan` on a pull request labelled `hotfix`. A job that is not due is
     # skipped by design and listed as not due; a due job that was skipped, failed or was cancelled fails the gate. A
@@ -1269,7 +1314,7 @@ jobs:
     # fork test skipped) fails the gate, as a failed one does. No branch rule requires this check.
     name: gate
     if: always()
-    needs: [changes, scripts, build, plan, test, hotfix-plan, hotfix, gas, abis, invariant, fork, differential, smtchecker, certora, coverage, fast-security]
+    needs: [changes, scripts, liquidator, build, plan, test, hotfix-plan, hotfix, gas, abis, invariant, fork, differential, smtchecker, certora, coverage, fast-security]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -1279,6 +1324,7 @@ jobs:
         env:
           RESULTS: ${{ toJSON(needs) }}
           BUILD: ${{ needs.changes.outputs.build == 'true' }}
+          LIQUIDATOR: ${{ needs.changes.outputs.liquidator == 'true' && !inputs.only }}
           TESTS: ${{ needs.changes.outputs.tests == 'true' && !inputs.only }}
           FULL: ${{ github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only }}
           LONG: ${{ github.event_name == 'workflow_dispatch' && inputs.suite == 'long' }}
@@ -1287,12 +1333,13 @@ jobs:
           # A manual run with `only` runs just those long-check targets; every skipped job is not selected.
           ONLY: ${{ inputs.only != '' && inputs.only != null }}
         run: |
-          args=(--argjson build "$BUILD" --argjson tests "$TESTS" --argjson full "$FULL" --argjson longrun "$LONG"
+          args=(--argjson build "$BUILD" --argjson liquidator "$LIQUIDATOR" --argjson tests "$TESTS" --argjson full "$FULL" --argjson longrun "$LONG"
             --argjson hotfix "$HOTFIX" --argjson certora "$CERTORA" --argjson only "$ONLY"
             --argjson long '["plan","invariant","fork","differential","smtchecker","certora"]')
           defs='def due($k):
               if $k == "changes" or $k == "scripts" then true
               elif $k == "build" then $build
+              elif $k == "liquidator" then $liquidator
               elif $k == "test" or $k == "gas" or $k == "abis" then $tests
               elif $k == "coverage" or $k == "fast-security" then $full
               elif $k == "certora" then ($longrun or $only) and $certora

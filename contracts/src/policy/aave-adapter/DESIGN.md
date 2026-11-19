@@ -25,7 +25,7 @@
 | Aave checks the health factor on every `withdraw` and `borrow` | The adapter needs no health logic of its own. It withdraws the supply above the account's remaining credit, and Aave refuses the call if the account would be unhealthy, which reverts the NFT release in the same call. |
 | The vault token moves only between the Hub and a registered address | The adapter registers itself as the token's only valid proxy, mints to itself and supplies in the same call. Vault tokens never sit in a user's account, so no account can move them. |
 | A user must not lose a $10,000 NFT because a narrower one next to it was liquidated, and a liquidator must know exactly which NFTs back which debt | One account per market isolates each market's collateral and debt (debated below). |
-| Plan limits: the AaveAdapter and RiskModule together at most 1,500 code lines | The adapter is 286 code lines (interface 69, contract 198, storage 4, proxy 15). With the RiskModule's 726 the policy part is 1,012. |
+| Plan limits: the AaveAdapter and RiskModule together at most 1,500 code lines | The adapter is 286 code lines (interface 69, contract 198, storage 4, proxy 15). With the RiskModule's 726 the policy part is 1,012. Step 8's `allowWithdraw` brings the adapter to 356 and the policy part to 1,082. |
 | Every market a user can pick is a decision the user can get wrong | The rule is fixed and the NFT's ticks decide it; the app explains it with Uniswap's own words. |
 
 Two details follow from the table:
@@ -102,6 +102,6 @@ Automatic routing with a hard rejection, unchanged in the contract. The debate c
 ## Open items for later steps
 
 - **Roles and wiring (step 9).** The AccessManager grants the adapter the LPVault's `pledge`, `addLiquidity`, `removeLiquidity`, `release` and `collectFees`, and each vault token's `mint`, `burn` and `addValidProxy`. Each CDP Spoke's configurator activates the adapter as a position manager.
-- **Repay with collateral (step 8).** `FlashloanRepay` can repay through `repay` for any wallet; withdrawing for the user needs the user's own call, so step 8 adds an operator rule or keeps the withdraw in the user's hands.
+- **Repay with collateral (step 8, done).** Step 8 added `allowWithdraw(operator, positionKey, maxLiquidity, data)`: the wallet lets one operator withdraw part of one position for the length of one callback (transient storage, cleared before return), and the call reverts unless the account's health factor ends at least where it started. There is no standing operator approval. The decision, its debate and the $10,000 examples are in the [repay-with-collateral record](../../periphery/flashloan-repay/DESIGN.md).
 - **Webapp (step 11).** The pledge preview shows market, account and health factor after the pledge; a rejection names the missed band edge; a warning fires when one account is low while a sibling has headroom.
 - **Liquidation (step 6).** The LiquidationModule liquidates the account directly on the Spoke and unwinds the NFTs in the LPVault; the account and the adapter take no part.

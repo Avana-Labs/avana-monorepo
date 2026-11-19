@@ -10,10 +10,12 @@ import {IRiskModule} from "../risk-module/IRiskModule.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {AccountProxy} from "./AccountProxy.sol";
 import {IAaveAdapter} from "./IAaveAdapter.sol";
+import {IWithdrawReceiver} from "./IWithdrawReceiver.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Multicall} from "@openzeppelin/contracts/utils/Multicall.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 
 /// @title AaveAdapter
 /// @notice The only door for users: pledge with automatic routing, add liquidity, withdraw whole or part, borrow,
@@ -25,6 +27,13 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 /// withdrawn tokens back to it to burn. `multicall` batches calls with the caller kept as `msg.sender`.
 contract AaveAdapter is IAaveAdapter, AaveAdapterStorage, ReentrancyGuardTransient, Multicall {
     using SafeERC20 for IERC20;
+    using TransientSlot for *;
+
+    /// @dev Transient slots of the open withdrawal allowance (`keccak256("avana.aaveadapter.allowance")` + 0..3).
+    bytes32 private constant ALLOWED_WALLET = 0xf3dbd24781f46a4764feeafda1afd01f4a5f4fe82e10ae966915a6953f732b9e;
+    bytes32 private constant ALLOWED_OPERATOR = 0xf3dbd24781f46a4764feeafda1afd01f4a5f4fe82e10ae966915a6953f732b9f;
+    bytes32 private constant ALLOWED_POSITION = 0xf3dbd24781f46a4764feeafda1afd01f4a5f4fe82e10ae966915a6953f732ba0;
+    bytes32 private constant ALLOWED_LIQUIDITY = 0xf3dbd24781f46a4764feeafda1afd01f4a5f4fe82e10ae966915a6953f732ba1;
 
     /// @inheritdoc IAaveAdapter
     address public immutable override RISK_MODULE;
@@ -83,7 +92,7 @@ contract AaveAdapter is IAaveAdapter, AaveAdapterStorage, ReentrancyGuardTransie
         address recipient
     ) external override nonReentrant returns (uint256 burned) {
         if (recipient == address(0)) revert InvalidAddress(recipient);
-        (address account, uint256 marketId) = _ownedPosition(positionKey);
+        (address wallet, address account, uint256 marketId) = _withdrawer(positionKey, liquidity);
         if (liquidity == 0 || liquidity >= ILPVault(LP_VAULT).getPosition(positionKey).liquidity) {
             liquidity = 0;
             ILPVault(LP_VAULT).release(positionKey, recipient);
@@ -91,7 +100,28 @@ contract AaveAdapter is IAaveAdapter, AaveAdapterStorage, ReentrancyGuardTransie
             ILPVault(LP_VAULT).removeLiquidity(positionKey, liquidity, amount0Min, amount1Min, recipient);
         }
         burned = _trimSupply(IRiskModule(RISK_MODULE).getMarket(marketId), account, marketId);
-        emit Withdrawn(msg.sender, positionKey, recipient, liquidity, burned);
+        emit Withdrawn(wallet, positionKey, recipient, liquidity, burned);
+    }
+
+    /// @inheritdoc IAaveAdapter
+    function allowWithdraw(
+        address operator,
+        bytes32 positionKey,
+        uint128 maxLiquidity,
+        bytes calldata data
+    ) external override {
+        if (operator == address(0) || operator == address(this)) revert InvalidAddress(operator);
+        if (maxLiquidity == 0) revert InvalidAmount();
+        if (ALLOWED_OPERATOR.asAddress().tload() != address(0)) revert AllowanceOpen();
+        (address account, uint256 marketId) = _ownedPosition(positionKey);
+        IAaveV4Spoke spoke = IAaveV4Spoke(IRiskModule(RISK_MODULE).getMarket(marketId).spoke);
+        uint256 before = spoke.getUserAccountData(account).healthFactor;
+        _setAllowance(msg.sender, operator, positionKey, maxLiquidity);
+        emit WithdrawAllowed(msg.sender, positionKey, operator, maxLiquidity);
+        IWithdrawReceiver(operator).onWithdrawAllowed(msg.sender, positionKey, maxLiquidity, data);
+        _setAllowance(address(0), address(0), bytes32(0), 0);
+        uint256 afterCall = spoke.getUserAccountData(account).healthFactor;
+        if (afterCall < before) revert HealthFactorDecreased(before, afterCall);
     }
 
     /// @inheritdoc IAaveAdapter
@@ -201,6 +231,39 @@ contract AaveAdapter is IAaveAdapter, AaveAdapterStorage, ReentrancyGuardTransie
         if (account == address(0) || _accounts[msg.sender][marketId] != account) {
             revert NotPositionOwner(positionKey, msg.sender);
         }
+    }
+
+    /// @dev Who may withdraw `liquidity` of the position: its wallet, or the operator of the open allowance for a part
+    /// within what is left of it (the rest is lowered). Returns the wallet, its account and the market.
+    function _withdrawer(
+        bytes32 positionKey,
+        uint128 liquidity
+    ) internal returns (address wallet, address account, uint256 marketId) {
+        if (msg.sender != ALLOWED_OPERATOR.asAddress().tload()) {
+            (account, marketId) = _ownedPosition(positionKey);
+            return (msg.sender, account, marketId);
+        }
+        ILPVault.Position memory p = ILPVault(LP_VAULT).getPosition(positionKey);
+        uint256 left = ALLOWED_LIQUIDITY.asUint256().tload();
+        if (
+            positionKey != ALLOWED_POSITION.asBytes32().tload() || liquidity == 0 || liquidity > left
+                || liquidity >= p.liquidity
+        ) revert WithdrawNotAllowed(positionKey, liquidity);
+        ALLOWED_LIQUIDITY.asUint256().tstore(left - liquidity);
+        return (ALLOWED_WALLET.asAddress().tload(), p.account, p.marketId);
+    }
+
+    /// @dev Opens (or, with zeros, closes) the withdrawal allowance.
+    function _setAllowance(
+        address wallet,
+        address operator,
+        bytes32 positionKey,
+        uint256 maxLiquidity
+    ) internal {
+        ALLOWED_WALLET.asAddress().tstore(wallet);
+        ALLOWED_OPERATOR.asAddress().tstore(operator);
+        ALLOWED_POSITION.asBytes32().tstore(positionKey);
+        ALLOWED_LIQUIDITY.asUint256().tstore(maxLiquidity);
     }
 
     /// @dev Mints `credit` vault tokens to this adapter and supplies them to Aave for `account`.

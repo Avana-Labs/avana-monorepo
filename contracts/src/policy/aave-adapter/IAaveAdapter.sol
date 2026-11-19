@@ -26,6 +26,12 @@ interface IAaveAdapter {
     error NotPositionOwner(bytes32 positionKey, address wallet);
     /// @notice There is no debt to repay.
     error NoDebt(address account, uint256 reserveId);
+    /// @notice A withdrawal allowance is already open in this call.
+    error AllowanceOpen();
+    /// @notice The operator may not withdraw this: another position, more than allowed, or the whole NFT.
+    error WithdrawNotAllowed(bytes32 positionKey, uint128 liquidity);
+    /// @notice The account's health factor after an allowed withdrawal is below what it was before.
+    error HealthFactorDecreased(uint256 before, uint256 afterCall);
 
     /// @notice A wallet's account in a market was deployed.
     event AccountCreated(address indexed wallet, uint256 indexed marketId, address account);
@@ -40,6 +46,10 @@ interface IAaveAdapter {
         address indexed recipient,
         uint128 liquidity,
         uint256 burned
+    );
+    /// @notice A wallet let `operator` withdraw up to `maxLiquidity` of a position for one call.
+    event WithdrawAllowed(
+        address indexed wallet, bytes32 indexed positionKey, address indexed operator, uint128 maxLiquidity
     );
     /// @notice A wallet borrowed `amount` of a debt reserve.
     event Borrowed(
@@ -77,7 +87,8 @@ interface IAaveAdapter {
     ) external returns (uint128 liquidity, uint128 credit, uint256 amount0, uint256 amount1);
 
     /// @notice Withdraws one of the caller's positions: the whole NFT, or part of its liquidity as tokens.
-    /// @dev `liquidity` of zero, or at least the record's, sends the whole NFT and its held fees to `recipient`. Any
+    /// @dev The operator of an open `allowWithdraw` may also call it for that position, in part only and within its
+    /// allowance. `liquidity` of zero, or at least the record's, sends the whole NFT and its held fees to `recipient`. Any
     /// other amount removes that liquidity and sends both tokens. The account's supply then drops to its remaining
     /// credit, and Aave reverts the call if the health factor would fall below one.
     /// @param positionKey The position.
@@ -93,6 +104,22 @@ interface IAaveAdapter {
         uint256 amount1Min,
         address recipient
     ) external returns (uint256 burned);
+
+    /// @notice Lets `operator` withdraw up to `maxLiquidity` of the caller's position, in part only, while it runs
+    /// `IWithdrawReceiver(operator).onWithdrawAllowed`; the allowance ends when that call returns.
+    /// @dev Repay with collateral: the operator repays the debt (anyone may), then calls `withdraw` for the position.
+    /// No allowance outlives the call, and the call reverts `HealthFactorDecreased` unless the account's health
+    /// factor afterwards is at least what it was before. `AllowanceOpen` when called inside another allowance.
+    /// @param operator The contract that receives the callback and may withdraw.
+    /// @param positionKey The caller's position.
+    /// @param maxLiquidity Most liquidity the operator may remove, over all its `withdraw` calls.
+    /// @param data Passed unchanged to the operator.
+    function allowWithdraw(
+        address operator,
+        bytes32 positionKey,
+        uint128 maxLiquidity,
+        bytes calldata data
+    ) external;
 
     /// @notice Borrows a debt reserve of the market's Spoke against the caller's account and sends it to `recipient`.
     /// @dev The RiskModule's `checkBorrow` gates it (registered reserve, a keeper, First-Loss coverage); Aave checks
