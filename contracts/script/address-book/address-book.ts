@@ -7,7 +7,7 @@
 // The other networks' sections are kept as they are; the text around them comes from templates/.
 //
 // Refuses a rehearsal's folder (unless --allow-rehearsal), a manifest of another chain, and any value that is missing
-// or still a placeholder, listing each one; a row the deployment legitimately lacks (no gas vault, no sequencer feed)
+// or still a placeholder, listing each one; a row the deployment legitimately lacks (no sequencer feed)
 // is written as such. Nothing is written when a check fails.
 //
 // Usage, from the repo root:

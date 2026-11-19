@@ -7,7 +7,6 @@ import {AvanaAccess} from "../../../script/deploy/lib/AvanaAccess.sol";
 import {IUniswapV3Integration} from "../../../src/amm/uniswap-v3/IUniswapV3Integration.sol";
 import {ICollateralization} from "../../../src/custody/collateralization/ICollateralization.sol";
 import {INonfungiblePositionManager} from "../../../src/interfaces/external/uniswap/INonfungiblePositionManager.sol";
-import {ILens} from "../../../src/lens/lens/ILens.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
 import {
     LPVaultSwapImmutables,
@@ -67,7 +66,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 /// implementation is built with their final addresses and no address is predicted. Stand-ins, each named: LPVaultSwap
 /// (`LPVaultSwapMock`, which liquidates on the Spoke through the real Collateralization and AaveAdapter) and the
 /// LPVault (`FullStackLPVaultMock`). A suite that overrides `_realStack()` to true gets neither: LPVaultSwap (router and
-/// three logic contracts, behind its ERC-1967 proxy), the PayoutEscrow, the FlashLiquidator, the Lens and the Uniswap v3
+/// three logic contracts, behind its ERC-1967 proxy), the PayoutEscrow and the Uniswap v3
 /// LPVault (`UniswapV3Integration` on the real NonfungiblePositionManager of `out-univ3-periphery/`) are the real
 /// contracts, and the one stand-in left here is the Aave V3 Pool behind the flash paths (`MockAaveV3Pool`, 5 bps: an
 /// external flash lender, neither Avana nor Aave V4). Nothing here imports Aave V4 sources or a via-IR contract's source.
@@ -102,10 +101,9 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
     ILPVaultSwap internal lvs;
     IUniswapV3Integration internal uniVault;
     INonfungiblePositionManager internal nfpm;
-    ILens internal lens;
     MockAaveV3Pool internal v3Pool;
 
-    /// @dev True on the real stack: LPVaultSwap, the PayoutEscrow, the FlashLiquidator, the Lens and the LPVault are
+    /// @dev True on the real stack: LPVaultSwap, the PayoutEscrow and the LPVault are
     /// the real contracts (the Uniswap v3 factory is deployed before `_deployCore`).
     function _realStack() internal pure virtual returns (bool) {
         return false;
@@ -151,7 +149,6 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         _installAdapter(registryAddr, storeAddr, riskAddr);
         if (real) {
             _installLPVaultSwap();
-            _deployLens();
         }
         _bindCoreAccess(registryAddr, storeAddr, riskAddr);
         _labelCore();
@@ -193,9 +190,6 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
         // restriction) found no copy there and two elsewhere in a narrow build: `multiple matching artifacts found`.
         payoutEscrow = deployCode("PayoutEscrow.sol:PayoutEscrow:default", abi.encode(lpVaultSwap, address(lock)));
         v3Pool = new MockAaveV3Pool(address(new MockAaveV3AddressesProvider(address(new MockAaveV3ACLManager()))), 5);
-        // The FlashLiquidator's constructor reads the MarketRegistry, which is built with its address: it is placed at
-        // a fixed address once the registry is installed (`_installLPVaultSwap`).
-        flashLiquidator = makeAddr("FlashLiquidator");
     }
 
     /// @dev Runs `initCode` (creation code and constructor arguments) at `at` as a call and installs the runtime code it
@@ -230,43 +224,11 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
             deployCode("LPVaultSwapDeleverageLogic.sol:LPVaultSwapDeleverageLogic", abi.encode(im))
         );
         address impl = deployCode("LPVaultSwap.sol:LPVaultSwap:default", abi.encode(im, l));
-        deployCodeTo(
-            "FlashLiquidator.sol:FlashLiquidator",
-            abi.encode(address(v3Pool), lpVaultSwap, address(registry), address(store)),
-            flashLiquidator
-        );
         address[] memory keepers = new address[](1);
         keepers[0] = keeper;
         AdapterPlaceholder(lpVaultSwap)
             .upgradeToAndCall(impl, abi.encodeCall(ILPVaultSwap.initialize, (address(accessManager), keepers)));
         lvs = ILPVaultSwap(lpVaultSwap);
-    }
-
-    /// @dev The Lens: entry point, nine modules and Aave's sizing library, over the real core.
-    function _deployLens() private {
-        address[9] memory core = [
-            address(coll),
-            address(proxyManager),
-            adapter,
-            address(lock),
-            address(registry),
-            address(store),
-            address(riskModule),
-            lpVaultSwap,
-            payoutEscrow
-        ];
-        address sizing = deployCode("out-aave/LensAaveSizing.sol/LensAaveSizing.json");
-        address[9] memory m;
-        m[0] = deployCode("LensAccountModule.sol:LensAccountModule", abi.encode(core));
-        m[1] = deployCode("LensMarketModule.sol:LensMarketModule", abi.encode(core));
-        m[2] = deployCode("LensPriceModule.sol:LensPriceModule", abi.encode(core));
-        m[3] = deployCode("LensLiquidationModule.sol:LensLiquidationModule", abi.encode(core, sizing));
-        m[4] = deployCode("LensRiskModule.sol:LensRiskModule", abi.encode(core));
-        m[5] = deployCode("LensPreviewModule.sol:LensPreviewModule", abi.encode(core));
-        m[6] = deployCode("LensMarketsModule.sol:LensMarketsModule", abi.encode(core));
-        m[7] = deployCode("LensPositionsModule.sol:LensPositionsModule", abi.encode(core));
-        m[8] = deployCode("LensDynamicCapModule.sol:LensDynamicCapModule", abi.encode(core));
-        lens = ILens(deployCode("Lens.sol:Lens:default", abi.encode(m)));
     }
 
     function _placeholderProxy() private returns (address) {
@@ -421,7 +383,6 @@ abstract contract FullStackDeploy is AaveV4Fixture, ClPoolFixture {
             vm.label(address(nfpm), "NonfungiblePositionManager");
             vm.label(payoutEscrow, "PayoutEscrow");
             vm.label(flashLiquidator, "FlashLiquidator");
-            vm.label(address(lens), "Lens");
             vm.label(address(v3Pool), "AaveV3Pool(stand-in)");
         } else {
             vm.label(lpVaultSwap, "LPVaultSwap(stand-in)");

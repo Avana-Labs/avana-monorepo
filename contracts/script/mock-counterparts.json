@@ -17,9 +17,7 @@
         "utils/mocks/MarketRegistryMocks.sol:RegistryFeedMock",
         "utils/mocks/MarketRegistryMocks.sol:RegistryDebtOracleMock",
         "utils/mocks/RiskModuleMocks.sol:RiskDebtOracleMock",
-        "utils/mocks/LPVaultSwapMocks.sol:LVSDebtOracleMock",
-        "utils/mocks/LensMocks.sol:LensDebtOracleMock",
-        "utils/mocks/LensMocks.sol:LensFeedEcho"
+        "utils/mocks/LPVaultSwapMocks.sol:LVSDebtOracleMock"
       ]
     },
     "uniswap-v3": {
@@ -50,14 +48,13 @@
       ]
     },
     "aave-v3-pool": {
-      "external": "Aave V3 Pool, ACLManager and addresses provider behind the core flash source and the flash liquidation helper",
+      "external": "Aave V3 Pool, ACLManager and addresses provider behind the core flash source",
       "functions": ["flashLoan", "flashLoanSimple"],
       "fork_tests": {"ethereum": ["TEST-118"], "base": ["TEST-118"]},
       "mocks": [
         "utils/mocks/AaveV3PoolMocks.sol:MockAaveV3Pool",
         "utils/mocks/AaveV3PoolMocks.sol:MockAaveV3ACLManager",
-        "utils/mocks/AaveV3PoolMocks.sol:MockAaveV3AddressesProvider",
-        "invariant/echidna/FlashLiquidatorProperties.sol:FlashLiquidatorPoolStandIn"
+        "utils/mocks/AaveV3PoolMocks.sol:MockAaveV3AddressesProvider"
       ]
     },
     "gho-gsm": {

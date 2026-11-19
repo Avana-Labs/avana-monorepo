@@ -582,42 +582,6 @@
       "review": "Pattern: specified timestamps. Avana signs nothing and has no deadline here; the regex `(<|>)=? block.timestamp` matched a specified timestamp rule."
     },
     {
-      "fingerprint": "6ad52bf59bf1b166",
-      "check": "Some tokens may revert when zero value transfers are made",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "FlashLiquidatorBase._repay (top-up)",
-      "reason": "Zero-value transfer not possible: topUp = owed - keeperOut is pulled only inside `if (keeperOut < owed)`, so topUp >= 1.",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
-    },
-    {
-      "fingerprint": "1b626a08a1c55264",
-      "check": "Some tokens may revert when zero value transfers are made",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "FlashLiquidatorBase._payOut (payout)",
-      "reason": "Zero-value transfer not possible: guarded by `payout != 0` on the same line.",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
-    },
-    {
-      "fingerprint": "182db800edc9fedd",
-      "check": "Contracts are vulnerable to fee-on-transfer accounting-related issues",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "FlashLiquidatorBase._repay (top-up)",
-      "reason": "Same as the inventory pull: the top-up's arrival is not credited by its nominal amount; the Pool pulls exactly owed and the payout is the whole-call balance delta, which reverts PayoutTooLow(0, minPayout) if a fee left the helper short.",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: returns measured by balance delta (the payout is the whole-call balance delta; a shortfall reverts)."
-    },
-    {
-      "fingerprint": "3a6c4b6e842c79d0",
-      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "FlashLiquidatorBase._openContext",
-      "reason": "Not a signature or typed-data hash: keccak256(abi.encode(request.params)) binds the liquidation parameters to the transient context, and executeOperation compares it with keccak256 of the params the Pool hands back (REQ-HELPER-004, REQ-HELPER-005). EIP-712 does not apply.",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group F (4naly3er regex false positive): checked 2026-11-11, the matched line does not have the property the title names; not in an approved pattern. Same class as the MarketRegistryStorage immutables fingerprint."
-    },
-    {
       "fingerprint": "7be11e74ddc06b96",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
       "file": "src/policy/parameter-store/ParameterStoreAdminOracleLogic.sol",
@@ -877,24 +841,6 @@
       "reason": "Records the block of the accepted price for the same-block quote-change cap of REQ-ORACLE-103; see the LPOracleEval._quoteCapped entry. Covered by TEST-219 (quoteChangeCapHoldsOneBlock).",
       "approval": "approved (Josue, 2026-11-11)",
       "review": "Reviewed per call site, group Y (block.number for a same-block rule): checked 2026-11-11, REQ-ORACLE-103 compares only whether the accepted price was stored in the current block; Avana deploys on Ethereum and Base, where block.number is the chain's own block (Base: the L2 block, 2 s), so the rule means the same block on both. On an Arbitrum-style chain block.number is the L1 block and the window would widen; recheck before any such deployment."
-    },
-    {
-      "fingerprint": "84aaa7a1ec765e68",
-      "check": "Some tokens may revert when zero value transfers are made",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "FlashLiquidatorBase.flashLiquidate (prefund pull)",
-      "reason": "Zero-value transfer not possible: the pull of prefund = debtToCover - flashAmount + maxShortfall runs only when prefund != 0 (same line). Replaces entry f4ab143b61727593 after the shortfall budget joined the pull.",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group H (transfer amount proven non-zero): checked 2026-11-11, the guard named in the reason precedes the transfer; not in an approved pattern."
-    },
-    {
-      "fingerprint": "b968fe610fa9b07c",
-      "check": "Contracts are vulnerable to fee-on-transfer accounting-related issues",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "function": "FlashLiquidatorBase.flashLiquidate (prefund pull)",
-      "reason": "The helper credits nothing from the nominal amount: keeperOut is measured as a balance rise plus the allowance LPVaultSwap consumed, and the payout as the rise of the T balance over the whole call (assetBefore is read before the pull); a transfer fee that leaves the helper short makes LPVaultSwap's pull or the Pool's pull fail, or ends the call below its start and reverts PayoutTooLow, so nothing held before the call pays for it (REQ-HELPER-006, REQ-HELPER-008, SPEC-LIQ-019). Replaces entry 8ab8d6bbd42ac726 after the shortfall budget joined the pull. Covered by TEST-174, TEST-289.",
-      "approval": "approved by pattern (independent review 2026-11-11)",
-      "review": "Pattern: returns measured by balance delta (keeperOut and the payout are balance deltas; a shortfall reverts). Same site as 8ab8d6bbd42ac726."
     },
     {
       "fingerprint": "37556efb5421ef8a",
@@ -1181,166 +1127,6 @@
       "approval": "pending review (approved pattern)"
     },
     {
-      "fingerprint": "bc011a031651da7d",
-      "check": "`decimals()` should be of type `uint8`",
-      "file": "src/lens/lens/LensRiskModule.sol",
-      "reason": "The Hub's getAssetUnderlyingAndDecimals already returns uint8. Test: hubAssetExposureBoundAndPrice.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "6a4b91c9e6f3c955",
-      "check": "Division by zero not prevented",
-      "file": "src/lens/lens/LensPreviewModule.sol",
-      "reason": "The divisor cannot be zero: _borrowPreview returns (0, 0) when unitValue == 0, before either _capacity call; target is the target health factor (at least 1e18) or the non-zero RECOMMENDED_HEALTH_FACTOR constant. Tests: Lens.Preview, Lens.States (a zero answer).",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "22cc303c1a2db237",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensAccountModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "057e25c686ccc32a",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensAccountModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "3c22d39e1d798be4",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensLiquidationModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "55767b30a96a69ac",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensMarketModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "c83b22a04a0ce36e",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensMarketModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "0c9b349811200b40",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensMarketModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "b612f0192b4c0d2c",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensMarketModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "15845f97b9911fd8",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensPriceModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "416efd22a6120d72",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensPriceModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "7ff25058fc604eb2",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensRiskModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "c5259ed38340628d",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensRiskModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "0bf882c837aed024",
-      "check": "Use of deprecated chainlink function: `latestAnswer()`",
-      "file": "src/lens/lens/LensBase.sol",
-      "reason": "latestAnswer() is the price-source interface Aave V4's AaveOracle reads (IAaveV4PriceFeed); LPOracle and DebtOracle serve their price through it, and the Lens must report exactly that served price (REQ-LENS-015, SPEC-LIQ-004). Tests: priceStateLive, debtPriceOracleExampleLiveThenCached.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "40a35363154deac1",
-      "check": "Use of deprecated chainlink function: `latestAnswer()`",
-      "file": "src/lens/lens/LensBase.sol",
-      "reason": "latestAnswer() is the price-source interface Aave V4's AaveOracle reads (IAaveV4PriceFeed); LPOracle and DebtOracle serve their price through it, and the Lens must report exactly that served price (REQ-LENS-015, SPEC-LIQ-004). Tests: priceStateLive, debtPriceOracleExampleLiveThenCached.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "5de2fd4312e3dbb9",
-      "check": "Use of deprecated chainlink function: `latestAnswer()`",
-      "file": "src/lens/lens/LensPreviewModule.sol",
-      "reason": "latestAnswer() is the price-source interface Aave V4's AaveOracle reads (IAaveV4PriceFeed); LPOracle and DebtOracle serve their price through it, and the Lens must report exactly that served price (REQ-LENS-015, SPEC-LIQ-004). Tests: priceStateLive, debtPriceOracleExampleLiveThenCached.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "2082eb06efd9a6a0",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensMarketsModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "bda79d530715ce53",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensMarketsModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "da118c7dc3e59a52",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensPositionsModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
-      "fingerprint": "e8021b074a435365",
-      "check": "`symbol()` is not a part of the ERC-20 standard",
-      "file": "src/lens/lens/LensMarketsModule.sol",
-      "reason": "The vault token is Avana's own IERC20Metadata token (VaultToken), which implements name() and symbol(); the Lens reads them only for display (REQ-LENS-045). Test: marketIdentity.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "review": "Lens (wave 1), new site"
-    },
-    {
       "fingerprint": "48f3f5e9148f7606",
       "check": "Division by zero not prevented",
       "file": "src/amm/concentrated-liquidity/ClPriceMath.sol",
@@ -1353,14 +1139,6 @@
       "check": "Division by zero not prevented",
       "file": "src/policy/market-registry/MarketRegistryActivationLogic.sol",
       "reason": "Division by the constant _BPS = 10,000 (offboarding target, REQ-CONFIG-080). Covered by TEST-213.",
-      "approval": "pending review (approved pattern)",
-      "review": "fixmed (adversarial-review fixes 2026-11-12)"
-    },
-    {
-      "fingerprint": "bef835a540778658",
-      "check": "Some tokens may revert when zero value transfers are made",
-      "file": "src/periphery/flash-liquidator/FlashLiquidatorBase.sol",
-      "reason": "The transfer runs only when the watched token's balance rose (balance > balanceBefore), so the amount is never 0 (REQ-HELPER-008). Covered by TEST-174.",
       "approval": "pending review (approved pattern)",
       "review": "fixmed (adversarial-review fixes 2026-11-12)"
     },
@@ -1395,102 +1173,6 @@
       "reason": "uint64(start + window) where start + window <= nowTs < 2^64, stated in the comment. Group E (timestamp casts). Covered by TEST-322, PROP-110.",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
-    },
-    {
-      "fingerprint": "8687a321fb2b4a56",
-      "check": "Division by zero not prevented",
-      "file": "src/lens/lens/LensPositionsModule.sol",
-      "reason": "The divisor per is checked on the first line of the function (per == 0 returns 0). Tests: Lens.Preview, Lens.Actions (TEST-247).",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2, new site; same reasoning as 70e5954afe4eae54"
-    },
-    {
-      "fingerprint": "ce2236cf2db80cc3",
-      "check": "Signature use at deadlines should be allowed",
-      "file": "src/lens/lens/LensDeleverage.sol",
-      "reason": "No signature: the deadline is the caller's transaction deadline used only to size the interest growth; a deadline at or before now counts no time (REQ-LENS-035, REQ-LENS-036). Test: repayAllDeadlineInPast.",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2: the deadline growth moved from LensPreview (2be6bee5d509a011) to LensDeleverage"
-    },
-    {
-      "fingerprint": "9a942eaf97bec7c1",
-      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/lens/lens/LensMarketsModule.sol",
-      "reason": "uint128 of the fee growth in _owedAfterUpdate reproduces the position manager's own 0.7 arithmetic: tokensOwed is a uint128 that wraps (differences mod 2^256, the owed sum mod 2^128), so the view reports exactly what collect would pay (REQ-LENS-050, REQ-LENS-051). Test: Lens.FeesEdges (test_TEST_247_owedWrapsLikeTheManager).",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2, new reasoning (intended wrap)"
-    },
-    {
-      "fingerprint": "3e80f22b96ed0907",
-      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/lens/lens/LensMarketModule.sol",
-      "reason": "The loop index runs from 0 to the reserve's latest dynamic configuration key, itself a uint32, so uint32(key) never truncates. Test: checkBackingLiquidationFeeOnAnyKey.",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Re-key of b80ce58173f9e15d (same uint32(key) cast, line text moved)"
-    },
-    {
-      "fingerprint": "896f1e27aba361e7",
-      "check": "A year is not always 365 days",
-      "file": "src/lens/lens/LensDeleverage.sol",
-      "reason": "Aave V4's own convention: its drawn rate is per 365-day year (MathUtils.SECONDS_PER_YEAR), so the growth until the deadline uses the same year (REQ-LENS-035, REQ-LENS-036). Tests: repayAllCoversDebtAtDeadline, repayAllUsdcExample.",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2: the deadline growth moved from LensPreview (f0b3243169ececd1) to LensDeleverage"
-    },
-    {
-      "fingerprint": "f3e0323f4f663d12",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensPositionsModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
-    },
-    {
-      "fingerprint": "8b7a5fb853938fd8",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensAccountModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
-    },
-    {
-      "fingerprint": "ec912d9693477858",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensMarketsModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
-    },
-    {
-      "fingerprint": "8ea1500d14de2f7d",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensRiskModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
-    },
-    {
-      "fingerprint": "72bc156bc13693ae",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensPositionsModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
-    },
-    {
-      "fingerprint": "18b788078201f2a5",
-      "check": "`block.number` means different things on different L2s",
-      "file": "src/lens/lens/LensPriceModule.sol",
-      "reason": "block.number is only reported, never compared: every view carries the block it was read at so a consumer can reject mixed reads (REQ-LENS-005). Tests: every *RawValues and identity test.",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2, new site; same reasoning as 2c9ede58b3cc3085"
-    },
-    {
-      "fingerprint": "6a3b09fee4405b45",
-      "check": "Use of deprecated chainlink function: `latestAnswer()`",
-      "file": "src/lens/lens/LensAccountMath.sol",
-      "reason": "latestAnswer() is the price-source interface Aave V4's AaveOracle reads (IAaveV4PriceFeed); LPOracle and DebtOracle serve their price through it, and the Lens must report exactly that served price (REQ-LENS-015, SPEC-LIQ-004). Tests: priceStateLive, debtPriceOracleExampleLiveThenCached.",
-      "approval": "approved (Josue, 2026-11-13)",
-      "review": "Lens round 2, new site; same reasoning as 0bf882c837aed024"
     },
     {
       "fingerprint": "1ba60cd2d7eb2ff0",
@@ -1678,17 +1360,6 @@
       "file": "src/oracle/lp-oracle/LPOracleV4Module.sol",
       "reason": "A range-checked narrowing: unitExp is at most ClUnitMath.MAX_UNIT_EXP (18), checked just before the cast (a larger value makes the market encoding invalid), as the comment above it states.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
-    },
-    {
-      "fingerprint": "9c093d38b34c169b",
-      "check": "Signature use at deadlines should be allowed",
-      "file": "src/periphery/gas-vault/AvanaGasVault.sol",
-      "function": "AvanaGasVault._window",
-      "reason": "Not a deadline or signature: a send counts toward the cap while at + PERIOD > now, the window (now - 24 h, now] of REQ-GASV-005 (exclusive start). Covered by TEST-333 (topUp_capHoldsOverAnyWindowNotPerCalendarPeriod), TEST-334.",
-      "approval": "approved (Josue, 2026-11-16)",
-      "reviewedFiles": {
-        "src/periphery/gas-vault/AvanaGasVault.sol": "9c0535e8ee61474db4f651150880c624f6329d90c927cfd16ee7af4150576e4d"
-      }
     }
   ]
 }

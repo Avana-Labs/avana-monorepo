@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Monitoring signals M-01 to M-36 (services/README.md, Monitoring and alerting). The keeper evaluates the ones it
+// Monitoring signals M-01 to M-34 (services/README.md, Monitoring and alerting). The keeper evaluates the ones it
 // already reads each block; the rest run on their stated cadence from indexer events or a daily fork simulation.
 // Every page is confirmed on a second RPC provider at a known block before it is sent (EMG-075).
 
@@ -62,6 +62,4 @@ export const SIGNALS: readonly SignalDef[] = [
   { id: "M-32", name: "Keeper class budget reached", cadence: "block", inputs: ["keeper spend log by fee class", "KEEPER_DAILY_BUDGET_WEI_{SCHEDULED,LAZY}"], warn: "—", page: "a scheduled or lazy class reaches its rolling 24 h budget and stops", responder: "keeper on-call, Avana Labs", playbook: "P-08 (EMG-082)" },
   { id: "M-33", name: "Standby keeper signer below its minimum balance", cadence: "block", inputs: ["standby signer balance", "KEEPER_STANDBY_MIN_BALANCE_WEI"], warn: "standby balance < its minBalance", page: "—", responder: "Avana Labs", playbook: "P-08 (EMG-082)" },
   { id: "M-34", name: "Oracle poke overdue (retired: the stateless oracles are never poked)", cadence: "block", inputs: [], warn: "—", page: "—", responder: "keeper on-call, operators", playbook: "P-08 (EMG-082)" },
-  { id: "M-35", name: "Gas vault runway", cadence: "block", inputs: ["AvanaGasVault balance and ToppedUp events, read by the monitor from the chain"], warn: "balance < 30 days of daily top-ups", page: "< 14 days", responder: "Avana Labs, keeper on-call", playbook: "P-22 (EMG-115)" },
-  { id: "M-36", name: "Gas vault top-up capped", cadence: "block", inputs: ["AvanaGasVault ToppedUp and TopUpFailed events, read by the monitor from the chain"], warn: "—", page: "ToppedUp.amount < requested, or TopUpFailed", responder: "Avana Labs, keeper on-call", playbook: "P-22 (EMG-115)" },
 ];

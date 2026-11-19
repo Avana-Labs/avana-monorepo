@@ -30,10 +30,6 @@
 #   10-aave-markets-aip           AAVE  vault-token assets and collateral reserves
 #   09-listing-activate           LPOracles poked, activateMarket (timelock, short delay)
 #   09-execute-listing-activate
-#   12-gas-vault                  the chain's AvanaGasVault (treasury = feeRecipient, checked on chain; no role granted)
-#   12-gas-vault-signers          addSigner of each configured keeper signer (timelock, normal delay)
-#   12-execute-gas-vault-signers
-#   12-fund-gas-vault             the treasury funds the vault to gasVault.fundWei (Ethereum and Base: printed for the Safe)
 #
 # Changes to a live deployment (deploy recipe B8), any time after the first deployment:
 #   11-changes <file>             a JSON list of changes, each checked against its on-chain limit, run as one timelock
@@ -102,10 +98,6 @@ case "$step" in
   10-aave-markets-aip) script=10_AaveListingPayload.s.sol; envs+=(AVANA_AAVE_STEP=vault-tokens) ;;
   09-listing-activate) script=09_ListMarkets.s.sol; envs+=(AVANA_LISTING_STEP=activate); schedule=1 ;;
   09-execute-listing-activate) script=05_ExecuteOperations.s.sol; envs+=(AVANA_OPERATIONS=listing-activate) ;;
-  12-gas-vault) script=12_DeployGasVault.s.sol; envs+=(AVANA_GAS_VAULT_STEP=deploy) ;;
-  12-gas-vault-signers) script=12_DeployGasVault.s.sol; envs+=(AVANA_GAS_VAULT_STEP=signers); schedule=1 ;;
-  12-execute-gas-vault-signers) script=05_ExecuteOperations.s.sol; envs+=(AVANA_OPERATIONS=gas-vault-signers) ;;
-  12-fund-gas-vault) script=12_DeployGasVault.s.sol; envs+=(AVANA_GAS_VAULT_STEP=fund) ;;
   *) echo "unknown step $step; the steps are listed at the top of script/deploy/step.sh" >&2; exit 2 ;;
 esac
 

@@ -22,7 +22,6 @@ import { createChainReader } from "../chain/reads.ts";
 import type { AccountCache } from "../discovery/accountCache.ts";
 import { type Head, ProcessedHeads, isReorg } from "../discovery/stream.ts";
 import { breakerPokeJob, configPokeJob } from "../jobs/breakerPoke.ts";
-import { gasTopUpJob } from "../jobs/gasTopUp.ts";
 import { liquidationJob } from "../jobs/liquidation.ts";
 import { settlePendingJob } from "../jobs/settlePending.ts";
 import { blocksFor } from "@avana/services-common";
@@ -108,7 +107,6 @@ export function chainLoop(d: ChainLoopDeps) {
     settlePendingJob(),
     breakerJob,
     configPokeJob(),
-    gasTopUpJob(d.from),
   ];
   // Checked at every head; the others at the slow cadence.
   const everyHead = new Set<Job<any, any>>([jobs[0]!, breakerJob]);

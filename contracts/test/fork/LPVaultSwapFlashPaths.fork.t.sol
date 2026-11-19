@@ -7,10 +7,8 @@ import {AaveV3FlashSource} from "../../src/flash/AaveV3FlashSource.sol";
 import {IFlashReceiver} from "../../src/flash/IFlashReceiver.sol";
 import {IFlashSource} from "../../src/flash/IFlashSource.sol";
 import {IAaveV3Pool} from "../../src/interfaces/external/aave/IAaveV3Pool.sol";
-import {FlashLiquidator} from "../../src/periphery/flash-liquidator/FlashLiquidator.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 import {MockFlashFeeCap} from "../utils/mocks/MockFlashReceiver.sol";
-import {MockMarketRegistry} from "../utils/mocks/MockMarketRegistry.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -85,8 +83,8 @@ contract ForkFlashBorrower is IFlashReceiver {
 /// chain's Aave V3 Pool, used only by `deleverage`, borrows the debt asset alone with interest-rate mode 0 and is
 /// repaid in the same transaction (no debt opened); its pre-loan checks refuse an amount above the Pool's idle
 /// liquidity and a premium above `maxFlashFeeBps`; a `FLASH_BORROWER` grant makes the premium 0; a paused Pool reserve
-/// makes `maxFlashLoan` 0; the lender is not the Hub the caller names. The public helper on the same Pool quotes the
-/// same liquidity and premium. LPVaultSwap's own pre-loan ordering (no collateral moves when a check fails) is
+/// makes `maxFlashLoan` 0; the lender is not the Hub the caller names.
+/// LPVaultSwap's own pre-loan ordering (no collateral moves when a check fails) is
 /// `LPVaultSwap.Deleverage.unit.t.sol`; the callback checks against a Pool are TEST-046 in the flash-source suites.
 /// Skipped without `RPC_MAINNET` / `RPC_BASE`; forks the latest block.
 /// @dev Run with `FOUNDRY_PROFILE=fork forge test --match-contract LPVaultSwapFlashPathsForkTest`.
@@ -101,7 +99,6 @@ contract LPVaultSwapFlashPathsForkTest is AvanaTest {
     ForkFlashBorrower internal borrower;
     AaveV3FlashSource internal source;
     MockFlashFeeCap internal cap;
-    FlashLiquidator internal helper;
 
     function _fork(
         string memory rpcVar,
@@ -117,7 +114,6 @@ contract LPVaultSwapFlashPathsForkTest is AvanaTest {
         cap = new MockFlashFeeCap(10);
         source = new AaveV3FlashSource(pool, address(borrower), address(cap));
         borrower.setSource(source);
-        helper = new FlashLiquidator(pool, makeAddr("lpVaultSwap"), address(new MockMarketRegistry()), address(cap));
         return true;
     }
 
@@ -129,9 +125,7 @@ contract LPVaultSwapFlashPathsForkTest is AvanaTest {
         address aToken = IAaveV3Pool(pool).getReserveAToken(asset);
         uint256 available = source.maxFlashLoan(asset);
         assertGt(available, amount, "the Pool lends the asset");
-        assertEq(helper.maxFlashLoan(asset), available, "the helper reads the same Pool liquidity");
         uint256 quote = source.flashPremium(asset, amount);
-        assertEq(helper.flashPremium(asset, amount), quote, "same premium quote");
         deal(asset, address(borrower), quote);
         uint256 aBefore = IERC20(asset).balanceOf(aToken);
         uint256 premium = borrower.borrow(asset, amount, HUB);
@@ -170,15 +164,12 @@ contract LPVaultSwapFlashPathsForkTest is AvanaTest {
         IForkACLManager acl = IForkACLManager(provider.getACLManager());
         vm.startPrank(provider.getACLAdmin());
         acl.addFlashBorrower(address(source));
-        acl.addFlashBorrower(address(helper));
         acl.addEmergencyAdmin(address(this));
         vm.stopPrank();
         assertEq(source.flashPremium(asset, amount), 0, "FLASH_BORROWER: no premium on the core source");
-        assertEq(helper.flashPremium(asset, amount), 0, "FLASH_BORROWER: no premium on the helper");
         assertEq(borrower.borrow(asset, amount, HUB), 0, "charged 0");
         IForkPoolConfigurator(provider.getPoolConfigurator()).setReservePause(asset, true);
         assertEq(source.maxFlashLoan(asset), 0, "a paused reserve lends nothing");
-        assertEq(helper.maxFlashLoan(asset), 0, "the helper reads the pause too");
         vm.expectRevert(abi.encodeWithSelector(IFlashSource.InsufficientFlashLiquidity.selector, 0));
         borrower.borrow(asset, amount, HUB);
     }

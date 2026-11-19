@@ -7,7 +7,6 @@ import {UniswapV4State} from "../../src/amm/uniswap-v4/UniswapV4State.sol";
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
 import {IUniswapV4PoolManager} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
-import {LiquidationPreview, PositionFeesView} from "../../src/lens/lens/types/LensTypes.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IRiskModuleErrors} from "../../src/policy/risk-module/IRiskModuleErrors.sol";
 import {PriceState} from "../../src/types/OracleTypes.sol";
@@ -70,55 +69,6 @@ contract MultiMarketUniswapV4IntegrationTest is RealStackUniswapV4 {
         _borrowAs(c.wallet, c.marketId, c.reserveId, c.borrowed);
     }
 
-    // TEST-344 verifies: REQ-AMM-V4-004, REQ-AMM-V4-005, REQ-AMM-V4-008, SPEC-AMM-V4-001, REQ-AMM-CORE-007
-    function test_TEST_344_v4MarketsPledgeBorrowAndLiquidate() public {
-        address[] memory proxies = new address[](cases.length);
-        for (uint256 i = 0; i < cases.length; ++i) {
-            Case memory c = cases[i];
-            assertTrue(mkt[c.marketId].oracle.getPriceStatus().borrowFresh, "v4 market price fresh");
-            proxies[i] = _open(c);
-            address spoke = _spokeOf(c.marketId);
-            assertTrue(spoke == v4SpokeS || spoke == v4SpokeV, "a v4 CDP Spoke");
-            assertGt(_sharesOn(spoke, proxies[i], mkt[c.marketId].reserveId), 0, "supplied on the market's Spoke");
-            assertGt(_hfOn(spoke, proxies[i]), 1e18, "healthy after the borrow");
-        }
-        // Crash: WETH -20 %; USDT to $0.85.
-        _publish(address(weth), 2400e8);
-        _publish(address(usdt), 85_000_000);
-        _repriceV4Markets();
-        for (uint256 i = 0; i < cases.length; ++i) {
-            _liquidateCase(cases[i], proxies[i]);
-        }
-        assertEq(v4Vault.balance, 0, "the LPVault never holds ETH");
-    }
-
-    function _liquidateCase(
-        Case memory c,
-        address proxy
-    ) internal {
-        address spoke = _spokeOf(c.marketId);
-        assertLt(_hfOn(spoke, proxy), 1e18, "underwater after the crash");
-        LiquidationPreview memory p = lens.previewLiquidation(proxy, c.reserveId, block.timestamp + 60);
-        assertTrue(p.aaveLiquidatable && p.pricesUsable, "liquidatable with usable prices");
-        p.params.maxShortfall = p.params.debtToCover / 20;
-        uint256 debtBefore = _debtOn(spoke, proxy, c.reserveId);
-        LiquidationResult memory r = _liquidateOn(spoke, keeper, p.params);
-        assertEq(r.debtRepaid, p.expectedDebtRepaid, "D as previewed");
-        assertEq(r.unitsSeized, p.expectedUnitsSeized, "c as previewed");
-        assertApproxEqAbs(debtBefore - _debtOn(spoke, proxy, c.reserveId), r.debtRepaid, 1, "debt fell by D");
-        assertEq(
-            r.callerFunds + r.recovered + r.shortfall,
-            r.debtRepaid + r.avanaFee + r.borrowerSurplus + r.keeperOut,
-            "conservation"
-        );
-        assertGe(r.recovered + r.shortfall, r.minOut, "floor");
-        ClTestToken[6] memory ts = [usdc, usdt, gho, weth, wbtc, meme];
-        for (uint256 k = 0; k < ts.length; ++k) {
-            assertEq(ts[k].balanceOf(lpVaultSwap), 0, "LPVaultSwap keeps no token");
-        }
-        assertFalse(lock.isLocked(), "Lock free");
-    }
-
     // TEST-331 verifies: REQ-AMM-V4-001, REQ-AMM-V4-006
     function test_TEST_331_hookedPoolIsRefused() public {
         PoolKey memory pk = v4KeyOf[v4EthUsdc];
@@ -135,28 +85,6 @@ contract MultiMarketUniswapV4IntegrationTest is RealStackUniswapV4 {
     ) external returns (uint256) {
         require(msg.sender == address(this), "self");
         return _addV4Market(pk, ref, VT_CF);
-    }
-
-    // TEST-344 verifies: REQ-AMM-V4-010, REQ-AMM-V4-004, REQ-LENS-050
-    function test_TEST_344_wrappedFeeGrowthKeepsFeesAndExitsWorking() public {
-        Case memory c = cases[1];
-        PoolKey memory pk = v4KeyOf[c.marketId];
-        bytes32 state = UniswapV4State.poolStateSlot(keccak256(abi.encode(pk)));
-        vm.store(address(v4pm), bytes32(uint256(state) + 1), bytes32(type(uint256).max - 1e20));
-        vm.store(address(v4pm), bytes32(uint256(state) + 2), bytes32(type(uint256).max - 1e20));
-        (bytes32 key, address proxy) = _v4PledgeUsd(c.wallet, c.marketId, c.usd);
-        for (uint256 i = 0; i < 3; ++i) {
-            v4actor.swap(pk, true, -1e12, 4_295_128_740);
-            v4actor.swap(pk, false, -1e12, 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_341);
-        }
-        PositionFeesView memory f = lens.getPositionFees(c.marketId, key);
-        assertTrue(f.supported, "v4 fees read");
-        assertGt(f.amounts[0] + f.amounts[1], 0, "fees accrued across the wrap");
-        uint256 units = coll.getRecord(coll.recordIdOf(V4, key)).credited;
-        vm.prank(c.wallet);
-        adapterC.withdraw(c.marketId, PositionRef(V4, key), units, _deadline(), 0);
-        assertEq(v4posm.ownerOf(uint256(key)), c.wallet, "position returned");
-        assertEq(_sharesOn(_spokeOf(c.marketId), proxy, mkt[c.marketId].reserveId), 0, "nothing supplied");
     }
 
     // TEST-344 verifies: REQ-AMM-V4-012, REQ-AMM-CORE-020, INV-096

@@ -26,38 +26,6 @@ import { rpcSummary, useHealthyRpc } from "./rpc.ts";
 export const NORMAL_DELAY = 120;
 /** One timelock operation's execution gas budget on a test network: under the 2^24 per-transaction cap (EIP-7825). */
 export const OPERATION_GAS_BUDGET = 15_000_000;
-/** A test network's AvanaGasVault: the deployer funds it with `fundWei` (0.5 test ETH), unless the private config
- * file sets the chain's GAS_VAULT_FUND_WEI_<chain> (gasVaultFundWei). */
-export const GAS_VAULT = { fundWei: "500000000000000000" };
-
-/** The private config file's key for the chain's gas vault funding, in wei: GAS_VAULT_FUND_WEI_SEPOLIA, …_BASE_SEPOLIA. */
-export const gasVaultFundKey = (c: LocalChain) => `GAS_VAULT_FUND_WEI_${c.envSuffix}`;
-
-/**
- * The wei the deployer funds the chain's gas vault with: the private file's GAS_VAULT_FUND_WEI_<chain>, a whole number
- * from 0 to 0.5 ETH, else 0.5 ETH. At 0 the vault is deployed and its signer added, but 12-fund-gas-vault sends nothing
- * (the script funds only up to fundWei); anyone can fund it later with the vault's `fund`.
- */
-export function gasVaultFundWei(c: LocalChain, file: Record<string, string | undefined>): string {
-  const key = gasVaultFundKey(c);
-  const v = file[key]?.trim();
-  if (!v) return GAS_VAULT.fundWei;
-  if (!/^\d+$/.test(v)) throw new Error(`${key}: "${v}" is not a whole number of wei`);
-  if (BigInt(v) > BigInt(GAS_VAULT.fundWei)) throw new Error(`${key}: ${v} wei is more than ${GAS_VAULT.fundWei} (0.5 ETH)`);
-  return BigInt(v).toString();
-}
-
-/**
- * On a rerun, the config was written by an earlier run: its gas vault funding is brought to `fundWei` while the release
- * has not funded the vault yet, so a changed GAS_VAULT_FUND_WEI_<chain> applies. Returns whether the file changed.
- */
-export function syncGasVaultFund(configPath: string, fundWei: string): boolean {
-  const cfg = JSON.parse(readFileSync(configPath, "utf8")) as Record<string, any>;
-  if (!cfg.gasVault || cfg.gasVault.fundWei === fundWei) return false;
-  cfg.gasVault.fundWei = fundWei;
-  writeFileSync(configPath, `${JSON.stringify(cfg, null, 2)}\n`);
-  return true;
-}
 /**
  * The dollars each native-ETH Uniswap v4 pool of the world (an `a` or `b` of `ETH`) is seeded with on a test network.
  * Step 02 pays half of a pool's `usd` in the deployer's own ETH (the other side, and the reference pool, are mintable
@@ -111,8 +79,6 @@ export function syncNativeV4Pools(configPath: string, status: Pick<Status, "conf
   return changed;
 }
 
-/** Its one keeper signer: refilled below 0.05 ETH to 0.2 ETH, at most 0.2 ETH a day. */
-export const GAS_VAULT_SIGNER = { minBalanceWei: "50000000000000000", targetBalanceWei: "200000000000000000", periodCapWei: "200000000000000000" };
 /** A directory the rehearsal (rehearse.ts) wrote: a real deploy refuses to resume it. */
 export const REHEARSAL_MARK = ".rehearsal";
 
@@ -173,10 +139,10 @@ function release(): string {
 }
 
 /** The chain's base config: the local stack's (writeBaseConfig), every role a test-network account (testnetPatch). */
-export async function testnetConfig(c: LocalChain, rel: string, fundWei = GAS_VAULT.fundWei): Promise<string> {
+export async function testnetConfig(c: LocalChain, rel: string): Promise<string> {
   const roles = testnetRoles();
   const executor = (await executorStandIn(roles.signers.payloadsController)).address;
-  const path = writeBaseConfig(c, baseRoles(roles), testnetPatch(roles, executor, rel, fundWei));
+  const path = writeBaseConfig(c, baseRoles(roles), testnetPatch(roles, executor, rel));
   const text = readFileSync(path, "utf8").toLowerCase();
   const left = ANVIL_ACCOUNTS.filter((x) => text.includes(x.slice(2)));
   if (left.length) throw new Error(`the config still names anvil accounts ${left.join(", ")}: every role must be a test-network account`);
@@ -188,10 +154,10 @@ export const baseRoles = ({ signers: s, addresses: a }: TestnetRoles) => ({ depl
 
 /**
  * What a test network's config changes in the local stack's: its roles, release, normal delay and operation gas budget,
- * the gas vault, and the native-ETH Uniswap v4 pools' size (NATIVE_V4_POOL_USD), and nothing else. testnet.test.ts checks every other value against the local stack's config, built from the same
+ * and the native-ETH Uniswap v4 pools' size (NATIVE_V4_POOL_USD), and nothing else. testnet.test.ts checks every other value against the local stack's config, built from the same
  * test values (script/local/test-values.json, the one source of the market parameters).
  */
-export function testnetPatch({ signers: s, addresses: a }: TestnetRoles, executor: string, rel: string, fundWei = GAS_VAULT.fundWei) {
+export function testnetPatch({ signers: s, addresses: a }: TestnetRoles, executor: string, rel: string) {
   return (cfg: Record<string, any>) => {
     cfg.release = rel;
     cfg.parameters.timelockNormalDelay = NORMAL_DELAY;
@@ -204,10 +170,6 @@ export function testnetPatch({ signers: s, addresses: a }: TestnetRoles, executo
     cfg.aaveLocal.payloadsController = s.payloadsController;
     cfg.aave.governanceExecutor = executor;
     for (const h of cfg.operatorHelpers) h.fundingSafe = s.governance;
-    // The gas vault (first release, gasVaultSteps): one keeper signer, sized for test ETH. The deployer funds it with
-    // `fundWei` (gasVaultFundWei; 0: not funded).
-    cfg.gasVault = { ...cfg.gasVault, fundWei };
-    cfg.gasVault.signers = [{ signer: a.KEEPER, ...GAS_VAULT_SIGNER }];
     // The native-ETH Uniswap v4 pools: seeded with the deployer's real test ETH, so a few dollars each.
     shrinkNativeV4Pools(cfg);
   };
@@ -238,19 +200,9 @@ async function deploy(): Promise<void> {
   const b = await balances(c);
   const empty = FUNDED_ROLES.filter((k) => b[k] === 0n);
   if (empty.length) throw new Stop(`no test ETH on the ${empty.join(", ")} signer${empty.length > 1 ? "s" : ""} (see \`roles\`)`);
-  let fundWei: string;
-  try {
-    fundWei = gasVaultFundWei(c, configFile());
-  } catch (e) {
-    throw new Stop(`the test-network config file: ${(e as Error).message}`);
-  }
   const status = readStatus(c);
-  const config = status.config ? currentConfig(c) : await testnetConfig(c, rel, fundWei);
+  const config = status.config ? currentConfig(c) : await testnetConfig(c, rel);
   say(`${c.network} (${c.chainId}): release ${rel}, config ${config}${flag("no-verify") ? "" : ", explorer verification at the end"}`);
-  if (status.steps["first:12-fund-gas-vault"]?.outcome !== "pass") {
-    if (status.config && syncGasVaultFund(config, fundWei)) say(`${c.network}: gas vault funding set to ${fundWei} wei (${gasVaultFundKey(c)})`);
-    if (fundWei === "0") say(`${c.network}: gas vault not funded: ${gasVaultFundKey(c)} = 0; fund it later with its \`fund\``);
-  }
   const shrunk = syncNativeV4Pools(config, status);
   if (shrunk.length) {
     const wei = nativeV4PoolWei(JSON.parse(readFileSync(config, "utf8")));

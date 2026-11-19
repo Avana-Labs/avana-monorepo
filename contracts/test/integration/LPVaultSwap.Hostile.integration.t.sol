@@ -8,7 +8,6 @@ import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAva
 import {ICollateralization} from "../../src/custody/collateralization/ICollateralization.sol";
 import {ICollateralizationBase} from "../../src/custody/collateralization/ICollateralizationBase.sol";
 import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ILock} from "../../src/lock/lock/ILock.sol";
 import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
@@ -276,41 +275,6 @@ contract LPVaultSwapHostileIntegrationTest is RealStackVolatile {
         assertTrue(IVaultToken(vt).isValidProxy(p1), "valid in its market");
         assertFalse(IVaultToken(vt).isValidProxy(p2), "not valid in another market");
         assertTrue(IVaultToken(mkt[mB].vaultToken).isValidProxy(p2), "valid in market B");
-    }
-
-    /// @notice Each First-Loss Reserve covers only deficits of its own `(Hub, asset)`: an account owing USDC and GHO on
-    /// the Volatile Spoke ($60,000 of WETH/USDC liquidity against 8,000 USDC and 8,000 GHO, HF 1.125) sees WETH fall 99 %
-    /// on every feed and in the pool (the liquidity is then worth about $6,000), is liquidated in USDC with the Lens's
-    /// parameters until its collateral is gone, and the Spoke records a deficit in both assets; the real USDC First-Loss
-    /// Reserve's `coverDeficit` clears the USDC deficit and leaves the GHO deficit exactly unchanged.
-    // TEST-211 verifies: SPEC-FLR-001, INV-079, ATTACK-173
-    function test_TEST_211_coverageReducesOnlyItsOwnAssetsDeficit() public {
-        _setUpVolatile();
-        IClPool[] memory pools = new IClPool[](1);
-        pools[0] = _newVolatilePool(weth, usdc, 500, 1e18);
-        _ageNewPools(pools);
-        uint256 m = _addVolatileMarket(pools[0], 3000);
-        (, address p) = _pledgeUsd(carol, m, 60_000);
-        _borrowAs(carol, m, usdcReserveIdV, 8000e6);
-        _borrowAs(carol, m, ghoReserveIdV, 8000e18);
-        _publish(address(weth), WETH_PRICE / 100);
-        _repriceMarkets();
-        LiquidationPreview memory pv = lens.previewLiquidation(p, usdcReserveIdV, block.timestamp + 120);
-        assertTrue(pv.aaveLiquidatable && pv.pricesUsable, "liquidatable with usable prices");
-        pv.params.maxShortfall = pv.params.debtToCover / 20;
-        _liquidateOn(spokeV, keeper, pv.params);
-        assertEq(_sharesOn(spokeV, p, mkt[m].reserveId), 0, "the collateral is gone");
-        IHubDeficitView h = IHubDeficitView(hubV);
-        uint256 ghoDeficit = h.getSpokeDeficitRay(ghoAssetIdV, spokeV);
-        assertGt(h.getSpokeDeficitRay(usdcAssetIdV, spokeV), 0, "USDC deficit recorded");
-        assertGt(ghoDeficit, 0, "GHO deficit recorded");
-        AvanaFirstLossReserve usdcReserve = AvanaFirstLossReserve(firstLossReserveOfV[address(usdc)]);
-        _enableCover(address(usdcReserve), spokeV);
-        vm.prank(coverageCaller);
-        (, uint256 covered) = usdcReserve.coverDeficit(spokeV, type(uint256).max);
-        assertGt(covered, 0, "USDC deficit covered");
-        assertEq(h.getSpokeDeficitRay(usdcAssetIdV, spokeV), 0, "USDC deficit cleared");
-        assertEq(h.getSpokeDeficitRay(ghoAssetIdV, spokeV), ghoDeficit, "GHO deficit unchanged");
     }
 
     /// @dev The Aave DAO's roles for a First-Loss Reserve's cover: `coverDeficit` for `coverageCaller`, the borrow-Spoke

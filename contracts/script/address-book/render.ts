@@ -248,11 +248,6 @@ export function renderAddresses(m: Model, problems: string[]): string {
       h.address,
     ]);
   });
-  periphery.push([
-    "AvanaGasVault",
-    "Holds the chain's native gas token and refills Avana's own keeper signers up to a per-signer cap over any 24 hours. Immutable.",
-    a.gasVault ? a.gasVault.address : "Not deployed on this network",
-  ]);
   const modules = a.lensModules.map((x) => ({ name: (x.artifact ?? "").split(":").at(-1) ?? "", address: x.address }));
   const moduleRows: string[][] = [];
   for (const [name, text] of LENS_MODULES) {
@@ -581,7 +576,6 @@ export function renderParameters(m: Model, problems: string[]): string {
 export function renderAccessControls(m: Model): string {
   const r = m.manifest.roles;
   const a = m.manifest.avana;
-  const gv = a.gasVault;
   const addr = (anchor: string) => link(m, "addresses", anchor);
   const kind = (address: string, safe: string, intended: string) => (m.isSafe(address) ? safe : `On this network a single account, not a Safe; the intended holder is ${intended}.`);
   const rows: string[][] = [
@@ -607,7 +601,7 @@ export function renderAccessControls(m: Model): string {
     ],
     [
       "Emergency Guardian",
-      `${kind(r.emergencyGuardian, "3-of-5 Safe: three Avana Labs seats, one Aave service-provider seat, one independent risk-provider seat.", "a 3-of-5 Safe with three Avana Labs seats, one Aave service-provider seat and one independent risk-provider seat")} \`APPLICATION_PAUSE_GUARDIAN\` and \`APPLICATION_FREEZE_GUARDIAN\` on the MarketRegistry, \`APPLICATION_PAUSE_GUARDIAN\` on the ParameterStore, \`CANCELLER_ROLE\` on the AvanaTimelock, \`COVERAGE_ROLE\` on every First-Loss Reserve${gv && gv.guardian.toLowerCase() === r.emergencyGuardian.toLowerCase() ? ", and the AvanaGasVault's `GUARDIAN`" : ""}. No upgrade or parameter power.`,
+      `${kind(r.emergencyGuardian, "3-of-5 Safe: three Avana Labs seats, one Aave service-provider seat, one independent risk-provider seat.", "a 3-of-5 Safe with three Avana Labs seats, one Aave service-provider seat and one independent risk-provider seat")} \`APPLICATION_PAUSE_GUARDIAN\` and \`APPLICATION_FREEZE_GUARDIAN\` on the MarketRegistry, \`APPLICATION_PAUSE_GUARDIAN\` on the ParameterStore, \`CANCELLER_ROLE\` on the AvanaTimelock, \`COVERAGE_ROLE\` on every First-Loss Reserve. No upgrade or parameter power.`,
       r.emergencyGuardian,
     ],
     [
@@ -617,16 +611,15 @@ export function renderAccessControls(m: Model): string {
     ],
     [
       "Fee recipient (treasury)",
-      `The ParameterStore's \`feeRecipient\`${gv && gv.treasury.toLowerCase() === m.manifest.feeRecipient.toLowerCase() ? " and the AvanaGasVault's `TREASURY`" : ""}. Receives the ${pct(m.avanaFeeShareBps)} liquidation fee share and the app's frontend fee. Holds no role; changed only by \`setFeeRecipient\` at the normal delay.`,
+      `The ParameterStore's \`feeRecipient\`. Receives the ${pct(m.avanaFeeShareBps)} liquidation fee share and the app's frontend fee. Holds no role; changed only by \`setFeeRecipient\` at the normal delay.`,
       m.manifest.feeRecipient,
     ],
   ];
   r.keepers.forEach((k, i) => {
-    const refilled = gv && m.gasVaultSigners.includes(k.toLowerCase());
     const helper = a.operatorHelpers.some((h) => h.signer.toLowerCase() === k.toLowerCase());
     rows.push([
       r.keepers.length > 1 ? `Liquidation keeper ${i + 1}` : "Liquidation keeper",
-      `Avana's own committed operator on LPVaultSwap, counted toward \`keeperFloor\`.${helper ? ` Also the signer of the OperatorFlashLiquidator${refilled ? " and a signer the AvanaGasVault refills" : ""}.` : refilled ? " Also a signer the AvanaGasVault refills." : ""} Never the deployer or the treasury.`,
+      `Avana's own committed operator on LPVaultSwap, counted toward \`keeperFloor\`.${helper ? " Also the signer of the OperatorFlashLiquidator." : ""} Never the deployer or the treasury.`,
       k,
     ]);
   });

@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AccountView, LiquidationPreview} from "../../src/lens/lens/types/LensTypes.sol";
 import {LiquidationResult} from "../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {PositionRef} from "../../src/types/PositionTypes.sol";
 import {ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
@@ -67,54 +66,6 @@ contract MultiMarketSlipstreamIntegrationTest is RealStackSlipstream {
     ) internal returns (address proxy) {
         (, proxy) = _slipPledgeUsd(c.wallet, c.marketId, c.usd);
         _borrowAs(c.wallet, c.marketId, c.reserveId, c.borrowed);
-    }
-
-    // TEST-047 verifies: REQ-SWAP-011, REQ-SWAP-020, REQ-SWAP-022, REQ-ADAPTER-070, SPEC-LIQ-004, SPEC-LIQ-005, SPEC-LIQ-010, Q-233
-    // TEST-205 verifies: REQ-LENS-016, REQ-LENS-017, REQ-LENS-028, REQ-LENS-029
-    function test_TEST_047_slipstreamMarketsLiquidate() public {
-        address[] memory proxies = new address[](cases.length);
-        for (uint256 i = 0; i < cases.length; ++i) {
-            Case memory c = cases[i];
-            proxies[i] = _open(c);
-            address spoke = _spokeOf(c.marketId);
-            assertTrue(spoke == slipSpokeS || spoke == slipSpokeV, "a Slipstream CDP Spoke");
-            assertGt(_sharesOn(spoke, proxies[i], mkt[c.marketId].reserveId), 0, "supplied on the market's own Spoke");
-            assertGt(_hfOn(spoke, proxies[i]), 1e18, "healthy after the borrow");
-        }
-        // Crash: WETH -20 %; USDT to $0.85, so the stable Slipstream market's vault price falls 7.8 %.
-        _publish(address(weth), 2400e8);
-        _publish(address(usdt), 85_000_000);
-        _repriceMarkets();
-        for (uint256 i = 0; i < cases.length; ++i) {
-            _liquidateCase(cases[i], proxies[i]);
-        }
-    }
-
-    function _liquidateCase(
-        Case memory c,
-        address proxy
-    ) internal {
-        address spoke = _spokeOf(c.marketId);
-        assertLt(_hfOn(spoke, proxy), 1e18, "underwater after the crash");
-        LiquidationPreview memory p = lens.previewLiquidation(proxy, c.reserveId, block.timestamp + 60);
-        assertTrue(p.aaveLiquidatable && p.pricesUsable, "liquidatable with usable prices");
-        p.params.maxShortfall = p.params.debtToCover / 20;
-        uint256 debtBefore = _debtOn(spoke, proxy, c.reserveId);
-        LiquidationResult memory r = _liquidateOn(spoke, keeper, p.params);
-        assertEq(r.debtRepaid, p.expectedDebtRepaid, "D as previewed");
-        assertEq(r.unitsSeized, p.expectedUnitsSeized, "c as previewed");
-        // Aave V4 rounds the repaid shares: the live debt falls by D within one base unit (as in `MultiMarket`).
-        assertApproxEqAbs(debtBefore - _debtOn(spoke, proxy, c.reserveId), r.debtRepaid, 1, "debt fell by D");
-        assertEq(
-            r.callerFunds + r.recovered + r.shortfall,
-            r.debtRepaid + r.avanaFee + r.borrowerSurplus + r.keeperOut,
-            "conservation"
-        );
-        assertGe(r.recovered + r.shortfall, r.minOut, "floor");
-        _assertNeutral();
-        AccountView memory a = lens.getAccount(c.wallet, c.marketId);
-        assertEq(a.healthFactor, _hfOn(spoke, proxy), "Lens HF = the market's Spoke");
-        assertEq(a.spoke, spoke, "Lens: the account's Spoke");
     }
 
     /// @notice A debt-free exit returns the position in every Slipstream market.

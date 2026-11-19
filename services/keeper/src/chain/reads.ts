@@ -10,7 +10,6 @@
 import { type Address, type Hex, type PublicClient, decodeFunctionResult, encodeFunctionData, keccak256, multicall3Abi, parseAbi } from "viem";
 import {
   aaveV4SpokeAbi,
-  avanaGasVaultAbi,
   collateralizationAbi,
   flashLiquidatorAbi,
   lensAbi,
@@ -29,8 +28,6 @@ export const ACCOUNTS_PER_CALL = 300;
 const routeAbi = parseAbi(["function tokenOut() view returns (address)", "function dependencies() view returns (address[])"]);
 const wrapperAbi = parseAbi(["function asset() view returns (address)", "function aToken() view returns (address)"]);
 const v3PoolAbi = parseAbi(["function getReserveAToken(address asset) view returns (address)"]);
-
-const multicall3BalanceAbi = parseAbi(["function getEthBalance(address addr) view returns (uint256 balance)"]);
 
 export interface AccountData {
   readonly healthFactor: bigint;
@@ -199,24 +196,6 @@ export function createChainReader(client: PublicClient, manifest: { avana: { len
         const results = decodeFunctionResult({ abi: multicall3Abi, functionName: "aggregate3", data: ret });
         marketIds.forEach((id, i) => out.set(id, results[i]?.success ? results[i]!.returnData : null));
         return out;
-      }),
-
-    /**
-     * The gas vault's view of `signer` at this block (2.24): whether it is listed, its refill trigger, the signer's
-     * balance and what `topUp(signer)` would send now and request (0 while paused, not due or capped to 0).
-     */
-    gasVaultQuote: (vault: Address, signer: Address): Promise<{ listed: boolean; minBalance: bigint; balance: bigint; amount: bigint; requested: bigint; paused: boolean }> =>
-      once(`gasVaultQuote:${vault}:${signer}`, async () => {
-        const v = { ...at, address: vault, abi: avanaGasVaultAbi } as const;
-        // The balance through Multicall3's getEthBalance, so it joins the same batched eth_call as the vault's reads.
-        const [listed, config, quote, paused, balance] = await Promise.all([
-          client.readContract({ ...v, functionName: "isSigner", args: [signer] }),
-          client.readContract({ ...v, functionName: "signerConfig", args: [signer] }),
-          client.readContract({ ...v, functionName: "quoteTopUp", args: [signer] }),
-          client.readContract({ ...v, functionName: "paused" }),
-          client.readContract({ ...at, address: MULTICALL3_ADDRESS, abi: multicall3BalanceAbi, functionName: "getEthBalance", args: [signer] }),
-        ]);
-        return { listed, minBalance: config.minBalance, balance, amount: quote[0], requested: quote[1], paused };
       }),
 
     async implementationOf(proxy: Address): Promise<Address> {

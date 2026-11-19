@@ -491,22 +491,6 @@ abstract contract RealStackVolatile is RealStackFlows {
         id = _addVolatileMarket(pools[0], 3000);
     }
 
-    /// @notice `wallet`'s account in `marketId` on the Volatile Spoke: $60,000 of liquidity against USDC at HF about
-    /// 1.02 (the Lens's `previewBorrowMax` / 1.02), then WBTC and WETH 10 % lower on every feed and in the pool, the TWAP
-    /// window waited: HF about 0.92.
-    function _usdcAccountBelowOne(
-        address wallet,
-        uint256 marketId
-    ) internal returns (address proxy, bytes32 key) {
-        (key, proxy) = _pledgeUsd(wallet, marketId, 60_000);
-        uint256 max = lens.previewBorrowMax(wallet, marketId, usdcReserveIdV, _deadline());
-        _borrowAs(wallet, marketId, usdcReserveIdV, max * 100 / 102);
-        _publish(address(wbtc), 54_000e8);
-        _publish(address(weth), WETH_PRICE * 9 / 10);
-        _repriceMarkets();
-        require(_hfOn(spokeV, proxy) < 1e18, "below HF 1");
-    }
-
     /// @notice A new round now, at its current answer, on every feed of every priced token and GHO's, except `skip`.
     function _refreshFeedsExcept(
         OracleFeedMock[] memory skip

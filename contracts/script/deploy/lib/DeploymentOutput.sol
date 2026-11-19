@@ -35,7 +35,6 @@ abstract contract DeploymentOutput is Script {
         vm.serializeAddress(o, "payoutEscrow", d.payoutEscrow);
         vm.serializeAddress(o, "flashSource", d.flashSource);
         vm.serializeAddress(o, "flashLiquidator", d.flashLiquidator);
-        vm.serializeAddress(o, "operatorHelpers", d.operatorHelpers);
         vm.serializeAddress(o, "lpVaults", d.lpVaults);
         uint256[] memory ids = new uint256[](c.integrations.length);
         string[] memory kinds = new string[](c.integrations.length);
@@ -44,9 +43,6 @@ abstract contract DeploymentOutput is Script {
         }
         vm.serializeUint(o, "integrationIds", ids);
         vm.serializeString(o, "integrationKinds", kinds);
-        vm.serializeAddress(o, "lens", d.lens);
-        vm.serializeAddress(o, "lensModules", d.lensModules);
-        vm.serializeAddress(o, "lensAaveSizing", d.lensAaveSizing);
         string memory json = vm.serializeUint(o, "deployedAtBlock", block.number);
         vm.writeJson(json, path);
     }

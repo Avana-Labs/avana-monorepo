@@ -7,7 +7,7 @@ import type { ChainConfig } from "./config.ts";
 import type { ChainReader } from "./chain/reads.ts";
 import type { Revert } from "./jobs/failureReasons.ts";
 
-export type JobKind = "liquidation" | "settlePending" | "breakerPoke" | "configPoke" | "gasTopUp";
+export type JobKind = "liquidation" | "settlePending" | "breakerPoke" | "configPoke";
 
 /**
  * Fee class of a transaction, declared by its job (keeper DESIGN.md, Fees):
@@ -15,7 +15,6 @@ export type JobKind = "liquidation" | "settlePending" | "breakerPoke" | "configP
  *   percentile of the last 5 blocks, at least `minTipUrgent`; never budget-limited.
  * - `scheduled`: tip `minTipScheduled`; the fees a lazy transaction is sent at after `lazyMaxWait`. No job declares
  *   it now that the oracles are stateless and never poked.
- * - `urgent` also covers the gas vault's `topUpAll` when the signer is below its `minBalance` (jobs/gasTopUp.ts).
  * - `lazy`: `settlePending`, with no deadline measured in blocks. Tip `minTipLazy`, sent only at a low base fee or
  *   after `lazyMaxWait`, then at scheduled fees.
  */

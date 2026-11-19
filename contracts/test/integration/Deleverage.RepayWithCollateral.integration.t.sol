@@ -80,46 +80,6 @@ contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
         return uint128(coll.getRecord(coll.recordIdOf(V3, k)).credited);
     }
 
-    /// @notice The flash path by balance delta (the `deleverage` half of PROP-097 on the deployed contracts): the
-    /// amount LPVaultSwap books from the flash source is what it received, the source ends with its principal plus the
-    /// premium, no bonus or Avana fee is taken, the health factor rises, and every amount matches the Lens preview.
-    // TEST-239 verifies: REQ-ADAPTER-080, REQ-ADAPTER-081, REQ-SWAP-106, REQ-SWAP-122, REQ-FLASH-004, SPEC-LIQ-020, SPEC-PROXY-009, INV-095, Q-255
-    function test_TEST_239_repayWithCollateralThroughRealLPVaultSwap() public {
-        Snapshot memory b = _snapshot();
-        uint256 v = _valueUsdc(RELEASE);
-        vm.recordLogs();
-        vm.prank(bob);
-        (uint256 repaid, uint256 toWallet) = adapterC.repayWithCollateral(_rwc(RELEASE, usdcReserveId));
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        (uint256 flashAmount, uint256 premium) = _flashLog(logs);
-        uint256 recovered = _recoveredLog(logs);
-
-        assertEq(repaid, b.pvRepaid, "debt repaid as previewed");
-        assertEq(b.debt - _debtOf(proxy, usdcReserveId), repaid, "the Spoke's debt fell by debtRepaid");
-        assertEq(flashAmount, repaid, "x: the loan is exactly the repayment LPVaultSwap received and repaid");
-        assertEq(premium, (flashAmount * 5 + 5000) / 10_000, "5 bps premium, half-up");
-        assertEq(usdc.balanceOf(_aUsdc()), b.lender + premium, "the lender holds principal plus premium");
-        assertEq(usdc.balanceOf(flashSource), 0, "the flash source keeps nothing");
-        assertEq(usdc.balanceOf(bob) - b.wallet, toWallet, "the rest of the recovery to the wallet");
-        assertEq(toWallet, recovered - flashAmount - premium, "wallet gets R - x - premium");
-        // The preview converts at the oracle value V = 1,500 x $2.00 (REQ-LENS-029 style) and charges the source's
-        // premium quote q, rounded up and never below the Pool's half-up charge (REQ-FLASH-002): it differs by
-        // (V - R) - (q - premium).
-        uint256 q = IFlashSource(flashSource).flashPremium(address(usdc), flashAmount);
-        assertLe(premium, q, "the quote is never below the charge");
-        assertLe(q - premium, 1, "the quote rounds up, the Pool half-up");
-        assertLt(recovered, v, "the real unwind and routes recover below the oracle value");
-        assertEq(b.pvToWallet + q, v - flashAmount, "preview at R = V, with the quoted premium");
-        assertEq(b.pvToWallet - toWallet + (q - premium), v - recovered, "preview less execution is V - R");
-        _checkAfter(b);
-    }
-
-    function _snapshot() internal view returns (Snapshot memory b) {
-        (b.pvRepaid, b.pvToWallet, b.pvHf) = lens.previewRepayWithCollateral(bob, mA, key, RELEASE, usdcReserveId);
-        (b.hf, b.debt, b.lender) = (_hf(proxy), _debtOf(proxy, usdcReserveId), usdc.balanceOf(_aUsdc()));
-        (b.supply, b.credited, b.wallet) = (IERC20(vt).totalSupply(), coll.getTotalCredited(vt), usdc.balanceOf(bob));
-    }
-
     function _checkAfter(
         Snapshot memory b
     ) internal view {
@@ -153,36 +113,6 @@ contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
         assertEq(IERC721(address(nfpm)).ownerOf(uint256(k2)), alice, "the NFT returned to its depositor");
     }
 
-    // TEST-239 verifies: REQ-SWAP-106, SPEC-LIQ-020
-    function test_TEST_239_minDebtRepaidEnforced() public {
-        (uint256 pvRepaid,,) = lens.previewRepayWithCollateral(bob, mA, key, RELEASE, usdcReserveId);
-        RepayWithCollateralParams memory p = _rwc(RELEASE, usdcReserveId);
-        p.minDebtRepaid = pvRepaid + 1;
-        uint256 debtBefore = _debtOf(proxy, usdcReserveId);
-        vm.expectPartialRevert(ILPVaultSwapBase.DeleverageTooSmall.selector);
-        vm.prank(bob);
-        adapterC.repayWithCollateral(p);
-        assertEq(_debtOf(proxy, usdcReserveId), debtBefore, "nothing repaid");
-        assertFalse(lock.isLocked(), "Lock free");
-    }
-
-    /// @notice A GHO-debt account deleverages with both legs swapped into GHO.
-    // TEST-239 verifies: REQ-SWAP-106, SPEC-LIQ-018
-    function test_TEST_239_ghoDebtLegsSwapIntoGho() public {
-        (bytes32 k3, address p3) = _pledgeAs(carol, mA, 5000e6);
-        _borrowAs(carol, mA, ghoReserveId, 2500e18);
-        (uint256 pvRepaid,,) = lens.previewRepayWithCollateral(carol, mA, k3, 1000e6, ghoReserveId);
-        uint256 debtBefore = _debtOf(p3, ghoReserveId);
-        uint256 poolTokensBefore = usdc.balanceOf(carol) + usdt.balanceOf(carol);
-        vm.prank(carol);
-        (uint256 repaid, uint256 toWallet) = adapterC.repayWithCollateral(_rwcParams(mA, k3, 1000e6, ghoReserveId));
-        assertEq(debtBefore - _debtOf(p3, ghoReserveId), repaid, "GHO debt fell");
-        assertEq(repaid, pvRepaid, "repaid as previewed");
-        assertGt(repaid, 1900e18, "above 95 % of the $2,000 the 1,000 vault tokens are worth");
-        assertEq(gho.balanceOf(carol), 2500e18 + toWallet, "GHO rest to the wallet");
-        assertEq(usdc.balanceOf(carol) + usdt.balanceOf(carol), poolTokensBefore, "no pool token reached the wallet");
-    }
-
     /// @notice A repay with collateral that leaves the account debt-free and empties its last record runs the
     /// collateral cleanup, as every other debt-free exit does: the vault-token reserve is no longer used as
     /// collateral, so a later pledge enables it afresh on Aave's latest dynamic configuration key.
@@ -202,38 +132,6 @@ contract DeleverageRepayWithCollateralIntegrationTest is RealStackFlows {
         assertEq(_sharesOf(p2, r), 0, "nothing left supplied");
         (bool enabled,) = IAaveV4Spoke(aave.cdpSpoke).getUserReserveStatus(r, p2);
         assertFalse(enabled, "the emptied reserve is no longer used as collateral");
-    }
-
-    /// @notice An account below health factor 1 that would stay below 1 after the call cannot repay with collateral:
-    /// the withdrawal step is an Aave `withdraw` of collateral, which requires health factor 1 while debt remains. The
-    /// Lens previews it as closed, `(0, 0, current health factor)`, rather than as a repayment that improves the health
-    /// factor; a release large enough to reach health factor 1 is previewed and executes as previewed.
-    // TEST-239 verifies: REQ-LENS-038, REQ-ADAPTER-080
-    function test_TEST_239_previewClosedWhenTheHealthFactorStaysBelowOne() public {
-        _borrowAs(bob, mA, usdcReserveId, 1880e6);
-        _depegUsdt(93_000_000);
-        uint256 hf0 = _hf(proxy);
-        assertLt(hf0, 1e18, "Bob is below health factor 1");
-
-        uint128 small = 20e6;
-        (uint256 pvRepaid, uint256 pvToWallet, uint256 pvHf) =
-            lens.previewRepayWithCollateral(bob, mA, key, small, usdcReserveId);
-        RepayWithCollateralParams memory p = _rwc(small, usdcReserveId);
-        vm.expectRevert(bytes4(keccak256("HealthFactorBelowThreshold()")));
-        vm.prank(bob);
-        adapterC.repayWithCollateral(p);
-        assertEq(pvRepaid, 0, "the preview shows the call closed");
-        assertEq(pvToWallet, 0, "nothing to the wallet");
-        assertEq(pvHf, hf0, "the current health factor");
-
-        uint128 large = 400e6;
-        (pvRepaid,, pvHf) = lens.previewRepayWithCollateral(bob, mA, key, large, usdcReserveId);
-        assertGe(pvHf, 1e18, "the larger release reaches health factor 1");
-        p = _rwc(large, usdcReserveId);
-        vm.prank(bob);
-        (uint256 repaid,) = adapterC.repayWithCollateral(p);
-        assertEq(repaid, pvRepaid, "executes as previewed");
-        assertGe(_hf(proxy), 1e18, "health factor at least 1 after the call");
     }
 
     function _recoveredLog(

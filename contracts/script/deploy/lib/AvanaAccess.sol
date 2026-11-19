@@ -7,7 +7,6 @@ import {IAvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/I
 import {ILPVault} from "../../../src/custody/lp-vault/ILPVault.sol";
 import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {IAvanaGasVault} from "../../../src/periphery/gas-vault/IAvanaGasVault.sol";
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";
@@ -32,7 +31,6 @@ library AvanaAccess {
         VaultTokenFactory,
         RiskModule,
         AaveAdapter,
-        GasVault,
         LpVault,
         FirstLossReserve
     }
@@ -127,7 +125,7 @@ library AvanaAccess {
 
     /// @notice Every governed function of Avana with its role.
     function bindings() internal pure returns (Binding[] memory b) {
-        b = new Binding[](96);
+        b = new Binding[](89);
         uint256 n;
         n = _parameterStore(b, n);
         n = _marketRegistry(b, n);
@@ -235,13 +233,6 @@ library AvanaAccess {
         b[n++] = Binding(Kind.VaultTokenFactory, IVaultTokenFactory.deployVaultToken.selector, g);
         b[n++] = Binding(Kind.RiskModule, UUPSUpgradeable.upgradeToAndCall.selector, g);
         b[n++] = Binding(Kind.AaveAdapter, UUPSUpgradeable.upgradeToAndCall.selector, g);
-        b[n++] = Binding(Kind.GasVault, IAvanaGasVault.addSigner.selector, g);
-        b[n++] = Binding(Kind.GasVault, IAvanaGasVault.setSignerConfig.selector, g);
-        b[n++] = Binding(Kind.GasVault, IAvanaGasVault.tightenSigner.selector, g);
-        b[n++] = Binding(Kind.GasVault, IAvanaGasVault.removeSigner.selector, g);
-        b[n++] = Binding(Kind.GasVault, IAvanaGasVault.pause.selector, g);
-        b[n++] = Binding(Kind.GasVault, IAvanaGasVault.unpause.selector, g);
-        b[n++] = Binding(Kind.GasVault, IAvanaGasVault.withdraw.selector, g);
         b[n++] = Binding(Kind.LpVault, ILPVault.returnStray.selector, g);
         b[n++] =
             Binding(Kind.FirstLossReserve, IAvanaFirstLossReserve.withdraw.selector, AvanaRoles.RESERVE_WITHDRAW_ROLE);

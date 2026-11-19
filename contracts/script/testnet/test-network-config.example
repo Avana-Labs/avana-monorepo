@@ -10,7 +10,3 @@ KEEPER=<address>
 AAVE_PROTOCOL_GUARDIAN=<address>
 EMERGENCY_GUARDIAN=<address>
 JOINT_CONFIG_SAFE=<address>
-# Optional: wei the deployer funds Sepolia's gas vault with, 0 to 500000000000000000 (0 funds nothing; unset: 0.5 ETH).
-GAS_VAULT_FUND_WEI_SEPOLIA=500000000000000000
-# Optional: the same for Base Sepolia's gas vault.
-GAS_VAULT_FUND_WEI_BASE_SEPOLIA=500000000000000000

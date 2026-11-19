@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The catalog matches services/README.md (one row per signal, M-01 to M-36, each with a responder and a playbook),
+// The catalog matches services/README.md (one row per signal, M-01 to M-34, each with a responder and a playbook),
 // and the level helpers treat the limits exactly.
 
 import { readFileSync } from "node:fs";
@@ -11,8 +11,8 @@ import { SIGNALS, maxLevel, ratioLevel, signal, thresholdLevel } from "../src/si
 const README = readFileSync(new URL("../../README.md", import.meta.url), "utf8");
 
 describe("signal catalog", () => {
-  it("lists M-01 to M-36 once each, in order", () => {
-    expect(SIGNALS.map((s) => s.id)).toEqual(Array.from({ length: 36 }, (_, i) => `M-${String(i + 1).padStart(2, "0")}`));
+  it("lists M-01 to M-34 once each, in order", () => {
+    expect(SIGNALS.map((s) => s.id)).toEqual(Array.from({ length: 34 }, (_, i) => `M-${String(i + 1).padStart(2, "0")}`));
   });
 
   it("has every signal of the services README table and names its playbook", () => {
@@ -33,11 +33,6 @@ describe("signal catalog", () => {
     for (const id of ["M-31", "M-32", "M-33"] as const) expect(signal(id).source).toBe("keeper");
     expect(signal("M-34")).toMatchObject({ source: "snapshot", responders: ["keeperOnCall", "operators"], playbook: "P-08 (EMG-082)" });
     expect(signal("M-34").name).toContain("retired");
-  });
-
-  it("reads the gas vault's M-35 from the chain and M-36 from its events, under the keeper-gas playbook", () => {
-    expect(signal("M-35")).toMatchObject({ source: "snapshot", playbook: "P-22 (EMG-115)" });
-    expect(signal("M-36")).toMatchObject({ source: "events", playbook: "P-22 (EMG-115)" });
   });
 
   it("refuses an unknown signal", () => {

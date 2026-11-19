@@ -101,9 +101,5 @@ struct AvanaDeployment {
     address payoutEscrow;
     address flashSource;
     address flashLiquidator;
-    address[] operatorHelpers;
     address[] lpVaults;
-    address lens;
-    address[] lensModules;
-    address lensAaveSizing;
 }
