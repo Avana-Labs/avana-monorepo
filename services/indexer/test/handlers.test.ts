@@ -105,9 +105,9 @@ describe("custody", () => {
 
   it("holds a received position until it is returned", async () => {
     const run = new Run();
-    await run.deliver({ source: "LPVault", event: "PositionReceived", args: { positionKey: KEY, marketId: 7n, depositor: WALLET, units: 5n }, address: LP_VAULT, block: 20n, logIndex: 0 });
+    await run.deliver({ source: "LPVault", event: "PositionPledged", args: { positionKey: KEY, account: WALLET, marketId: 7n, from: WALLET, liquidity: 5n, credit: 5n }, address: LP_VAULT, block: 20n, logIndex: 0 });
     expect(run.store.rows(schema.lpPosition)[0]).toMatchObject({ held: true, stray: false, depositor: lower(WALLET) });
-    await run.deliver({ source: "LPVault", event: "PositionReturned", args: { positionKey: KEY, depositor: WALLET }, address: LP_VAULT, block: 21n, logIndex: 0 });
+    await run.deliver({ source: "LPVault", event: "PositionReleased", args: { positionKey: KEY, account: WALLET, recipient: WALLET, liquidity: 5n, credit: 5n }, address: LP_VAULT, block: 21n, logIndex: 0 });
     expect(run.store.rows(schema.lpPosition)[0]).toMatchObject({ held: false, lastBlock: 21n });
   });
 
