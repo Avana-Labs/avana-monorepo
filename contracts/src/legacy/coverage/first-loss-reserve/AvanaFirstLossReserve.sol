@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
+import {IAaveV4Hub} from "../../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAvanaFirstLossReserve} from "./IAvanaFirstLossReserve.sol";
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

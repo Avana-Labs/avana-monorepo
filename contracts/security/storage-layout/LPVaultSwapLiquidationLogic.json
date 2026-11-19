@@ -1,11 +1,11 @@
 {
   "contract": "LPVaultSwapLiquidationLogic",
-  "source": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+  "source": "src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
   "storage": [],
   "namespaces": {
     "erc7201:avana.storage.LPVaultSwap": {
       "baseSlot": "0x91af63178751821a6b1a96f50867937bf3006ecc962b49702910546a3afa6f00",
-      "declaredIn": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+      "declaredIn": "src/legacy/lp-vault-swap/LPVaultSwapStorage.sol",
       "fields": [
         {
           "path": "timelock",

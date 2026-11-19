@@ -1,6 +1,6 @@
 /*
- * First-Loss Reserve (src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol against
- * src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol, spec 2.14 First-Loss Reserve).
+ * First-Loss Reserve (src/legacy/coverage/first-loss-reserve/AvanaFirstLossReserve.sol against
+ * src/legacy/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol, spec 2.14 First-Loss Reserve).
  *
  * `coverDeficit(borrowSpoke, maxAmount)` calls `Hub.eliminateDeficit` at most once, only on its own `(HUB(),
  * ASSET_ID())`, only for a Borrow Spoke on its DAO-set allowlist, and only for

@@ -4,14 +4,14 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {IAaveV4Spoke} from "../../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {LPVaultSwapLiquidationLogic} from "../../../src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol";
+import {ILPVaultSwap} from "../../../src/legacy/lp-vault-swap/ILPVaultSwap.sol";
+import {LPVaultSwapLiquidationLogic} from "../../../src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol";
 import {
     LPVaultSwapImmutables,
     LiquidationParams,
     LiquidationResult,
     RouteMode
-} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+} from "../../../src/legacy/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {DebtReserveDef} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {MarketParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {Market} from "../../../src/types/MarketTypes.sol";

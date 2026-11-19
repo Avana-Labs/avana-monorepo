@@ -7,7 +7,7 @@ import {IAaveV3ACLManager} from "../interfaces/external/aave/IAaveV3ACLManager.s
 import {IAaveV3FlashLoanReceiver} from "../interfaces/external/aave/IAaveV3FlashLoanReceiver.sol";
 import {IAaveV3Pool} from "../interfaces/external/aave/IAaveV3Pool.sol";
 import {IAaveV3PoolAddressesProvider} from "../interfaces/external/aave/IAaveV3PoolAddressesProvider.sol";
-import {SettlementMath} from "../liquidation/lp-vault-swap/SettlementMath.sol";
+import {SettlementMath} from "../legacy/lp-vault-swap/SettlementMath.sol";
 import {IParameterStore} from "../policy/parameter-store/IParameterStore.sol";
 import {IFlashReceiver} from "./IFlashReceiver.sol";
 import {IFlashSource} from "./IFlashSource.sol";

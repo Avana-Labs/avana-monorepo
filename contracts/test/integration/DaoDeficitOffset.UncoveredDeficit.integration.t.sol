@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IDaoDeficitOffset} from "../../src/coverage/dao-deficit-offset/IDaoDeficitOffset.sol";
 import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
+import {IDaoDeficitOffset} from "../../src/legacy/coverage/dao-deficit-offset/IDaoDeficitOffset.sol";
 import {DaoDeficitOffsetFixture} from "../utils/fixtures/DaoDeficitOffsetFixture.sol";
 
 interface IHubLossViews {

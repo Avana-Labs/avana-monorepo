@@ -1,6 +1,6 @@
 /*
- * LPVaultSwap (planned implementation src/liquidation/lp-vault-swap/LPVaultSwap.sol, interface
- * src/liquidation/lp-vault-swap/ILPVaultSwap.sol, spec 2.11).
+ * LPVaultSwap (planned implementation src/legacy/lp-vault-swap/LPVaultSwap.sol, interface
+ * src/legacy/lp-vault-swap/ILPVaultSwap.sol, spec 2.11).
  *
  * What is proved, for the verified LPVaultSwap implementation (5.2 limitations):
  *   - entry gates of `liquidate`, the one liquidation entry point, for any caller: unfrozen caller, deadline, minimum

@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LPVaultSwapSettlement} from "../../../src/liquidation/lp-vault-swap/LPVaultSwapSettlement.sol";
-import {LPVaultSwapStorage} from "../../../src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol";
-import {LPVaultSwapImmutables, RouteMode} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {LPVaultSwapSettlement} from "../../../src/legacy/lp-vault-swap/LPVaultSwapSettlement.sol";
+import {LPVaultSwapStorage} from "../../../src/legacy/lp-vault-swap/LPVaultSwapStorage.sol";
+import {LPVaultSwapImmutables, RouteMode} from "../../../src/legacy/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @notice Minimal mintable token of the settlement harness.

@@ -248,7 +248,7 @@ _ex78 = (975_000 * 10**4 <= 10 * 1_950_000_000) and not (3_900_000 * 10**4 <= 10
 
 # Code: SettlementMath.flashPremiumWithinCap has the two branches modelled below, and both premium checks
 # (AaveV3FlashSource and FlashLiquidatorBase) call it; the Lens LiquidationPreview carries no flash field.
-_sm = (_SRC78 / "liquidation/lp-vault-swap/SettlementMath.sol").read_text()
+_sm = (_SRC78 / "legacy/lp-vault-swap/SettlementMath.sol").read_text()
 _code_forms = {
     "SettlementMath branch m <= 10^4": "if (maxFlashFeeBps <= BPS) return premium <= Math.mulDiv(maxFlashFeeBps, amount, BPS);" in _sm,
     "SettlementMath branch m > 10^4": "return Math.mulDiv(premium, BPS, maxFlashFeeBps, Math.Rounding.Ceil) <= amount;" in _sm,

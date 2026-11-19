@@ -3,12 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {IFlashSource} from "../../flash/IFlashSource.sol";
 import {IAaveV4Oracle} from "../../interfaces/external/aave/IAaveV4Oracle.sol";
 import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ITetherFee} from "../../interfaces/external/tether/ITetherFee.sol";
+import {IAvanaFirstLossReserve} from "../../legacy/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {RiskModuleMath} from "../../legacy/risk-module/RiskModuleMath.sol";
 import {RouteMath} from "../../liquidation/settlement-routes/RouteMath.sol";
 import {IParameterStore} from "../parameter-store/IParameterStore.sol";

@@ -5,10 +5,10 @@ pragma solidity 0.8.28;
 
 import {ILegacyAaveAdapter} from "../../../src/legacy/aave-adapter/ILegacyAaveAdapter.sol";
 import {AaveAdapterImmutables} from "../../../src/legacy/aave-adapter/types/AaveAdapterTypes.sol";
+import {ILPVaultSwap} from "../../../src/legacy/lp-vault-swap/ILPVaultSwap.sol";
+import {LPVaultSwapImmutables} from "../../../src/legacy/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {ILegacyRiskModule} from "../../../src/legacy/risk-module/ILegacyRiskModule.sol";
 import {RiskModuleImmutables} from "../../../src/legacy/risk-module/types/RiskModuleTypes.sol";
-import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {LPVaultSwapImmutables} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {MarketRegistryImmutables} from "../../../src/policy/market-registry/types/MarketRegistryTypes.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";

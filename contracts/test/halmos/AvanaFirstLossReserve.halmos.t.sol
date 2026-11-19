@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
-import {IAvanaFirstLossReserve} from "../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
+import {AvanaFirstLossReserve} from "../../src/legacy/coverage/first-loss-reserve/AvanaFirstLossReserve.sol";
+import {IAvanaFirstLossReserve} from "../../src/legacy/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {MockAuthority} from "../utils/mocks/MockAuthority.sol";
 import {MockDebtAsset} from "../utils/mocks/MockDebtAsset.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";

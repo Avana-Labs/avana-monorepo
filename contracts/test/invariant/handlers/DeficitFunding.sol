@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVaultSwapBase} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
+import {ILPVaultSwapBase} from "../../../src/legacy/lp-vault-swap/ILPVaultSwapBase.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 /// @title DeficitFunding

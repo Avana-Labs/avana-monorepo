@@ -9,7 +9,7 @@ import {ICollateralization} from "../../legacy/ICollateralization.sol";
 import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
 import {LegacyChainlinkPrice} from "../../legacy/LegacyChainlinkPrice.sol";
 import {LegacyPriceMath} from "../../legacy/LegacyPriceMath.sol";
-import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {ILPVaultSwap} from "../../legacy/lp-vault-swap/ILPVaultSwap.sol";
 import {IMarketRegistry} from "../../policy/market-registry/IMarketRegistry.sol";
 import {MarketStatus} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {DriftReason, Market} from "../../types/MarketTypes.sol";

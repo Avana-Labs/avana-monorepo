@@ -27,7 +27,7 @@
     {
       "fingerprint": "b1ec8f783baf0c3b",
       "check": "initialize-target",
-      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+      "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
       "function": "LPVaultSwap.initialize(address,address[])",
       "reason": "Informational reminder that the proxy must be initialized: initialize(timelock, initialKeepers) runs atomically in the ERC1967Proxy constructor (REQ-SWAP-040, REQ-ACCESS-153), and the implementation's constructor calls _disableInitializers, so neither the proxy nor the implementation can be initialized by anyone else. Covered by LPVaultSwap.Admin and LPVaultSwap.Admin.fuzz (initialKeeperList).",
       "approval": "pending review (approved pattern)"

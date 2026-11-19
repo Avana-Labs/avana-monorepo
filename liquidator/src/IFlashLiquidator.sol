@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LiquidationParams} from "avana/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {LiquidationParams} from "avana/legacy/lp-vault-swap/types/LPVaultSwapTypes.sol";
 
 /// @title IFlashLiquidator
 /// @notice Flash liquidation helper: borrows the debt asset from Aave V3 and runs `LPVaultSwap.liquidate` in the loan.

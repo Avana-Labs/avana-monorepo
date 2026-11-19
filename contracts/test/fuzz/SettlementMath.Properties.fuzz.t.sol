@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {SettlementMath} from "../../src/liquidation/lp-vault-swap/SettlementMath.sol";
+import {SettlementMath} from "../../src/legacy/lp-vault-swap/SettlementMath.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title SettlementMathPropertiesFuzzTest

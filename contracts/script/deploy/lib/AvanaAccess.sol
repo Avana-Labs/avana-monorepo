@@ -3,11 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAvanaFirstLossReserve} from "../../../src/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
 import {ILegacyLPVault} from "../../../src/legacy/ILegacyLPVault.sol";
 import {ILegacyVaultTokenFactory} from "../../../src/legacy/ILegacyVaultTokenFactory.sol";
-import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {IAvanaFirstLossReserve} from "../../../src/legacy/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
+import {ILPVaultSwap} from "../../../src/legacy/lp-vault-swap/ILPVaultSwap.sol";
 import {IMarketRegistry} from "../../../src/policy/market-registry/IMarketRegistry.sol";
 import {IMarketRegistryRoutes} from "../../../src/policy/market-registry/IMarketRegistryRoutes.sol";
 import {IParameterStore} from "../../../src/policy/parameter-store/IParameterStore.sol";

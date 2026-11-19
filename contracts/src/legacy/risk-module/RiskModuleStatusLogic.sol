@@ -8,7 +8,7 @@ import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ILegacyLPOracle} from "../../legacy/ILegacyLPOracle.sol";
 import {LegacyChainlinkPrice} from "../../legacy/LegacyChainlinkPrice.sol";
 import {LegacyPriceMath} from "../../legacy/LegacyPriceMath.sol";
-import {ILPVaultSwap} from "../../liquidation/lp-vault-swap/ILPVaultSwap.sol";
+import {ILPVaultSwap} from "../../legacy/lp-vault-swap/ILPVaultSwap.sol";
 import {DebtReserveDef, MarketStatus} from "../../policy/market-registry/types/MarketRegistryTypes.sol";
 import {AccountGateStatus, MarketGateStatus} from "../../types/MarketTypes.sol";
 import {PriceState} from "../../types/OracleTypes.sol";

@@ -8,11 +8,11 @@ pragma solidity 0.8.28;
 /// @dev A call that reverts or returns an unusable value counts as a failed check.
 // Loop lengths are the registry's size, which only governed operations grow.
 
-import {IAvanaFirstLossReserve} from "../../coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {IAaveV4Hub} from "../../interfaces/external/aave/IAaveV4Hub.sol";
 import {IAaveV4PriceFeed} from "../../interfaces/external/aave/IAaveV4PriceFeed.sol";
 import {IAaveV4Spoke} from "../../interfaces/external/aave/IAaveV4Spoke.sol";
 import {ICollateralization} from "../../legacy/ICollateralization.sol";
+import {IAvanaFirstLossReserve} from "../../legacy/coverage/first-loss-reserve/IAvanaFirstLossReserve.sol";
 import {Market} from "../../types/MarketTypes.sol";
 import {PledgeCounters} from "../../types/PositionTypes.sol";
 import {DebtReserveDef, TokenDef} from "../market-registry/types/MarketRegistryTypes.sol";

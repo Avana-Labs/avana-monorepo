@@ -4,9 +4,9 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ILock} from "../../../src/legacy/ILock.sol";
-import {ILPVaultSwap} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwap.sol";
-import {ILPVaultSwapBase} from "../../../src/liquidation/lp-vault-swap/ILPVaultSwapBase.sol";
-import {LiquidationParams, LiquidationResult} from "../../../src/liquidation/lp-vault-swap/types/LPVaultSwapTypes.sol";
+import {ILPVaultSwap} from "../../../src/legacy/lp-vault-swap/ILPVaultSwap.sol";
+import {ILPVaultSwapBase} from "../../../src/legacy/lp-vault-swap/ILPVaultSwapBase.sol";
+import {LiquidationParams, LiquidationResult} from "../../../src/legacy/lp-vault-swap/types/LPVaultSwapTypes.sol";
 import {IPayoutEscrow} from "../../../src/liquidation/payout-escrow/IPayoutEscrow.sol";
 import {PayoutToken} from "./PayoutToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
