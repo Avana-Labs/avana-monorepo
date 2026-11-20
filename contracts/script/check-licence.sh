@@ -43,7 +43,7 @@ find "${roots[@]}" -name '*.sol' -type f | LC_ALL=C sort | xargs awk -v allow="$
       }
       return
     }
-    if (f ~ /^src\/interfaces\/external\//) {
+    if (f ~ /^src\/dependencies\//) {
       if (l1 !~ /^\/\/ SPDX-License-Identifier: [A-Za-z0-9.+-]+$/) {
         printf "%s: third-party interface without an SPDX identifier on its first line\n", f; bad = 1
       }
