@@ -9,6 +9,8 @@ need no list of files: every harness and every src/ contract found in the build 
     security-targets.py assertion-sigs <build> <contract>
         Signature of every state-changing function of the contract that is not a `property_` function: the entry
         points of assertion mode.
+    security-targets.py external-sigs <build> <contract>
+        Signature of every externally callable function in the contract ABI.
     security-targets.py code <build> <contract> <file>
         Writes the runtime code of the contract (hex, no 0x) to <file>.
     security-targets.py creation-code <build> <contract> <file>
@@ -66,6 +68,17 @@ def assertion_sigs(build: Path, contract: str) -> None:
             if item.get("type") != "function" or item["name"].startswith("property_"):
                 continue
             if item.get("stateMutability") in ("view", "pure"):
+                continue
+            print(f"{item['name']}({','.join(canonical(p) for p in item['inputs'])})")
+        return
+
+
+def external_sigs(build: Path, contract: str) -> None:
+    for name, _, data in artifacts(build):
+        if name != contract:
+            continue
+        for item in data["abi"]:
+            if item.get("type") != "function":
                 continue
             print(f"{item['name']}({','.join(canonical(p) for p in item['inputs'])})")
         return
@@ -187,6 +200,8 @@ def main() -> int:
         harnesses(build, sys.argv[3:])
     elif command == "assertion-sigs":
         assertion_sigs(build, sys.argv[3])
+    elif command == "external-sigs":
+        external_sigs(build, sys.argv[3])
     elif command == "code" and len(sys.argv) == 5:
         code(build, sys.argv[3], Path(sys.argv[4]))
     elif command == "creation-code" and len(sys.argv) == 5:

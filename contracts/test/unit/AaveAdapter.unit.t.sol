@@ -196,6 +196,10 @@ contract AaveAdapterUnitTest is AaveAdapterTestBase {
     function test_withdraw_liquidityAtRecordIsWholeNft() public {
         bytes32 key = _mint(alice, FULL_LOWER, FULL_UPPER, 1e18);
         _pledge(alice, key);
+        // The event reports a whole-NFT release as liquidity 0 (IAaveAdapter.Withdrawn), so an indexer does not book
+        // the release of the NFT as a partial removal that leaves a position behind.
+        vm.expectEmit(address(adapter));
+        emit IAaveAdapter.Withdrawn(alice, key, alice, 0, 1e18);
         vm.prank(alice);
         adapter.withdraw(key, 1e18, 0, 0, alice);
         assertEq(pm.ownerOf(uint256(key)), alice);

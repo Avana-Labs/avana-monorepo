@@ -10,6 +10,7 @@ import {LPVaultTestToken, MockLPVault, MockPositionManager} from "../utils/mocks
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @notice Shared setup: an LPVault on a mock position manager, one band market `[-1000, 1000]`, the adapter and
@@ -592,5 +593,41 @@ contract LockProbe {
 
     function probe() external {
         sawLocked = VAULT.locked();
+    }
+}
+
+/// @notice ClTickMath against Uniswap v4-core's TickMath: the square-root price of every tick bit, on both sides of
+/// tick 0 and at the ends of the range, and the tick of each of those prices and of the prices one below and one above
+/// them. A wrong price here misvalues every concentrated-liquidity position the LPVault credits.
+contract ClTickMathUnitTest is Test {
+    function test_matchesUniswapTickMathOnEveryTickBit() public pure {
+        for (uint256 k = 0; k < 20; ++k) {
+            int24 t = int24(int256(1 << k));
+            _check(t);
+            _check(-t);
+            _check(t - 1);
+            _check(1 - t);
+        }
+        _check(ClTickMath.MAX_TICK);
+        _check(ClTickMath.MIN_TICK);
+        _check(0x2aaaa);
+        _check(-0x55555);
+        _check(0x7ffff);
+        _check(-0x7ffff);
+    }
+
+    function _check(
+        int24 t
+    ) internal pure {
+        if (t > ClTickMath.MAX_TICK || t < ClTickMath.MIN_TICK) return;
+        uint160 p = TickMath.getSqrtPriceAtTick(t);
+        assertEq(ClTickMath.getSqrtPriceAtTick(t), p, "sqrt price at tick");
+        if (p < TickMath.MAX_SQRT_PRICE) assertEq(ClTickMath.getTickAtSqrtPrice(p), t, "tick at its own price");
+        if (p > TickMath.MIN_SQRT_PRICE) {
+            assertEq(ClTickMath.getTickAtSqrtPrice(p - 1), t - 1, "tick just below");
+        }
+        if (p + 1 < TickMath.MAX_SQRT_PRICE) {
+            assertEq(ClTickMath.getTickAtSqrtPrice(p + 1), t, "tick just above");
+        }
     }
 }

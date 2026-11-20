@@ -129,6 +129,30 @@ contract LPVaultSlipstreamUnitTest is Test {
         assertEq(npms[1].ownerOf(_id(key)), user);
     }
 
+    /// @notice Fee growth recorded outside the position's ticks (earned before the position existed, or while the price
+    /// sat on the other side of a tick) is not the position's: the view counts only the growth inside, as the pool and
+    /// the position manager do, so it never reports fees the collect will not pay.
+    function test_feesOf_excludesGrowthOutsideTheTicks() public {
+        npms[1].setTrackFees(true);
+        bytes32 key = _mint(-1000, 1000, 1e18);
+        vm.prank(adapter);
+        vault.pledge(user, account, MARKET, key);
+        uint256 q128 = uint256(1) << 128;
+        pool.setFeeGrowthGlobal(3 * q128, 4 * q128);
+        pool.setFeeGrowthOutside(-1000, q128, q128);
+        pool.setFeeGrowthOutside(1000, q128 / 2, 2 * q128);
+        (uint256 f0, uint256 f1) = vault.feesOf(key);
+        assertEq(f0, 1.5e18, "token0: 3 - 1 - 0.5 per unit of liquidity");
+        assertEq(f1, 1e18, "token1: 4 - 1 - 2 per unit of liquidity");
+
+        bytes32[] memory keys = new bytes32[](1);
+        keys[0] = key;
+        vm.prank(adapter);
+        vault.collectFees(account, keys, recipient);
+        assertEq(t0.balanceOf(recipient), f0, "the collect pays what the view reported");
+        assertEq(t1.balanceOf(recipient), f1);
+    }
+
     function test_pledge_refusesAStakedNftAndAnUnknownGeneration() public {
         bytes32 key = _mint(-1000, 1000, 1e18);
         MockCLGauge gauge = new MockCLGauge(address(pool), npms[1], new MintableToken("AERO", 18));
