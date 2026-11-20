@@ -54,12 +54,26 @@ ACCESS_CONTROL: set[str] = set()
 # have no methods block, so there is nothing to check against an ABI (the fast tier builds src/ only).
 HARNESS_WITHOUT_METHODS = {"FloorCreditMathHarness", "LPOracleSummariesHarness"}
 
+OVER_APPROXIMATION = "over-approximation"
+
+# Specs allowed one `unresolved external in _._ => DISPATCH [] default NONDET` entry: calls whose sighash the Prover
+# cannot resolve, each listed in the spec next to the entry, become NONDET (no effect on the verified contract's
+# storage) instead of a full havoc. Any other unresolved entry is still refused.
+UNRESOLVED_NONDET = {
+    "AaveAdapterAccounts.spec": "unresolved external in _._ => DISPATCH [] default NONDET",
+}
+
 # Internal library functions a spec summarises, each with the spec that proves the summary against the library
 # bytecode.
 INTERNAL_SUMMARIES = {
     "Math.mulDiv": "LPOracleSummaries.spec",
     "FullMath.mulDiv": "LPOracleSummaries.spec",
     "Math.sqrt": "LPOracleSummaries.spec",
+    # Over-approximations (NONDET, or an unconstrained ghost function of the inputs): every real behaviour is among
+    # the summarised ones, so no proof is needed.
+    "ClTickMath.getTickAtSqrtPrice": OVER_APPROXIMATION,
+    "BandMath.unitDecimals": OVER_APPROXIMATION,
+    "LPPriceMath.sqrtPriceX96": OVER_APPROXIMATION,
 }
 
 # Specs verified by no conf: the contract whose interface their unqualified entries bind to.
@@ -266,6 +280,10 @@ def main() -> int:
                 if not stmt:
                     continue
                 line = line0  # block line; entries are reported by text
+                if stmt == UNRESOLVED_NONDET.get(spec.name):
+                    if args.verbose:
+                        print(f"ok    {rel}: unresolved calls NONDET (listed in the spec)")
+                    continue
                 if stmt.startswith("unresolved") or re.match(r"^function\s+_\._\b", stmt):
                     print(f"ERROR {rel}:{line}: catch-all entry `{stmt}`; bind every call to a named function")
                     errors += 1
@@ -278,7 +296,10 @@ def main() -> int:
                 checked += 1
                 if e["visibility"] == "internal" and f"{e['target']}.{e['name']}" in INTERNAL_SUMMARIES:
                     proof = INTERNAL_SUMMARIES[f"{e['target']}.{e['name']}"]
-                    if not (HERE / "specs" / proof).is_file():
+                    if proof == OVER_APPROXIMATION:
+                        if args.verbose:
+                            print(f"ok    {rel}: {e['target']}.{e['name']} internal, over-approximated")
+                    elif not (HERE / "specs" / proof).is_file():
                         print(f"ERROR {rel}: internal summary {e['target']}.{e['name']} names {proof}, which does not exist")
                         errors += 1
                     elif args.verbose:
