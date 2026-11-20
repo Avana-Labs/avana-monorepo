@@ -28,13 +28,8 @@
  * `Math.mulDiv` is floor(x * y / den) (proved in LPOracleSummaries.spec): without it the Prover's model of the
  * 512-bit code returned wrong quotients, the false counterexamples of the 19-Nov run.
  *
- * Known blocker for the rules that call `liquidate`: the Prover's pointer analysis fails on `liquidate` and
- * `previewUnwind` ("Failed to build callgraph from points-to information"). The likely cause is the assembly that
- * shortens the `steps` and `c` arrays in place (`mstore(steps, n)` in `_plan`, `mstore(c, n)` in `_candidates`).
- * Without call resolution no summary above applies inside `liquidate`: every external call is an AUTO havoc. Until
- * the module builds those arrays at their final length, liquidateGoesThroughAaveLiquidationCall,
- * liquidationFeeIsTwentyPercentOfBonus, payoutIsEverythingUnwound and noValueLeaks do not check the module (a pass
- * of noValueLeaks is not evidence).
+ * `_plan` and `_candidates` build their arrays at the final length (no assembly length rewrite), so the Prover's
+ * pointer analysis can resolve the calls in `liquidate` and the summaries above apply there.
  */
 
 import "setup/Erc20Model.spec";

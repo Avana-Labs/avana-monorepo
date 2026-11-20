@@ -181,7 +181,7 @@ contract LiquidationModule is ILiquidationModule, ReentrancyGuardTransient {
     ) internal view returns (UnwindStep[] memory steps, uint256 shortfall) {
         Candidate[] memory c = _candidates(account, marketId, m);
         _sort(c);
-        steps = new UnwindStep[](c.length);
+        UnwindStep[] memory all = new UnwindStep[](c.length);
         uint256 n = 0;
         for (uint256 i = 0; i < c.length && units != 0; ++i) {
             uint256 take = units < c[i].cap ? units : c[i].cap;
@@ -192,10 +192,12 @@ contract LiquidationModule is ILiquidationModule, ReentrancyGuardTransient {
             if (credit == 0) continue;
             // At most the record's uint128 credit (take <= cap).
             // forge-lint: disable-next-line(unsafe-typecast)
-            steps[n++] = UnwindStep({positionKey: c[i].key, credit: uint128(credit), units: take});
+            all[n++] = UnwindStep({positionKey: c[i].key, credit: uint128(credit), units: take});
         }
-        assembly ("memory-safe") {
-            mstore(steps, n)
+        // Copied into an array of the final length (no in-place length rewrite, which formal tools cannot follow).
+        steps = new UnwindStep[](n);
+        for (uint256 i = 0; i < n; ++i) {
+            steps[i] = all[i];
         }
         shortfall = units;
     }
@@ -208,8 +210,8 @@ contract LiquidationModule is ILiquidationModule, ReentrancyGuardTransient {
     ) internal view returns (Candidate[] memory c) {
         ILPVault vault = ILPVault(LP_VAULT);
         bytes32[] memory keys = vault.positionsOf(account);
-        c = new Candidate[](keys.length);
         if (keys.length == 0) return c;
+        Candidate[] memory all = new Candidate[](keys.length);
         Pricing memory pr = _pricing(ILPOracle(m.lpOracle));
         uint256 n = 0;
         for (uint256 i; i < keys.length; ++i) {
@@ -225,12 +227,14 @@ contract LiquidationModule is ILiquidationModule, ReentrancyGuardTransient {
             uint256 cap = LiquidationMath.capacity(
                 LiquidationMath.value(a0, a1, pr.p0, pr.p1, pr.d0, pr.d1), pr.unitValue, pr.unitScale, pos.credit
             );
-            c[n++] = Candidate({
+            all[n++] = Candidate({
                 key: keys[i], credit: pos.credit, cap: cap, ratio: LiquidationMath.excessRatio(cap, pos.credit)
             });
         }
-        assembly ("memory-safe") {
-            mstore(c, n)
+        // Copied into an array of the final length (no in-place length rewrite).
+        c = new Candidate[](n);
+        for (uint256 i = 0; i < n; ++i) {
+            c[i] = all[i];
         }
     }
 
