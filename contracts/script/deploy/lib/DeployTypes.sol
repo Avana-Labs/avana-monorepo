@@ -35,6 +35,16 @@ struct OperatorHelperInput {
     uint256 maxTopUpBps;
 }
 
+/// @notice The keeper top-up wallet (`keeperTopUp`): it holds the chain's keeper gas and refills every keeper signer
+/// (the `keepers` and each operator helper's `signer`) that is below `minBalanceWei` back to `targetBalanceWei`
+/// (`11_FundKeepers`). Required on every chain but a local anvil node.
+struct KeeperTopUpInput {
+    // KEEPER_TOPUP_WALLET when set, else the config's `keeperTopUp.wallet`.
+    address wallet;
+    uint256 minBalanceWei;
+    uint256 targetBalanceWei;
+}
+
 /// @notice The RiskModule settings the listing-setup operation sets on every stack.
 struct CoreParams {
     // Avana's share of the realized liquidation surplus, bps (at most `RiskModule.MAX_FEE_SHARE_BPS`).
@@ -60,6 +70,7 @@ struct ChainInputs {
     address[] keepers;
     OperatorHelperInput[] operatorHelpers;
     IntegrationInput[] integrations;
+    KeeperTopUpInput keeperTopUp;
 }
 
 /// @notice The core stack of one integration: the RiskModule's `LP_VAULT` is immutable, so each LPVault has its own.

@@ -12,13 +12,13 @@ import { FIRST_RELEASE, LATER_RELEASE, baseConfig, firstRelease, laterRelease, t
 import { type HubInput, type TestValues, planHub } from "../local/operator/hub.ts";
 import { ADDRESS_ROLES, SIGNER_ROLES, type TestnetRoles, checkRoles, keysOf, parseConfigFile } from "./keys.ts";
 import {
-  NATIVE_V4_POOL_USD, WORLD_STEP, baseRoles, isNativeV4Pool, nativeV4PoolWei, syncNativeV4Pools, testnetPatch,
+  KEEPER_TOP_UP, NATIVE_V4_POOL_USD, WORLD_STEP, baseRoles, isNativeV4Pool, nativeV4PoolWei, syncNativeV4Pools, testnetPatch,
 } from "./testnet.ts";
 
 const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
 const signers = Object.fromEntries(SIGNER_ROLES.map((k, i) => [k, addr(i + 1)]));
 const roles = Object.fromEntries(ADDRESS_ROLES.map((k, i) => [k, addr(100 + i)]));
-const KEYS = ["KEYSTORE_DIR", "PASSWORD_FILE", "DEPLOYER", "GOVERNANCE", "PAYLOADS_CONTROLLER", "ORACLES"];
+const KEYS = ["KEYSTORE_DIR", "PASSWORD_FILE", "DEPLOYER", "GOVERNANCE", "PAYLOADS_CONTROLLER", "ORACLES", "KEEPER_TOPUP_WALLET"];
 
 test("the committed config template parses, holds every key and only placeholders", () => {
   const t = parseConfigFile(readFileSync(new URL("./test-network-config.example", import.meta.url), "utf8"));
@@ -30,7 +30,7 @@ test("the committed config template parses, holds every key and only placeholder
 
 test("the config file names every keystore, each once, under absolute paths", () => {
   const dir = process.platform === "win32" ? "C:\\k" : "/k";
-  const good = { KEYSTORE_DIR: dir, PASSWORD_FILE: `${dir}p`, DEPLOYER: "a", GOVERNANCE: "b", PAYLOADS_CONTROLLER: "c", ORACLES: "d,e,f,g" };
+  const good = { KEYSTORE_DIR: dir, PASSWORD_FILE: `${dir}p`, DEPLOYER: "a", GOVERNANCE: "b", PAYLOADS_CONTROLLER: "c", ORACLES: "d,e,f,g", KEEPER_TOPUP_WALLET: "h" };
   const { keys, errors } = keysOf(good);
   assert.deepEqual(errors, []);
   assert.equal(Object.keys(keys!.keystores).length, SIGNER_ROLES.length);
@@ -38,6 +38,7 @@ test("the config file names every keystore, each once, under absolute paths", ()
   assert.match(keysOf({ ...good, GOVERNANCE: "a" }).errors.join(), /its own keystore/);
   assert.match(keysOf({ ...good, KEYSTORE_DIR: "k" }).errors.join(), /KEYSTORE_DIR/);
   assert.match(keysOf({ ...good, DEPLOYER: undefined }).errors.join(), /deployer: no keystore/);
+  assert.match(keysOf({ ...good, KEEPER_TOPUP_WALLET: undefined }).errors.join(), /KEEPER_TOPUP_WALLET: no keystore name.*required/);
 });
 
 test("sound roles pass; a missing signer, a bad address and a shared account are each refused", () => {
@@ -161,7 +162,7 @@ test("a test network's market parameters are the local stack's, from test-values
   // ID, and the route depth threshold a chain that is not a development node requires (from the test values too).
   const strip = (cfg: Record<string, any>) => {
     const c = structuredClone(cfg);
-    for (const k of ["network", "chainId", "release", "governance", "operatorHelpers", "keepers"]) delete c[k];
+    for (const k of ["network", "chainId", "release", "governance", "operatorHelpers", "keepers", "keeperTopUp"]) delete c[k];
     delete c.parameters.timelockNormalDelay;
     delete c.parameters.globals.feeRecipient;
     delete c.chain.operationGasBudget;
@@ -185,6 +186,7 @@ test("a test network's market parameters are the local stack's, from test-values
     }
     assert.ok(t.listing.markets.length > 0, `${testnet}: its Hub files list markets`);
     assert.deepEqual(strip(t), strip(l), `${testnet}: every value but the roles and delays is the local stack's`);
+    assert.deepEqual(t.keeperTopUp, { wallet: roles.signers.keeperTopUp, ...KEEPER_TOP_UP[testnet] }, `${testnet}: the keeper top-up wallet`);
     // The values come from test-values.json: the DAO's per debt asset and per token, the market ladder per market.
     for (const d of t.aavePayload.debtAssets) for (const [k, v] of Object.entries(tv.debtAssets?.[d.symbol] ?? {})) if (k in d) assert.deepEqual(d[k], v, `${testnet} ${d.symbol}.${k}`);
     for (const tok of t.listing.tokens) for (const [k, v] of Object.entries({ ...tv.tokens?.default, ...tv.tokens?.[tok.symbol] })) assert.deepEqual(tok[k], v, `${testnet} ${tok.symbol}.${k}`);

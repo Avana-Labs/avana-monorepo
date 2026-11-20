@@ -605,7 +605,7 @@ export function firstRelease(c: LocalChain, d = releaseDelays(c)): string[] {
   return [
     ...head, "02-test-world", "03-avana", "04-access-operations", `advance:${d.normal + 1}`, "05-execute-access-operations",
     "06-aave-deployment-aip", "07-deploy-first-loss-reserves", "08-aave-loss-layers-aip", "07-fund-first-loss-reserves",
-    ...listingSetupSteps(d), "swap-contracts", "manifest", "treasury",
+    ...listingSetupSteps(d), "11-fund-keepers", "swap-contracts", "manifest", "treasury",
   ];
 }
 

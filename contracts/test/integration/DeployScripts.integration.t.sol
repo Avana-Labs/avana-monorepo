@@ -5,6 +5,8 @@ pragma solidity 0.8.28;
 
 import {IAccessManagerOps} from "../../script/deploy/lib/AccessOperations.sol";
 import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
+import {DeployInputs} from "../../script/deploy/lib/DeployInputs.sol";
+import {OperatorHelperInput} from "../../script/deploy/lib/DeployTypes.sol";
 import {AaveGovernanceExecutorOwnedStandIn} from "../../script/deploy/local/AaveGovernanceExecutorOwnedStandIn.sol";
 import {IFirstLossReserve} from "../../src/coverage/first-loss-reserve/IFirstLossReserve.sol";
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
@@ -22,6 +24,9 @@ import {
     ICoverageHubConfigurator
 } from "../utils/fixtures/CoverageHubFixture.sol";
 import {MockDebtAsset} from "../utils/mocks/MockDebtAsset.sol";
+import {Test} from "forge-std/Test.sol";
+import {VmSafe} from "forge-std/Vm.sol";
+import {console2} from "forge-std/console2.sol";
 
 /// @notice An 8-decimal Chainlink-style feed the AaveOracle (`latestAnswer`) and the LPOracle (`latestRoundData`) read.
 contract DeployTestFeed {
@@ -84,11 +89,21 @@ interface IDeployStep {
     function run() external;
 }
 
+/// @notice `DeployInputs._keeperTopUp` on a config given as text.
+contract KeeperTopUpCheck is DeployInputs {
+    function wallet(
+        string memory json
+    ) external view returns (address) {
+        return _keeperTopUp(json, _addrs(json, ".keepers"), new OperatorHelperInput[](0)).wallet;
+    }
+}
+
 /// @title DeployScriptsIntegrationTest
 /// @notice The step-9 deploy scripts end to end on a local chain: the real Aave V4 (pinned build) with its governance
-/// executor stand-in, real Uniswap v3 pools, and every Avana step from `00-factories` to `09-execute-listing-activate`
-/// in order, run as `script/deploy/step.sh` runs them on anvil (the operations scheduled as the governance Safe and
-/// executed once the governance delay has passed, the Aave AIPs run through the executor).
+/// executor stand-in, real Uniswap v3 pools, and every Avana step from `00-factories` to `11-fund-keepers` in order,
+/// run as `script/deploy/step.sh` runs them on anvil (the operations scheduled as the governance Safe and executed once
+/// the governance delay has passed, the Aave AIPs run through the executor). Each step's gas is logged (`-vv`) for the
+/// gas table of script/README.md.
 /// @dev Runs in the test's own chain by default and on a fork of a local anvil node with `AVANA_DEPLOY_TEST_RPC`.
 /// The scripts read a config this test writes to `deployments-local/deploy-test/` and write their outputs next to
 /// it. Aave's side of `06-aave-deployment-aip` (GHO on the Hub, the Lend and CDP Spokes, the credit line) is set up
@@ -104,6 +119,11 @@ contract DeployScriptsIntegrationTest is AaveV4Fixture, ClPoolFixture {
     address internal controller = makeAddr("payloadsController");
     address internal tokenMinter = makeAddr("tokenMinter");
     address internal riskSteward = makeAddr("riskSteward");
+    address internal topUpWallet = makeAddr("keeperTopUpWallet");
+
+    uint256 internal constant KEEPER_MIN = 1 ether;
+    uint256 internal constant KEEPER_TARGET = 3 ether;
+    uint256 internal constant TOP_UP_FUNDS = 10 ether;
 
     AaveGovernanceExecutorOwnedStandIn internal executor;
     address internal nfpm;
@@ -115,6 +135,14 @@ contract DeployScriptsIntegrationTest is AaveV4Fixture, ClPoolFixture {
     IClPool internal stablePool;
     IClPool internal daiPool;
     DeployTestFeed internal usdFeed;
+
+    struct StepGas {
+        string step;
+        uint256 gas;
+        uint256 txs;
+    }
+
+    StepGas[] private _gas;
 
     function setUp() public {
         // `AVANA_DEPLOY_TEST_RPC=http://127.0.0.1:8545` runs the same flow on a fork of a local anvil node.
@@ -154,24 +182,34 @@ contract DeployScriptsIntegrationTest is AaveV4Fixture, ClPoolFixture {
             _checkPool(rm, manager, adapter, module, pools[i], ltvs[i]);
         }
         assertEq(vm.parseJsonUintArray(vm.readFile(_out("markets")), ".marketIds").length, 4, "four markets recorded");
+        // 11-fund-keepers: the keeper, below its minimum, is refilled to its target by the top-up wallet only.
+        assertEq(keeper.balance, KEEPER_TARGET, "keeper signer at its target");
+        assertEq(topUpWallet.balance, TOP_UP_FUNDS - KEEPER_TARGET, "the top-up wallet paid the refill");
+        uint256 sent = _gas.length;
+        _run("11-fund-keepers (rerun)", "11_FundKeepers.s.sol:FundKeepers");
+        assertEq(_gas[sent].txs, 0, "a signer at its target gets nothing");
+        _logGas();
     }
 
     // ─── Steps ───
 
     function _runSteps() private {
-        _run("00_Factories.s.sol:Factories");
-        _run("03_DeployAvana.s.sol:DeployAvana");
+        _run("00-factories", "00_Factories.s.sol:Factories");
+        _run("03-avana", "03_DeployAvana.s.sol:DeployAvana");
         vm.setEnv("AVANA_COVERAGE_STEP", "deploy");
-        _run("07_DeployFirstLossReserves.s.sol:DeployFirstLossReserves");
-        _run("08_AaveLossLayersPayload.s.sol:AaveLossLayersPayload");
+        _run("07-deploy-first-loss-reserves", "07_DeployFirstLossReserves.s.sol:DeployFirstLossReserves");
+        _run("08-aave-loss-layers-aip", "08_AaveLossLayersPayload.s.sol:AaveLossLayersPayload");
         vm.setEnv("AVANA_COVERAGE_STEP", "fund");
-        _run("07_DeployFirstLossReserves.s.sol:DeployFirstLossReserves");
+        _run("07-fund-first-loss-reserves", "07_DeployFirstLossReserves.s.sol:DeployFirstLossReserves");
         _governed("setup", "listing-setup");
         _governed("markets", "listing-markets");
         vm.setEnv("AVANA_LISTING_STEP", "vault-tokens");
-        _run("09_ListMarkets.s.sol:ListMarkets");
-        _run("10_AaveListingPayload.s.sol:AaveListingPayload");
+        _run("09-vault-tokens", "09_ListMarkets.s.sol:ListMarkets");
+        _run("10-aave-markets-aip", "10_AaveListingPayload.s.sol:AaveListingPayload");
         _governed("activate", "listing-activate");
+        vm.deal(keeper, 0);
+        vm.deal(topUpWallet, TOP_UP_FUNDS);
+        _run("11-fund-keepers", "11_FundKeepers.s.sol:FundKeepers");
     }
 
     /// @dev A `09_ListMarkets` step that schedules an operation, then `05_ExecuteOperations` once it is ready.
@@ -180,21 +218,71 @@ contract DeployScriptsIntegrationTest is AaveV4Fixture, ClPoolFixture {
         string memory operation
     ) private {
         vm.setEnv("AVANA_LISTING_STEP", step);
-        _run("09_ListMarkets.s.sol:ListMarkets");
+        _run(string.concat("09-listing-", step), "09_ListMarkets.s.sol:ListMarkets");
         vm.warp(block.timestamp + NORMAL_DELAY + 1);
         vm.roll(block.number + 1);
         vm.setEnv("AVANA_OPERATIONS", operation);
-        _run("05_ExecuteOperations.s.sol:ExecuteOperations");
+        _run(string.concat("09-execute-listing-", step), "05_ExecuteOperations.s.sol:ExecuteOperations");
     }
 
+    /// @dev Runs one step and records its gas: the execution gas of the run (an upper bound: it includes the script's
+    /// own reads and string building) plus, for each transaction the step broadcasts (a call or create the script sends
+    /// as another account), the intrinsic 21,000 gas and its calldata (EIP-2028; a create adds 32,000 and the EIP-3860
+    /// init-code words). The gas reaches the log (`-vv`); script/README.md quotes it.
     function _run(
+        string memory step,
         string memory artifact
     ) private {
         address at = makeAddr(artifact);
         vm.etch(at, vm.getDeployedCode(artifact));
         // On a fork a contract placed during the test reaches the cheatcodes only once allowed.
         vm.allowCheatcodes(at);
+        vm.startStateDiffRecording();
+        uint256 g = gasleft();
         IDeployStep(at).run();
+        g -= gasleft();
+        (uint256 txs, uint256 intrinsic) = _broadcasts(vm.stopAndReturnStateDiff(), at);
+        _gas.push(StepGas(step, g + intrinsic, txs));
+    }
+
+    /// @dev The transactions a step broadcast and their intrinsic and calldata gas, from its recorded accesses: the
+    /// calls and creates one level below the script whose sender is not the script itself.
+    function _broadcasts(
+        VmSafe.AccountAccess[] memory acc,
+        address script
+    ) private view returns (uint256 txs, uint256 intrinsic) {
+        uint64 top = type(uint64).max - 1;
+        for (uint256 i = 0; i < acc.length; ++i) {
+            if (acc[i].account == script && acc[i].accessor == address(this)) {
+                top = acc[i].depth;
+                break;
+            }
+        }
+        for (uint256 i = 0; i < acc.length; ++i) {
+            VmSafe.AccountAccess memory a = acc[i];
+            if (a.depth != top + 1 || a.accessor == script || a.account == address(vm)) continue;
+            bool create = a.kind == VmSafe.AccountAccessKind.Create;
+            if (!create && a.kind != VmSafe.AccountAccessKind.Call) continue;
+            ++txs;
+            intrinsic += 21_000;
+            for (uint256 j = 0; j < a.data.length; ++j) {
+                intrinsic += a.data[j] == 0 ? 4 : 16;
+            }
+            if (create) intrinsic += 32_000 + 2 * ((a.data.length + 31) / 32);
+        }
+    }
+
+    function _logGas() private view {
+        uint256 total;
+        uint256 txs;
+        for (uint256 i = 0; i < _gas.length; ++i) {
+            console2.log(
+                string.concat("gas ", _gas[i].step, " ", vm.toString(_gas[i].gas), " txs ", vm.toString(_gas[i].txs))
+            );
+            total += _gas[i].gas;
+            txs += _gas[i].txs;
+        }
+        console2.log(string.concat("gas total ", vm.toString(total), " txs ", vm.toString(txs)));
     }
 
     function _out(
@@ -403,7 +491,9 @@ contract DeployScriptsIntegrationTest is AaveV4Fixture, ClPoolFixture {
                 _parameters(),
                 ',"keepers":[',
                 _q(keeper),
-                '],"operatorHelpers":[],"integrations":[',
+                '],"operatorHelpers":[],"keeperTopUp":',
+                _keeperTopUp(topUpWallet),
+                ',"integrations":[',
                 _integration(),
                 '],"aavePayload":',
                 _aavePayload(),
@@ -413,6 +503,20 @@ contract DeployScriptsIntegrationTest is AaveV4Fixture, ClPoolFixture {
                 _listing(),
                 "}"
             )
+        );
+    }
+
+    function _keeperTopUp(
+        address wallet
+    ) private pure returns (string memory) {
+        return string.concat(
+            '{"wallet":',
+            _q(wallet),
+            ',"minBalanceWei":"',
+            vm.toString(KEEPER_MIN),
+            '","targetBalanceWei":"',
+            vm.toString(KEEPER_TARGET),
+            '"}'
         );
     }
 
@@ -555,6 +659,48 @@ contract DeployScriptsIntegrationTest is AaveV4Fixture, ClPoolFixture {
             '","integrationId":1,"spoke":"cdpStable","pool":"',
             pool,
             '","maxLiquidationBonus":10500,"marketUsdCap":5000000}'
+        );
+    }
+}
+
+/// @title KeeperTopUpRequirementTest
+/// @notice `DeployInputs._keeperTopUp`: off anvil the keeper top-up wallet is required, with its two balances, and is
+/// never a keeper signer; on anvil a config may leave it out. The config is passed as text, so nothing here touches the
+/// environment or the files the deploy test reads.
+contract KeeperTopUpRequirementTest is Test {
+    address internal keeper = makeAddr("keeper");
+    address internal topUpWallet = makeAddr("keeperTopUpWallet");
+
+    function test_keeperTopUpWalletIsRequiredOffAnvil() public {
+        KeeperTopUpCheck check = new KeeperTopUpCheck();
+        string memory k = string.concat('{"keepers":["', vm.toString(keeper), '"]');
+        string memory noWallet = string.concat(k, "}");
+        assertEq(check.wallet(noWallet), address(0), "anvil runs without one");
+        vm.chainId(11_155_111);
+        vm.expectRevert(
+            bytes(
+                "KEEPER_TOPUP_WALLET is missing: set keeperTopUp.wallet in the network config, or the KEEPER_TOPUP_WALLET environment variable, to the address that funds the keeper signers (required on test networks and mainnet)"
+            )
+        );
+        check.wallet(noWallet);
+        vm.expectRevert(
+            bytes(
+                "keeperTopUp: set minBalanceWei above 0 and targetBalanceWei above minBalanceWei (script/README.md, Keeper gas)"
+            )
+        );
+        check.wallet(string.concat(k, ',"keeperTopUp":{"wallet":"', vm.toString(topUpWallet), '"}}'));
+        vm.expectRevert(bytes("KEEPER_TOPUP_WALLET is a keeper: the top-up wallet is its own account"));
+        check.wallet(string.concat(k, ',"keeperTopUp":', _topUp(keeper), "}"));
+        assertEq(check.wallet(string.concat(k, ',"keeperTopUp":', _topUp(topUpWallet), "}")), topUpWallet);
+    }
+
+    function _topUp(
+        address wallet
+    ) private pure returns (string memory) {
+        return string.concat(
+            '{"wallet":"',
+            vm.toString(wallet),
+            '","minBalanceWei":"1000000000000000000","targetBalanceWei":"3000000000000000000"}'
         );
     }
 }

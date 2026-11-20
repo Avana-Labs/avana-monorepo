@@ -269,12 +269,12 @@ Each instance exposes metrics on a port separate from the kill switch: blocks be
 
 ### Gas funding runbook
 
-Each chain has two funded keeper signers, the primary's and the standby's, on different providers. Before a market's `activateMarket` each signer is funded to its target balance. The `feeRecipient` treasury Safe refills each signer directly.
+Each chain has two funded keeper signers, the primary's and the standby's, on different providers. Before a market's `activateMarket` each signer is funded to its target balance. The keeper top-up wallet (`KEEPER_TOPUP_WALLET`) refills each signer: `contracts/script/deploy/step.sh 11-fund-keepers` tops every signer below its minimum up to its target ([contracts/script/README.md](../contracts/script/README.md#keeper-gas)).
 
-- **Signer runway warn (`M-17` gas, below 3 days of median spend).** Look at the spend anomaly first. If spend is normal, refill the signer from the treasury Safe. If it pages (below 1 day), refill now and find out why the warn was not acted on.
+- **Signer runway warn (`M-17` gas, below 3 days of median spend).** Look at the spend anomaly first. If spend is normal, refill the signer with `11-fund-keepers` from the top-up wallet. If it pages (below 1 day), refill now and find out why the warn was not acted on.
 - **Spend anomaly (`M-31`, 24-hour spend above 3× the 7-day median warns, above 5× pages).** Read the spend per class (`keeper_gas_spend_24h_wei`) and per Hub. A breaker-poke loop points to a griefing case: raise nothing until the cause is known. A liquidation burst is expected in a crash: refill and keep watching the runway.
 - **Class budget reached (`M-32`).** The scheduled or lazy class has stopped; urgent transactions continue. Find the cause in the spend log before raising `KEEPER_DAILY_BUDGET_WEI_<CLASS>_<CHAIN>`; the class resumes by itself once older spend leaves the 24-hour window.
-- **Standby unfunded (`M-33`, the standby signer below its minimum balance).** Refill the standby from the treasury Safe. It must be able to take over at any time.
+- **Standby unfunded (`M-33`, the standby signer below its minimum balance).** Refill the standby from the top-up wallet (`11-fund-keepers`). It must be able to take over at any time.
 - **Keeper profits.** Liquidation payouts go to the instance's `FUNDING_SAFE` in the debt asset. Converting them into gas is a manual treasury decision; no path refills a signer from them automatically.
 
 ### Tests before deployment

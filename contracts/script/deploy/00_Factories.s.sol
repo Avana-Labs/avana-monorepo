@@ -16,6 +16,8 @@ import {console2} from "forge-std/console2.sol";
 contract Factories is DeployBase {
     function run() external {
         string memory network = _network();
+        // Off anvil the keeper top-up wallet is required: checked here, before the first transaction of the deploy.
+        if (!_isLocalChain(block.chainid)) _requireKeeperTopUp(network);
         if (SAFE_SINGLETON_FACTORY.code.length == 0) {
             string memory method;
             if (_isLocalChain(block.chainid)) method = "anvil_setCode";
