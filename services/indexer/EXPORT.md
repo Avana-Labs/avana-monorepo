@@ -41,7 +41,7 @@ Example: Convex holds `seriesThroughTime = 1,767,229,200` (01:00 UTC) for chain 
 
 ## Keeper stream
 
-`GET /keeper/v1/events?chainId=<id>&after=<block>&afterHash=<hash>&limit=<n>` feeds the keeper's candidate cache at the chain head ([`src/api/keeperEvents.ts`](src/api/keeperEvents.ts); wire types in [`services/common/src/keeperStream.ts`](../common/src/keeperStream.ts)). It serves only the `event_log` kinds the keeper follows (`KEEPER_STREAM_KINDS`: account, market, pending-settlement and keeper-status events), under the same authentication as the export with the keeper's own key ID.
+`GET /keeper/v1/events?chainId=<id>&after=<block>&afterHash=<hash>&limit=<n>` feeds the bot runner's account set at the chain head (the LiquidationBot's discovery) ([`src/api/keeperEvents.ts`](src/api/keeperEvents.ts); wire types in [`services/common/src/keeperStream.ts`](../common/src/keeperStream.ts)). It serves only the `event_log` kinds the bots follow (`KEEPER_STREAM_KINDS`: `AaveAdapter.AccountCreated` and the other account events, liquidations, repayments with collateral, the Spoke's account events, and the RiskModules' `KeeperAdded` and `KeeperRemoved`), under the same authentication as the export with the bot runner's own key ID. Stream version 2.
 
 | Response | Meaning |
 |---|---|
@@ -52,11 +52,11 @@ Example: Convex holds `seriesThroughTime = 1,767,229,200` (01:00 UTC) for chain 
 | 401 | Authentication failed |
 
 - **Depth.** Unlike the export, the stream does not wait for finality: `toBlock ≤ indexed − 1`. Rows at the head can still be rolled back by Ponder, which is why each cursor carries its block hash.
-- **Cursor.** `next = { block: toBlock, hash }`, the hash read over the indexer's RPC when the page was built. The keeper sends both back; the indexer re-reads the hash at `after` and answers 409 on a mismatch. Pages never split a block (as in the export), so a cursor always points after a complete block.
-- **Catching up.** A page ends at `toBlock < indexedBlock` when it is full; the keeper asks again until `toBlock = indexedBlock` or 204.
-- **What the keeper does with it.** Creation events add accounts to the cache (`seenBy.indexer`); every other kind only names what to re-read. Decisions never use a streamed value: every decision re-reads the chain at a pinned block. A stream that fails or answers 409 is followed by the keeper's RPC backfill from the finalized block before new heads are processed.
+- **Cursor.** `next = { block: toBlock, hash }`, the hash read over the indexer's RPC when the page was built. The bot runner sends both back; the indexer re-reads the hash at `after` and answers 409 on a mismatch. Pages never split a block (as in the export), so a cursor always points after a complete block.
+- **Catching up.** A page ends at `toBlock < indexedBlock` when it is full; the bot runner asks again until `toBlock = indexedBlock` or 204.
+- **What the bot runner does with it.** `AaveAdapter.AccountCreated` adds an account (wallet, market) to the set; every other kind only names what to re-read. Decisions never use a streamed value: the LiquidationBot re-reads every health factor on chain. A stream that fails or answers 409 falls back to the runner's own RPC scan of `AccountCreated` from the finalized block.
 
-Example: the keeper holds `{ block: 21,400,240, hash: 0xaa… }`. Block 21,400,240 is replaced by `0xbb…`; Ponder rolls back and replays. The next request names `0xaa…`, the indexer reads `0xbb…` at that height and answers 409 with the finalized cursor `{ 21,400,176, 0xcc… }`; the keeper re-reads its RPC logs from 21,400,176 and continues the stream from that cursor.
+Example: the bot runner holds `{ block: 21,400,240, hash: 0xaa… }`. Block 21,400,240 is replaced by `0xbb…`; Ponder rolls back and replays. The next request names `0xaa…`, the indexer reads `0xbb…` at that height and answers 409 with the finalized cursor `{ 21,400,176, 0xcc… }`; the runner re-reads its RPC logs from 21,400,176 and continues the stream from that cursor.
 
 ## Authentication
 

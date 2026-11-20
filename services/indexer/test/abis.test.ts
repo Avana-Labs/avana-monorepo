@@ -10,14 +10,14 @@ import { type Abi, type Address, decodeEventLog, encodeAbiParameters, encodeEven
 import { abis, factoryEvents } from "../src/config/abis.ts";
 
 const VAULT_TOKEN: Address = getAddress("0x00000000000000000000000000000000000000a1");
-const SPOKE: Address = getAddress("0x00000000000000000000000000000000000000b2");
+const RESERVE: Address = getAddress("0x00000000000000000000000000000000000000b2");
 
 describe("factory events", () => {
   it("are events of the contract the source watches", () => {
     const watched = [
-      [factoryEvents.vaultTokenDeployed, abis.VaultTokenFactory],
-      [factoryEvents.marketRegistered, abis.MarketRegistry],
-      [factoryEvents.firstLossReserveSet, abis.MarketRegistry],
+      [factoryEvents.marketActivated, abis.RiskModule],
+      [factoryEvents.debtReserveSet, abis.RiskModule],
+      [factoryEvents.addSpoke, abis.AaveHub],
     ] as const;
     for (const [event, abi] of watched) {
       const selectors = (abi as Abi).filter((i) => i.type === "event").map((i) => toEventSelector(i));
@@ -25,15 +25,15 @@ describe("factory events", () => {
     }
   });
 
-  it("decode the vault token address from a VaultTokenDeployed log", () => {
-    const event = factoryEvents.vaultTokenDeployed;
-    const nonIndexed = event.inputs.filter((i) => !i.indexed);
-    const topics = encodeEventTopics({ abi: [event], eventName: "VaultTokenDeployed", args: { vaultToken: VAULT_TOKEN, marketId: 7n, spoke: SPOKE } });
-    const values = nonIndexed.map((i) => zeroOf(i));
-    const data = encodeAbiParameters(nonIndexed, values);
-    const log = decodeEventLog({ abi: abis.VaultTokenFactory, topics: topics as [`0x${string}`, ...`0x${string}`[]], data });
-    expect(log.eventName).toBe("VaultTokenDeployed");
-    expect(log.args).toMatchObject({ vaultToken: VAULT_TOKEN, marketId: 7n, spoke: SPOKE });
+  it("decode the vault token from MarketActivated and the First-Loss Reserve from DebtReserveSet", () => {
+    const decode = (event: (typeof factoryEvents)["marketActivated" | "debtReserveSet"], args: Record<string, unknown>) => {
+      const nonIndexed = event.inputs.filter((i) => !i.indexed);
+      const topics = encodeEventTopics({ abi: [event], eventName: event.name, args } as never);
+      const data = encodeAbiParameters(nonIndexed, nonIndexed.map((i) => args[i.name!] ?? zeroOf(i)));
+      return decodeEventLog({ abi: abis.RiskModule, topics: topics as [`0x${string}`, ...`0x${string}`[]], data }).args;
+    };
+    expect(decode(factoryEvents.marketActivated, { marketId: 7n, vaultToken: VAULT_TOKEN })).toMatchObject({ marketId: 7n, vaultToken: VAULT_TOKEN });
+    expect(decode(factoryEvents.debtReserveSet, { spoke: VAULT_TOKEN, reserveId: 2n, firstLossReserve: RESERVE })).toMatchObject({ reserveId: 2n, firstLossReserve: RESERVE });
   });
 });
 
@@ -54,7 +54,7 @@ describe("logOnly subscriptions", () => {
         }
       }
     }
-    expect(checked).toBeGreaterThan(50);
+    expect(checked).toBeGreaterThan(20);
     expect(missing).toEqual([]);
   });
 });

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Implementations and roles of every upgradeable contract, ParameterStore and RiskModule
-// events, First-Loss Reserve balances, vault tokens and the factory.
+// Aave Hub and Spoke upgrades, the Avana AccessManager's role and operation events, and the loss layers: each
+// First-Loss Reserve's and DAO deficit offset's funded balance and every deficit it covered.
 
 import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
@@ -9,15 +9,7 @@ import { AAVE_HUB_SOURCES, AAVE_SPOKE_SOURCES, FIRST_LOSS_SOURCES } from "../con
 import { logOnly } from "../lib/logOnly.ts";
 import { recordLog } from "../lib/record.ts";
 
-/**
- * Contracts whose ABI carries ERC-1967 `Upgraded` and AccessControl role events (src/config/abis.ts), each with the
- * kind its logs are recorded under: every Aave Hub or Spoke source records under the Aave contract's name.
- */
-const UPGRADEABLE = [
-  ...(["AaveAdapter", "LPVaultSwap", "MarketRegistry", "ParameterStore", "RiskModule"] as const).map((c) => [c, c] as const),
-  ...AAVE_SPOKE_SOURCES.map((c) => [c, "AaveSpoke"] as const),
-  ...AAVE_HUB_SOURCES.map((c) => [c, "AaveHub"] as const),
-];
+const UPGRADEABLE = [...AAVE_SPOKE_SOURCES.map((c) => [c, "AaveSpoke"] as const), ...AAVE_HUB_SOURCES.map((c) => [c, "AaveHub"] as const)];
 
 for (const [contract, kind] of UPGRADEABLE) {
   ponder.on(`${contract}:Upgraded`, async ({ event, context }) => {
@@ -28,52 +20,51 @@ for (const [contract, kind] of UPGRADEABLE) {
       .values({ chainId: p.chainId, proxy: event.log.address, ...row })
       .onConflictDoUpdate(row);
   });
-  for (const [name, granted] of [["RoleGranted", true], ["RoleRevoked", false]] as const) {
-    ponder.on(`${contract}:${name}`, async ({ event, context }) => {
-      const p = await recordLog(event, context, `${kind}.${name}`);
-      await context.db
-        .insert(schema.roleMember)
-        .values({ chainId: p.chainId, contract: event.log.address, role: event.args.role, account: event.args.account, granted, lastBlock: p.blockNumber })
-        .onConflictDoUpdate({ granted, lastBlock: p.blockNumber });
-    });
-  }
-  // A role's admin role changing moves who can grant it (M-22); kept in the log under the contract's kind.
-  ponder.on(`${contract}:RoleAdminChanged`, async ({ event, context }) => {
-    await recordLog(event, context, `${kind}.RoleAdminChanged`);
-  });
 }
 
-logOnly("ParameterStore", [
-  "AuthorityUpdated",
-  "MarketDynamicCapSet",
-  "ParameterTightened",
-  "ParameterLoosened",
-  "ParameterSet",
-  "CapTightened",
-  "CapLoosened",
-  "StressFloorSet",
-  "FeedConfigured",
-  "RouteDepthThresholdSet",
-  "MinPledgeUsdSet",
-  "DebtAssetParamsSet",
+logOnly("AccessManager", [
+  "RoleGranted",
+  "RoleRevoked",
+  "RoleLabel",
+  "RoleAdminChanged",
+  "RoleGuardianChanged",
+  "RoleGrantDelayChanged",
+  "TargetFunctionRoleUpdated",
+  "TargetAdminDelayUpdated",
+  "TargetClosed",
+  "OperationScheduled",
+  "OperationExecuted",
+  "OperationCanceled",
 ]);
 
-logOnly("RiskModule", ["AuthorityUpdated", "ConfigDriftDetected"]);
-
 for (const source of FIRST_LOSS_SOURCES) {
-  for (const name of ["ReserveFunded", "DeficitCovered", "ReserveWithdrawn"] as const) {
+  for (const name of ["Funded", "DeficitCovered", "Withdrawn"] as const) {
     ponder.on(`${source}:${name}`, async ({ event, context }) => {
-      const p = await recordLog(event, context, `AvanaFirstLossReserve.${name}`);
+      const p = await recordLog(event, context, `FirstLossReserve.${name}`);
       if (!p.fresh) return;
       const row = { balance: event.args.balanceAfter, lastBlock: p.blockNumber };
       await context.db
         .insert(schema.coverageBalance)
         .values({ chainId: p.chainId, firstLossReserve: event.log.address, ...row })
         .onConflictDoUpdate(row);
+      if (name !== "DeficitCovered") return;
+      const a = event.args as { spoke: `0x${string}`; caller: `0x${string}`; covered: bigint; shares: bigint; balanceAfter: bigint };
+      await context.db
+        .insert(schema.firstLossCover)
+        .values({
+          chainId: p.chainId,
+          txHash: p.txHash,
+          logIndex: p.logIndex,
+          blockNumber: p.blockNumber,
+          firstLossReserve: event.log.address,
+          spoke: a.spoke,
+          caller: a.caller,
+          covered: a.covered,
+          shares: a.shares,
+          balanceAfter: a.balanceAfter,
+        })
+        .onConflictDoNothing();
     });
   }
-  logOnly(source, ["AuthorityUpdated", "ReserveBelowMinimum", "BorrowSpokeAllowlistUpdated", "FirstLossReserveMinimumUpdated"], "AvanaFirstLossReserve");
+  logOnly(source, ["SpokeAllowed", "MinimumSet", "BelowMinimum"], "FirstLossReserve");
 }
-
-logOnly("VaultToken", ["Transfer", "ProxyAdded"]);
-logOnly("VaultTokenFactory", ["IntegrationRegistered", "VaultTokenDeployed"]);

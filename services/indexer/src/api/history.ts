@@ -12,11 +12,11 @@ import { EXPORT_SCHEMA_VERSION, type HexString, type HistoryPage } from "@avana/
 import { type HistoryRequest, closeHistoryPage } from "../lib/history.ts";
 import { servableThrough, toRecord } from "./exportPage.ts";
 
-/** The wallet's proxies attributed by both creation events (TEST-144); a one-sided account is never attributed. */
+/** The wallet's account proxies, one per market, as the AaveAdapters announced them. */
 async function attributedProxies(chainId: number, wallet: HexString): Promise<HexString[]> {
   const t = schema.account;
   const rows = await db.select().from(t).where(and(eq(t.chainId, chainId), eq(t.wallet, wallet)));
-  return [...new Set(rows.filter((r) => r.adapterSeen && r.managerSeen).map((r) => r.proxy.toLowerCase() as HexString))].sort();
+  return [...new Set(rows.map((r) => r.proxy.toLowerCase() as HexString))].sort();
 }
 
 /** The keys of the logs naming any party, below `before`, newest first; one key per log. */
