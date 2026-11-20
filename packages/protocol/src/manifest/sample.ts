@@ -78,7 +78,7 @@ export function sampleManifest(): ReleaseManifest {
       aaveProtocolGuardian: A(53),
       jointConfigSafe: A(54),
       keepers: [A(55)],
-      keeperTopUpWallet: A(56),
+      keeperTopUp: { wallet: A(56), minBalanceWei: "3000000000000000000", targetBalanceWei: "10000000000000000000" },
     },
     external: [{ name: "USDC", group: "token", address: A(60), codeHash: H(60), implementation: null, standIn: true }],
   };

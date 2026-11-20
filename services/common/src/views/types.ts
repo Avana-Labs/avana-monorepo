@@ -207,8 +207,10 @@ export interface MarketRow {
   readonly spoke: Address;
   readonly reserveId: DecimalString;
   readonly hubAssetId: DecimalString;
-  /** `LPOracle.latestAnswer()`, USD with 8 decimals per whole vault token. */
+  /** `LPOracle.latestAnswer()`, USD with 8 decimals per whole vault token; "0" when the oracle refuses to price. */
   readonly acceptedPrice: DecimalString;
+  /** False when `latestAnswer` reverted (a stale or invalid feed leg): the Spoke cannot price the collateral. */
+  readonly priceAvailable: boolean;
   readonly suppliedUnits: DecimalString;
   readonly suppliedUsd8: DecimalString;
   /** The RiskModule's LTV, the same for both markets of a pool. */

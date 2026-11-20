@@ -308,7 +308,6 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
     client,
     markets.flatMap((m): ContractCall[] => [
       { address: lower(m.riskModule), abi: riskModuleViewsAbi, functionName: "getMarket", args: [m.marketId] },
-      { address: lower(m.lpOracle), abi: lpOracleViewsAbi, functionName: "latestAnswer", args: [] },
       { address: lower(m.lpOracle), abi: lpOracleViewsAbi, functionName: "decimals", args: [] },
       spokeCall(lower(m.spoke), "getReserve", [m.reserveId]),
       spokeCall(lower(m.spoke), "getReserveConfig", [m.reserveId]),
@@ -316,16 +315,18 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
       ...m.tokens.map((t): ContractCall => ({ address: lower(t), abi: erc20ViewsAbi, functionName: "decimals", args: [] })),
     ]),
   );
+  // An LPOracle refuses to price (InvalidPrice) when a feed leg is stale or bad: that market is read without a price.
+  const prices = await some(client, markets.map((m): ContractCall => ({ address: lower(m.lpOracle), abi: lpOracleViewsAbi, functionName: "latestAnswer", args: [] })));
   let mc = 0;
-  const decoded = markets.map((m) => {
+  const decoded = markets.map((m, i) => {
     const rm = marketReads[mc++] as DecodedRiskMarket;
-    const price = marketReads[mc++] as bigint;
+    const price = (prices[i] as bigint | null) ?? 0n;
     const priceDecimals = Number(marketReads[mc++] as number);
     const reserve = marketReads[mc++] as DecodedReserve;
     const config = marketReads[mc++] as DecodedReserveConfig;
     const symbol = marketReads[mc++] as string;
     const tokenDecimals = m.tokens.map(() => Number(marketReads[mc++] as number));
-    return { m, rm, price: toUsd8(price > 0n ? price : 0n, priceDecimals), reserve, config, symbol, tokenDecimals };
+    return { m, rm, priceAvailable: prices[i] !== null, price: toUsd8(price > 0n ? price : 0n, priceDecimals), reserve, config, symbol, tokenDecimals };
   });
   const second = await all(
     client,
@@ -335,7 +336,7 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
     ]),
   );
   const rateOf = (hub: Address, asset: Address) => hubAssets.find((a) => a.hub === hub && a.underlying === asset)?.drawnRateRay ?? "0";
-  const marketRows: MarketRow[] = decoded.map(({ m, rm, price, reserve, config, symbol, tokenDecimals }, i) => {
+  const marketRows: MarketRow[] = decoded.map(({ m, rm, priceAvailable, price, reserve, config, symbol, tokenDecimals }, i) => {
     const dyn = second[i * 2] as { collateralFactor: number; maxLiquidationBonus: number; liquidationFee: number };
     const supplied = second[i * 2 + 1] as bigint;
     const vaultDecimals = Number(reserve.decimals);
@@ -362,6 +363,7 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
       reserveId: s(m.reserveId),
       hubAssetId: s(BigInt(reserve.assetId)),
       acceptedPrice: s(price),
+      priceAvailable,
       suppliedUnits: s(supplied),
       suppliedUsd8: s((supplied * price) / 10n ** BigInt(vaultDecimals)),
       ltvBps: Number(rm.ltvBps),

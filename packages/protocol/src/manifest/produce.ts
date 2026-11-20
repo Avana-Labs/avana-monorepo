@@ -173,7 +173,8 @@ export async function produceManifest(o: ProduceOptions): Promise<ReleaseManifes
   // The keeper registry of every RiskModule; the manifest records the keepers registered in all of them.
   const registries = await Promise.all(integrations.map((x) => read<readonly Address[]>(x.riskModule.address, riskModuleAbi, "getKeepers")));
   const keepers = (registries[0] ?? []).map((k) => getAddress(k)).filter((k) => registries.every((r) => r.some((x) => getAddress(x) === k)));
-  const topUp = at(config, "keeperTopUpWallet") ?? process.env.KEEPER_TOPUP_WALLET;
+  // The top-up wallet as 11_FundKeepers reads it: KEEPER_TOPUP_WALLET when set, else the config's keeperTopUp.wallet.
+  const topUpWallet = process.env.KEEPER_TOPUP_WALLET || (at(config, "keeperTopUp.wallet") as string | undefined);
   const uniswapV4 = await uniswapV4PoolManager(client, integrations, imm);
   const gov = (k: string) => cfgAddr(`governance.${k}`);
 
@@ -210,7 +211,13 @@ export async function produceManifest(o: ProduceOptions): Promise<ReleaseManifes
       aaveProtocolGuardian: gov("aaveProtocolGuardian"),
       jointConfigSafe: gov("jointConfigSafe"),
       keepers,
-      keeperTopUpWallet: typeof topUp === "string" && topUp !== "" ? resolveAddress(topUp, outputs) : null,
+      keeperTopUp: topUpWallet
+        ? {
+            wallet: resolveAddress(topUpWallet, outputs),
+            minBalanceWei: BigInt(String(at(config, "keeperTopUp.minBalanceWei") ?? "0")).toString(),
+            targetBalanceWei: BigInt(String(at(config, "keeperTopUp.targetBalanceWei") ?? "0")).toString(),
+          }
+        : null,
     },
     external,
     ...(uniswapV4 ? { uniswapV4 } : {}),

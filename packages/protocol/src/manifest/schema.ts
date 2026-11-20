@@ -74,7 +74,7 @@ const manifestProps: Record<string, Schema> = {
     aaveProtocolGuardian: address,
     jointConfigSafe: address,
     keepers: arr(address),
-    keeperTopUpWallet: nullable(address),
+    keeperTopUp: nullable(obj({ wallet: address, minBalanceWei: decimal, targetBalanceWei: decimal })),
   }),
   external: arr(
     obj({

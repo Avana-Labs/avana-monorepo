@@ -130,6 +130,7 @@ const market = (marketId: string, kind: MarketRow["kind"], name: string, supplie
   reserveId: String(10 + Number(marketId)),
   hubAssetId: String(10 + Number(marketId)),
   acceptedPrice: "200000000",
+  priceAvailable: true,
   suppliedUnits: (suppliedWhole * 10n ** 18n).toString(10),
   suppliedUsd8: (suppliedWhole * 2n * 10n ** 8n).toString(10),
   ltvBps: 9_000,

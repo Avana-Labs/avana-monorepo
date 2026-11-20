@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { type Abi, type Address, encodeAbiParameters, encodeEventTopics, type Hex } from "viem";
-import { collateralizationAbi } from "@avana/protocol/abis";
+import { accessManagerAbi } from "@avana/protocol/abis";
 import type { ServiceManifest } from "@avana/services-common";
 import { AlertBook } from "../src/alertBook.ts";
 import { snapshotProbe } from "../src/confirm.ts";
@@ -22,17 +22,17 @@ import { STATE_VERSION, apply, collect, decode, encode, fileStateStore } from ".
 import type { Notice } from "../src/types.ts";
 import { EMPTY_MANIFEST, fakeChain, fakeProvider, fixtureSnapshot, on } from "./fakeChain.ts";
 
-const TIMELOCK = "0x0000000000000000000000000000000000000071" as Address;
-const COLL = "0x0000000000000000000000000000000000000074" as Address;
+const MANAGER = "0x0000000000000000000000000000000000000071" as Address;
 const SAFE = "0x00000000000000000000000000000000000005af" as Address;
-const manifest = { ...EMPTY_MANIFEST, avana: { ...EMPTY_MANIFEST.avana, riskModule: { address: "0x0000000000000000000000000000000000000073" }, collateralization: { address: COLL }, lpVaultSwap: { address: "0x0000000000000000000000000000000000000075" }, aaveAdapter: { address: "0x0000000000000000000000000000000000000076" }, lpVaults: [] }, aave: { hubs: [], lendSpokes: [], borrowSpokes: [] } } as unknown as ServiceManifest;
+const manifest = { ...EMPTY_MANIFEST, avana: { ...EMPTY_MANIFEST.avana, accessManager: { address: MANAGER } }, aave: { hubs: [], lendSpokes: [], borrowSpokes: [] } } as unknown as ServiceManifest;
 
-function saturated(block: bigint, n: number): RawLog {
-  const ev = (collateralizationAbi as Abi).find((e) => e.type === "event" && e.name === "CounterSaturated") as Extract<Abi[number], { type: "event" }>;
-  const values: Record<string, unknown> = { counterKind: 1, hub: TIMELOCK, key: TIMELOCK, valueBefore: 5n, subtracted: 9n };
-  const topics = encodeEventTopics({ abi: [ev], eventName: "CounterSaturated", args: Object.fromEntries(ev.inputs.filter((i) => i.indexed).map((i) => [i.name!, values[i.name!]])) } as never) as Hex[];
+/** An AccessManager role grant (M-22, a page). */
+function granted(block: bigint, n: number): RawLog {
+  const ev = (accessManagerAbi as Abi).find((e) => e.type === "event" && e.name === "RoleGranted") as Extract<Abi[number], { type: "event" }>;
+  const values: Record<string, unknown> = { roleId: 101n, account: MANAGER, delay: 0, since: 5, newMember: true };
+  const topics = encodeEventTopics({ abi: [ev], eventName: "RoleGranted", args: Object.fromEntries(ev.inputs.filter((i) => i.indexed).map((i) => [i.name!, values[i.name!]])) } as never) as Hex[];
   const plain = ev.inputs.filter((i) => !i.indexed);
-  return { address: COLL, topics, data: encodeAbiParameters(plain, plain.map((i) => values[i.name!])), blockNumber: block, transactionHash: `0x${n.toString(16).padStart(64, "0")}`, logIndex: 0 };
+  return { address: MANAGER, topics, data: encodeAbiParameters(plain, plain.map((i) => values[i.name!])), blockNumber: block, transactionHash: `0x${n.toString(16).padStart(64, "0")}`, logIndex: 0 };
 }
 
 function monitor() {
@@ -47,7 +47,7 @@ describe("restart through the state file", () => {
   it("keeps open alerts quiet, reads events from downtime and reports a Safe changed meanwhile", async () => {
     let owners = ["0xa", "0xb"];
     const p = fakeProvider({
-      snapshot: (b) => fixtureSnapshot(b, (s) => ({ ...s, markets: s.markets.map((m) => (m.marketId === "1" ? { ...m, priceState: 2 } : m)) })),
+      snapshot: (b) => fixtureSnapshot(b, (s) => ({ ...s, markets: s.markets.map((m) => (m.marketId === "1" ? { ...m, priceAvailable: false } : m)) })),
       handlers: [on("getOwners", () => owners), on("getThreshold", () => 2n), on("getModulesPaginated", () => [[], "0x1"])],
     });
     let block = 100n;
@@ -58,15 +58,15 @@ describe("restart through the state file", () => {
     expect((await runRound(chain, first.deps)).map((n) => n.alert.signal)).toEqual(["M-01"]);
     store.save(collect(first.parts, 1));
 
-    // Down for blocks 101..110: a counter saturates at 105 and a Safe owner is swapped.
-    p.logs.push(saturated(105n, 1));
+    // Down for blocks 101..110: a role is granted at 105 and a Safe owner is swapped.
+    p.logs.push(granted(105n, 1));
     owners = ["0xa", "0xc"];
     block = 110n;
 
     const second = monitor();
     apply(second.parts, store.load()!);
     const ns = await runRound(chain, second.deps);
-    expect(ns.map((n) => `${n.transition}:${n.alert.signal}`)).toEqual(["event:M-21", "event:M-23"]);
+    expect(ns.map((n) => `${n.transition}:${n.alert.signal}`)).toEqual(["event:M-22", "event:M-23"]);
     expect(second.deps.book.open().map((a) => a.signal)).toEqual(["M-01"]);
   });
 

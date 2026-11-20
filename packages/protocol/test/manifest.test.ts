@@ -57,12 +57,12 @@ describe("release manifest schema", () => {
     expect(paths).toContain("$.markets[1].tokens");
   });
 
-  it("takes a keeper top-up wallet or null", () => {
+  it("takes the keeper top-up wallet and its refill rule, or null", () => {
     const m = structuredClone(sampleManifest()) as Record<string, any>;
-    m.roles.keeperTopUpWallet = null;
+    m.roles.keeperTopUp = null;
     expect(validate(m)).toEqual([]);
-    delete m.roles.keeperTopUpWallet;
-    expect(validate(m).map((e) => e.path)).toEqual(["$.roles.keeperTopUpWallet"]);
+    delete m.roles.keeperTopUp;
+    expect(validate(m).map((e) => e.path)).toEqual(["$.roles.keeperTopUp"]);
   });
 
   it("accepts a Uniswap v4 integration with its PoolManager, and the PoolManager is optional", () => {

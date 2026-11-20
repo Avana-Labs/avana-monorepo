@@ -123,8 +123,18 @@ export interface RoleTable {
   readonly jointConfigSafe: Address;
   /** The liquidation bots registered in every RiskModule's keeper registry; borrowing stops while none is. */
   readonly keepers: readonly Address[];
-  /** Wallet that tops up the keepers' gas (deploy config `KEEPER_TOPUP_WALLET`); null when none is configured. */
-  readonly keeperTopUpWallet: Address | null;
+  /**
+   * The keeper top-up wallet and its refill rule (`11_FundKeepers`): a keeper signer below `minBalanceWei` is refilled
+   * to `targetBalanceWei` from `wallet` (deploy config `keeperTopUp`, or `KEEPER_TOPUP_WALLET`). Null on a local node
+   * whose config names none.
+   */
+  readonly keeperTopUp: KeeperTopUp | null;
+}
+
+export interface KeeperTopUp {
+  readonly wallet: Address;
+  readonly minBalanceWei: string;
+  readonly targetBalanceWei: string;
 }
 
 export interface ReleaseManifest {

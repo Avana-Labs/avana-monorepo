@@ -69,8 +69,8 @@ export interface ServiceManifest {
   readonly roles: {
     /** The liquidation bots registered in the RiskModules' keeper registry. */
     readonly keepers: readonly Address[];
-    /** Wallet that tops up the keepers' gas, null when the deploy config names none. */
-    readonly keeperTopUpWallet: Address | null;
+    /** The keeper top-up wallet and its refill rule (`11_FundKeepers`); null when the deploy config names none. */
+    readonly keeperTopUp: { readonly wallet: Address; readonly minBalanceWei: string; readonly targetBalanceWei: string } | null;
   };
   /** Chainlink sequencer-uptime feed on an L2, null on Ethereum. */
   readonly sequencerFeed: Address | null;

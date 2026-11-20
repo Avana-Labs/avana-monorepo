@@ -291,40 +291,43 @@ The monitoring service, run by Avana Labs on the indexer's data and direct RPC r
 
 | # | Signal | Warn | Page | Responder | Playbook |
 |---|---|---|---|---|---|
-| M-01 | LPOracle and debt price freshness per market and debt reserve (Lens: Cached once an input is past its `liquidationPriceMaxAge`) | Cached on entry | Expired | operators, then the Emergency Guardian (standby switch) | P-02 (`EMG-076`) |
+| M-01 | A market's LPOracle refusing to price (`latestAnswer` reverts on a stale or invalid feed leg): the Spoke cannot price the collateral | — | every | operators, then the Emergency Guardian | P-02 (`EMG-076`) |
 | M-02 | Feed disagreement start. Retired: the stateless LPOracle records no disagreement, so nothing raises it | — | — | operators, then the Emergency Guardian | P-02 (`EMG-076`) |
-| M-03 | Feed leg age, collateral and debt feeds | above 50 % of `feedMaxAge` | above 90 % | operators | P-02 (`EMG-076`) |
-| M-04 | Debt feed age, against the feed's ParameterStore ages | above `borrowPriceMaxAge` | above 90 % of `liquidationPriceMaxAge` | operators, Aave | P-02 (`EMG-076`) |
-| M-05 | USD band distance √(q0·q1) | below 0.95 | below 0.90 | guardians | P-03 (`EMG-077`) |
+| M-03 | Feed leg age of every market's LPOracle (`LPOracle.feedsOf`, recorded in the manifest with its heartbeat) | past the heartbeat | past 1.5 heartbeats | operators | P-02 (`EMG-076`) |
+| M-04 | Debt feed age, against the feed's heartbeat in the manifest | past the heartbeat | past 1.5 heartbeats | operators, Aave | P-02 (`EMG-076`) |
+| M-05 | USD band distance. Retired: M-36 watches the Custom band edge | — | — | guardians | P-03 (`EMG-077`) |
 | M-06 | Collateral value per market at oracle prices | −10 % in 1 hour | −25 % in 1 hour | guardians | P-03 (`EMG-077`) |
-| M-07 | Live pool share | above 15 % | above 20 % (POOL_SHARE breaker trips) | risk service providers | P-04 (`EMG-078`) |
-| M-08 | Any breaker latched or condition true (Lens `getBreakerStatus`, `getDebtBreakerStatus`) | every | any latched security freeze (`reopensAt = type(uint64).max`) | guardians | per reason |
-| M-09 | Accounts below HF 1 not liquidated | 60 s (5 Ethereum blocks, 30 Base blocks) | 300 s (25 Ethereum blocks, 150 Base blocks); 3,600 s escalates to an Emergency Guardian decision on a breaker trip | standby keeper, keeper on-call, guardians | P-08 (`EMG-082`) |
-| M-10 | Liquidation reverts by reason (`RecoveryBelowFloor`, `InsufficientProceeds`, `NoRouteAvailable`, `StalePrice`, `DebtPriceStale`) in keeper simulation or on-chain; `RouteFailed` events; share of a market's collateral seized | 1 revert or `RouteFailed` per market per hour; 10 % seized in 1 hour | 3 per market per hour; 20 % seized in 1 hour | governance (routes), guardians | P-04 (`EMG-078`) |
-| M-11 | Route depth at stress size against `routeDepthThreshold(marketId, token, debtAsset, kind)`, in base units of the debt asset (daily fork simulation) | below 120 % | below 100 % | governance | P-04 (`EMG-078`) |
-| M-12 | GSM exposure headroom per token | below 2× the market's stress size | below 1× | risk service providers | P-04 (`EMG-078`) |
-| M-13 | First-Loss Reserve balance; DAO deficit offset balance | below 150 % of `firstLossReserveMinimum`; the offset below 100 % of `daoDeficitOffset` | below 100 % (monitoring alert only; no breaker reads it, `Q-399`) | Avana Labs top-up; Aave DAO top-up of the offset (`Q-410`) | P-09 (`EMG-083`) |
-| M-14 | Tail coverage ratio (`getTailCoverage`, and the live variant from current debt) | below 150 % | below 100 % | risk service providers, Aave DAO | P-09 (`EMG-083`) |
+| M-07 | Live pool share. Retired: the new core has no pool-share breaker | — | — | risk service providers | P-04 (`EMG-078`) |
+| M-08 | Breakers. Retired: the new core has none; a frozen market or debt reserve is M-24 | — | — | guardians | per reason |
+| M-09 | Accounts below HF 1 not liquidated (LiquidationBot reports); a bot runner instance whose heartbeat falls 3 blocks behind | 60 s | 300 s, or a silent bot runner | standby keeper, keeper on-call, guardians | P-08 (`EMG-082`) |
+| M-10 | Liquidation failures the LiquidationBot reports per market; the share of a market's collateral seized (`LiquidationModule.Liquidated`) | 1 failure per market per hour; 10 % seized in 1 hour | 3 per market per hour; 20 % seized in 1 hour | governance, guardians | P-04 (`EMG-078`) |
+| M-11 | Route depth at stress size. Retired: liquidation is in kind, there are no swap routes | — | — | governance | P-04 (`EMG-078`) |
+| M-12 | GSM exposure headroom. Retired with the swap routes | — | — | risk service providers | P-04 (`EMG-078`) |
+| M-13 | First-Loss Reserve balance against its `minimum()`; DAO deficit offset balance against its minimum | a reserve below 150 %; the offset below 100 % | a reserve below 100 % | Avana Labs top-up; Aave DAO top-up of the offset | P-09 (`EMG-083`) |
+| M-14 | Draw-cap coverage: the First-Loss Reserve's balance against Σ `RiskModule.coverage(hub, asset).required` | below 150 % | below 100 % (borrowing stops: `CoverageBelowRatio`) | risk service providers, Aave DAO | P-09 (`EMG-083`) |
 | M-15 | Hub deficit per asset | any | uncovered after 24 hours (coverage window 72 hours) | `COVERAGE_ROLE` holder | P-09 (`EMG-083`) |
-| M-16 | Keeper debt-asset float per chain and asset (free inventory after reservations), which funds inventory calls, helper top-ups and shortfall top-ups | below 150 % of the largest single `debtToCover` the caps allow | below 100 % | Avana Labs | P-09 (`EMG-083`) |
-| M-17 | Keeper gas balance per signer; Aave V3 Pool idle liquidity per debt asset | gas below 3 days of median spend; idle liquidity below 2× the largest single `debtToCover` | gas below 1 day; idle liquidity below 1× | Avana Labs | P-08 (`EMG-082`) |
+| M-16 | A liquidatable account the LiquidationBot cannot fund (no balance of the debt asset and no flash path) | — | every | Avana Labs, keeper on-call | P-09 (`EMG-083`) |
+| M-17 | Keeper gas balance. Retired: M-35, read by the monitor | — | — | Avana Labs | P-08 (`EMG-082`) |
 | M-18 | `drawn / drawCap` per asset | 80 % | 90 % | risk service providers | P-10 (`EMG-084`) |
 | M-19 | Hub utilization and Lend Spoke withdrawals | utilization 90 % | utilization 98 %, or a withdrawal above 10 % of supply within 1 hour | Aave DAO, guardians | P-10 (`EMG-084`) |
-| M-20 | Aave configuration against recorded values (collateral factor, bonus, target HF, caps, Spoke implementation) | any change | `ConfigDrift` live | Emergency Guardian | P-12 (`EMG-086`) |
-| M-21 | Backing-check failure (`Lens.checkBacking`), `CounterSaturated` | — | every | engineering | P-05 (`EMG-079`) |
-| M-22 | Timelock `CallScheduled` | every | role change, upgrade, `setShortDelaySelector`, `setNormalDelay`, `unfreezeAddress`, `restorePriceRoute` | every canceller | P-06 (`EMG-080`) |
+| M-20 | Aave configuration events of every CDP Spoke (reserve and dynamic config, liquidation config, price source, position manager, authority, upgrade) | any change | — | Emergency Guardian | P-12 (`EMG-086`) |
+| M-21 | Backing check. Retired: no Collateralization or Lens in the new core | — | — | engineering | P-05 (`EMG-079`) |
+| M-22 | Avana AccessManager: `OperationScheduled`; `RoleGranted`, `RoleRevoked`, `TargetFunctionRoleUpdated`, `TargetClosed` | an operation scheduled | a role or function role changed, a target closed | every canceller | P-06 (`EMG-080`) |
 | M-23 | Safe owner, threshold, guard or module change; signer liveness | every | every; liveness answers below threshold + 1 | every signer | P-07 (`EMG-081`) |
-| M-24 | Pause state and reason, address freeze, standby switch, manual breaker | every | — | every signer | per reason |
-| M-25 | Token issuer: `paused()`, `basisPointsRate()`, blocklist events naming Avana contracts | probe change | blocklist of LPVaultSwap, the LPVault, Collateralization or the AaveAdapter | guardians | P-11 (`EMG-085`) |
-| M-26 | Keeper code-check mismatch (implementation slot or code hash) | — | every | keeper on-call | P-08 (`EMG-082`) |
+| M-24 | A market's vault-token reserve or a debt reserve frozen, paused or reopened on its Spoke (a depeg's response is a freeze) | every | — | every signer | per reason |
+| M-25 | Token issuer: `paused()`, `basisPointsRate()`, blocklist events naming Avana contracts | probe change; a blocklist naming another Avana contract | a blocklist naming an LPVault, AaveAdapter, LiquidationModule or FlashloanRepay | guardians | P-11 (`EMG-085`) |
+| M-26 | Keeper code-check mismatch. Retired: the bot runner calls immutable contracts | — | — | keeper on-call | P-08 (`EMG-082`) |
 | M-27 | Frontend bundle hash, DNS and hosting change | any | hash mismatch | engineering | P-13 (`EMG-087`) |
 | M-28 | Liquidity leaving a listed pool: the pool's total liquidity (and its liquidity around the current price) per listed market, independent of Avana's share | −20 % in 1 hour | −40 % in 1 hour | risk service providers, guardians | P-04 (`EMG-078`) |
 | M-29 | Rate curve per lend asset: the Hub's interest-rate data and drawn rate; for GHO, `baseDrawnRate` against the Core Hub GHO base rate (`SPEC-HUB-007`) | any change of a curve's values | GHO `baseDrawnRate` below the Core Hub GHO base rate | Aave DAO, risk service providers | P-10 (`EMG-084`) |
-| M-30 | Keeper discovery mismatch: accounts (`UserProxyCreated`) that only one of the keeper's discovery sources holds, the indexer stream or the RPC log backfill over both providers, up to the block both have read | any one-sided account | an account one-sided for `KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS` (1 hour by default) | keeper on-call | P-08 (`EMG-082`) |
-| M-31 | Keeper gas spend anomaly: the rolling 24-hour spend of every class from the keeper's spend log, against the median daily spend of the last 7 days (never below `KEEPER_GAS_DAILY_SPEND_WEI_<CHAIN>`) | above 3× the median | above 5× | Avana Labs, keeper on-call | P-08 (`EMG-082`) |
-| M-32 | Keeper class budget reached: the rolling 24-hour spend of the scheduled or lazy class against `KEEPER_DAILY_BUDGET_WEI_{SCHEDULED,LAZY}_<CHAIN>` | — | the class reaches its budget and stops sending | keeper on-call, Avana Labs | P-08 (`EMG-082`) |
-| M-33 | Standby keeper signer gas balance against `KEEPER_STANDBY_MIN_BALANCE_WEI_<CHAIN>` | below its minimum | — | Avana Labs | P-08 (`EMG-082`) |
+| M-30 | Keeper discovery mismatch. Retired with the old keeper | — | — | keeper on-call | P-08 (`EMG-082`) |
+| M-31 | Keeper gas spend anomaly. Retired with the old keeper | — | — | Avana Labs, keeper on-call | P-08 (`EMG-082`) |
+| M-32 | Keeper class budget reached. Retired with the old keeper | — | — | keeper on-call, Avana Labs | P-08 (`EMG-082`) |
+| M-33 | Standby keeper signer balance. Retired: M-35 | — | — | Avana Labs | P-08 (`EMG-082`) |
 | M-34 | Oracle poke overdue. Retired: the stateless oracles are never poked, so nothing raises it | — | — | keeper on-call, operators | P-08 (`EMG-082`) |
+| M-35 | Keeper wallet gas balance (the RiskModules' keepers and the flash liquidators' operators) and the keeper top-up wallet (`keeperTopUp`, `KEEPER_TOPUP_WALLET`), against the refill rule of `11-fund-keepers` | a keeper wallet below `minBalanceWei`; the top-up wallet below one full refill | a keeper wallet below a third of `minBalanceWei` | Avana Labs, keeper on-call | P-08 (`EMG-082`) |
+| M-36 | Band edge: a Custom range market's pool tick against its band (fixed for life) | within 10 % of the band's width from an edge | outside the band | risk service providers, guardians | P-03 (`EMG-077`) |
+| M-37 | Depeg above 1 % on a Stable or Correlated pair: the pool price against the LPOracle's fair price, or a Stable token's Chainlink price below $0.99. Response: freeze the market's vault-token reserve | depegged and already frozen | depegged while the reserve is open | Emergency Guardian, guardians, risk service providers | P-03 (`EMG-077`) |
 
 Rules:
 
