@@ -23,6 +23,8 @@
  *  - The LPVault's `listMarket` is NONDET (it records the market in the LPVault, not here); its `getMarket` returns a
  *    ghost market per ID, each token's and feed's `decimals` a ghost per address, and each Chainlink feed's
  *    `latestRoundData` a ghost answer per feed, so `listingTickOf` and `listPool` read the same listing price.
+ *  - `ClTickMath.getTickAtSqrtPrice` is a ghost function of the square-root price, so both read the same listing
+ *    tick; its fixed 14-step loop does not fit loop_iter 2 (the tick math is not what these rules check).
  *  - Other external reads (activation and coverage) are unresolved view calls: any return value.
  *  - The AccessManager's `canCall` decision is the ghost AuthorityModel (setup/AuthorityModel.spec), bound by sighash
  *    because the low-level STATICCALL of `restricted` has no resolvable target; `consumeScheduledOp` is NONDET.
@@ -42,6 +44,13 @@ methods {
     function _.getMarket(uint256 id) external => vaultMarket(id) expect (ILPVault.Market);
     function _.decimals() external => decimalsOf(calledContract) expect (uint8);
     function _.latestRoundData() external => feedRound(calledContract) expect (uint80, int256, uint256, uint256, uint80);
+
+    // The tick of a square-root price is a ghost function of the price. ClTickMath.getTickAtSqrtPrice runs a
+    // fixed 14-step loop (bits 63 to 50 of the logarithm), which loop_iter 2 with optimistic unrolling cuts: every
+    // path through it would be assumed away and `listPool` would never return. The rules need only that `listPool`
+    // and `listingTickOf` get the same tick for the same price, whatever the tick is.
+    function ClTickMath.getTickAtSqrtPrice(uint160 sqrtPriceX96) internal returns (int24)
+        => tickAtSqrtPrice(sqrtPriceX96);
 }
 
 definition MAX_TICK() returns mathint = 887272;
@@ -59,6 +68,7 @@ ghost mapping(uint256 => address) vaultToken0;
 ghost mapping(uint256 => address) vaultToken1;
 ghost mapping(address => uint8) decimalsGhost;
 ghost mapping(address => int256) feedAnswer;
+ghost tickAtSqrtPrice(uint160) returns int24;
 
 function vaultMarket(uint256 id) returns ILPVault.Market {
     ILPVault.Market m;
