@@ -31,19 +31,19 @@ library LiquidationMath {
     }
 
     /// @notice A position's worth in credit units at the oracle price, never below its credit.
-    /// @dev `value · unitScale / unitValue`, rounded down. Floor credit makes a position worth at least its credit at
-    /// every price, so the floor at `credit` only absorbs rounding.
-    /// @param value 18-decimal USD value of the position's liquidity at the oracle price.
+    /// @dev `positionValue · unitScale / unitValue`, rounded down. Floor credit makes a position worth at least its
+    /// credit at every price, so the floor at `credit` only absorbs rounding.
+    /// @param positionValue 18-decimal USD value of the position's liquidity at the oracle price.
     /// @param unitValue 18-decimal USD value of one whole vault token.
     /// @param unitScale Units in one whole vault token, `10^unitDecimals`.
     /// @param credit The position's recorded credit.
     function capacity(
-        uint256 value,
+        uint256 positionValue,
         uint256 unitValue,
         uint256 unitScale,
         uint256 credit
     ) internal pure returns (uint256 cap) {
-        cap = Math.mulDiv(value, unitScale, unitValue);
+        cap = Math.mulDiv(positionValue, unitScale, unitValue);
         if (cap < credit) cap = credit;
     }
 
