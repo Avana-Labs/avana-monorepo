@@ -3,6 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
+import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title AvanaTest
@@ -13,14 +16,12 @@ import {Test} from "forge-std/Test.sol";
 abstract contract AvanaTest is Test {
     // ─── Time (1.5 Governance, Q-228) ───
 
-    /// @notice Short delay of the AvanaTimelock, also `getMinDelay()`.
+    /// @notice Execution delay of the tighten role for the governance Safe (12 hours).
     uint256 internal constant SHORT_DELAY = 43_200;
-    /// @notice Default normal delay and `MAX_DELAY`.
+    /// @notice Default governance delay of the governance role (5 days, the top of the 4 to 5 day range).
     uint256 internal constant NORMAL_DELAY = 432_000;
-    /// @notice Floor of the normal delay.
-    uint256 internal constant MIN_NORMAL_DELAY = 345_600;
-    /// @notice Window after an operation is ready in which it can be executed.
-    uint256 internal constant GRACE_PERIOD = 1_209_600;
+    /// @notice Execution delay of the First-Loss Reserve withdraw role (14 days).
+    uint256 internal constant WITHDRAW_DELAY = 1_209_600;
 
     // ─── Units ───
 
@@ -60,14 +61,20 @@ abstract contract AvanaTest is Test {
 
     // ─── Actors ───
 
-    /// @notice 4-of-7 governance Safe: proposer and executor on the AvanaTimelock.
+    /// @notice 4-of-7 governance Safe: holds the tighten and governance roles with their execution delays.
     address internal governanceMultisig = makeAddr("governanceMultisig");
-    /// @notice 3-of-5 Emergency Guardian: canceller, pause and freeze guardian.
+    /// @notice 3-of-5 Emergency Guardian: pause and freeze guardian.
     address internal emergencyGuardian = makeAddr("emergencyGuardian");
-    /// @notice Aave Protocol Guardian: canceller, pause and freeze guardian.
+    /// @notice Aave Protocol Guardian: pause and freeze guardian.
     address internal aaveGuardian = makeAddr("aaveGuardian");
-    /// @notice Aave governance executor: second proposer, canceller and the only DAO canceller.
+    /// @notice Aave governance executor: the DAO, admin and guardian of every role of Avana's AccessManager.
     address internal aaveGovernanceExecutor = makeAddr("aaveGovernanceExecutor");
+    /// @notice Stand-in for the governance Safe where a test is not about delays: holds every Avana role with no
+    /// execution delay, so its calls run at once.
+    address internal governor = makeAddr("governor");
+    /// @notice The Avana AccessManager every suite starts with: the DAO is its admin and the guardian of each role;
+    /// `governor` holds each role with no delay, `governanceMultisig` with the delay of the role.
+    AccessManager internal accessManager = _newAccessManager();
     /// @notice Aave DAO: admin of the Aave-side AccessManager, configurator admin and proxy admin owner.
     address internal aaveDao = makeAddr("aaveDao");
     /// @notice Aave DAO treasury: supplies the credit lines through the Lend Spoke.
@@ -86,6 +93,60 @@ abstract contract AvanaTest is Test {
     address internal carol = makeAddr("carol");
     /// @notice An account with no role anywhere.
     address internal attacker = makeAddr("attacker");
+
+    // ─── Access ───
+
+    /// @notice Deploys the Avana AccessManager with the DAO (`aaveGovernanceExecutor`) as admin, labels the Avana roles,
+    /// makes the DAO the guardian of each and grants each role to `governor` with no execution delay and to the
+    /// governance Safe (`governanceMultisig`) with the delay of the role (12 hours, 5 days, 14 days).
+    function _newAccessManager() internal returns (AccessManager manager) {
+        // From the artifact, so the manager's creation code is not compiled into every test contract.
+        manager = AccessManager(deployCode("AccessManager.sol:AccessManager", abi.encode(aaveGovernanceExecutor)));
+        vm.label(address(manager), "AccessManager");
+        uint64[] memory ids = AvanaAccess.roles();
+        vm.startPrank(aaveGovernanceExecutor);
+        for (uint256 i = 0; i < ids.length; ++i) {
+            manager.labelRole(ids[i], AvanaAccess.roleLabel(ids[i]));
+            manager.setRoleGuardian(ids[i], AvanaRoles.ADMIN_ROLE);
+            manager.grantRole(ids[i], governor, 0);
+            manager.grantRole(ids[i], governanceMultisig, AvanaAccess.roleDelay(ids[i], NORMAL_DELAY));
+        }
+        vm.stopPrank();
+    }
+
+    /// @notice Schedules `data` on `target` as `caller` at the earliest time the AccessManager allows and returns the
+    /// operation id and the time it is ready.
+    function _scheduleOp(
+        address caller,
+        address target,
+        bytes memory data
+    ) internal returns (bytes32 id, uint256 readyAt) {
+        vm.prank(caller);
+        accessManager.schedule(target, data, 0);
+        id = accessManager.hashOperation(caller, target, data);
+        readyAt = accessManager.getSchedule(id);
+    }
+
+    /// @notice The execution delay the governance Safe (`governanceMultisig`) needs for a call.
+    function _delayOf(
+        address target,
+        bytes memory data
+    ) internal view returns (uint256 delay) {
+        (, uint32 d) = accessManager.canCall(governanceMultisig, target, bytes4(data));
+        delay = d;
+    }
+
+    /// @notice Schedules `data` on `target` as the governance Safe, waits the delay of its role and executes it.
+    function _runScheduled(
+        address target,
+        bytes memory data
+    ) internal returns (bytes32 id) {
+        uint256 readyAt;
+        (id, readyAt) = _scheduleOp(governanceMultisig, target, data);
+        vm.warp(readyAt);
+        vm.prank(governanceMultisig);
+        accessManager.execute(target, data);
+    }
 
     // ─── Helpers ───
 

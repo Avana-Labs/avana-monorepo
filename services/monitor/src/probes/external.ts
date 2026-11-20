@@ -6,8 +6,7 @@
 // (bundle hash against the released one pages on a mismatch; DNS and hosting changes warn).
 
 import { createHash } from "node:crypto";
-import { lensAbi } from "@avana/protocol/abis";
-import { some } from "@avana/services-common/views";
+import { hubViewsAbi as hubConfigAbi, rateStrategyAbi, some } from "@avana/services-common/views";
 import { type Address, type Hex, parseAbi } from "viem";
 import type { LivenessBook } from "../liveness.ts";
 import { type Probe, text } from "../probe.ts";
@@ -169,9 +168,12 @@ export function ghoRateProbe(core: CoreHubGho): Probe<GhoRates> {
     name: "ghoRate",
     async read(ctx) {
       const gho = ctx.manifest.debtReserves.find((d) => d.isGho)?.asset.toLowerCase();
-      const [c] = await some(ctx.views, [{ address: ctx.manifest.avana.lens.address, abi: lensAbi, functionName: "getHubAsset", args: [core.hub, core.assetId] }]);
+      // The Core Hub asset's rate strategy, then its curve.
+      const [config] = await some(ctx.views, [{ address: core.hub, abi: hubConfigAbi, functionName: "getAssetConfig", args: [core.assetId] }]);
+      const strategy = (config as { irStrategy: Address } | null)?.irStrategy;
+      const [c] = strategy ? await some(ctx.views, [{ address: strategy, abi: rateStrategyAbi, functionName: "getInterestRateData", args: [core.assetId] }]) : [null];
       const avana = new Map(ctx.snapshot.hubAssets.filter((a) => gho !== undefined && a.underlying.toLowerCase() === gho && a.rateCurve !== null).map((a) => [`hubAsset:${a.hub}:${a.assetId}:ghoBase`, BigInt(a.rateCurve!.baseDrawnRateBps)]));
-      return { core: c ? BigInt((c as { baseDrawnRateBps: bigint }).baseDrawnRateBps) : null, avana };
+      return { core: c ? BigInt((c as { baseDrawnRate: number }).baseDrawnRate) : null, avana };
     },
     evaluate(input) {
       return [...input.avana].map(([subject, bps]): Finding =>

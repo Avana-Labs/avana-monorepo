@@ -5,45 +5,31 @@
 export { aaveAdapterAbi } from "./aaveAdapter.ts";
 export { aaveV4HubAbi } from "./aaveV4Hub.ts";
 export { aaveV4SpokeAbi } from "./aaveV4Spoke.ts";
-export { avanaGasVaultAbi } from "./avanaGasVault.ts";
-export { avanaTimelockAbi } from "./avanaTimelock.ts";
-export { collateralizationAbi } from "./collateralization.ts";
+export { accessManagerAbi } from "./accessManager.ts";
 export { firstLossReserveAbi } from "./firstLossReserve.ts";
 export { flashLiquidatorAbi } from "./flashLiquidator.ts";
-export { lensAbi } from "./lens.ts";
+export { flashloanRepayAbi } from "./flashloanRepay.ts";
+export { liquidationModuleAbi } from "./liquidationModule.ts";
 export { lpOracleAbi } from "./lpOracle.ts";
 export { lpVaultAbi } from "./lpVault.ts";
-export { lpVaultSwapAbi } from "./lpVaultSwap.ts";
-export { marketRegistryAbi } from "./marketRegistry.ts";
-export { parameterStoreAbi } from "./parameterStore.ts";
-export { payoutEscrowAbi } from "./payoutEscrow.ts";
-export { proxyManagerAbi } from "./proxyManager.ts";
 export { riskModuleAbi } from "./riskModule.ts";
 export { vaultTokenAbi } from "./vaultToken.ts";
-export { vaultTokenFactoryAbi } from "./vaultTokenFactory.ts";
 
 /** Artifact name of each ABI, the keys ABI_HASH is computed over. */
 export const ABI_ARTIFACTS = {
   aaveAdapterAbi: "IAaveAdapter",
   aaveV4HubAbi: "IHub",
   aaveV4SpokeAbi: "ISpoke",
-  avanaGasVaultAbi: "IAvanaGasVault",
-  avanaTimelockAbi: "AvanaTimelock",
-  collateralizationAbi: "ICollateralization",
-  firstLossReserveAbi: "AvanaFirstLossReserve",
+  accessManagerAbi: "IAccessManager",
+  firstLossReserveAbi: "IFirstLossReserve",
   flashLiquidatorAbi: "IFlashLiquidator",
-  lensAbi: "ILens",
+  flashloanRepayAbi: "IFlashloanRepay",
+  liquidationModuleAbi: "ILiquidationModule",
   lpOracleAbi: "ILPOracle",
   lpVaultAbi: "ILPVault",
-  lpVaultSwapAbi: "ILPVaultSwap",
-  marketRegistryAbi: "IMarketRegistry",
-  parameterStoreAbi: "IParameterStore",
-  payoutEscrowAbi: "IPayoutEscrow",
-  proxyManagerAbi: "IProxyManager",
   riskModuleAbi: "IRiskModule",
   vaultTokenAbi: "IVaultToken",
-  vaultTokenFactoryAbi: "IVaultTokenFactory",
 } as const;
 
 /** keccak256 of the canonical JSON of every ABI above; the release manifest's abiHash must equal it (TEST-149). */
-export const ABI_HASH = "0x554e6db14034fc48bcb3a518d8af608ab902ae428d0cf8b07d4ab16d22ae5201" as const;
+export const ABI_HASH = "0x85d706da44602d494d02b5cbd7d23885d7aaa285b1a6b983f6781f58704e57e9" as const;

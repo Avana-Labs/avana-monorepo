@@ -71,7 +71,8 @@ describe("M-29 GHO base rate", () => {
 
   it("pages while an Avana Hub's GHO base rate is below the Core Hub's", async () => {
     let core = 450n;
-    const p = fakeProvider({ snapshot: ghoSnapshot, handlers: [on("getHubAsset", () => ({ baseDrawnRateBps: core }))] });
+    const IRS = "0x00000000000000000000000000000000000000c1";
+    const p = fakeProvider({ snapshot: ghoSnapshot, handlers: [on("getAssetConfig", () => ({ feeReceiver: IRS, liquidityFee: 0, irStrategy: IRS, reinvestmentController: IRS })), on("getInterestRateData", () => ({ optimalUsageRatio: 8_000, baseDrawnRate: Number(core), rateGrowthBeforeOptimal: 0, rateGrowthAfterOptimal: 0 }), IRS)] });
     const probe = ghoRateProbe({ hub: "0x00000000000000000000000000000000000000c0", assetId: 3n });
     const subject = `hubAsset:${FIXTURE_HUB}:1:ghoBase`;
     expect((await run(probe, p, 1, manifest)).findings).toEqual([{ signal: "M-29", kind: "condition", level: "page", subject, detail: { baseDrawnRateBps: "400", coreHubBaseDrawnRateBps: "450" } }]);
@@ -161,13 +162,13 @@ describe("M-27 frontend", () => {
 
 describe("probesFor", () => {
   const chain = { chain: CHAINS.mainnet } as ChainConfig;
-  const base = { safes: new Map(), coreHubGho: new Map(), frontend: null, routeCheckSeconds: 86_400 } as unknown as MonitorConfig;
+  const base = { safes: new Map(), coreHubGho: new Map(), frontend: null, keeperWallets: { warnWei: null, pageWei: null, extra: new Map() } } as unknown as MonitorConfig;
   const deps = { fetchText: async () => ({ body: "", server: "" }), resolve: async () => "" };
 
   it("runs the protocol probes everywhere and the others only where configured", () => {
-    expect(probesFor(chain, base, deps).map((p) => p.name)).toEqual(["snapshot", "oracle", "coverage", "events", "issuers", "routes", "gasVault"]);
+    expect(probesFor(chain, base, deps).map((p) => p.name)).toEqual(["snapshot", "oracle", "coverage", "markets", "wallets", "events", "issuers"]);
     const full = { ...base, safes: new Map([[1, [{ label: "g", address: SAFE }]]]), coreHubGho: new Map([[1, { hub: SAFE, assetId: 1n }]]), frontend: { url: "https://x", expectedSha256: null, chainId: 1 } } as unknown as MonitorConfig;
-    expect(probesFor(chain, full, deps).map((p) => p.name)).toEqual(["snapshot", "oracle", "coverage", "events", "issuers", "routes", "gasVault", "safes", "ghoRate", "frontend"]);
-    expect(probesFor({ chain: CHAINS.base } as ChainConfig, full, deps).map((p) => p.name)).toEqual(["snapshot", "oracle", "coverage", "events", "issuers", "routes", "gasVault"]);
+    expect(probesFor(chain, full, deps).map((p) => p.name)).toEqual(["snapshot", "oracle", "coverage", "markets", "wallets", "events", "issuers", "safes", "ghoRate", "frontend"]);
+    expect(probesFor({ chain: CHAINS.base } as ChainConfig, full, deps).map((p) => p.name)).toEqual(["snapshot", "oracle", "coverage", "markets", "wallets", "events", "issuers"]);
   });
 });

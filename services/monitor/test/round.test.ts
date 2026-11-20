@@ -27,10 +27,11 @@ function harness() {
   return { sent, entries, deps, feed };
 }
 
-const priced = (priceState: number) => (b: { number: bigint; timestamp: number }) => fixtureSnapshot(b, (s) => ({ ...s, markets: s.markets.map((m) => (m.marketId === "1" ? { ...m, priceState } : m)) }));
+/** The snapshot with market 1 priced (`true`) or its LPOracle refusing to price (`false`, an M-01 page). */
+const priced = (state: number) => (b: { number: bigint; timestamp: number }) => fixtureSnapshot(b, (s) => ({ ...s, markets: s.markets.map((m) => (m.marketId === "1" ? { ...m, priceAvailable: state !== 3 } : m)) }));
 
 describe("runRound", () => {
-  it("pages a confirmed Expired price to the signers and the Aave contact, once, then resolves it", async () => {
+  it("pages a confirmed unpriced market to the signers and the Aave contact, once, then resolves it", async () => {
     const { sent, entries, deps, feed } = harness();
     const primary = fakeProvider();
     const second = fakeProvider();
@@ -95,7 +96,7 @@ describe("runRound", () => {
       evidence: () => "1",
     };
     const withFlaky = { ...deps, probes: [flaky as Probe, ...deps.probes] };
-    const chain = fakeChain(() => ({ number: 1n, timestamp: 12 }), fakeProvider({ snapshot: priced(2) }), fakeProvider());
+    const chain = fakeChain(() => ({ number: 1n, timestamp: 12 }), fakeProvider({ snapshot: priced(3) }), fakeProvider({ snapshot: priced(3) }));
     await runRound(chain, withFlaky);
     fail = true;
     await expect(runRound(chain, withFlaky)).rejects.toThrow(RoundError);
@@ -104,7 +105,7 @@ describe("runRound", () => {
 });
 
 describe("loadConfig", () => {
-  const manifest = { chainId: 1, avana: { lens: { address: "0x1" }, marketRegistry: { address: "0x2" }, firstLossReserves: [] }, aave: { hubs: [{ address: "0x00000000000000000000000000000000000000a1", label: "Stable", tier: 1, startBlock: 1 }], lendSpokes: [{ address: "0x00000000000000000000000000000000000000a2", label: "Lend", startBlock: 1 }], borrowSpokes: [] } } as unknown as ServiceManifest;
+  const manifest = { chainId: 1, avana: { accessManager: { address: "0x1" }, integrations: [], flashLiquidators: [] }, markets: [], debtReserves: [], coverage: { firstLossReserves: [], daoDeficitOffsets: [] }, aave: { hubs: [{ address: "0x00000000000000000000000000000000000000a1", label: "Stable", tier: 1, startBlock: 1 }], lendSpokes: [{ address: "0x00000000000000000000000000000000000000a2", label: "Lend", startBlock: 1 }], borrowSpokes: [] } } as unknown as ServiceManifest;
   const base: NodeJS.ProcessEnv = {
     MONITOR_NETWORK_SET: "production",
     AVANA_MANIFEST: "eth.json",

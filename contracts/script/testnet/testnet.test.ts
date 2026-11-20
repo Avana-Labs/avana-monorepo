@@ -12,22 +12,17 @@ import { FIRST_RELEASE, LATER_RELEASE, baseConfig, firstRelease, laterRelease, t
 import { type HubInput, type TestValues, planHub } from "../local/operator/hub.ts";
 import { ADDRESS_ROLES, SIGNER_ROLES, type TestnetRoles, checkRoles, keysOf, parseConfigFile } from "./keys.ts";
 import {
-  GAS_VAULT, GAS_VAULT_SIGNER, NATIVE_V4_POOL_USD, WORLD_STEP, baseRoles, gasVaultFundKey, gasVaultFundWei, isNativeV4Pool, nativeV4PoolWei,
-  syncGasVaultFund, syncNativeV4Pools, testnetPatch,
+  KEEPER_TOP_UP, NATIVE_V4_POOL_USD, WORLD_STEP, baseRoles, isNativeV4Pool, nativeV4PoolWei, syncNativeV4Pools, testnetPatch,
 } from "./testnet.ts";
 
 const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
 const signers = Object.fromEntries(SIGNER_ROLES.map((k, i) => [k, addr(i + 1)]));
 const roles = Object.fromEntries(ADDRESS_ROLES.map((k, i) => [k, addr(100 + i)]));
-const KEYS = ["KEYSTORE_DIR", "PASSWORD_FILE", "DEPLOYER", "GOVERNANCE", "PAYLOADS_CONTROLLER", "ORACLES"];
+const KEYS = ["KEYSTORE_DIR", "PASSWORD_FILE", "DEPLOYER", "GOVERNANCE", "PAYLOADS_CONTROLLER", "ORACLES", "KEEPER_TOPUP_WALLET"];
 
 test("the committed config template parses, holds every key and only placeholders", () => {
   const t = parseConfigFile(readFileSync(new URL("./test-network-config.example", import.meta.url), "utf8"));
-  const fund = TESTNETS.map(gasVaultFundKey);
-  assert.deepEqual(Object.keys(t).sort(), [...KEYS, ...ADDRESS_ROLES, ...fund].sort());
-  // The optional gas vault funding keys hold the default; every other key a placeholder.
-  for (const c of TESTNETS) assert.equal(gasVaultFundWei(c, t), GAS_VAULT.fundWei);
-  for (const k of fund) delete t[k];
+  assert.deepEqual(Object.keys(t).sort(), [...KEYS, ...ADDRESS_ROLES].sort());
   for (const v of Object.values(t)) assert.match(v, /^<[^>]+>(,<[^>]+>)*$/);
   assert.ok(keysOf(t).errors.length > 0, "a placeholder is never taken for a keystore");
   assert.equal(checkRoles(signers, t).length, ADDRESS_ROLES.length, "a placeholder is never taken for an address");
@@ -35,7 +30,7 @@ test("the committed config template parses, holds every key and only placeholder
 
 test("the config file names every keystore, each once, under absolute paths", () => {
   const dir = process.platform === "win32" ? "C:\\k" : "/k";
-  const good = { KEYSTORE_DIR: dir, PASSWORD_FILE: `${dir}p`, DEPLOYER: "a", GOVERNANCE: "b", PAYLOADS_CONTROLLER: "c", ORACLES: "d,e,f,g" };
+  const good = { KEYSTORE_DIR: dir, PASSWORD_FILE: `${dir}p`, DEPLOYER: "a", GOVERNANCE: "b", PAYLOADS_CONTROLLER: "c", ORACLES: "d,e,f,g", KEEPER_TOPUP_WALLET: "h" };
   const { keys, errors } = keysOf(good);
   assert.deepEqual(errors, []);
   assert.equal(Object.keys(keys!.keystores).length, SIGNER_ROLES.length);
@@ -43,6 +38,7 @@ test("the config file names every keystore, each once, under absolute paths", ()
   assert.match(keysOf({ ...good, GOVERNANCE: "a" }).errors.join(), /its own keystore/);
   assert.match(keysOf({ ...good, KEYSTORE_DIR: "k" }).errors.join(), /KEYSTORE_DIR/);
   assert.match(keysOf({ ...good, DEPLOYER: undefined }).errors.join(), /deployer: no keystore/);
+  assert.match(keysOf({ ...good, KEEPER_TOPUP_WALLET: undefined }).errors.join(), /KEEPER_TOPUP_WALLET: no keystore name.*required/);
 });
 
 test("sound roles pass; a missing signer, a bad address and a shared account are each refused", () => {
@@ -72,72 +68,13 @@ test("a test network's release deploys the executor before Aave V4 and waits its
   // The local stack's ledgers name these steps: they must not move.
   assert.deepEqual(FIRST_RELEASE.slice(0, 4), ["multicall3", "00-factories", "01-aave-v4", "place-executor"]);
   assert.deepEqual(LATER_RELEASE.filter((s) => s.startsWith("advance:")), ["advance:432001", "advance:432001", "advance:432001", "advance:43201"]);
-  // Only a test network's first release deploys, wires and funds the gas vault, before the manifest records it.
-  const vault = ["12-gas-vault", "12-gas-vault-signers", "advance:121", "12-execute-gas-vault-signers", "12-fund-gas-vault"];
-  const at = first.indexOf("12-gas-vault");
-  assert.deepEqual(first.slice(at, at + vault.length), vault);
-  assert.ok(at > first.indexOf("05-execute-access-operations") && at < first.indexOf("manifest"));
-  assert.ok(!FIRST_RELEASE.some((s) => s.startsWith("12-")));
-  assert.equal(first.length - vault.length, FIRST_RELEASE.length);
+  assert.ok(!first.some((s) => s.startsWith("12-")));
+  assert.equal(first.length, FIRST_RELEASE.length);
   // Only a test network's listing waits for the pools' TWAP history, right before its listing operation.
   assert.equal(later.indexOf("twap-history"), later.indexOf("09-listing-markets") - 1);
   assert.ok(!LATER_RELEASE.includes("twap-history"));
   assert.deepEqual(later.filter((s) => s !== "twap-history").length, LATER_RELEASE.length);
 });
-
-test("the gas vault funding: 0.5 ETH by default, each chain's own override, 0 funds nothing, a bad value is refused", () => {
-  const sepolia = chainOf("sepolia");
-  const base = chainOf("base-sepolia");
-  assert.equal(gasVaultFundKey(sepolia), "GAS_VAULT_FUND_WEI_SEPOLIA");
-  assert.equal(gasVaultFundKey(base), "GAS_VAULT_FUND_WEI_BASE_SEPOLIA");
-  // Unset or empty: 0.5 ETH.
-  assert.equal(GAS_VAULT.fundWei, "500000000000000000");
-  for (const c of [sepolia, base]) {
-    assert.equal(gasVaultFundWei(c, {}), GAS_VAULT.fundWei);
-    assert.equal(gasVaultFundWei(c, { [gasVaultFundKey(c)]: "" }), GAS_VAULT.fundWei);
-  }
-  // An override applies to its chain only.
-  const f = { GAS_VAULT_FUND_WEI_BASE_SEPOLIA: "100000000000000000" };
-  assert.equal(gasVaultFundWei(base, f), "100000000000000000");
-  assert.equal(gasVaultFundWei(sepolia, f), GAS_VAULT.fundWei);
-  assert.equal(gasVaultFundWei(sepolia, { GAS_VAULT_FUND_WEI_SEPOLIA: "500000000000000000" }), GAS_VAULT.fundWei);
-  assert.equal(gasVaultFundWei(base, { GAS_VAULT_FUND_WEI_BASE_SEPOLIA: "0" }), "0");
-  assert.equal(gasVaultFundWei(base, { GAS_VAULT_FUND_WEI_BASE_SEPOLIA: "000" }), "0");
-  // Not a whole number of wei, negative, or over 0.5 ETH: refused, naming the key.
-  for (const bad of ["-1", "0.1", "1e17", "0x10", "abc", "1 000"]) assert.throws(() => gasVaultFundWei(base, { GAS_VAULT_FUND_WEI_BASE_SEPOLIA: bad }), /GAS_VAULT_FUND_WEI_BASE_SEPOLIA: .* not a whole number/, bad);
-  assert.throws(() => gasVaultFundWei(base, { GAS_VAULT_FUND_WEI_BASE_SEPOLIA: "500000000000000001" }), /GAS_VAULT_FUND_WEI_BASE_SEPOLIA: .*more than/);
-
-  // The config: the chain's amount, and at 0 the vault and its keeper signer stay, only the funding is 0 (the fund
-  // step's script funds up to fundWei, so it sends nothing); the step list does not change.
-  const r = {
-    signers: Object.fromEntries(SIGNER_ROLES.map((k, i) => [k, addr(i + 1)])),
-    addresses: Object.fromEntries(ADDRESS_ROLES.map((k, i) => [k, addr(100 + i)])),
-  } as unknown as TestnetRoles;
-  const zero = baseConfig(base, baseRoles(r), testnetPatch(r, addr(999), "v9.9.9-rc.1", gasVaultFundWei(base, { GAS_VAULT_FUND_WEI_BASE_SEPOLIA: "0" })));
-  assert.equal(zero.gasVault.fundWei, "0");
-  assert.deepEqual(zero.gasVault.signers, [{ signer: r.addresses.KEEPER, ...GAS_VAULT_SIGNER }]);
-  assert.ok(zero.gasVault.maxSigners > 0);
-  assert.ok(firstRelease(base, { normal: 120, short: 60 }).includes("12-fund-gas-vault"));
-  const dflt = baseConfig(base, baseRoles(r), testnetPatch(r, addr(999), "v9.9.9-rc.1"));
-  assert.equal(dflt.gasVault.fundWei, GAS_VAULT.fundWei);
-
-  // A rerun's config, written before the override, takes the new amount; an unchanged one is left as it is.
-  const dir = mkdtempSync(join(tmpdir(), "gas-vault-fund-"));
-  try {
-    const p = join(dir, "config-base.json");
-    writeFileSync(p, `${JSON.stringify(dflt, null, 2)}\n`);
-    assert.equal(syncGasVaultFund(p, "0"), true);
-    const after = JSON.parse(readFileSync(p, "utf8"));
-    assert.equal(after.gasVault.fundWei, "0");
-    assert.deepEqual(after.gasVault.signers, dflt.gasVault.signers);
-    assert.equal(syncGasVaultFund(p, "0"), false);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
-/** The deployer's spare test ETH the native-ETH Uniswap v4 pools may take on each chain, all pools together. */
-const NATIVE_V4_TARGET_WEI = 5_000_000_000_000_000n;
 
 test("a test network's native-ETH Uniswap v4 pools take a few dollars of the deployer's ETH; the other v4 pools are the local stack's", () => {
   const r = {
@@ -225,7 +162,7 @@ test("a test network's market parameters are the local stack's, from test-values
   // ID, and the route depth threshold a chain that is not a development node requires (from the test values too).
   const strip = (cfg: Record<string, any>) => {
     const c = structuredClone(cfg);
-    for (const k of ["network", "chainId", "release", "governance", "gasVault", "operatorHelpers", "keepers"]) delete c[k];
+    for (const k of ["network", "chainId", "release", "governance", "operatorHelpers", "keepers", "keeperTopUp"]) delete c[k];
     delete c.parameters.timelockNormalDelay;
     delete c.parameters.globals.feeRecipient;
     delete c.chain.operationGasBudget;
@@ -248,11 +185,8 @@ test("a test network's market parameters are the local stack's, from test-values
       t = planHub(t, input, tv, tc.chainId).config;
     }
     assert.ok(t.listing.markets.length > 0, `${testnet}: its Hub files list markets`);
-    // The gas vault: one keeper signer, the test-network sizes, the base config's maxSigners.
-    assert.deepEqual(t.gasVault.signers, [{ signer: roles.addresses.KEEPER, ...GAS_VAULT_SIGNER }]);
-    assert.equal(t.gasVault.fundWei, GAS_VAULT.fundWei);
-    assert.equal(t.gasVault.maxSigners, l.gasVault.maxSigners);
     assert.deepEqual(strip(t), strip(l), `${testnet}: every value but the roles and delays is the local stack's`);
+    assert.deepEqual(t.keeperTopUp, { wallet: roles.signers.keeperTopUp, ...KEEPER_TOP_UP[testnet] }, `${testnet}: the keeper top-up wallet`);
     // The values come from test-values.json: the DAO's per debt asset and per token, the market ladder per market.
     for (const d of t.aavePayload.debtAssets) for (const [k, v] of Object.entries(tv.debtAssets?.[d.symbol] ?? {})) if (k in d) assert.deepEqual(d[k], v, `${testnet} ${d.symbol}.${k}`);
     for (const tok of t.listing.tokens) for (const [k, v] of Object.entries({ ...tv.tokens?.default, ...tv.tokens?.[tok.symbol] })) assert.deepEqual(tok[k], v, `${testnet} ${tok.symbol}.${k}`);

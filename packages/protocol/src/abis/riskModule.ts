@@ -5,11 +5,11 @@
 export const riskModuleAbi = [
   {
     "type": "function",
-    "name": "ADAPTER",
+    "name": "LIQUIDATION_MODULE",
     "inputs": [],
     "outputs": [
       {
-        "name": "adapter",
+        "name": "liquidationModule",
         "type": "address",
         "internalType": "address"
       }
@@ -18,11 +18,11 @@ export const riskModuleAbi = [
   },
   {
     "type": "function",
-    "name": "COLLATERALIZATION",
+    "name": "LP_VAULT",
     "inputs": [],
     "outputs": [
       {
-        "name": "collateralization",
+        "name": "lpVault",
         "type": "address",
         "internalType": "address"
       }
@@ -31,72 +31,82 @@ export const riskModuleAbi = [
   },
   {
     "type": "function",
-    "name": "LP_VAULT_SWAP",
+    "name": "MAX_FEE_SHARE_BPS",
     "inputs": [],
     "outputs": [
       {
-        "name": "lpVaultSwap",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "MARKET_REGISTRY",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "marketRegistry",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "PARAMETER_STORE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "parameterStore",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "RESCUE_MIN_PLEDGE_USD",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "usd",
+        "name": "maxShareBps",
         "type": "uint256",
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "pure"
+    "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "TIMELOCK",
+    "name": "MAX_KEEPERS",
     "inputs": [],
     "outputs": [
       {
-        "name": "timelock",
-        "type": "address",
-        "internalType": "address"
+        "name": "maxKeepers",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "checkAaveConfig",
+    "name": "MIN_BAND_SPACINGS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "spacings",
+        "type": "int24",
+        "internalType": "int24"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "activateMarket",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "vaultToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "lpOracle",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "addKeeper",
+    "inputs": [
+      {
+        "name": "keeper",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "checkBorrow",
     "inputs": [
       {
         "name": "spoke",
@@ -104,25 +114,7 @@ export const riskModuleAbi = [
         "internalType": "address"
       },
       {
-        "name": "marketIds",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "checkBorrowGate",
-    "inputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "debtReserveId",
+        "name": "reserveId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -132,42 +124,131 @@ export const riskModuleAbi = [
   },
   {
     "type": "function",
-    "name": "checkPledge",
+    "name": "coverage",
     "inputs": [
       {
-        "name": "depositor",
+        "name": "hub",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "proxy",
+        "name": "asset",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "drawCapSum",
+        "type": "uint256",
+        "internalType": "uint256"
       },
+      {
+        "name": "required",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "funded",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "coverageRatioBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "ratioBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "creditOf",
+    "inputs": [
       {
         "name": "marketId",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "integrationId",
-        "type": "uint32",
-        "internalType": "uint32"
+        "name": "tickLower",
+        "type": "int24",
+        "internalType": "int24"
       },
       {
-        "name": "positionKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "name": "tickUpper",
+        "type": "int24",
+        "internalType": "int24"
       },
       {
-        "name": "units",
+        "name": "liquidity",
         "type": "uint128",
         "internalType": "uint128"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "credit",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "feeRecipient",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "recipient",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "feeShareBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "shareBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getDebtReserve",
+    "inputs": [
+      {
+        "name": "spoke",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        "name": "counters",
+        "name": "reserveId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "reserve",
         "type": "tuple",
-        "internalType": "struct PledgeCounters",
+        "internalType": "struct IRiskModule.DebtReserve",
         "components": [
           {
             "name": "hub",
@@ -175,353 +256,19 @@ export const riskModuleAbi = [
             "internalType": "address"
           },
           {
-            "name": "regularUsed",
-            "type": "uint128",
-            "internalType": "uint128"
+            "name": "asset",
+            "type": "address",
+            "internalType": "address"
           },
           {
-            "name": "sliceUsed",
-            "type": "uint128",
-            "internalType": "uint128"
-          },
-          {
-            "name": "poolKey",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "poolUnits",
+            "name": "assetId",
             "type": "uint256",
             "internalType": "uint256"
           },
           {
-            "name": "accountRecords",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "tokenUsed",
-            "type": "uint256[]",
-            "internalType": "uint256[]"
-          }
-        ]
-      },
-      {
-        "name": "requireRescue",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "charge",
-        "type": "tuple",
-        "internalType": "struct PledgeCharge",
-        "components": [
-          {
-            "name": "usdCharge",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "sliceUsd",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "rescue",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "rescueUnits",
-            "type": "uint128",
-            "internalType": "uint128"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "checkRemainingRecord",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "remainingUnits",
-        "type": "uint128",
-        "internalType": "uint128"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "creditRepay",
-    "inputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "creditWithdraw",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "usd",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "debtValueUsd",
-    "inputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "usd",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "expectedCollateralFactorBps",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "cfBps",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getAccountGateStatus",
-    "inputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "status",
-        "type": "tuple",
-        "internalType": "struct AccountGateStatus",
-        "components": [
-          {
-            "name": "spokeApproved",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "markets",
-            "type": "tuple[]",
-            "internalType": "struct MarketGateStatus[]",
-            "components": [
-              {
-                "name": "marketId",
-                "type": "uint256",
-                "internalType": "uint256"
-              },
-              {
-                "name": "reserveId",
-                "type": "uint256",
-                "internalType": "uint256"
-              },
-              {
-                "name": "priceState",
-                "type": "uint8",
-                "internalType": "enum PriceState"
-              },
-              {
-                "name": "oldestFeedAge",
-                "type": "uint256",
-                "internalType": "uint256"
-              },
-              {
-                "name": "feedTooOld",
-                "type": "bool",
-                "internalType": "bool"
-              },
-              {
-                "name": "offboarding",
-                "type": "bool",
-                "internalType": "bool"
-              },
-              {
-                "name": "aaveReservePaused",
-                "type": "bool",
-                "internalType": "bool"
-              },
-              {
-                "name": "aaveReserveFrozen",
-                "type": "bool",
-                "internalType": "bool"
-              },
-              {
-                "name": "hubSharesEqualAssets",
-                "type": "bool",
-                "internalType": "bool"
-              },
-              {
-                "name": "noSettlementPath",
-                "type": "bool",
-                "internalType": "bool"
-              },
-              {
-                "name": "liquidationHalted",
-                "type": "bool",
-                "internalType": "bool"
-              },
-              {
-                "name": "breakerReasons",
-                "type": "uint32",
-                "internalType": "uint32"
-              },
-              {
-                "name": "breakerLatchedUntil",
-                "type": "uint64",
-                "internalType": "uint64"
-              }
-            ]
-          },
-          {
-            "name": "unknownCollateralReserveId",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "unapprovedDebtReserveId",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "pausedDebtReserveId",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "staleDebtReserveId",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "haltedDebtReserveId",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "driftMarketId",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "driftReason",
-            "type": "uint8",
-            "internalType": "enum DriftReason"
-          },
-          {
-            "name": "noApprovedKeeper",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "pauseState",
-            "type": "uint8",
-            "internalType": "enum PauseState"
-          },
-          {
-            "name": "healthFactor",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "hardHealthFloor",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "borrowAllowed",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "withdrawWithDebtAllowed",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "pauseReason",
-            "type": "uint8",
-            "internalType": "enum PauseReason"
-          },
-          {
-            "name": "healthFactorExcludingRescue",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "breakerDebtReserveId",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "debtBreakerReasons",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "statusUnavailable",
-            "type": "bool",
-            "internalType": "bool"
+            "name": "firstLossReserve",
+            "type": "address",
+            "internalType": "address"
           }
         ]
       }
@@ -530,15 +277,23 @@ export const riskModuleAbi = [
   },
   {
     "type": "function",
-    "name": "getBorrowSpeed",
+    "name": "getKeepers",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "keepers",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getMarket",
     "inputs": [
       {
         "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "debtReserveId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -547,72 +302,65 @@ export const riskModuleAbi = [
       {
         "name": "market",
         "type": "tuple",
-        "internalType": "struct SpeedView",
+        "internalType": "struct IRiskModule.Market",
         "components": [
           {
-            "name": "limit",
+            "name": "pool",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "spoke",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "vaultToken",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "lpOracle",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "reserveId",
             "type": "uint256",
             "internalType": "uint256"
           },
           {
-            "name": "used",
-            "type": "uint256",
-            "internalType": "uint256"
+            "name": "feedsHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
           },
           {
-            "name": "available",
-            "type": "uint256",
-            "internalType": "uint256"
+            "name": "bandLower",
+            "type": "int24",
+            "internalType": "int24"
           },
           {
-            "name": "moreAt",
-            "type": "uint64",
-            "internalType": "uint64"
+            "name": "bandUpper",
+            "type": "int24",
+            "internalType": "int24"
           },
           {
-            "name": "moreAmount",
-            "type": "uint256",
-            "internalType": "uint256"
+            "name": "ltvBps",
+            "type": "uint16",
+            "internalType": "uint16"
           },
           {
-            "name": "unavailable",
-            "type": "bool",
-            "internalType": "bool"
-          }
-        ]
-      },
-      {
-        "name": "debt",
-        "type": "tuple",
-        "internalType": "struct SpeedView",
-        "components": [
-          {
-            "name": "limit",
-            "type": "uint256",
-            "internalType": "uint256"
+            "name": "unitDecimals",
+            "type": "uint8",
+            "internalType": "uint8"
           },
           {
-            "name": "used",
-            "type": "uint256",
-            "internalType": "uint256"
+            "name": "kind",
+            "type": "uint8",
+            "internalType": "enum IRiskModule.MarketKind"
           },
           {
-            "name": "available",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "moreAt",
-            "type": "uint64",
-            "internalType": "uint64"
-          },
-          {
-            "name": "moreAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "unavailable",
+            "name": "active",
             "type": "bool",
             "internalType": "bool"
           }
@@ -623,102 +371,29 @@ export const riskModuleAbi = [
   },
   {
     "type": "function",
-    "name": "getBreakerStatus",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "reasons",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "reopensAt",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getDebtBreakerStatus",
+    "name": "getSpoke",
     "inputs": [
       {
         "name": "spoke",
         "type": "address",
         "internalType": "address"
-      },
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "outputs": [
       {
-        "name": "reasons",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "reopensAt",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getPledgeSpeed",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "pledge",
+        "name": "config",
         "type": "tuple",
-        "internalType": "struct SpeedView",
+        "internalType": "struct IRiskModule.SpokeConfig",
         "components": [
           {
-            "name": "limit",
-            "type": "uint256",
-            "internalType": "uint256"
+            "name": "hub",
+            "type": "address",
+            "internalType": "address"
           },
           {
-            "name": "used",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "available",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "moreAt",
-            "type": "uint64",
-            "internalType": "uint64"
-          },
-          {
-            "name": "moreAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "unavailable",
-            "type": "bool",
-            "internalType": "bool"
+            "name": "kind",
+            "type": "uint8",
+            "internalType": "enum IRiskModule.SpokeKind"
           }
         ]
       }
@@ -727,81 +402,27 @@ export const riskModuleAbi = [
   },
   {
     "type": "function",
-    "name": "getSpeedWindow",
-    "inputs": [
-      {
-        "name": "scope",
-        "type": "uint8",
-        "internalType": "enum SpeedScope"
-      },
-      {
-        "name": "key",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "window",
-        "type": "tuple",
-        "internalType": "struct SpeedWindow",
-        "components": [
-          {
-            "name": "start",
-            "type": "uint64",
-            "internalType": "uint64"
-          },
-          {
-            "name": "prev",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "curr",
-            "type": "uint96",
-            "internalType": "uint96"
-          },
-          {
-            "name": "base",
-            "type": "uint248",
-            "internalType": "uint248"
-          },
-          {
-            "name": "opened",
-            "type": "bool",
-            "internalType": "bool"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "initialize",
-    "inputs": [
-      {
-        "name": "timelock",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "isHubSharesEqualAssets",
+    "name": "isEligible",
     "inputs": [
       {
         "name": "marketId",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "tickLower",
+        "type": "int24",
+        "internalType": "int24"
+      },
+      {
+        "name": "tickUpper",
+        "type": "int24",
+        "internalType": "int24"
       }
     ],
     "outputs": [
       {
-        "name": "equal",
+        "name": "eligible",
         "type": "bool",
         "internalType": "bool"
       }
@@ -810,218 +431,148 @@ export const riskModuleAbi = [
   },
   {
     "type": "function",
-    "name": "liveBreakerReasons",
+    "name": "isKeeper",
     "inputs": [
       {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [
       {
-        "name": "reasons",
-        "type": "uint32",
-        "internalType": "uint32"
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "liveDebtBreakerReasons",
+    "name": "listPool",
     "inputs": [
       {
-        "name": "spoke",
-        "type": "address",
-        "internalType": "address"
+        "name": "p",
+        "type": "tuple",
+        "internalType": "struct IRiskModule.ListPoolParams",
+        "components": [
+          {
+            "name": "pool",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "spoke",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "tickSpacing",
+            "type": "int24",
+            "internalType": "int24"
+          },
+          {
+            "name": "listingTick",
+            "type": "int24",
+            "internalType": "int24"
+          },
+          {
+            "name": "ltvBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "width",
+            "type": "tuple",
+            "internalType": "struct IRiskModule.Width",
+            "components": [
+              {
+                "name": "below",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "above",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "token0",
+            "type": "tuple",
+            "internalType": "struct ILPOracle.TokenFeeds",
+            "components": [
+              {
+                "name": "feeds",
+                "type": "address[]",
+                "internalType": "address[]"
+              },
+              {
+                "name": "usdStable",
+                "type": "bool",
+                "internalType": "bool"
+              }
+            ]
+          },
+          {
+            "name": "token1",
+            "type": "tuple",
+            "internalType": "struct ILPOracle.TokenFeeds",
+            "components": [
+              {
+                "name": "feeds",
+                "type": "address[]",
+                "internalType": "address[]"
+              },
+              {
+                "name": "usdStable",
+                "type": "bool",
+                "internalType": "bool"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "fullRange",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
-        "name": "debtReserveId",
+        "name": "customRange",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "reasons",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "pokeBreakers",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "reasons",
-        "type": "uint32",
-        "internalType": "uint32"
       }
     ],
     "stateMutability": "nonpayable"
   },
   {
     "type": "function",
-    "name": "pokeConfig",
+    "name": "marketsOf",
     "inputs": [
       {
-        "name": "spoke",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "reason",
-        "type": "uint8",
-        "internalType": "enum DriftReason"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "postHealthCheck",
-    "inputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "minHealthFactor",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "healthFactor",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "preBorrowCheck",
-    "inputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "preWithdrawCheck",
-    "inputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "previewPledge",
-    "inputs": [
-      {
-        "name": "depositor",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "positionKey",
+        "name": "pool",
         "type": "bytes32",
         "internalType": "bytes32"
       }
     ],
     "outputs": [
       {
-        "name": "preview",
+        "name": "markets",
         "type": "tuple",
-        "internalType": "struct PledgePreview",
+        "internalType": "struct IRiskModule.PoolMarkets",
         "components": [
           {
-            "name": "eligible",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "reason",
-            "type": "bytes4",
-            "internalType": "bytes4"
-          },
-          {
-            "name": "isTopUp",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "usdCharge",
+            "name": "fullRange",
             "type": "uint256",
             "internalType": "uint256"
           },
           {
-            "name": "sliceUsd",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "marketRoomUsd",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "sliceRoomUsd",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "tokenRoomUsd",
-            "type": "uint256[]",
-            "internalType": "uint256[]"
-          },
-          {
-            "name": "poolShareRoomUnits",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "recordRoom",
+            "name": "customRange",
             "type": "uint256",
             "internalType": "uint256"
           }
@@ -1032,30 +583,81 @@ export const riskModuleAbi = [
   },
   {
     "type": "function",
-    "name": "rescueHealthFactor",
-    "inputs": [],
-    "outputs": [
+    "name": "registerSpoke",
+    "inputs": [
       {
-        "name": "value",
+        "name": "spoke",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "hub",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "kind",
+        "type": "uint8",
+        "internalType": "enum IRiskModule.SpokeKind"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "removeDebtReserve",
+    "inputs": [
+      {
+        "name": "spoke",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "reserveId",
         "type": "uint256",
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "pure"
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
-    "name": "usdToRestore",
+    "name": "removeKeeper",
     "inputs": [
       {
-        "name": "proxy",
+        "name": "keeper",
         "type": "address",
         "internalType": "address"
       }
     ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "routeOf",
+    "inputs": [
+      {
+        "name": "pool",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "tickLower",
+        "type": "int24",
+        "internalType": "int24"
+      },
+      {
+        "name": "tickUpper",
+        "type": "int24",
+        "internalType": "int24"
+      }
+    ],
     "outputs": [
       {
-        "name": "usd",
+        "name": "marketId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -1063,142 +665,404 @@ export const riskModuleAbi = [
     "stateMutability": "view"
   },
   {
-    "type": "event",
-    "name": "BreakersPoked",
+    "type": "function",
+    "name": "setCoverageRatio",
     "inputs": [
       {
-        "name": "marketId",
+        "name": "ratioBps",
         "type": "uint256",
-        "indexed": true,
         "internalType": "uint256"
-      },
-      {
-        "name": "reasons",
-        "type": "uint32",
-        "indexed": false,
-        "internalType": "uint32"
       }
     ],
-    "anonymous": false
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    "type": "event",
-    "name": "ConfigDriftDetected",
+    "type": "function",
+    "name": "setDebtReserve",
     "inputs": [
       {
         "name": "spoke",
         "type": "address",
-        "indexed": true,
         "internalType": "address"
       },
-      {
-        "name": "reason",
-        "type": "uint8",
-        "indexed": false,
-        "internalType": "enum DriftReason"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "error",
-    "name": "AaveReservePaused",
-    "inputs": [
       {
         "name": "reserveId",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "AaveReserveUnavailable",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "AdminRoleOnlyTimelock",
-    "inputs": [
-      {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
       },
       {
-        "name": "account",
+        "name": "firstLossReserve",
         "type": "address",
         "internalType": "address"
       }
-    ]
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    "type": "error",
-    "name": "BelowMinPledge",
+    "type": "function",
+    "name": "setFee",
     "inputs": [
       {
-        "name": "pledgeUsd",
+        "name": "shareBps",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "minPledgeUsd",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "recipient",
+        "type": "address",
+        "internalType": "address"
       }
-    ]
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    "type": "error",
-    "name": "BorrowSpeedExceeded",
+    "type": "function",
+    "name": "setSpokeWidth",
+    "inputs": [
+      {
+        "name": "kind",
+        "type": "uint8",
+        "internalType": "enum IRiskModule.SpokeKind"
+      },
+      {
+        "name": "width",
+        "type": "tuple",
+        "internalType": "struct IRiskModule.Width",
+        "components": [
+          {
+            "name": "below",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "above",
+            "type": "uint24",
+            "internalType": "uint24"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "spokeWidth",
+    "inputs": [
+      {
+        "name": "kind",
+        "type": "uint8",
+        "internalType": "enum IRiskModule.SpokeKind"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "width",
+        "type": "tuple",
+        "internalType": "struct IRiskModule.Width",
+        "components": [
+          {
+            "name": "below",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "above",
+            "type": "uint24",
+            "internalType": "uint24"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "CoverageRatioSet",
+    "inputs": [
+      {
+        "name": "ratioBps",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DebtReserveRemoved",
+    "inputs": [
+      {
+        "name": "spoke",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "reserveId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DebtReserveSet",
+    "inputs": [
+      {
+        "name": "spoke",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "reserveId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "hub",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "asset",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "firstLossReserve",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FeeSet",
+    "inputs": [
+      {
+        "name": "shareBps",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "recipient",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "KeeperAdded",
+    "inputs": [
+      {
+        "name": "keeper",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "KeeperRemoved",
+    "inputs": [
+      {
+        "name": "keeper",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MarketActivated",
     "inputs": [
       {
         "name": "marketId",
         "type": "uint256",
+        "indexed": true,
         "internalType": "uint256"
       },
       {
-        "name": "availableUsd",
+        "name": "vaultToken",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "reserveId",
         "type": "uint256",
+        "indexed": false,
         "internalType": "uint256"
       },
       {
-        "name": "moreAt",
-        "type": "uint64",
-        "internalType": "uint64"
+        "name": "lpOracle",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
       }
-    ]
+    ],
+    "anonymous": false
   },
   {
-    "type": "error",
-    "name": "BreakerTripped",
+    "type": "event",
+    "name": "MarketListed",
     "inputs": [
       {
         "name": "marketId",
         "type": "uint256",
+        "indexed": true,
         "internalType": "uint256"
       },
       {
-        "name": "reasons",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "CapExceeded",
-    "inputs": [
-      {
-        "name": "capKind",
+        "name": "pool",
         "type": "bytes32",
+        "indexed": true,
         "internalType": "bytes32"
+      },
+      {
+        "name": "kind",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "enum IRiskModule.MarketKind"
+      },
+      {
+        "name": "bandLower",
+        "type": "int24",
+        "indexed": false,
+        "internalType": "int24"
+      },
+      {
+        "name": "bandUpper",
+        "type": "int24",
+        "indexed": false,
+        "internalType": "int24"
+      },
+      {
+        "name": "unitDecimals",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
       }
-    ]
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PoolListed",
+    "inputs": [
+      {
+        "name": "pool",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "spoke",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "fullRange",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "customRange",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "listingTick",
+        "type": "int24",
+        "indexed": false,
+        "internalType": "int24"
+      },
+      {
+        "name": "ltvBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SpokeRegistered",
+    "inputs": [
+      {
+        "name": "spoke",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "hub",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "kind",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "enum IRiskModule.SpokeKind"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SpokeWidthSet",
+    "inputs": [
+      {
+        "name": "kind",
+        "type": "uint8",
+        "indexed": true,
+        "internalType": "enum IRiskModule.SpokeKind"
+      },
+      {
+        "name": "below",
+        "type": "uint24",
+        "indexed": false,
+        "internalType": "uint24"
+      },
+      {
+        "name": "above",
+        "type": "uint24",
+        "indexed": false,
+        "internalType": "uint24"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "error",
-    "name": "ConfigDrift",
+    "name": "ActivationCheckFailed",
     "inputs": [
       {
         "name": "marketId",
@@ -1207,78 +1071,46 @@ export const riskModuleAbi = [
       },
       {
         "name": "reason",
-        "type": "uint8",
-        "internalType": "enum DriftReason"
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ]
   },
   {
     "type": "error",
-    "name": "DebtBreakerTripped",
+    "name": "BandNotNarrowerThanFullRange",
     "inputs": [
       {
-        "name": "spoke",
-        "type": "address",
-        "internalType": "address"
+        "name": "bandLower",
+        "type": "int24",
+        "internalType": "int24"
       },
       {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "reasons",
-        "type": "uint32",
-        "internalType": "uint32"
+        "name": "bandUpper",
+        "type": "int24",
+        "internalType": "int24"
       }
     ]
   },
   {
     "type": "error",
-    "name": "DebtLiquidationHalted",
+    "name": "BandTooNarrow",
     "inputs": [
       {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "DebtPriceTooOld",
-    "inputs": [
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "bandLower",
+        "type": "int24",
+        "internalType": "int24"
       },
       {
-        "name": "source",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "age",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "bandUpper",
+        "type": "int24",
+        "internalType": "int24"
       }
     ]
   },
   {
     "type": "error",
-    "name": "DebtReservePaused",
-    "inputs": [
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "DebtSpeedExceeded",
+    "name": "CoverageBelowRatio",
     "inputs": [
       {
         "name": "hub",
@@ -1291,65 +1123,12 @@ export const riskModuleAbi = [
         "internalType": "address"
       },
       {
-        "name": "available",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "moreAt",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "HealthFactorTooLow",
-    "inputs": [
-      {
-        "name": "healthFactor",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
         "name": "required",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "HubAddCapReached",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "HubSharesNotEqualAssets",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "HubSpokeUnavailable",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InsufficientGas",
-    "inputs": [
-      {
-        "name": "gasLeft",
-        "type": "uint256",
-        "internalType": "uint256"
       },
       {
-        "name": "required",
+        "name": "funded",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -1357,26 +1136,42 @@ export const riskModuleAbi = [
   },
   {
     "type": "error",
-    "name": "IntegrationMismatch",
+    "name": "DebtReserveExists",
     "inputs": [
       {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "spoke",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        "name": "integrationId",
-        "type": "uint32",
-        "internalType": "uint32"
+        "name": "reserveId",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ]
   },
   {
     "type": "error",
-    "name": "InvalidLogic",
+    "name": "DebtReserveNotListed",
     "inputs": [
       {
-        "name": "logic",
+        "name": "spoke",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "reserveId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidAddress",
+    "inputs": [
+      {
+        "name": "account",
         "type": "address",
         "internalType": "address"
       }
@@ -1384,10 +1179,10 @@ export const riskModuleAbi = [
   },
   {
     "type": "error",
-    "name": "LiquidationHalted",
+    "name": "InvalidCoverageRatio",
     "inputs": [
       {
-        "name": "marketId",
+        "name": "ratioBps",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -1395,58 +1190,15 @@ export const riskModuleAbi = [
   },
   {
     "type": "error",
-    "name": "MarketNotActive",
+    "name": "InvalidFee",
     "inputs": [
       {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "MarketOffboarding",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "NotPositionOwner",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotRescueTopUp",
-    "inputs": [
-      {
-        "name": "healthFactor",
+        "name": "shareBps",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "usdCharge",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "restoreBooked",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "NotSpeedWriter",
-    "inputs": [
-      {
-        "name": "caller",
+        "name": "recipient",
         "type": "address",
         "internalType": "address"
       }
@@ -1454,188 +1206,51 @@ export const riskModuleAbi = [
   },
   {
     "type": "error",
-    "name": "PledgeSpeedExceeded",
+    "name": "InvalidFirstLossReserve",
     "inputs": [
       {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "availableUsd",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "moreAt",
-        "type": "uint64",
-        "internalType": "uint64"
+        "name": "firstLossReserve",
+        "type": "address",
+        "internalType": "address"
       }
     ]
   },
   {
     "type": "error",
-    "name": "PoolMismatch",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "PoolShareExceeded",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "PoolShareUnavailable",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "PriceNotAccepted",
+    "name": "InvalidKeeper",
     "inputs": [
       {
-        "name": "state",
-        "type": "uint8",
-        "internalType": "uint8"
+        "name": "keeper",
+        "type": "address",
+        "internalType": "address"
       }
     ]
   },
   {
     "type": "error",
-    "name": "PriceNotLive",
+    "name": "InvalidLtv",
     "inputs": [
       {
-        "name": "marketId",
+        "name": "ltvBps",
         "type": "uint256",
         "internalType": "uint256"
-      },
-      {
-        "name": "state",
-        "type": "uint8",
-        "internalType": "enum PriceState"
       }
     ]
   },
   {
     "type": "error",
-    "name": "PriceTooOld",
+    "name": "InvalidPriceFeed",
     "inputs": [
       {
         "name": "feed",
         "type": "address",
         "internalType": "address"
-      },
-      {
-        "name": "age",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ]
   },
   {
     "type": "error",
-    "name": "RecordBelowMinPledge",
-    "inputs": [
-      {
-        "name": "remainingUsd",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "minPledgeUsd",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "ReserveFrozen",
-    "inputs": [
-      {
-        "name": "reserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "SecondSourceDisagrees",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "SequencerDown",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "SequencerGrace",
-    "inputs": [
-      {
-        "name": "graceEndsAt",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "ShapeMismatch",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "SliceNotAvailable",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "TooManyRecords",
-    "inputs": [
-      {
-        "name": "records",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "UnexpectedDebtPriceSource",
-    "inputs": [
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "source",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "UnknownCollateral",
-    "inputs": [
-      {
-        "name": "reserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "UnknownSpoke",
+    "name": "InvalidSpoke",
     "inputs": [
       {
         "name": "spoke",
@@ -1646,12 +1261,104 @@ export const riskModuleAbi = [
   },
   {
     "type": "error",
-    "name": "UserReservesLimit",
+    "name": "InvalidTickSpacing",
+    "inputs": [
+      {
+        "name": "tickSpacing",
+        "type": "int24",
+        "internalType": "int24"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidWidth",
+    "inputs": [
+      {
+        "name": "below",
+        "type": "uint24",
+        "internalType": "uint24"
+      },
+      {
+        "name": "above",
+        "type": "uint24",
+        "internalType": "uint24"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "MarketAlreadyActive",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "MarketNotListed",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "NoActiveKeeper",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "ZeroLiquidity",
+    "name": "PriceOutsideBand",
+    "inputs": [
+      {
+        "name": "tick",
+        "type": "int24",
+        "internalType": "int24"
+      },
+      {
+        "name": "bandLower",
+        "type": "int24",
+        "internalType": "int24"
+      },
+      {
+        "name": "bandUpper",
+        "type": "int24",
+        "internalType": "int24"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "SpokeNotRegistered",
+    "inputs": [
+      {
+        "name": "spoke",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TooManyKeepers",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "UnitValueTooLow",
+    "inputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   }
 ] as const;

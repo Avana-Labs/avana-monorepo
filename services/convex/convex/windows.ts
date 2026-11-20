@@ -58,7 +58,7 @@ export const getRateWindows = query({
     for (const [id, days] of Object.entries(WINDOWS) as [WindowId, number][]) {
       const pool = await buckets(ctx, "pool", `${m.chainId}:${m.pool}`, days, now);
       const hub = asset ? rateAverages(await buckets(ctx, "hubAsset", hubAssetKey(asset), days, now)) : null;
-      const lp = pricing && state && pool.length > 0 ? lpFeeAprPct(pool, days, { sqrtPriceX96: state.sqrtPriceX96, tickLower: m.tickLower, tickUpper: m.tickUpper }, pricing) : null;
+      const lp = pricing && state && pool.length > 0 ? lpFeeAprPct(pool, days, { sqrtPriceX96: state.sqrtPriceX96, tickLower: m.bandLower, tickUpper: m.bandUpper }, pricing) : null;
       // The market's borrowers pay the base rate × (1 + collateral risk) (REQ-LENS-057).
       const borrow = hub ? (hub.borrowAprPct * (10_000 + m.collateralRiskBps)) / 10_000 : null;
       out.push({ id, supplyApyPct: null, borrowAprPct: borrow, utilizationPct: null, lpFeeAprPct: lp });

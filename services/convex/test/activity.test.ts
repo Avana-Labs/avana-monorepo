@@ -18,8 +18,6 @@ const res: Resolver = {
   chainId: 1,
   isLendSpoke: (s) => s === LEND,
   hubAssetOfReserve: async (spoke, id) => (spoke === LEND && id === "0") || (spoke === CDP && id === "1") ? `1:${HUB}:1` : null,
-  hubAssetOfUnderlying: async () => `1:${HUB}:1`,
-  spokeReserveOfAsset: async (spoke) => `1:${spoke}:1`,
   spokeReserveOfHubAsset: async (spoke) => `1:${spoke}:1`,
   marketOfCollateralReserve: async (spoke, id) => (spoke === CDP && id === "11" ? "1:4" : null),
   account: async (proxy) => (proxy === PROXY ? { wallet: WALLET, marketKey: "1:4" } : null),

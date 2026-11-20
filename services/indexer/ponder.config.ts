@@ -10,16 +10,17 @@ import {
   activeChains,
   ammPoolSource,
   chainSources,
+  coreSource,
   firstLossReserveListedSource,
   firstLossReserveSource,
-  hubRecordedSource,
+  flashLiquidatorSource,
   hubSource,
   perChain,
   poolManagerSource,
   samplerSource,
   spokeAddedSource,
-  spokeApprovedSource,
   spokeSource,
+  vaultTokenListedSource,
   vaultTokenSource,
 } from "./src/config/sources.ts";
 
@@ -32,47 +33,31 @@ export default createConfig({
   database: process.env.INDEXER_DATABASE === "pglite" ? { kind: "pglite", directory: ".ponder/pglite" } : { kind: "postgres" },
   chains: chainSources(),
   contracts: {
-    AaveAdapter: { abi: abis.AaveAdapter, chain: perChain((m) => a(m.avana.aaveAdapter)) },
-    ProxyManager: { abi: abis.ProxyManager, chain: perChain((m) => a(m.avana.proxyManager)) },
-    Collateralization: { abi: abis.Collateralization, chain: perChain((m) => a(m.avana.collateralization)) },
-    LPVaultSwap: { abi: abis.LPVaultSwap, chain: perChain((m) => a(m.avana.lpVaultSwap)) },
-    PayoutEscrow: { abi: abis.PayoutEscrow, chain: perChain((m) => a(m.avana.payoutEscrow)) },
-    MarketRegistry: { abi: abis.MarketRegistry, chain: perChain((m) => a(m.avana.marketRegistry)) },
-    ParameterStore: { abi: abis.ParameterStore, chain: perChain((m) => a(m.avana.parameterStore)) },
-    RiskModule: { abi: abis.RiskModule, chain: perChain((m) => a(m.avana.riskModule)) },
-    AvanaTimelock: { abi: abis.AvanaTimelock, chain: perChain((m) => a(m.avana.timelock)) },
-    VaultTokenFactory: { abi: abis.VaultTokenFactory, chain: perChain((m) => a(m.avana.vaultTokenFactory)) },
-    LPVault: {
-      abi: abis.LPVault,
-      chain: perChain((m) => ({
-        address: m.avana.lpVaults.map((v) => v.address),
-        startBlock: Math.min(...m.avana.lpVaults.map((v) => v.startBlock)),
-      })),
-    },
-    FlashLiquidator: {
-      abi: abis.FlashLiquidator,
-      chain: perChain((m) => {
-        const helpers = [m.avana.flashLiquidator, ...m.avana.operatorHelpers];
-        return { address: helpers.map((h) => h.address), startBlock: Math.min(...helpers.map((h) => h.startBlock)) };
-      }),
-    },
+    // One core stack per AMM integration; each source covers that contract of every integration.
+    AaveAdapter: { abi: abis.AaveAdapter, chain: coreSource("aaveAdapter") },
+    RiskModule: { abi: abis.RiskModule, chain: coreSource("riskModule") },
+    LiquidationModule: { abi: abis.LiquidationModule, chain: coreSource("liquidationModule") },
+    FlashloanRepay: { abi: abis.FlashloanRepay, chain: coreSource("flashloanRepay") },
+    LPVault: { abi: abis.LPVault, chain: coreSource("lpVault") },
+    AccessManager: { abi: abis.AccessManager, chain: perChain((m) => a(m.avana.accessManager)) },
+    FlashLiquidator: { abi: abis.FlashLiquidator, chain: flashLiquidatorSource() },
+    // Vault tokens: the manifest's from their deployment, and every one a RiskModule activates, from that event.
+    VaultTokenListed: { abi: abis.VaultToken, chain: vaultTokenListedSource() },
     VaultToken: { abi: abis.VaultToken, chain: vaultTokenSource() },
-    // First-Loss Reserves: the manifest's from their deployment, and every one the MarketRegistry sets, from that event.
-    AvanaFirstLossReserveListed: { abi: abis.AvanaFirstLossReserve, chain: firstLossReserveListedSource() },
-    AvanaFirstLossReserve: { abi: abis.AvanaFirstLossReserve, chain: firstLossReserveSource() },
-    // The Aave DAO's deficit offsets: every Spoke a manifest Hub adds, read for First-Loss Reserve events
-    // (src/config/aaveSources.ts, FIRST_LOSS_SOURCES).
-    DaoDeficitOffset: { abi: abis.AvanaFirstLossReserve, chain: spokeAddedSource() },
-    // Aave V4: every Hub and every Lend and CDP Spoke, the manifest's and those listed later (src/config/aaveSources.ts).
-    // Spoke events are attributed only to accounts the AaveAdapter and the ProxyManager both announced (TEST-144).
+    // Loss layers: the manifest's First-Loss Reserves and DAO deficit offsets, every First-Loss Reserve a RiskModule
+    // registers, and every Spoke a manifest Hub adds (a deficit offset the DAO registers later), decoded with the
+    // First-Loss Reserve ABI (src/config/aaveSources.ts, FIRST_LOSS_SOURCES).
+    FirstLossReserveListed: { abi: abis.FirstLossReserve, chain: firstLossReserveListedSource() },
+    FirstLossReserve: { abi: abis.FirstLossReserve, chain: firstLossReserveSource() },
+    DaoDeficitOffset: { abi: abis.FirstLossReserve, chain: spokeAddedSource() },
+    // Aave V4: every Hub and every Lend and CDP Spoke, the manifest's and those a Hub adds later (src/config/aaveSources.ts).
+    // Spoke events are attributed only to accounts the AaveAdapter announced.
     AaveSpoke: { abi: abis.AaveSpoke, chain: spokeSource() },
     AaveSpokeAdded: { abi: abis.AaveSpoke, chain: spokeAddedSource() },
-    AaveSpokeApproved: { abi: abis.AaveSpoke, chain: spokeApprovedSource() },
     AaveHub: { abi: abis.AaveHub, chain: hubSource() },
-    AaveHubRecorded: { abi: abis.AaveHub, chain: hubRecordedSource() },
     // The AMM pool of every listed market, for its volume, fee and price series.
     AmmPool: { abi: clPoolAbi, chain: ammPoolSource() },
-    // The Uniswap v4 PoolManager of a chain whose manifest names one; only pools a market lists by poolId are kept.
+    // The Uniswap v4 PoolManager of a chain whose manifest names one; only pools a market lists by PoolId are kept.
     UniswapV4PoolManager: { abi: uniswapV4PoolManagerAbi, chain: poolManagerSource() },
   },
   // One row per chain records the last block handled at the realtime head; the export never serves past it.
@@ -80,7 +65,7 @@ export default createConfig({
     Progress: {
       chain: Object.fromEntries(activeChains.map((c) => [c.key, { startBlock: "latest" as const, interval: 1 }])),
     },
-    // Reads every Hub asset, Spoke slice, market and account once an hour of block time, from the Lens deployment on,
+    // Reads every Hub asset, Spoke slice, market and account once an hour of block time, from Avana's deployment on,
     // for the chart series (src/handlers/series.ts).
     SeriesSampler: { chain: samplerSource() },
   },

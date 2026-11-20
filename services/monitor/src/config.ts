@@ -5,7 +5,7 @@
 
 import { ABI_HASH } from "@avana/protocol/abis";
 import { type ChainInfo, type NetworkSet, type ServiceManifest, aaveTopology, chainsOf, intEnv, listEnv, loadManifest, optionalEnv, requireEnv, rpcEnvName } from "@avana/services-common";
-import type { ChainDeployment } from "@avana/services-common/views";
+import { type ChainDeployment, chainDeploymentOf } from "@avana/services-common/views";
 import type { Address } from "viem";
 import type { KeeperInstance } from "./keeper.ts";
 import type { LivenessConfig } from "./liveness.ts";
@@ -49,10 +49,8 @@ export interface MonitorConfig {
   readonly safes: ReadonlyMap<number, readonly SafeConfig[]>;
   /** The Core Hub's GHO asset each chain's Avana Hubs are compared with (M-29). */
   readonly coreHubGho: ReadonlyMap<number, CoreHubGho>;
-  /** The expected daily gas spend per chain, the floor of the gas vault's runway rate (M-35); absent: measured only. */
-  readonly gasVaultDailyWei?: ReadonlyMap<number, bigint>;
-  /** Seconds between route depth and GSM headroom measurements (M-11, M-12). */
-  readonly routeCheckSeconds: number;
+  /** M-35 overrides of the keeper wallet limits (wei; null: the manifest's keeperTopUp rule) and extra wallets per chain. */
+  readonly keeperWallets: { readonly warnWei: bigint | null; readonly pageWei: bigint | null; readonly extra: ReadonlyMap<number, readonly Address[]> };
   /** Safe signer liveness periods (M-23). */
   readonly liveness: LivenessConfig;
   /** The frontend checked on one chain's round (M-27); null when not configured. */
@@ -65,16 +63,8 @@ const envSuffix = (name: string) => name.replace(/[^A-Za-z0-9]/g, "_").toUpperCa
 
 /** The addresses the snapshot reader starts from, from the verified manifest (as the indexer's sampler does). */
 export function deploymentOf(m: ServiceManifest): ChainDeployment {
-  const t = aaveTopology(m);
-  return {
-    chainId: m.chainId,
-    lens: m.avana.lens.address,
-    marketRegistry: m.avana.marketRegistry.address,
-    hubs: t.hubs.map((h) => ({ address: h.address, label: h.label })),
-    lendSpokes: t.lendSpokes.map((s) => s.address),
-    cdpSpokes: t.borrowSpokes.map((s) => s.address),
-    firstLossReserves: m.avana.firstLossReserves.map((c) => ({ address: c.address, asset: c.asset, hub: c.hub })),
-  };
+  aaveTopology(m);
+  return chainDeploymentOf(m);
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv, load: (path: string) => ServiceManifest = (p) => loadManifest(p, ABI_HASH)): MonitorConfig {
@@ -140,12 +130,19 @@ export function loadConfig(env: NodeJS.ProcessEnv, load: (path: string) => Servi
     if (!assetId || !/^\d+$/.test(assetId)) throw new Error(`MONITOR_CORE_HUB_GHO entry ${spec} is not chain:hub:assetId`);
     coreHubGho.set(chainOf(key, "MONITOR_CORE_HUB_GHO", spec), { hub: address(hub, "MONITOR_CORE_HUB_GHO", spec), assetId: BigInt(assetId) });
   }
-  const gasVaultDailyWei = new Map<number, bigint>();
-  for (const spec of listEnv(env, "MONITOR_GAS_VAULT_DAILY_WEI")) {
-    const [key, wei] = spec.split(":");
-    if (!wei || !/^\d+$/.test(wei) || BigInt(wei) === 0n) throw new Error(`MONITOR_GAS_VAULT_DAILY_WEI entry ${spec} is not chain:wei with a positive amount`);
-    gasVaultDailyWei.set(chainOf(key, "MONITOR_GAS_VAULT_DAILY_WEI", spec), BigInt(wei));
+  const wei = (name: string) => {
+    const v = optionalEnv(env, name);
+    if (v === undefined) return null;
+    if (!/^\d+$/.test(v)) throw new Error(`${name} must be a whole number of wei`);
+    return BigInt(v);
+  };
+  const extraWallets = new Map<number, Address[]>();
+  for (const spec of listEnv(env, "MONITOR_KEEPER_WALLETS")) {
+    const [key, a] = spec.split(":");
+    const id = chainOf(key, "MONITOR_KEEPER_WALLETS", spec);
+    extraWallets.set(id, [...(extraWallets.get(id) ?? []), address(a, "MONITOR_KEEPER_WALLETS", spec)]);
   }
+  const keeperWallets = { warnWei: wei("MONITOR_KEEPER_WALLET_WARN_WEI"), pageWei: wei("MONITOR_KEEPER_WALLET_PAGE_WEI"), extra: extraWallets };
   const statusToken = requireEnv(env, "MONITOR_STATUS_TOKEN");
   const metricsToken = optionalEnv(env, "MONITOR_METRICS_TOKEN") ?? null;
   // The metrics scraper holds its own token: it must not also read the open alerts in full.
@@ -171,13 +168,12 @@ export function loadConfig(env: NodeJS.ProcessEnv, load: (path: string) => Servi
     keeperInstances,
     keeperTokens,
     safes,
-    routeCheckSeconds: (optionalEnv(env, "MONITOR_ROUTE_CHECK_HOURS") ? intEnv(env, "MONITOR_ROUTE_CHECK_HOURS") : 24) * 3_600,
+    keeperWallets,
     liveness: {
       periodSeconds: (optionalEnv(env, "MONITOR_LIVENESS_PERIOD_HOURS") ? intEnv(env, "MONITOR_LIVENESS_PERIOD_HOURS") : 24) * 3_600,
       windowSeconds: (optionalEnv(env, "MONITOR_LIVENESS_WINDOW_HOURS") ? intEnv(env, "MONITOR_LIVENESS_WINDOW_HOURS") : 12) * 3_600,
     },
     coreHubGho,
-    gasVaultDailyWei,
     frontend,
   };
 }

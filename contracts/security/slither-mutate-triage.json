@@ -703,7 +703,7 @@
           "fingerprint": "eeaab9e8477c35c7"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 57,
           "line_fda9bed": 58,
@@ -713,7 +713,7 @@
           "fingerprint": "ba3b5a127f0b3420"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 60,
           "line_fda9bed": 61,
@@ -723,7 +723,7 @@
           "fingerprint": "bf6c7c5d7aa5659b"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 61,
           "line_fda9bed": 62,
@@ -733,7 +733,7 @@
           "fingerprint": "9a73e9614d717a1f"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 62,
           "line_fda9bed": 63,
@@ -743,7 +743,7 @@
           "fingerprint": "9c137251b475cb80"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 68,
           "line_fda9bed": 69,
@@ -753,7 +753,7 @@
           "fingerprint": "d6facbb390482f81"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 69,
           "line_fda9bed": 70,
@@ -763,7 +763,7 @@
           "fingerprint": "5f2a7bb8cb973144"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 70,
           "line_fda9bed": 71,
@@ -773,7 +773,7 @@
           "fingerprint": "1755884e1dbbe160"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 71,
           "line_fda9bed": 72,
@@ -783,7 +783,7 @@
           "fingerprint": "474d857e2a47aaeb"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 72,
           "line_fda9bed": 73,
@@ -793,7 +793,7 @@
           "fingerprint": "60cfa9aa16e92bce"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 73,
           "line_fda9bed": 74,
@@ -803,7 +803,7 @@
           "fingerprint": "d9d732c1688308ea"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 74,
           "line_fda9bed": 75,
@@ -813,7 +813,7 @@
           "fingerprint": "237ed7eff4480676"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 75,
           "line_fda9bed": 76,
@@ -823,7 +823,7 @@
           "fingerprint": "19045e8f083502e7"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 76,
           "line_fda9bed": 77,
@@ -833,7 +833,7 @@
           "fingerprint": "2ffe6662db701f94"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapStorage.sol",
           "function": "LPVaultSwapStorage (top level)",
           "line_aa340fb": 25,
           "line_fda9bed": 25,
@@ -843,7 +843,7 @@
           "fingerprint": "c077f9913393d897"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapStorage.sol",
           "function": "LPVaultSwapStorage (top level)",
           "line_aa340fb": 27,
           "line_fda9bed": 27,
@@ -853,7 +853,7 @@
           "fingerprint": "abca258e32bdc2c6"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapStorage.sol",
           "function": "LPVaultSwapStorage (top level)",
           "line_aa340fb": 29,
           "line_fda9bed": 29,
@@ -863,7 +863,7 @@
           "fingerprint": "a885b36842b91437"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapStorage.sol",
           "function": "LPVaultSwapStorage (top level)",
           "line_aa340fb": 31,
           "line_fda9bed": 31,
@@ -2213,7 +2213,7 @@
           "fingerprint": "e1fd1c9fbf5f08f0"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.initialize",
           "line_aa340fb": 151,
           "line_fda9bed": 151,
@@ -2223,7 +2223,7 @@
           "fingerprint": "0c4abb71bfef5cbc"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.removeKeeper",
           "line_aa340fb": 180,
           "line_fda9bed": 180,
@@ -2233,7 +2233,7 @@
           "fingerprint": "a8bab1fc3d961ef7"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.activeKeeperCount",
           "line_aa340fb": 212,
           "line_fda9bed": 212,
@@ -2243,7 +2243,7 @@
           "fingerprint": "e78e497a9645fcc3"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._settleLoan",
           "line_aa340fb": 212,
           "line_fda9bed": 219,
@@ -2253,7 +2253,7 @@
           "fingerprint": "7a739942dc192cf7"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._repaySource",
           "line_aa340fb": 313,
           "line_fda9bed": 324,
@@ -2263,7 +2263,7 @@
           "fingerprint": "afe9107f4c4d4616"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic.settlePending",
           "line_aa340fb": 89,
           "line_fda9bed": 89,
@@ -2273,7 +2273,7 @@
           "fingerprint": "5530bd13e77aaefb"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic._releaseAndSwap",
           "line_aa340fb": 149,
           "line_fda9bed": 149,
@@ -2283,7 +2283,7 @@
           "fingerprint": "dc5dbfa17d2d3fd6"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic._releaseAndSwap",
           "line_aa340fb": 150,
           "line_fda9bed": 150,
@@ -2493,7 +2493,7 @@
           "fingerprint": "1794543b468620eb"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/SettlementMath.sol",
+          "file": "src/legacy/lp-vault-swap/SettlementMath.sol",
           "function": "SettlementMath.legSlippage",
           "line_aa340fb": 102,
           "line_fda9bed": 102,
@@ -2793,7 +2793,7 @@
           "fingerprint": "1de6a60b54fd95dc"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._settleLoan",
           "line_aa340fb": 212,
           "line_fda9bed": 219,
@@ -2803,7 +2803,7 @@
           "fingerprint": "83f255edc1eebad0"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._repaySource",
           "line_aa340fb": 313,
           "line_fda9bed": 324,
@@ -2813,7 +2813,7 @@
           "fingerprint": "ec3e8aa7cd827bde"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
           "function": "LPVaultSwapLiquidationLogic._waterfall",
           "line_aa340fb": 252,
           "line_fda9bed": 255,
@@ -2823,7 +2823,7 @@
           "fingerprint": "73f742ec4ca7b15e"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic.settlePending",
           "line_aa340fb": 89,
           "line_fda9bed": 89,
@@ -2833,7 +2833,7 @@
           "fingerprint": "e2ae14f8b193516a"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic._releaseAndSwap",
           "line_aa340fb": 150,
           "line_fda9bed": 150,
@@ -4123,7 +4123,7 @@
           "fingerprint": "d80fe96430243089"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.initialize",
           "line_aa340fb": 151,
           "line_fda9bed": 151,
@@ -4133,7 +4133,7 @@
           "fingerprint": "ec1e40a3b2a8fac1"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.initialize",
           "line_aa340fb": 151,
           "line_fda9bed": 151,
@@ -4143,7 +4143,7 @@
           "fingerprint": "829153319952b05b"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.removeKeeper",
           "line_aa340fb": 180,
           "line_fda9bed": 180,
@@ -4153,7 +4153,7 @@
           "fingerprint": "dd1fd028d6949b76"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.activeKeeperCount",
           "line_aa340fb": 212,
           "line_fda9bed": 212,
@@ -4163,7 +4163,7 @@
           "fingerprint": "7bcf033ef1048929"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.activeKeeperCount",
           "line_aa340fb": 212,
           "line_fda9bed": 212,
@@ -4173,7 +4173,7 @@
           "fingerprint": "c371534f58210064"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._settleLoan",
           "line_aa340fb": 212,
           "line_fda9bed": 219,
@@ -4183,7 +4183,7 @@
           "fingerprint": "308a3361fdb8941e"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._settleLoan",
           "line_aa340fb": 212,
           "line_fda9bed": 219,
@@ -4193,7 +4193,7 @@
           "fingerprint": "7a00e20b02adeaec"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._repaySource",
           "line_aa340fb": 313,
           "line_fda9bed": 324,
@@ -4203,7 +4203,7 @@
           "fingerprint": "7ad64d806d007b67"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic.settlePending",
           "line_aa340fb": 89,
           "line_fda9bed": 89,
@@ -4213,7 +4213,7 @@
           "fingerprint": "96ea63d83917c8d4"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic.settlePending",
           "line_aa340fb": 89,
           "line_fda9bed": 89,
@@ -4223,7 +4223,7 @@
           "fingerprint": "6e15e55e22f9571e"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic._releaseAndSwap",
           "line_aa340fb": 150,
           "line_fda9bed": 150,
@@ -4233,7 +4233,7 @@
           "fingerprint": "6020eef56936cf8f"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic._releaseAndSwap",
           "line_aa340fb": 150,
           "line_fda9bed": 150,
@@ -4853,7 +4853,7 @@
           "fingerprint": "d3b9ab2760314470"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.initialize",
           "line_aa340fb": 151,
           "line_fda9bed": 151,
@@ -4863,7 +4863,7 @@
           "fingerprint": "d569b1ee4abaa295"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.removeKeeper",
           "line_aa340fb": 182,
           "line_fda9bed": 182,
@@ -4873,7 +4873,7 @@
           "fingerprint": "3c5dcdc77bb8cc63"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.activeKeeperCount",
           "line_aa340fb": 212,
           "line_fda9bed": 212,
@@ -4883,7 +4883,7 @@
           "fingerprint": "5e4c2829b6249e12"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.activeKeeperCount",
           "line_aa340fb": 213,
           "line_fda9bed": 213,
@@ -4893,7 +4893,7 @@
           "fingerprint": "9ab4a9043684e34d"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._settleLoan",
           "line_aa340fb": 212,
           "line_fda9bed": 219,
@@ -4903,7 +4903,7 @@
           "fingerprint": "8d622a076b0f335b"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._repaySource",
           "line_aa340fb": 313,
           "line_fda9bed": 324,
@@ -4913,7 +4913,7 @@
           "fingerprint": "55ef4a09f9a5720e"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
           "function": "LPVaultSwapLiquidationLogic._waterfall",
           "line_aa340fb": 252,
           "line_fda9bed": 255,
@@ -4923,7 +4923,7 @@
           "fingerprint": "e3b28a0c3adf56d3"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic.settlePending",
           "line_aa340fb": 89,
           "line_fda9bed": 89,
@@ -4933,7 +4933,7 @@
           "fingerprint": "50c5dcd74556312d"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic._releaseAndSwap",
           "line_aa340fb": 150,
           "line_fda9bed": 150,
@@ -5323,7 +5323,7 @@
           "fingerprint": "91fe7dc34ee61fa9"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._runFlash",
           "line_aa340fb": 144,
           "line_fda9bed": 151,
@@ -5333,7 +5333,7 @@
           "fingerprint": "b8251b35d55de38e"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic.receive",
           "line_aa340fb": 191,
           "line_fda9bed": 198,
@@ -5343,7 +5343,7 @@
           "fingerprint": "62a9150c038ec047"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._settleLoan",
           "line_aa340fb": 213,
           "line_fda9bed": 220,
@@ -5353,7 +5353,7 @@
           "fingerprint": "a065d5cf2dac5dc2"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
           "function": "LPVaultSwapLiquidationLogic._entryChecks",
           "line_aa340fb": 106,
           "line_fda9bed": 109,
@@ -5363,7 +5363,7 @@
           "fingerprint": "0120743c112309e9"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
           "function": "LPVaultSwapLiquidationLogic._seize",
           "line_aa340fb": 161,
           "line_fda9bed": 164,
@@ -5373,7 +5373,7 @@
           "fingerprint": "bb4214dacd070a62"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
           "function": "LPVaultSwapLiquidationLogic._waterfall",
           "line_aa340fb": 232,
           "line_fda9bed": 235,
@@ -5383,7 +5383,7 @@
           "fingerprint": "e573a63395b91e9e"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
           "function": "LPVaultSwapLiquidationLogic._waterfall",
           "line_aa340fb": 246,
           "line_fda9bed": 249,
@@ -5393,7 +5393,7 @@
           "fingerprint": "b418dba55f51cbdb"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
           "function": "LPVaultSwapLiquidationLogic._waterfall",
           "line_aa340fb": 251,
           "line_fda9bed": 254,
@@ -5403,7 +5403,7 @@
           "fingerprint": "8fa1891fa64a1966"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
           "function": "LPVaultSwapLiquidationLogic._waterfall",
           "line_aa340fb": 253,
           "line_fda9bed": 256,
@@ -5413,7 +5413,7 @@
           "fingerprint": "8364da4daa84dc35"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic._preLock",
           "line_aa340fb": 124,
           "line_fda9bed": 124,
@@ -5423,7 +5423,7 @@
           "fingerprint": "1c2970f0b928e4ef"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapStorage.sol",
           "function": "LPVaultSwapStorage.constructor",
           "line_aa340fb": 81,
           "line_fda9bed": 81,
@@ -5983,7 +5983,7 @@
           "fingerprint": "31c6fcaeffa49095"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.initialize",
           "line_aa340fb": 143,
           "line_fda9bed": 143,
@@ -5993,7 +5993,7 @@
           "fingerprint": "03564755c3cf52d2"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.initialize",
           "line_aa340fb": 144,
           "line_fda9bed": 144,
@@ -6112,7 +6112,7 @@
           "fingerprint": "e947d73d58284faf"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.activeKeeperCount",
           "line_aa340fb": 209,
           "line_fda9bed": 209,
@@ -8144,7 +8144,7 @@
           "fingerprint": "cf82748399a20974"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 60,
           "line_fda9bed": 61,
@@ -8154,7 +8154,7 @@
           "fingerprint": "8c114d9c2b1a6505"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 61,
           "line_fda9bed": 62,
@@ -8164,7 +8164,7 @@
           "fingerprint": "df33b034cefe4717"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic (top level)",
           "line_aa340fb": 62,
           "line_fda9bed": 63,
@@ -8174,7 +8174,7 @@
           "fingerprint": "8a972187ccfc1d5f"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapStorage.sol",
           "function": "LPVaultSwapStorage (top level)",
           "line_aa340fb": 21,
           "line_fda9bed": 21,
@@ -8184,7 +8184,7 @@
           "fingerprint": "96a8f7a1ddd49531"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapStorage.sol",
           "function": "LPVaultSwapStorage (top level)",
           "line_aa340fb": 25,
           "line_fda9bed": 25,
@@ -8194,7 +8194,7 @@
           "fingerprint": "686abf3e9743225a"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapStorage.sol",
           "function": "LPVaultSwapStorage (top level)",
           "line_aa340fb": 27,
           "line_fda9bed": 27,
@@ -8204,7 +8204,7 @@
           "fingerprint": "88d3901b417e6c25"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapStorage.sol",
           "function": "LPVaultSwapStorage (top level)",
           "line_aa340fb": 29,
           "line_fda9bed": 29,
@@ -8214,7 +8214,7 @@
           "fingerprint": "3a24a11042b40410"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapStorage.sol",
           "function": "LPVaultSwapStorage (top level)",
           "line_aa340fb": 31,
           "line_fda9bed": 31,
@@ -8464,7 +8464,7 @@
           "fingerprint": "629d47fb09949bbd"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/SettlementMath.sol",
+          "file": "src/legacy/lp-vault-swap/SettlementMath.sol",
           "function": "SettlementMath (top level)",
           "line_aa340fb": 33,
           "line_fda9bed": 33,
@@ -8474,7 +8474,7 @@
           "fingerprint": "5db87147b019bcc9"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/SettlementMath.sol",
+          "file": "src/legacy/lp-vault-swap/SettlementMath.sol",
           "function": "SettlementMath (top level)",
           "line_aa340fb": 36,
           "line_fda9bed": 36,
@@ -8484,7 +8484,7 @@
           "fingerprint": "c2a687aafab628db"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/SettlementMath.sol",
+          "file": "src/legacy/lp-vault-swap/SettlementMath.sol",
           "function": "SettlementMath (top level)",
           "line_aa340fb": 39,
           "line_fda9bed": 39,
@@ -9310,7 +9310,7 @@
           "fingerprint": "b99a4e1841cd32b1"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.initialize",
           "line_aa340fb": 151,
           "line_fda9bed": 151,
@@ -9320,7 +9320,7 @@
           "fingerprint": "a770fb749d29b9d9"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.removeKeeper",
           "line_aa340fb": 180,
           "line_fda9bed": 180,
@@ -9330,7 +9330,7 @@
           "fingerprint": "fc09a41a3807ee45"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwap.sol",
           "function": "LPVaultSwap.activeKeeperCount",
           "line_aa340fb": 212,
           "line_fda9bed": 212,
@@ -9340,7 +9340,7 @@
           "fingerprint": "9a23c866ccc982d3"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._settleLoan",
           "line_aa340fb": 212,
           "line_fda9bed": 219,
@@ -9350,7 +9350,7 @@
           "fingerprint": "b023d3f31a922b79"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._repaySource",
           "line_aa340fb": 313,
           "line_fda9bed": 324,
@@ -9360,7 +9360,7 @@
           "fingerprint": "e40d4afc30afc044"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic.settlePending",
           "line_aa340fb": 89,
           "line_fda9bed": 89,
@@ -9370,7 +9370,7 @@
           "fingerprint": "1ced0f4d10cec18f"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic._releaseAndSwap",
           "line_aa340fb": 149,
           "line_fda9bed": 149,
@@ -9380,7 +9380,7 @@
           "fingerprint": "896219857a405a9d"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic._releaseAndSwap",
           "line_aa340fb": 150,
           "line_fda9bed": 150,
@@ -9500,7 +9500,7 @@
           "fingerprint": "0ab5e09c3949ec47"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/SettlementMath.sol",
+          "file": "src/legacy/lp-vault-swap/SettlementMath.sol",
           "function": "SettlementMath.legSlippage",
           "line_aa340fb": 102,
           "line_fda9bed": 102,
@@ -11487,67 +11487,6 @@
       ]
     },
     {
-      "id": "SM-112",
-      "class": "real-test-gap",
-      "mutants": 5,
-      "reason": "The principal received in the callback (balance rise since the loan was requested) and R (balance rise over the release and swaps) are measured as balance changes (REQ-SWAP-108), but every test ran with LPVaultSwap holding no debt asset before the call, so a start balance of 0 (`before`, `snapshot`, `r0` left uninitialised) or a sum instead of a difference gave the same numbers. With a held balance the mutants make the callback revert InvalidFlashCallback (received > amount) or report R inflated by the held balance in Deleveraged.",
-      "covered_by": "test_TEST_239_heldBalanceNotCounted in test/unit/LPVaultSwap.Deleverage.unit.t.sol (123 USDC held by LPVaultSwap; the repay completes, Deleveraged carries recovered = R exactly, assetOut = R - x - phi, the held balance stays)",
-      "test_status": "test added, passed",
-      "approval": "pending",
-      "locations": [
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._runFlash",
-          "line_aa340fb": 126,
-          "line_fda9bed": 127,
-          "mutator": "MVIE",
-          "original": "uint256 before = asset.balanceOf(address(this))",
-          "mutant": "uint256 before",
-          "fingerprint": "16b10a629ff3816a"
-        },
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._checkCallback",
-          "line_aa340fb": 189,
-          "line_fda9bed": 196,
-          "mutator": "MVIE",
-          "original": "uint256 snapshot = _BALANCE_SLOT.asUint256().tload()",
-          "mutant": "uint256 snapshot",
-          "fingerprint": "67d933e20adf3048"
-        },
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic.receive",
-          "line_aa340fb": 190,
-          "line_fda9bed": 197,
-          "mutator": "AOR",
-          "original": "received = balance > snapshot ? balance - snapshot : 0",
-          "mutant": "received = balance > snapshot ? balance + snapshot : 0",
-          "fingerprint": "a3ae898f398fc0f4"
-        },
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._releaseAndSwap",
-          "line_aa340fb": 275,
-          "line_fda9bed": 282,
-          "mutator": "MVIE",
-          "original": "uint256 r0 = asset.balanceOf(address(this))",
-          "mutant": "uint256 r0",
-          "fingerprint": "49e8a6bdc54f08ac"
-        },
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._releaseAndSwap",
-          "line_aa340fb": 282,
-          "line_fda9bed": 289,
-          "mutator": "AOR",
-          "original": "recovered = r1 > r0 ? r1 - r0 : 0",
-          "mutant": "recovered = r1 > r0 ? r1 + r0 : 0",
-          "fingerprint": "3c8f4f8eeec13f47"
-        }
-      ]
-    },
-    {
       "id": "SM-113",
       "class": "equivalent-or-harmless",
       "mutants": 1,
@@ -11555,7 +11494,7 @@
       "approval": "pending",
       "locations": [
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._runFlash",
           "line_aa340fb": 137,
           "line_fda9bed": 138,
@@ -11574,7 +11513,7 @@
       "approval": "pending",
       "locations": [
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._runFlash",
           "line_aa340fb": 143,
           "line_fda9bed": null,
@@ -11584,7 +11523,7 @@
           "fingerprint": "7c324755cef80a22"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._runFlash",
           "line_aa340fb": 143,
           "line_fda9bed": null,
@@ -11596,77 +11535,6 @@
       ]
     },
     {
-      "id": "SM-115",
-      "class": "real-test-gap",
-      "mutants": 6,
-      "reason": "No test had R exactly equal to x + phi, so DeleverageShortfall at equality (`recovered <= owed`) survived; and no test used a debt asset or pool token that reverts on a zero transfer, so dropping the `!= 0` guards on the wallet payout and on the residues, or looping on with zero top-ups once the source holds `owed` (`held > owed`), changed nothing observable. With R = x + phi, assetOut is 0, every residue is 0 and the source is repaid in one transfer, so each mutant either reverts DeleverageShortfall or makes a zero-amount transfer that a revert-on-zero token refuses (ZeroTransfer).",
-      "covered_by": "test_TEST_239_recoveryExactlyOwed in test/unit/LPVaultSwap.Deleverage.unit.t.sol (route pays exactly x + phi - a0; USDC and USDT revert on zero transfers; the repay completes with assetOut = 0 and Deleveraged(recovered = x + phi, assetOut = 0))",
-      "test_status": "test added, passed",
-      "approval": "pending",
-      "locations": [
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._runFlash",
-          "line_aa340fb": 144,
-          "line_fda9bed": 151,
-          "mutator": "MIA",
-          "original": "assetOut != 0",
-          "mutant": "true",
-          "fingerprint": "27b31ee76b23512b"
-        },
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._runFlash",
-          "line_aa340fb": 144,
-          "line_fda9bed": 151,
-          "mutator": "ROR",
-          "original": "assetOut != 0",
-          "mutant": "assetOut >= 0",
-          "fingerprint": "4536890eb5d8991a"
-        },
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._settleLoan",
-          "line_aa340fb": 208,
-          "line_fda9bed": 215,
-          "mutator": "ROR",
-          "original": "recovered < owed",
-          "mutant": "recovered <= owed",
-          "fingerprint": "4f384a9e91a266c3"
-        },
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._settleLoan",
-          "line_aa340fb": 213,
-          "line_fda9bed": 220,
-          "mutator": "MIA",
-          "original": "residues[i] != 0",
-          "mutant": "true",
-          "fingerprint": "56f3fd0ae9e53a44"
-        },
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._settleLoan",
-          "line_aa340fb": 213,
-          "line_fda9bed": 220,
-          "mutator": "ROR",
-          "original": "residues[i] != 0",
-          "mutant": "residues[i] >= 0",
-          "fingerprint": "c8f9f862af480c8d"
-        },
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._repaySource",
-          "line_aa340fb": 315,
-          "line_fda9bed": 326,
-          "mutator": "ROR",
-          "original": "held >= owed",
-          "mutant": "held > owed",
-          "fingerprint": "72187bfb0d62148e"
-        }
-      ]
-    },
-    {
       "id": "SM-116",
       "class": "equivalent-or-harmless",
       "mutants": 3,
@@ -11674,7 +11542,7 @@
       "approval": "pending",
       "locations": [
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic.receive",
           "line_aa340fb": 190,
           "line_fda9bed": 197,
@@ -11684,7 +11552,7 @@
           "fingerprint": "c1aae1a78c8e40ef"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._releaseAndSwap",
           "line_aa340fb": 282,
           "line_fda9bed": 289,
@@ -11694,7 +11562,7 @@
           "fingerprint": "ed5472df1e375e50"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic._releaseAndSwap",
           "line_aa340fb": 158,
           "line_fda9bed": 158,
@@ -11706,120 +11574,6 @@
       ]
     },
     {
-      "id": "SM-117",
-      "class": "real-test-gap",
-      "mutants": 1,
-      "reason": "The residue loop's first index was never exercised: in the USDC-debt tests token 0 is the settlement asset itself (its residue is always 0), so starting the loop at 1 skipped nothing. With GHO debt, USDC is token 0 and a partial fill of its leg leaves a residue that the mutant keeps in LPVaultSwap instead of sending to the wallet.",
-      "covered_by": "test_TEST_239_ghoResidueOfFirstTokenToWallet in test/unit/LPVaultSwap.DeleverageGho.unit.t.sol (25 raw USDC residue reaches the wallet; LPVaultSwap keeps none)",
-      "test_status": "test added, passed",
-      "approval": "pending",
-      "locations": [
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._settleLoan",
-          "line_aa340fb": 212,
-          "line_fda9bed": 219,
-          "mutator": "LIR",
-          "original": "uint256 i = 0",
-          "mutant": "uint256 i = 1",
-          "fingerprint": "6cbf128ed775ec34"
-        }
-      ]
-    },
-    {
-      "id": "SM-118",
-      "class": "real-test-gap",
-      "mutants": 2,
-      "reason": "The release minimums: no LPVaultSwap test passed a non-zero minimum or an empty array to repay with collateral. `true` always sends zeros (the borrower's minimums are ignored); `false` forwards an empty array, which the unwind refuses (LengthMismatch). AaveAdapter.LPVaultSwap.EmptyMinAmounts.integration.t.sol covers the empty case but is outside the mutation test set of this folder.",
-      "covered_by": "test_TEST_239_releaseMinimums in test/unit/LPVaultSwap.Deleverage.unit.t.sol (a minimum above the released USDC reverts BelowMinimum(0, a0, a0 + 1); an empty minAmounts repays x)",
-      "test_status": "test added, passed",
-      "approval": "pending",
-      "locations": [
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._releaseAndSwap",
-          "line_aa340fb": 276,
-          "line_fda9bed": 283,
-          "mutator": "MIA",
-          "original": "uint256[] memory mins = fc.r.minAmounts.length == 0 ? new uint256[](n) : fc.r.minAmounts",
-          "mutant": "false",
-          "fingerprint": "2175498ef90b9187"
-        },
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._releaseAndSwap",
-          "line_aa340fb": 276,
-          "line_fda9bed": 283,
-          "mutator": "MIA",
-          "original": "uint256[] memory mins = fc.r.minAmounts.length == 0 ? new uint256[](n) : fc.r.minAmounts",
-          "mutant": "true",
-          "fingerprint": "e136a718b8e2faf9"
-        }
-      ]
-    },
-    {
-      "id": "SM-119",
-      "class": "real-test-gap",
-      "mutants": 1,
-      "reason": "REQ-SWAP-122 caps the repayment loop at four transfers; the existing short-repayment test used a 50 % fee, which a fifth transfer does not fix either, so `k <= 4` survived. With a 1 % fee four transfers leave the source 20 raw USDC short and a fifth would clear it: the original reverts FlashRepayShort(balance, owed), the mutant completes the loop and fails later with other revert data.",
-      "covered_by": "test_TEST_239_noFifthRepayTransfer in test/unit/LPVaultSwap.Deleverage.unit.t.sol (exact FlashRepayShort(balance after four transfers, owed) data)",
-      "test_status": "test added, passed",
-      "approval": "pending",
-      "locations": [
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._repaySource",
-          "line_aa340fb": 313,
-          "line_fda9bed": 324,
-          "mutator": "ROR",
-          "original": "k < _MAX_REPAY_TRANSFERS",
-          "mutant": "k <= _MAX_REPAY_TRANSFERS",
-          "fingerprint": "6f0fc15afddb6e88"
-        }
-      ]
-    },
-    {
-      "id": "SM-120",
-      "class": "real-test-gap",
-      "mutants": 3,
-      "reason": "A source that already holds more than `owed` (a donation, REQ-SWAP-122, LIQ-I2) was never tested through LPVaultSwap: never breaking, or breaking only at equality, computes `owed - held` with held > owed (arithmetic panic), and `balance != owed` reverts FlashRepayShort although the source holds enough.",
-      "covered_by": "test_TEST_239_sourceAboveOwedNeedsNoTransfer in test/unit/LPVaultSwap.Deleverage.unit.t.sol (source holds x + phi + 1 USDC; no LPVaultSwap-to-source transfer; assetOut = R - x - phi)",
-      "test_status": "test added, passed",
-      "approval": "pending",
-      "locations": [
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._repaySource",
-          "line_aa340fb": 315,
-          "line_fda9bed": 326,
-          "mutator": "MIA",
-          "original": "held >= owed",
-          "mutant": "false",
-          "fingerprint": "2335a9a38696b8f1"
-        },
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._repaySource",
-          "line_aa340fb": 315,
-          "line_fda9bed": 326,
-          "mutator": "ROR",
-          "original": "held >= owed",
-          "mutant": "held == owed",
-          "fingerprint": "2dcc875ec55adf7c"
-        },
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
-          "function": "LPVaultSwapDeleverageLogic._repaySource",
-          "line_aa340fb": 319,
-          "line_fda9bed": 330,
-          "mutator": "ROR",
-          "original": "balance < owed",
-          "mutant": "balance != owed",
-          "fingerprint": "4dd66899317ab90b"
-        }
-      ]
-    },
-    {
       "id": "SM-121",
       "class": "equivalent-or-harmless",
       "mutants": 2,
@@ -11827,7 +11581,7 @@
       "approval": "pending",
       "locations": [
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._repaySource",
           "line_aa340fb": 319,
           "line_fda9bed": 330,
@@ -11837,7 +11591,7 @@
           "fingerprint": "78b3836d0e274ea2"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol",
           "function": "LPVaultSwapDeleverageLogic._repaySource",
           "line_aa340fb": 319,
           "line_fda9bed": 330,
@@ -11856,7 +11610,7 @@
       "approval": "pending",
       "locations": [
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
           "function": "LPVaultSwapLiquidationLogic._entryChecks",
           "line_aa340fb": 115,
           "line_fda9bed": 116,
@@ -11868,142 +11622,6 @@
       ]
     },
     {
-      "id": "SM-123",
-      "class": "real-test-gap",
-      "mutants": 1,
-      "reason": "REQ-SWAP-009: grace refuses every HF >= graceHealthFactor. The tests set the bound at HF (refused) and HF + 1 (liquidated), so `==` survived; a bound below the account's HF must also refuse.",
-      "covered_by": "test_TEST_049_graceHealthFactorAboveBound in test/unit/LPVaultSwap.PriceGates.unit.t.sol",
-      "test_status": "test added, passed",
-      "approval": "pending",
-      "locations": [
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
-          "function": "LPVaultSwapLiquidationLogic._entryChecks",
-          "line_aa340fb": 118,
-          "line_fda9bed": 121,
-          "mutator": "ROR",
-          "original": "inGrace && c.hf >= IParameterStore(_PARAMETER_STORE).graceHealthFactor()",
-          "mutant": "inGrace && c.hf == IParameterStore(_PARAMETER_STORE).graceHealthFactor()",
-          "fingerprint": "d4eaa38579cb83bf"
-        }
-      ]
-    },
-    {
-      "id": "SM-124",
-      "class": "real-test-gap",
-      "mutants": 1,
-      "reason": "A funding pull after which LPVaultSwap's balance is lower than before (a token that burns from the receiver) only differs from `==` when LPVaultSwap already held a balance; the mutant then underflows (Panic 0x11) instead of FundingMismatch.",
-      "covered_by": "test_TEST_048_balanceFallOnFundingRefused in test/unit/LPVaultSwap.Funding.unit.t.sol",
-      "test_status": "test added, passed",
-      "approval": "pending",
-      "locations": [
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
-          "function": "LPVaultSwapLiquidationLogic._fund",
-          "line_aa340fb": 131,
-          "line_fda9bed": 134,
-          "mutator": "ROR",
-          "original": "afterFunding <= before || afterFunding - before > p.debtToCover",
-          "mutant": "afterFunding == before || afterFunding - before > p.debtToCover",
-          "fingerprint": "4e11cbccedd3e99c"
-        }
-      ]
-    },
-    {
-      "id": "SM-125",
-      "class": "real-test-gap",
-      "mutants": 2,
-      "reason": "REQ-SWAP-112 requires the shortfall pull to raise the balance by exactly the shortfall; no test made that pull arrive 1 above or 1 below, so `<` and `>` both survived.",
-      "covered_by": "test_TEST_233_shortfallArrivalExact in test/unit/LPVaultSwap.Shortfall.unit.t.sol (the route switches the debt asset to mint 1 or burn 1 on transferFrom; FundingMismatch both ways)",
-      "test_status": "test added, passed",
-      "approval": "pending",
-      "locations": [
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
-          "function": "LPVaultSwapLiquidationLogic._waterfall",
-          "line_aa340fb": 237,
-          "line_fda9bed": 240,
-          "mutator": "ROR",
-          "original": "asset.balanceOf(address(this)) != before + shortfall",
-          "mutant": "asset.balanceOf(address(this)) < before + shortfall",
-          "fingerprint": "f0c2fd2fd0617261"
-        },
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
-          "function": "LPVaultSwapLiquidationLogic._waterfall",
-          "line_aa340fb": 237,
-          "line_fda9bed": 240,
-          "mutator": "ROR",
-          "original": "asset.balanceOf(address(this)) != before + shortfall",
-          "mutant": "asset.balanceOf(address(this)) > before + shortfall",
-          "fingerprint": "3f20b650ffc80129"
-        }
-      ]
-    },
-    {
-      "id": "SM-126",
-      "class": "real-test-gap",
-      "mutants": 1,
-      "reason": "`keeperOut >= 0` attempts a zero transfer to the caller when keeperOut is 0 (REQ-SWAP-077 requires it skipped). keeperOut = Kf + R' - D - A - B is 0 for a completing liquidation only when D = Kf, R = 0 and minRec = 0: a dust seizure whose unwind returns nothing.",
-      "covered_by": "test_TEST_179_zeroKeeperOutSkipped in test/unit/LPVaultSwap.PayoutEscrow.unit.t.sol (a 0.9 USDC dust repayment, unwind returning nothing: minRec = 0, R = 0, keeperOut = Kf - D = 0, USDC reverting on zero transfers)",
-      "test_status": "test added, passed",
-      "approval": "pending",
-      "locations": [
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol",
-          "function": "LPVaultSwapLiquidationLogic._waterfall",
-          "line_aa340fb": 251,
-          "line_fda9bed": 254,
-          "mutator": "ROR",
-          "original": "keeperOut != 0",
-          "mutant": "keeperOut >= 0",
-          "fingerprint": "68023f09f9262c04"
-        }
-      ]
-    },
-    {
-      "id": "SM-127",
-      "class": "real-test-gap",
-      "mutants": 1,
-      "reason": "No pending-settlement test had R exactly at minPending, so RecoveryBelowFloor at equality survived.",
-      "covered_by": "test_TEST_170_recoveryAtPendingFloor in test/unit/LPVaultSwap.SettlePending.unit.t.sol (route pays exactly minPending - a0; the settlement completes with added = minPending)",
-      "test_status": "test added, passed",
-      "approval": "pending",
-      "locations": [
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
-          "function": "LPVaultSwapPendingLogic.settlePending",
-          "line_aa340fb": 86,
-          "line_fda9bed": 86,
-          "mutator": "ROR",
-          "original": "c.recovered < c.minPending",
-          "mutant": "c.recovered <= c.minPending",
-          "fingerprint": "d6012dc7a395667d"
-        }
-      ]
-    },
-    {
-      "id": "SM-128",
-      "class": "real-test-gap",
-      "mutants": 1,
-      "reason": "As for the deleverage residues: with USDC settlement, token 0 is the settlement asset and its residue is always 0. With GHO as the settlement asset a USDC residue (index 0) must reach feeRecipient; the mutant leaves it in LPVaultSwap.",
-      "covered_by": "test_TEST_170_residueOfFirstTokenToFeeRecipient in test/unit/LPVaultSwap.SettlePending.unit.t.sol",
-      "test_status": "test added, passed",
-      "approval": "pending",
-      "locations": [
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
-          "function": "LPVaultSwapPendingLogic.settlePending",
-          "line_aa340fb": 89,
-          "line_fda9bed": 89,
-          "mutator": "LIR",
-          "original": "uint256 i = 0",
-          "mutant": "uint256 i = 1",
-          "fingerprint": "5c53acc76c9a5248"
-        }
-      ]
-    },
-    {
       "id": "SM-129",
       "class": "equivalent-or-harmless",
       "mutants": 1,
@@ -12011,7 +11629,7 @@
       "approval": "pending",
       "locations": [
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic._fundCoverage",
           "line_aa340fb": 202,
           "line_fda9bed": 207,
@@ -12023,27 +11641,6 @@
       ]
     },
     {
-      "id": "SM-130",
-      "class": "real-test-gap",
-      "mutants": 1,
-      "reason": "`before + afterFunding != total` equals the original exactly when LPVaultSwap held nothing but Rt before funding (before = Rt, after = 0), which every test had. A held settlement-asset balance that is not a recorded carry makes the mutant revert FundingMismatch.",
-      "covered_by": "test_TEST_170_heldBalanceNotFunded in test/unit/LPVaultSwap.SettlePending.unit.t.sol",
-      "test_status": "test added, passed",
-      "approval": "pending",
-      "locations": [
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
-          "function": "LPVaultSwapPendingLogic._fundCoverage",
-          "line_aa340fb": 204,
-          "line_fda9bed": 209,
-          "mutator": "AOR",
-          "original": "afterFunding > before || before - afterFunding != total",
-          "mutant": "afterFunding > before || before + afterFunding != total",
-          "fingerprint": "35076db6ae10b8fb"
-        }
-      ]
-    },
-    {
       "id": "SM-131",
       "class": "equivalent-or-harmless",
       "mutants": 2,
@@ -12051,7 +11648,7 @@
       "approval": "pending",
       "locations": [
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic._fundCoverage",
           "line_aa340fb": 204,
           "line_fda9bed": 209,
@@ -12061,7 +11658,7 @@
           "fingerprint": "2c13a00b935ed4a1"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol",
           "function": "LPVaultSwapPendingLogic._fundCoverage",
           "line_aa340fb": 204,
           "line_fda9bed": 209,
@@ -12073,27 +11670,6 @@
       ]
     },
     {
-      "id": "SM-132",
-      "class": "real-test-gap",
-      "mutants": 1,
-      "reason": "The event's `carried` field was only checked as 0 (funded case); the sub-share carry test checked balances, not the event.",
-      "covered_by": "test_TEST_170_eventFieldsWhenCarried in test/unit/LPVaultSwap.SettlePending.unit.t.sol (PendingSettlementForwarded with funded = 0, carried = R)",
-      "test_status": "test added, passed",
-      "approval": "pending",
-      "locations": [
-        {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol",
-          "function": "LPVaultSwapPendingLogic._fundCoverage",
-          "line_aa340fb": 208,
-          "line_fda9bed": 213,
-          "mutator": "CR",
-          "original": "c.carried = total",
-          "mutant": "//c.carried = total",
-          "fingerprint": "37f8ed3544dce9b3"
-        }
-      ]
-    },
-    {
       "id": "SM-133",
       "class": "noise",
       "mutants": 3,
@@ -12101,7 +11677,7 @@
       "approval": "pending",
       "locations": [
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapStorage.sol",
           "function": "LPVaultSwapStorage (top level)",
           "line_aa340fb": 23,
           "line_fda9bed": 23,
@@ -12111,7 +11687,7 @@
           "fingerprint": "bd943981a543b652"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapStorage.sol",
           "function": "LPVaultSwapStorage (top level)",
           "line_aa340fb": 23,
           "line_fda9bed": 23,
@@ -12121,7 +11697,7 @@
           "fingerprint": "d4f8d18fa4beed3c"
         },
         {
-          "file": "src/liquidation/lp-vault-swap/LPVaultSwapStorage.sol",
+          "file": "src/legacy/lp-vault-swap/LPVaultSwapStorage.sol",
           "function": "LPVaultSwapStorage (top level)",
           "line_aa340fb": 23,
           "line_fda9bed": 23,

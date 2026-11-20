@@ -1,0 +1,42 @@
+# Avana's own liquidation bot contracts. They compile against the protocol's sources and dependencies in ../contracts.
+[profile.default]
+src = "src"
+test = "test"
+out = "out"
+cache_path = "cache"
+libs = ["../contracts/dependencies"]
+allow_paths = ["../contracts"]
+solc_version = "0.8.28"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 10_000
+via_ir = false
+bytecode_hash = "none"
+cbor_metadata = false
+auto_detect_solc = false
+auto_detect_remappings = false
+remappings = [
+  "avana/=../contracts/src/",
+  "@openzeppelin/contracts/=../contracts/dependencies/@openzeppelin-contracts-5.1.0/",
+  "@openzeppelin/contracts-upgradeable/=../contracts/dependencies/@openzeppelin-contracts-upgradeable-5.1.0/",
+  "aave-v4/=../contracts/dependencies/aave-v4-a3ef63e/src/",
+  "forge-std/=../contracts/dependencies/forge-std-1.17.0/src/",
+  "solady/=../contracts/dependencies/solady-0.1.26/src/",
+]
+
+[profile.default.fuzz]
+runs = 1_000
+
+[fmt]
+line_length = 120
+tab_width = 4
+bracket_spacing = false
+int_types = "long"
+multiline_func_header = "params_first"
+quote_style = "double"
+number_underscore = "thousands"
+override_spacing = false
+wrap_comments = false
+sort_imports = true
+contract_new_lines = false
+

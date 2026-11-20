@@ -3,48 +3,27 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {GlobalParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
-
 /// @notice The chain's governance accounts (2.15 `REQ-ACCESS-027`, 1.4 role table).
 struct GovernanceInputs {
-    // Governance Safe (4-of-7): proposer, executor, canceller.
+    // Governance Safe (4-of-7): admin of Avana's AccessManager, holder of the governance and tighten roles.
     address governanceSafe;
-    // Emergency Guardian (3-of-5): canceller, MarketRegistry and ParameterStore guardian.
+    // Emergency Guardian (3-of-5).
     address emergencyGuardian;
-    // Aave Protocol Guardian: canceller, MarketRegistry and ParameterStore guardian.
+    // Aave Protocol Guardian.
     address aaveProtocolGuardian;
-    // Aave governance executor of the chain: proposer, canceller, DAO canceller, `AAVE_GOVERNANCE_EXECUTOR`.
+    // Aave governance executor of the chain.
     address aaveGovernanceExecutor;
-    // Joint Configuration Safe (2-of-3): MarketRegistry guardian, ParameterStore risk steward.
+    // Joint Configuration Safe (2-of-3): the risk steward, holds the tighten role with no delay.
     address jointConfigSafe;
 }
 
-/// @notice One Aave V4 Hub Avana records, with its risk tier (`MarketRegistry.recordHub`).
-struct HubInput {
-    address hub;
-    // RiskTier: 1 Stable, 2 Correlated, 3 Volatile.
-    uint8 tier;
-}
-
-/// @notice The Aave contracts Avana's deployment reads or names.
-struct AaveInputs {
-    // The Aave V4 AccessManager (authority of every First-Loss Reserve).
-    address accessManager;
-    // The audited standard Spoke implementation every CDP Spoke must match (`MarketRegistryImmutables`).
-    address standardSpokeImplementation;
-    // The chain's Aave V3 Pool: lender of the flash source and of the flash liquidation helpers.
-    address v3Pool;
-    // The Avana Hubs (Stable LP, Correlated LP, Volatile LP) recorded by the wiring operation.
-    HubInput[] hubs;
-}
-
-/// @notice One AMM integration's LPVault (1.2 deployment step 6).
+/// @notice One AMM integration: one LPVault and the core stack built on it (1.2 deployment step 6).
 struct IntegrationInput {
     uint32 integrationId;
     // "uniswap-v3", "slipstream" or "uniswap-v4".
     string kind;
     // Uniswap v3: one position manager and factory; Slipstream: the four generations of 2.21, index 0 to 3; Uniswap v4:
-    // the PositionManager and the chain's Uniswap v3 factory, whose pools are the reference pools.
+    // the PositionManager (its factories entry is not read).
     address[] positionManagers;
     address[] factories;
 }
@@ -56,6 +35,28 @@ struct OperatorHelperInput {
     uint256 maxTopUpBps;
 }
 
+/// @notice The keeper top-up wallet (`keeperTopUp`): it holds the chain's keeper gas and refills every keeper signer
+/// (the `keepers` and each operator helper's `signer`) that is below `minBalanceWei` back to `targetBalanceWei`
+/// (`11_FundKeepers`). Required on every chain but a local anvil node.
+struct KeeperTopUpInput {
+    // KEEPER_TOPUP_WALLET when set, else the config's `keeperTopUp.wallet`.
+    address wallet;
+    uint256 minBalanceWei;
+    uint256 targetBalanceWei;
+}
+
+/// @notice The RiskModule settings the listing-setup operation sets on every stack.
+struct CoreParams {
+    // Avana's share of the realized liquidation surplus, bps (at most `RiskModule.MAX_FEE_SHARE_BPS`).
+    uint16 feeShareBps;
+    address feeRecipient;
+    // First-Loss coverage of the summed draw caps, bps.
+    uint16 coverageRatioBps;
+    // The governance delay source, seconds: the governance role's execution delay when it lies between 4 and 5 days,
+    // else 4 days (`AvanaAccess.governanceDelay`).
+    uint256 timelockNormalDelay;
+}
+
 /// @notice Everything `03_DeployAvana` needs for one chain; read from `script/deploy/config/<network>.json`.
 struct ChainInputs {
     string network;
@@ -63,51 +64,33 @@ struct ChainInputs {
     // Release tag vX.Y.Z; part of every salt.
     string release;
     GovernanceInputs gov;
-    AaveInputs aave;
-    // Seconds per block (12 on Ethereum and Sepolia, 2 on Base).
-    uint32 blockTime;
-    bool hasSequencer;
-    address sequencerFeed;
-    uint32 sequencerGraceSeconds;
-    GlobalParams globals;
-    uint16 initialPoolShareMaxBps;
-    uint256 maxMarketCount;
-    uint256 keeperFloor;
-    // The timelock's initial normal delay, seconds (`REQ-ACCESS-027`: 432,000; 60 to 120 on a test network,
-    // `REQ-ACCESS-187`).
-    uint256 timelockNormalDelay;
+    // The chain's Aave V3 Pool: lender of FlashloanRepay and of the operator flash liquidators; zero skips both.
+    address v3Pool;
+    CoreParams params;
     address[] keepers;
     OperatorHelperInput[] operatorHelpers;
     IntegrationInput[] integrations;
+    KeeperTopUpInput keeperTopUp;
 }
 
-/// @notice One upgradeable contract: its fixed proxy, its implementation and the logic contracts it forwards to.
-struct UpgradeableDeployment {
-    address proxy;
-    address implementation;
-    address[] logics;
+/// @notice The core stack of one integration: the RiskModule's `LP_VAULT` is immutable, so each LPVault has its own.
+struct CoreStack {
+    uint32 integrationId;
+    string kind;
+    address lpVault;
+    address riskModule;
+    address liquidationModule;
+    address aaveAdapter;
+    // Zero without an Aave V3 Pool.
+    address flashloanRepay;
+    // One per operator helper; empty without an Aave V3 Pool.
+    address[] flashLiquidators;
 }
 
 /// @notice Every address `03_DeployAvana` deploys.
 struct AvanaDeployment {
     address factory;
     address deployer;
-    address timelock;
-    UpgradeableDeployment marketRegistry;
-    UpgradeableDeployment parameterStore;
-    UpgradeableDeployment riskModule;
-    UpgradeableDeployment aaveAdapter;
-    UpgradeableDeployment lpVaultSwap;
-    address lock;
-    address collateralization;
-    address vaultTokenFactory;
-    address proxyManager;
-    address payoutEscrow;
-    address flashSource;
-    address flashLiquidator;
-    address[] operatorHelpers;
-    address[] lpVaults;
-    address lens;
-    address[] lensModules;
-    address lensAaveSizing;
+    address accessManager;
+    CoreStack[] stacks;
 }

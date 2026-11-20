@@ -6,7 +6,7 @@
 // 2,000,000), 7,000,000 liquidity. U's slice rounds its owed amount up by one base unit, as the Hub does per Spoke.
 // The chain with several Hubs that the reader runs on is in fixtureHubs.ts.
 
-import type { HubAssetRow, HubAssetSpokeRow, MarketReserveDebtRow, MarketRow, SpeedWindow, SpokeReserveRow } from "./types.ts";
+import type { HubAssetRow, HubAssetSpokeRow, MarketReserveDebtRow, MarketRow, SpokeReserveRow } from "./types.ts";
 
 export * from "./fixtureChain.ts";
 export * from "./fixtureHubs.ts";
@@ -49,10 +49,11 @@ export const fixtureHubAsset: HubAssetRow = {
   exposure: {
     firstLossReserve: FIXTURE_COVERAGE,
     fundedBalance: USDC(200_000),
-    line: USDC(7_000_000),
+    // CDP Spokes' draw caps, whole tokens: 4,000,000 + 3,000,000; 2.5 % of them must be funded.
+    drawCapSum: "7000000",
+    required: USDC(175_000),
     coverageBoundHolds: true,
     uncovered: "0",
-    priceAdj: "1000000",
     deficitOffset: "0x0000000000000000000000000000000000000000",
     offsetFunded: "0",
   },
@@ -101,37 +102,26 @@ const reserve = (spoke: `0x${string}`, reserveId: string): SpokeReserveRow => ({
   paused: false,
   frozen: false,
   borrowable: true,
-  breakerReasons: 0,
-  pauseState: 0,
   blockNumber: BLOCK,
 });
 
 export const fixtureSpokeReserves: SpokeReserveRow[] = [reserve(FIXTURE_U, "1"), reserve(FIXTURE_X, "1")];
 
-const speed = (limit: bigint, used: bigint, moreAt: number, moreAmount: bigint): SpeedWindow => ({
-  limit: limit.toString(10),
-  used: used.toString(10),
-  available: (limit > used ? limit - used : 0n).toString(10),
-  moreAt,
-  moreAmount: moreAmount.toString(10),
-  unavailable: false,
-});
-
-const market = (marketId: string, name: string, suppliedWhole: bigint, collateralRiskBps: number): MarketRow => ({
+/** One pool's two markets on U: Full range (market 1) and Custom range (market 2), same LTV. */
+const market = (marketId: string, kind: MarketRow["kind"], name: string, suppliedWhole: bigint, collateralRiskBps: number): MarketRow => ({
   chainId: 1,
   marketId,
-  status: 1,
-  pool: `0x00000000000000000000000000000000000000a${marketId}` as `0x${string}`,
-  poolId: "0x0000000000000000000000000000000000000000000000000000000000000000",
+  kind,
+  active: true,
+  pool: "0x000000000000000000000000000000000000000000000000000000000000000a",
   tokens: [FIXTURE_USDC, "0xdac17f958d2ee523a2206206994597c13d831ec7"],
   tokenDecimals: [6, 6],
-  feeTier: 100,
-  tickLower: -10,
-  tickUpper: 10,
+  bandLower: kind === "full-range" ? -887_270 : -100,
+  bandUpper: kind === "full-range" ? 887_270 : 100,
   integrationId: 1,
-  ammProtocol: "0x0000000000000000000000000000000000000000000000000000000000000001",
   vaultToken: `0x00000000000000000000000000000000000000b${marketId}` as `0x${string}`,
   vaultDecimals: 18,
+  unitDecimals: 18,
   name,
   symbol: `av-${marketId}`,
   lpOracle: `0x00000000000000000000000000000000000000c${marketId}` as `0x${string}`,
@@ -140,45 +130,25 @@ const market = (marketId: string, name: string, suppliedWhole: bigint, collatera
   reserveId: String(10 + Number(marketId)),
   hubAssetId: String(10 + Number(marketId)),
   acceptedPrice: "200000000",
-  priceState: 0,
+  priceAvailable: true,
   suppliedUnits: (suppliedWhole * 10n ** 18n).toString(10),
   suppliedUsd8: (suppliedWhole * 2n * 10n ** 8n).toString(10),
-  collateralFactorBps: 8_000,
+  ltvBps: 9_000,
+  collateralFactorBps: 9_000,
   maxLiquidationBonusBps: 10_500,
+  liquidationFeeBps: 1_000,
   collateralRiskBps,
+  paused: false,
+  frozen: false,
   liquidation: { targetHealthFactorWad: "1100000000000000000", healthFactorForMaxBonusWad: "950000000000000000", liquidationBonusFactorBps: 5_000 },
-  marketHeadroomUsd8: (1_000_000n * 10n ** 8n).toString(10),
-  sliceHeadroomUsd8: (500_000n * 10n ** 8n).toString(10),
-  addHeadroom: "0",
-  pauseState: 0,
-  breakerReasons: 0,
-  caps: {
-    liquidationThresholdBps: 8_000,
-    liquidationFeeBps: 1_000,
-    hardHealthFloorWad: "0",
-    marketUsdCap8: (2_000_000n * 10n ** 8n).toString(10),
-    topUpSliceUsd8: (500_000n * 10n ** 8n).toString(10),
-    tokenUsdCaps8: [(3_000_000n * 10n ** 8n).toString(10), (3_000_000n * 10n ** 8n).toString(10)],
-    addCap: String(2n ** 40n - 1n),
-  },
-  borrow: [
-    {
-      reserveId: "1",
-      borrowRateRay: ((6n * 10n ** 25n * BigInt(10_000 + collateralRiskBps) + 9_999n) / 10_000n).toString(10),
-      // Market window $250,000 of room, USDC window 400,000 USDC: $250,000 at $1 is the smaller.
-      speed: {
-        availableNow: USDC(250_000),
-        moreAt: 1_767_240_000,
-        market: speed(1_000_000n * 10n ** 8n, 750_000n * 10n ** 8n, 1_767_240_000, 100_000n * 10n ** 8n),
-        debt: speed(500_000n * 10n ** 6n, 100_000n * 10n ** 6n, 1_767_250_000, 50_000n * 10n ** 6n),
-      },
-    },
-  ],
-  pledgeSpeed: speed(2_500_000n * 10n ** 8n, 0n, 0, 0n),
+  borrow: [{ reserveId: "1", borrowRateRay: ((6n * 10n ** 25n * BigInt(10_000 + collateralRiskBps) + 9_999n) / 10_000n).toString(10) }],
   blockNumber: BLOCK,
 });
 
-export const fixtureMarkets: MarketRow[] = [market("1", "USDC/USDT 0.01%", 1_000_000n, 500), market("2", "USDC/DAI 0.01%", 500_000n, 300)];
+export const fixtureMarkets: MarketRow[] = [
+  market("1", "full-range", "USDC-USDT-100 full", 1_000_000n, 500),
+  market("2", "custom-range", "USDC-USDT-100 custom", 500_000n, 300),
+];
 
 /** U's owed amount split by market; each account rounds up, so Σ markets ≥ U's slice by at most one unit per account. */
 export const fixtureMarketDebt: MarketReserveDebtRow[] = [

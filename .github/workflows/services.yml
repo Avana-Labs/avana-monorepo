@@ -19,6 +19,7 @@ on:
   pull_request:
     paths:
       - "services/**"
+      - "liquidator/**"
       - "packages/protocol/**"
       - "packages/export/**"
       - "packages/rpc/**"
@@ -64,7 +65,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          all=(services/common services/indexer services/keeper services/monitor services/faucet services/convex packages/protocol packages/export packages/rpc)
+          all=(services/common services/indexer services/keeper services/monitor services/faucet services/convex packages/protocol packages/export packages/rpc liquidator)
           declare -A hit=()
           if [ "$EVENT" != pull_request ]; then
             for p in "${all[@]}"; do hit[$p]=1; done
@@ -210,7 +211,7 @@ jobs:
         if: matrix.target == 'monitor' || strategy.job-index == 0
         run: |
           for s in indexer keeper monitor; do cp "services/$s/.env.example" "services/$s/.env"; done
-          POSTGRES_PASSWORD=ci KEEPER_TLS_DIR=/tmp docker compose -f services/compose.yaml config -q
+          POSTGRES_PASSWORD=ci KEEPER_TLS_DIR=/tmp KEEPER_SECRETS_DIR=/tmp docker compose -f services/compose.yaml config -q
 
   gate:
     # Passes only when the changes job and every due package and image job passed; a job with nothing to check

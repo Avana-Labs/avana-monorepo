@@ -1,66 +1,73 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The coverage probe on a scripted chain: M-07, M-13 (reserve and offset), M-14, M-21 and M-28 at their boundaries.
+// The coverage probe on a scripted chain: M-13 (First-Loss Reserve and DAO deficit offset), M-14 (draw-cap coverage)
+// and M-28 (pool liquidity) at their boundaries, a Uniswap v4 pool read through the PoolManager.
 
 import { describe, expect, it } from "vitest";
+import type { ServiceManifest } from "@avana/services-common";
 import { FIXTURE_HUB, FIXTURE_USDC, fixtureMarkets } from "@avana/services-common/fixtures";
-import { type Tail, coverageProbe, m07, m13Offset, m13Reserve, m14, tailKey } from "../src/probes/coverage.ts";
+import { type Layer, coverageProbe, m13, m14 } from "../src/probes/coverage.ts";
 import { encodePacked, keccak256, toHex } from "viem";
 import { EMPTY_MANIFEST, contextOf, fakeProvider, fixtureSnapshot, on } from "./fakeChain.ts";
 
+const RESERVE = "0x00000000000000000000000000000000000000c1";
 const OFFSET = "0x00000000000000000000000000000000000000d0";
-const tail = (o: Partial<Tail> = {}): Tail => ({ hub: FIXTURE_HUB, asset: FIXTURE_USDC, funded: 300n, minimum: 200n, ratioBps: 20_000n, deficitOffset: OFFSET, offsetFunded: 100n, offsetMinimum: 100n, ...o });
+const layer = (o: Partial<Layer> = {}): Layer => ({ address: RESERVE, label: "stable USDC", funded: 300n, minimum: 200n, offset: false, ...o });
 
 describe("coverage rules", () => {
-  it("M-07 warns above 75 % of the pool-share maximum and pages above it", () => {
-    const at = (bps: bigint) => m07({ name: "m", poolShareBps: bps, poolShareMaxBps: 2_000n, backingBroken: [] });
-    expect([1_500n, 1_501n, 2_000n, 2_001n].map(at)).toEqual(["ok", "warn", "warn", "page"]);
-    expect(m07({ name: "m", poolShareBps: 9n, poolShareMaxBps: 0n, backingBroken: [] })).toBeNull();
+  it("M-13 warns below 150 % of a reserve's minimum, pages below 100 %, and warns on an offset below its minimum", () => {
+    expect([300n, 299n, 200n, 199n].map((funded) => m13(layer({ funded })))).toEqual(["ok", "warn", "warn", "page"]);
+    expect(m13(layer({ minimum: 0n }))).toBeNull();
+    expect([m13(layer({ offset: true, funded: 200n })), m13(layer({ offset: true, funded: 199n }))]).toEqual(["ok", "warn"]);
   });
 
-  it("M-13 warns below 150 % of the reserve minimum, pages below 100 %, and warns on an offset below its size", () => {
-    expect([300n, 299n, 200n, 199n].map((funded) => m13Reserve(tail({ funded })))).toEqual(["ok", "warn", "warn", "page"]);
-    expect(m13Reserve(tail({ minimum: 0n }))).toBeNull();
-    expect([m13Offset(tail()), m13Offset(tail({ offsetFunded: 99n })), m13Offset(tail({ offsetMinimum: null }))]).toEqual(["ok", "warn", null]);
-  });
-
-  it("M-14 warns below 150 % and pages below 100 %", () => {
-    expect([15_000n, 14_999n, 10_000n, 9_999n].map((ratioBps) => m14(tail({ ratioBps })))).toEqual(["ok", "warn", "warn", "page"]);
+  it("M-14 warns below 150 % of the required balance and pages below 100 %", () => {
+    expect([1_500n, 1_499n, 1_000n, 999n].map((funded) => m14({ funded, required: 1_000n }))).toEqual(["ok", "warn", "warn", "page"]);
+    expect(m14({ funded: 0n, required: 0n })).toBe("ok");
   });
 });
 
+const integration = (id: number, kind: string) => ({ integrationId: id, kind, riskModule: { address: "0x00000000000000000000000000000000000000a1" } });
+const manifestWith = (o: Record<string, unknown> = {}) =>
+  ({
+    ...EMPTY_MANIFEST,
+    avana: { ...EMPTY_MANIFEST.avana, integrations: [integration(1, "uniswap-v3"), integration(3, "uniswap-v4")] },
+    coverage: {
+      firstLossReserves: [{ address: RESERVE, hubLabel: "stable", symbol: "USDC" }],
+      daoDeficitOffsets: [{ address: OFFSET, hubLabel: "stable", symbol: "USDC" }],
+    },
+    ...o,
+  }) as unknown as ServiceManifest;
+
 describe("coverageProbe", () => {
   let liquidity = 1_000n;
-  const backed = { supplyEqualsCredited: true, hubHoldsSupplied: true, sharesEqualAssets: true, noDrawnShares: true, noDrawCap: true, singleBorrowSpoke: true, noLiquidityFee: true, noReinvestment: true, reserveFlags: true };
   const chain = fakeProvider({
     handlers: [
-      on("getCapHeadroom", (args) => ({ poolShareBps: args[0] === fixtureMarkets[0]!.vaultToken ? 1_600n : 100n, poolShareMaxBps: 2_000n })),
-      on("checkBacking", (args) => (args[0] === fixtureMarkets[1]!.vaultToken ? { ...backed, supplyEqualsCredited: false } : backed)),
-      on("getTailCoverage", () => ({ funded: 250n, minimum: 200n, ratioBps: 9_000n, deficitOffset: OFFSET, offsetFunded: 50n })),
-      on("firstLossReserveMinimum", () => 100n, OFFSET),
+      on("fundedBalance", () => 250n, RESERVE),
+      on("minimum", () => 200n, RESERVE),
+      on("fundedBalance", () => 50n, OFFSET),
+      on("minimum", () => 100n, OFFSET),
       on("liquidity", () => liquidity),
     ],
   });
 
-  it("judges every market, loss-layer pair and pool, and M-28 over the hour", async () => {
+  it("judges every loss layer, the covered Hub asset and the pool both markets share, and M-28 over the hour", async () => {
     const probe = coverageProbe();
     const round = async (timestamp: number) => {
-      const ctx = await contextOf(chain, { number: BigInt(timestamp), timestamp });
+      const ctx = await contextOf(chain, { number: BigInt(timestamp), timestamp }, manifestWith());
       const input = await probe.read(ctx);
       return Object.fromEntries(probe.evaluate(input, ctx.block).map((f) => [`${f.signal} ${f.subject}`, f.level]));
     };
-    const key = tailKey(FIXTURE_HUB, FIXTURE_USDC);
     const pool = fixtureMarkets[0]!.pool.toLowerCase();
-    expect(await round(1_000)).toMatchObject({
-      "M-07 market:1:poolShare": "warn",
-      "M-07 market:2:poolShare": "ok",
-      "M-21 market:1:backing": "ok",
-      "M-21 market:2:backing": "page",
-      [`M-13 tail:${key}:reserve`]: "warn",
-      [`M-13 tail:${key}:offset`]: "warn",
-      [`M-14 tail:${key}:ratio`]: "page",
+    const first = await round(1_000);
+    expect(first).toMatchObject({
+      [`M-13 layer:${RESERVE}`]: "warn",
+      [`M-13 layer:${OFFSET}`]: "warn",
+      // The fixture's First-Loss Reserve holds 200,000 USDC against 175,000 required: below 150 %.
+      [`M-14 coverage:${FIXTURE_HUB}:${FIXTURE_USDC}`]: "warn",
       [`M-28 pool:${pool}`]: "ok",
     });
+    expect(Object.keys(first).filter((k) => k.startsWith("M-28"))).toHaveLength(1);
     liquidity = 800n;
     expect((await round(2_000))[`M-28 pool:${pool}`]).toBe("warn");
     liquidity = 600n;
@@ -69,52 +76,32 @@ describe("coverageProbe", () => {
   });
 });
 
-describe("coverageProbe on a pool keyed by identifier", () => {
+describe("coverageProbe on a Uniswap v4 pool", () => {
   const MANAGER = "0x000000000004444c5dc75cb358380d2e3de08a90";
   const POOL_ID = `0x${"7c".repeat(32)}` as const;
-  const ZERO_POOL = "0x0000000000000000000000000000000000000000";
-  const v4Market = { ...fixtureMarkets[0]!, marketId: "3", pool: ZERO_POOL, poolId: POOL_ID, vaultToken: "0x00000000000000000000000000000000000000f3" } as (typeof fixtureMarkets)[number];
+  const v4Market = { ...fixtureMarkets[0]!, marketId: "3", integrationId: 3, pool: POOL_ID, vaultToken: "0x00000000000000000000000000000000000000f3" } as (typeof fixtureMarkets)[number];
   // StateLibrary: the pool's state at keccak256(poolId . 6), liquidity in the low 128 bits of the fourth word.
   const LIQUIDITY_SLOT = toHex(BigInt(keccak256(encodePacked(["bytes32", "uint256"], [POOL_ID, 6n]))) + 3n, { size: 32 });
-  const withManager = { ...EMPTY_MANIFEST, uniswapV4: { poolManager: { address: MANAGER, startBlock: 1 } } } as typeof EMPTY_MANIFEST;
   let word = 0n;
   const chain = fakeProvider({
     snapshot: (b) => fixtureSnapshot(b, (s) => ({ ...s, markets: [...s.markets, v4Market] })),
-    handlers: [
-      on("getCapHeadroom", () => ({ poolShareBps: 100n, poolShareMaxBps: 2_000n })),
-      on("checkBacking", () => ({ supplyEqualsCredited: true, hubHoldsSupplied: true, sharesEqualAssets: true, noDrawnShares: true, noDrawCap: true, singleBorrowSpoke: true, noLiquidityFee: true, noReinvestment: true, reserveFlags: true })),
-      on("getTailCoverage", () => ({ funded: 250n, minimum: 200n, ratioBps: 20_000n, deficitOffset: OFFSET, offsetFunded: 50n })),
-      on("firstLossReserveMinimum", () => 100n, OFFSET),
-      on("liquidity", () => 1_000n),
-      on("extsload", (args) => (args[0] === LIQUIDITY_SLOT ? toHex(word, { size: 32 }) : undefined), MANAGER),
-    ],
+    handlers: [on("fundedBalance", () => 0n), on("minimum", () => 0n), on("liquidity", () => 1_000n), on("extsload", (args) => (args[0] === LIQUIDITY_SLOT ? toHex(word, { size: 32 }) : undefined), MANAGER)],
   });
-  const findings = async (manifest: typeof EMPTY_MANIFEST, timestamp: number) => {
-    const probe = coverageProbe();
+  const m28 = async (manifest: ServiceManifest, timestamp: number, probe = coverageProbe()) => {
     const ctx = await contextOf(chain, { number: BigInt(timestamp), timestamp }, manifest);
-    return probe.evaluate(await probe.read(ctx), ctx.block).filter((f) => f.signal === "M-28");
+    return probe.evaluate(await probe.read(ctx), ctx.block).filter((f) => f.signal === "M-28" && f.subject === `pool:${POOL_ID}`);
   };
 
-  it("reads the pool's liquidity through the PoolManager and keys the subject by poolId", async () => {
+  it("reads the pool's liquidity through the PoolManager and keys the subject by PoolId", async () => {
     const probe = coverageProbe();
-    const round = async (timestamp: number) => {
-      const ctx = await contextOf(chain, { number: BigInt(timestamp), timestamp }, withManager);
-      return probe.evaluate(await probe.read(ctx), ctx.block).filter((f) => f.signal === "M-28" && f.subject === `pool:${POOL_ID}`);
-    };
+    const withManager = manifestWith({ uniswapV4: { poolManager: { address: MANAGER, startBlock: 1 } } });
     word = (5n << 200n) | 1_000n; // bits above 128 are not liquidity
-    expect(await round(1_000)).toMatchObject([{ kind: "condition", level: "ok", detail: { pool: POOL_ID, liquidity: "1000" } }]);
+    expect(await m28(withManager, 1_000, probe)).toMatchObject([{ kind: "condition", level: "ok", detail: { pool: POOL_ID, liquidity: "1000" } }]);
     word = 600n;
-    expect(await round(2_000)).toMatchObject([{ kind: "condition", level: "page" }]);
-  });
-
-  it("never reads address(0) as a pool", async () => {
-    const subjects = (await findings(withManager, 1_000)).map((f) => f.subject);
-    expect(subjects).not.toContain(`pool:${ZERO_POOL}`);
-    expect(subjects).toContain(`pool:${fixtureMarkets[0]!.pool.toLowerCase()}`);
+    expect(await m28(withManager, 2_000, probe)).toMatchObject([{ kind: "condition", level: "page" }]);
   });
 
   it("reports the pool unread when the manifest names no PoolManager", async () => {
-    word = 1_000n;
-    expect((await findings(EMPTY_MANIFEST, 1_000)).filter((f) => f.subject === `pool:${POOL_ID}`)).toMatchObject([{ kind: "unread" }]);
+    expect(await m28(manifestWith(), 1_000)).toMatchObject([{ kind: "unread" }]);
   });
 });

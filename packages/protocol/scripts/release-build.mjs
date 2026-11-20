@@ -9,7 +9,7 @@
 //
 //   node packages/protocol/scripts/release-build.mjs --release v0.1.0-alpha.1 --commit <sha> [--out-dir dist/release]
 //        [--contracts contracts] [--abi-index packages/protocol/src/abis/index.ts] [--deployer 0x...]
-//        [--lp-vault-ids 1,2] [--operator-helpers 1]
+//        [--lp-vault-ids 1,2] [--operator-helpers 1]   (integration IDs, and flash liquidators per integration)
 //
 // --contracts and --abi-index point at the tagged checkout, so the workflow can record an older tag with this script.
 // A tag older than the deploy scripts (no AvanaCreate3Factory in its build) or than this package (no ABI_HASH) gets
@@ -32,23 +32,10 @@ const REPO = resolve(PKG, "../..");
 export const SAFE_SINGLETON_FACTORY = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7";
 /** Solady CREATE3 proxy init code hash (dependencies/solady-0.1.26/src/utils/CREATE3.sol). */
 const CREATE3_PROXY_INITCODE_HASH = "0x21c35dbe1b344a2488cf3321d6ce542f8e9f305544ff09e4993a62319a497c1f";
-/** Names the deploy scripts pass to `_deploy3` / `_predict` (script/deploy/lib/AvanaCoreDeploy.sol, AvanaPeripheryDeploy.sol). */
-export const CREATE3_NAMES = [
-  "AaveAdapter",
-  "AaveV3FlashSource",
-  "AvanaTimelock",
-  "Collateralization",
-  "FlashLiquidator",
-  "Lens",
-  "Lock",
-  "LPVaultSwap",
-  "MarketRegistry",
-  "ParameterStore",
-  "PayoutEscrow",
-  "ProxyManager",
-  "RiskModule",
-  "VaultTokenFactory",
-];
+/** Chain-level names `03_DeployAvana` passes to `_deployOnce` (`_deploy3` / `_predict`). */
+export const CREATE3_NAMES = ["AccessManager"];
+/** Names of one integration's core stack, `I<integrationId>.<name>` (`03_DeployAvana._deployStack`). */
+export const STACK_NAMES = ["LPVault", "RiskModule", "LiquidationModule", "AaveAdapter", "FlashloanRepay"];
 /** Builds the record covers: Avana sources in out/ (default profile) and Avana's own files in out-aave/ (aave profile). */
 const BUILDS = [
   { dir: "out", prefix: "", include: (src) => src.startsWith("src/") || src === "script/deploy/AvanaCreate3Factory.sol" },
@@ -155,8 +142,10 @@ export function buildRecord({ release, commit, contractsDir, abiHash = null, dep
     : null;
   const names = !create3Factory ? [] : [
     ...CREATE3_NAMES,
-    ...lpVaultIds.map((id) => `LPVault.${id}`),
-    ...Array.from({ length: operatorHelpers }, (_, i) => `OperatorFlashLiquidator.${i}`),
+    ...lpVaultIds.flatMap((id) => [
+      ...STACK_NAMES.map((n) => `I${id}.${n}`),
+      ...Array.from({ length: operatorHelpers }, (_, i) => `I${id}.FlashLiquidator.${i}`),
+    ]),
   ];
   const caller = deployer ? getAddress(deployer) : null;
   const salts = names.map((name) => {

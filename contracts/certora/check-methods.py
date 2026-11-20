@@ -12,8 +12,9 @@ same return types where the entry states them), in the ABI it binds to:
   function c.f(...)         contract C of a multi-contract conf, bound by `using C as c;`: the interface of C
   function _.f(...)         any external contract: some ABI in out/ that declares f with these parameter types
 
-Internal entries and `unresolved external` entries are refused: no implementation exists to name internal functions,
-and every external call of a verified contract is bound to an interface function by name.
+Internal entries and `unresolved external` entries are refused, so every external call of a verified contract is bound
+to an interface function by name. The one exception is an internal library function in INTERNAL_SUMMARIES, whose
+summary another spec proves against the library bytecode.
 
 Types are compared on the ABI `internalType`: structs and enums by their declared name (with or without the
 declaring interface as qualifier), contract types as `address`, arrays element-wise.
@@ -39,23 +40,44 @@ CONTRACTS = HERE.parent
 # Verified contract -> interface ABIs, where the interface is not simply I<Contract>.
 INTERFACE_OF = {
     "HubInstance": ["IAaveV4Hub"],
-    "PegModuleRoute": ["ISettlementRoute"],
-    "DexPathRoute": ["ISettlementRoute"],
-    "WrapperThenDexRoute": ["ISettlementRoute"],
-    "AvanaFirstLossReserve": ["IAvanaFirstLossReserve"],
-    "AaveV3FlashSource": ["IFlashSource", "IAaveV3FlashLoanReceiver"],
+    # Test harnesses that add views to a contract: their entries bind to the wrapped contract's interface, and the
+    # added views are called directly.
+    "LPOracleHarness": ["ILPOracle"],
+    "RiskModuleHarness": ["IRiskModule"],
+    "LiquidationModuleHarness": ["ILiquidationModule"],
 }
 
 # Contracts that inherit OpenZeppelin AccessControl (v5.1.0) and so expose IAccessControl (PROP-034, PROP-070).
-ACCESS_CONTROL = {
-    "AaveAdapter", "ProxyManager", "MarketRegistry", "ParameterStore", "RiskModule",
-    "LPVaultSwap", "AvanaTimelock",
+ACCESS_CONTROL: set[str] = set()
+
+# Verified contracts that are test harnesses with no interface: their specs call the harness's functions directly and
+# have no methods block, so there is nothing to check against an ABI (the fast tier builds src/ only).
+HARNESS_WITHOUT_METHODS = {"FloorCreditMathHarness", "LPOracleSummariesHarness"}
+
+OVER_APPROXIMATION = "over-approximation"
+
+# Specs allowed one `unresolved external in _._ => DISPATCH [] default NONDET` entry: calls whose sighash the Prover
+# cannot resolve, each listed in the spec next to the entry, become NONDET (no effect on the verified contract's
+# storage) instead of a full havoc. Any other unresolved entry is still refused.
+UNRESOLVED_NONDET = {
+    "AaveAdapterAccounts.spec": "unresolved external in _._ => DISPATCH [] default NONDET",
+}
+
+# Internal library functions a spec summarises, each with the spec that proves the summary against the library
+# bytecode.
+INTERNAL_SUMMARIES = {
+    "Math.mulDiv": "LPOracleSummaries.spec",
+    "FullMath.mulDiv": "LPOracleSummaries.spec",
+    "Math.sqrt": "LPOracleSummaries.spec",
+    # Over-approximations (NONDET, or an unconstrained ghost function of the inputs): every real behaviour is among
+    # the summarised ones, so no proof is needed.
+    "ClTickMath.getTickAtSqrtPrice": OVER_APPROXIMATION,
+    "BandMath.unitDecimals": OVER_APPROXIMATION,
+    "LPPriceMath.sqrtPriceX96": OVER_APPROXIMATION,
 }
 
 # Specs verified by no conf: the contract whose interface their unqualified entries bind to.
-SPEC_WITHOUT_CONF = {
-    "AvanaFirstLossReserve.spec": "AvanaFirstLossReserve",
-}
+SPEC_WITHOUT_CONF: dict[str, str] = {}
 
 ELEMENTARY = re.compile(r"^(u?int\d*|address|bool|bytes\d*|string)$")
 
@@ -244,6 +266,11 @@ def main() -> int:
         alias = {a: c for c, a in re.findall(r"\busing\s+(\w+)\s+as\s+(\w+)\s*;", text)}
         alias["currentContract"] = next(iter(verified), "")
         for c in verified:
+            if c in HARNESS_WITHOUT_METHODS:
+                if blocks:
+                    print(f"ERROR {rel}: {c} has no interface; call its functions directly, without a methods block")
+                    errors += 1
+                continue
             if not any(n in abis for n in iface(c)):
                 print(f"ERROR {rel}: no ABI in {out.name}/ for {c} (looked for {', '.join(iface(c))})")
                 errors += 1
@@ -253,6 +280,10 @@ def main() -> int:
                 if not stmt:
                     continue
                 line = line0  # block line; entries are reported by text
+                if stmt == UNRESOLVED_NONDET.get(spec.name):
+                    if args.verbose:
+                        print(f"ok    {rel}: unresolved calls NONDET (listed in the spec)")
+                    continue
                 if stmt.startswith("unresolved") or re.match(r"^function\s+_\._\b", stmt):
                     print(f"ERROR {rel}:{line}: catch-all entry `{stmt}`; bind every call to a named function")
                     errors += 1
@@ -263,6 +294,17 @@ def main() -> int:
                     errors += 1
                     continue
                 checked += 1
+                if e["visibility"] == "internal" and f"{e['target']}.{e['name']}" in INTERNAL_SUMMARIES:
+                    proof = INTERNAL_SUMMARIES[f"{e['target']}.{e['name']}"]
+                    if proof == OVER_APPROXIMATION:
+                        if args.verbose:
+                            print(f"ok    {rel}: {e['target']}.{e['name']} internal, over-approximated")
+                    elif not (HERE / "specs" / proof).is_file():
+                        print(f"ERROR {rel}: internal summary {e['target']}.{e['name']} names {proof}, which does not exist")
+                        errors += 1
+                    elif args.verbose:
+                        print(f"ok    {rel}: {e['target']}.{e['name']} internal, proved in {proof}")
+                    continue
                 if e["visibility"] != "external":
                     print(f"ERROR {rel}: `{e['name']}` is not an external entry; only interface functions may be named")
                     errors += 1

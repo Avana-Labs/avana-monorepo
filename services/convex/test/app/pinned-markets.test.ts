@@ -5,6 +5,7 @@
 import { convexTest } from "convex-test"
 import { describe, expect, test } from "vitest"
 import { fixtureHubAsset, fixtureMarkets } from "@avana/services-common/fixtures"
+import { ammProtocolOf } from "../../convex/ingest/apply"
 import { api } from "../../convex/_generated/api"
 import schema from "../../convex/schema"
 
@@ -16,7 +17,7 @@ async function seeded() {
   const t = convexTest(schema, modules)
   await t.run(async (ctx) => {
     await ctx.db.insert("hubAssets", { ...fixtureHubAsset, slug: "ethereum-usdc", updatedAt: 0, lendReserves: [...fixtureHubAsset.lendReserves] })
-    await ctx.db.insert("markets", { ...fixtureMarkets[0]!, slug: "ethereum-usdc-usdt", updatedAt: 0 } as never)
+    await ctx.db.insert("markets", { ...fixtureMarkets[0]!, tickLower: fixtureMarkets[0]!.bandLower, tickUpper: fixtureMarkets[0]!.bandUpper, ammProtocol: ammProtocolOf("uniswap-v3"), slug: "ethereum-usdc-usdt", updatedAt: 0 } as never)
   })
   return t
 }

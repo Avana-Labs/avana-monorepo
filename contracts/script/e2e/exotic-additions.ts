@@ -70,9 +70,9 @@ c.listing.spokes.push(
   { label: SLIP, hub: HUB, integrationId: 2, tier: 3, spoke: `$aave:.spokes.${SLIP}.proxy` },
 );
 
-// 2. The new debt assets. Draw caps, loss-layer minimums and the (Hub, asset) credit line and speed limit are in whole
-// tokens, so each is sized to the token's price: PEPE's are in the billions. A debt asset's floor rounding allowance is
-// at most $1 of the asset (ParameterStore ROUNDING_ALLOWANCE_USD_MAX).
+// 2. The new debt assets. Draw caps, loss-layer minimums and the (Hub, asset) speed limit are in whole tokens, so each
+// is sized to the token's price: PEPE's are in the billions. A debt asset's floor rounding allowance is at most $1 of
+// the asset (ParameterStore ROUNDING_ALLOWANCE_USD_MAX).
 type DebtAsset = {
   symbol: string;
   decimals: number;
@@ -83,7 +83,6 @@ type DebtAsset = {
   offsetMinimum: number;
   stressRiseBps: number;
   floorRoundingAllowance: string;
-  creditLineWhole?: number;
   debtMinWhole?: number;
   debtMaxWhole?: number;
 };
@@ -99,7 +98,6 @@ const DEBT_ASSETS: DebtAsset[] = [
     offsetMinimum: 7_500_000_000,
     stressRiseBps: 3000,
     floorRoundingAllowance: "50000000000000000000000",
-    creditLineWhole: 200_000_000_000,
     // 2.5-7.5e10 PEPE ($250k-$750k): the speed limit's bounds are uint96 base units.
     debtMinWhole: 25_000_000_000,
     debtMaxWhole: 75_000_000_000,
@@ -144,7 +142,6 @@ for (const d of DEBT_ASSETS) {
     fixedPrice: false,
     stressRiseBps: d.stressRiseBps,
     floorRoundingAllowance: d.floorRoundingAllowance,
-    ...(d.creditLineWhole ? { creditLineWhole: d.creditLineWhole } : {}),
     ...(d.debtMinWhole ? { debtMinWhole: d.debtMinWhole, debtMaxWhole: d.debtMaxWhole } : {}),
     address: `$world:.tokens.${d.symbol}`,
     feeds: { primary: `$world:.feeds.${d.symbol}.primary` },

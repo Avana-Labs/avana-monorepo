@@ -97,7 +97,7 @@ describe("deliver", () => {
 
 describe("second-provider confirmation", () => {
   const snap = (block: string, edit: (s: ChainSnapshot) => ChainSnapshot = (s) => s): ChainSnapshot =>
-    edit({ chainId: 1, blockNumber: block, timestamp: 0, hubs: [], creditLines: [], hubAssets: [fixtureHubAsset], slices: fixtureSlices, spokeReserves: fixtureSpokeReserves, markets: fixtureMarkets });
+    edit({ chainId: 1, blockNumber: block, timestamp: 0, hubs: [], hubAssets: [fixtureHubAsset], slices: fixtureSlices, spokeReserves: fixtureSpokeReserves, markets: fixtureMarkets });
   const page: Finding = { signal: "M-01", kind: "condition", level: "page", subject: "market:1", detail: {} };
   const warn: Finding = { ...page, level: "warn", subject: "market:2" };
   const probe = snapshotProbe();

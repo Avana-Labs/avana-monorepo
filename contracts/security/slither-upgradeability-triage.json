@@ -1,68 +1,12 @@
 {
   "accepted": [
     {
-      "fingerprint": "0410eb7b4d80fdce",
-      "check": "initialize-target",
-      "file": "src/policy/parameter-store/ParameterStore.sol",
-      "function": "ParameterStore.initialize(address,GlobalParams,uint256,uint16)",
-      "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (REQ-PSTORE-001), and the implementation's constructor calls _disableInitializers. Covered by TEST-242 (initializeRefusesOtherTimelockAndRunsOnce).",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "44499e6d1cee9a4b",
-      "check": "initialize-target",
-      "file": "src/policy/market-registry/MarketRegistry.sol",
-      "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (REQ-CONFIG-002, REQ-MREG-005), and the implementation's constructor calls _disableInitializers. Covered by TEST-242 (initializeOnlyWithTimelockAndOnce).",
-      "approval": "approved (Josue, 2026-11-10, by pattern)"
-    },
-    {
-      "fingerprint": "2a1c646e4fe8715c",
-      "check": "initialize-target",
-      "file": "src/oracle/debt-oracle/DebtOracle.sol",
-      "function": "DebtOracle.initialize(DebtOracleInitParams)",
-      "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (REQ-ORACLE-091), and the implementation's constructor calls _disableInitializers. Covered by TEST-062 (initializeEmitsSeedAndRunsOnce) and TEST-242 (initializeRejectsAnotherTimelock).",
-      "approval": "approved (Josue, 2026-11-11)",
-      "review": "Reviewed per call site, group Q (UUPS boilerplate, identical to the Josue-approved ParameterStore and MarketRegistry entries): checked 2026-11-11. initialize runs in the ERC1967Proxy constructor and rejects any timelock other than the immutable TIMELOCK."
-    },
-    {
-      "fingerprint": "b1ec8f783baf0c3b",
-      "check": "initialize-target",
-      "file": "src/liquidation/lp-vault-swap/LPVaultSwap.sol",
-      "function": "LPVaultSwap.initialize(address,address[])",
-      "reason": "Informational reminder that the proxy must be initialized: initialize(timelock, initialKeepers) runs atomically in the ERC1967Proxy constructor (REQ-SWAP-040, REQ-ACCESS-153), and the implementation's constructor calls _disableInitializers, so neither the proxy nor the implementation can be initialized by anyone else. Covered by LPVaultSwap.Admin and LPVaultSwap.Admin.fuzz (initialKeeperList).",
-      "approval": "pending review (approved pattern)"
-    },
-    {
-      "fingerprint": "457ae7e5b660d5f5",
-      "check": "initialize-target",
-      "file": "src/policy/aave-adapter/AaveAdapter.sol",
-      "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (or the upgradeToAndCall that installs the first implementation), and the implementation's constructor calls _disableInitializers (REQ-ADAPTER-074). Covered by TEST-242 (test_TEST_242_initializeRules).",
-      "approval": "pending review (approved pattern)",
-      "review": "Pattern: same as the ParameterStore and MarketRegistry initialize-target entries."
-    },
-    {
       "fingerprint": "c1f9cd7e08ccabe7",
       "check": "initialize-target",
       "file": "src/policy/risk-module/RiskModule.sol",
       "reason": "Same as d5db8888ac8cc58f (fingerprint moved by the speed-limit edit): initialize runs atomically in the ERC1967Proxy constructor, and the implementation's constructor calls _disableInitializers. Covered by TEST-242.",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
       "review": "ratelimit (speed limits, Q-411, 2026-11-12)"
-    },
-    {
-      "fingerprint": "6f3f68a716916458",
-      "check": "initialize-target",
-      "file": "src/oracle/lp-oracle/LPOracleCL.sol",
-      "function": "LPOracle.initialize(InitParams)",
-      "reason": "Informational reminder that the proxy must be initialized: initialize(InitParams) runs atomically in the ERC1967Proxy constructor (REQ-ORACLE-058), and the implementation's constructor (LPOracle, inherited by LPOracleCL) calls _disableInitializers (REQ-ORACLE-080). Covered by TEST-062 (test_TEST_062_initializersLocked, test_TEST_062_initializeChecks).",
-      "approval": "pending review (approved pattern)",
-      "review": "Pattern: same as the Josue-approved DebtOracle (2a1c646e4fe8715c), ParameterStore (0410eb7b4d80fdce) and MarketRegistry (44499e6d1cee9a4b) initialize-target entries; checked: LPOracle's constructor ends with _disableInitializers and the fixtures deploy the proxy with initialize in the ERC1967Proxy constructor."
-    },
-    {
-      "fingerprint": "7639b87d2c57bd78",
-      "check": "initialize-target",
-      "file": "src/oracle/lp-oracle/LPOracleV4.sol",
-      "reason": "Informational reminder that the proxy must be initialized: initialize runs atomically in the ERC1967Proxy constructor (REQ-ORACLE-058), and the implementation's constructor calls _disableInitializers; same as LPOracleCL.",
-      "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     }
   ]
 }

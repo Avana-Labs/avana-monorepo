@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 /// @title IAaveV3Pool
-/// @notice Subset of the Aave V3 Pool that the chain's `IFlashSource` implementation calls.
+/// @notice Subset of the Aave V3 Pool that Avana's flash-loan helpers call (repay with collateral and the liquidation bot).
 /// @dev Copied from aave-v3-origin v3.4 `IPool.sol`; only `flashLoan` waives the premium for a `FLASH_BORROWER`.
 interface IAaveV3Pool {
     /// @notice Flash-borrows `amounts[i]` of `assets[i]` to `receiverAddress`, calls its `executeOperation`, then pulls

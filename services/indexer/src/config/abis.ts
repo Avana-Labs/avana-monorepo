@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // ABIs the indexer decodes with. Avana and Aave ABIs come only from packages/protocol, generated from the release
-// build (TEST-149); the standard OpenZeppelin events below are added to each upgradeable or role-managed contract.
-// After an upgrade, the release's ABI is the union of every version live since the start block, so each block
-// range decodes with the events that version emitted.
+// build (TEST-149). The core contracts are not upgradeable; the ERC-1967 `Upgraded` event is added to the Aave Hubs
+// and Spokes, which are.
 
 import { mergeAbis } from "ponder";
 import { getAbiItem, parseAbi } from "viem";
@@ -11,46 +10,31 @@ import {
   aaveAdapterAbi,
   aaveV4HubAbi,
   aaveV4SpokeAbi,
-  avanaTimelockAbi,
-  collateralizationAbi,
+  accessManagerAbi,
   firstLossReserveAbi,
   flashLiquidatorAbi,
+  flashloanRepayAbi,
+  liquidationModuleAbi,
   lpVaultAbi,
-  lpVaultSwapAbi,
-  marketRegistryAbi,
-  parameterStoreAbi,
-  payoutEscrowAbi,
-  proxyManagerAbi,
   riskModuleAbi,
   vaultTokenAbi,
-  vaultTokenFactoryAbi,
 } from "@avana/protocol/abis";
 
-/** ERC-1967 and AccessControl events; `Upgraded` drives the implementation table and alert M-22. */
-export const upgradeAndRoleEvents = parseAbi([
-  "event Upgraded(address indexed implementation)",
-  "event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)",
-  "event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)",
-  "event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole)",
-]);
+/** ERC-1967 `Upgraded`; drives the implementation table and the monitor's upgrade alert. */
+export const upgradeEvents = parseAbi(["event Upgraded(address indexed implementation)"]);
 
 export const abis = {
-  AaveAdapter: mergeAbis([aaveAdapterAbi, upgradeAndRoleEvents]),
-  LPVaultSwap: mergeAbis([lpVaultSwapAbi, upgradeAndRoleEvents]),
-  MarketRegistry: mergeAbis([marketRegistryAbi, upgradeAndRoleEvents]),
-  ParameterStore: mergeAbis([parameterStoreAbi, upgradeAndRoleEvents]),
-  RiskModule: mergeAbis([riskModuleAbi, upgradeAndRoleEvents]),
-  AvanaTimelock: avanaTimelockAbi,
-  ProxyManager: proxyManagerAbi,
-  Collateralization: collateralizationAbi,
+  AaveAdapter: aaveAdapterAbi,
+  RiskModule: riskModuleAbi,
+  LiquidationModule: liquidationModuleAbi,
+  FlashloanRepay: flashloanRepayAbi,
+  FlashLiquidator: flashLiquidatorAbi,
   LPVault: lpVaultAbi,
   VaultToken: vaultTokenAbi,
-  VaultTokenFactory: vaultTokenFactoryAbi,
-  PayoutEscrow: payoutEscrowAbi,
-  AvanaFirstLossReserve: firstLossReserveAbi,
-  FlashLiquidator: flashLiquidatorAbi,
-  AaveSpoke: mergeAbis([aaveV4SpokeAbi, upgradeAndRoleEvents]),
-  AaveHub: mergeAbis([aaveV4HubAbi, upgradeAndRoleEvents]),
+  FirstLossReserve: firstLossReserveAbi,
+  AccessManager: accessManagerAbi,
+  AaveSpoke: mergeAbis([aaveV4SpokeAbi, upgradeEvents]),
+  AaveHub: mergeAbis([aaveV4HubAbi, upgradeEvents]),
 } as const;
 
 /**
@@ -59,16 +43,10 @@ export const abis = {
  * type error here instead of a factory source that silently matches no log.
  */
 export const factoryEvents = {
-  /** VaultTokenFactory: a market's vault token; child address in `vaultToken`. */
-  vaultTokenDeployed: getAbiItem({ abi: vaultTokenFactoryAbi, name: "VaultTokenDeployed" }),
-  /** MarketRegistry: a listed market; child address in `pool` (its AMM pool). */
-  marketRegistered: getAbiItem({ abi: marketRegistryAbi, name: "MarketRegistered" }),
-  /** MarketRegistry: the First-Loss Reserve of a Hub asset; child address in `firstLossReserve`. */
-  firstLossReserveSet: getAbiItem({ abi: marketRegistryAbi, name: "AvanaFirstLossReserveSet" }),
-  /** MarketRegistry: a recorded Hub; child address in `hub`. */
-  hubRecorded: getAbiItem({ abi: marketRegistryAbi, name: "HubRecorded" }),
-  /** MarketRegistry: an approved CDP Spoke; child address in `spoke`. */
-  spokeApproved: getAbiItem({ abi: marketRegistryAbi, name: "SpokeApproved" }),
+  /** RiskModule: an activated market; child address in `vaultToken`. */
+  marketActivated: getAbiItem({ abi: riskModuleAbi, name: "MarketActivated" }),
+  /** RiskModule: a debt reserve with its First-Loss Reserve; child address in `firstLossReserve`. */
+  debtReserveSet: getAbiItem({ abi: riskModuleAbi, name: "DebtReserveSet" }),
   /** Aave V4 Hub: a Spoke added to one of its assets; child address in `spoke`. */
   addSpoke: getAbiItem({ abi: aaveV4HubAbi, name: "AddSpoke" }),
 } as const;

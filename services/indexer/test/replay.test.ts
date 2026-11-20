@@ -8,25 +8,25 @@
 
 import { describe, expect, it } from "vitest";
 import { type LogSpec, Run, addr, blockHash } from "./harness/run.ts";
+import { V3 } from "./harness/manifest.ts";
 
-const ADAPTER = addr(0xa0);
-const MANAGER = addr(0xa1);
-const REGISTRY = addr(0xa2);
+const ADAPTER = V3.aaveAdapter;
 const SPOKE = addr(0xb0);
 const HUB = addr(0xb1);
-const C = addr(0xa3);
-const LP_VAULT = addr(0xe0);
+const LP_VAULT = V3.lpVault;
+const VAULT = addr(0xf0);
+const POOL = `0x${"00".repeat(12)}${addr(0xf5).slice(2)}` as const;
 const wallet = (i: number) => addr(0xc00 + i);
 const proxy = (i: number) => addr(0xd00 + i);
 const key = (i: number) => `0x${i.toString(16).padStart(64, "0")}` as const;
 const noPremium = { sharesDelta: 0n, offsetRayDelta: 0n, restoredPremiumRay: 0n };
 
 function account(i: number, block: bigint): LogSpec[] {
-  const args = { wallet: wallet(i), spoke: SPOKE, marketId: 1n, proxy: proxy(i) };
   return [
-    { source: "AaveAdapter", event: "UserProxyCreated", args, address: ADAPTER, block, logIndex: 0 },
-    { source: "ProxyManager", event: "ProxyDeployed", args, address: MANAGER, block, logIndex: 1 },
-    { source: "LPVault", event: "PositionReceived", args: { positionKey: key(i), marketId: 1n, depositor: wallet(i), units: 100n }, address: LP_VAULT, block, logIndex: 2 },
+    { source: "AaveAdapter", event: "AccountCreated", args: { wallet: wallet(i), marketId: 1n, account: proxy(i) }, address: ADAPTER, block, logIndex: 0 },
+    { source: "LPVault", event: "PositionPledged", args: { positionKey: key(i), account: proxy(i), marketId: 1n, from: wallet(i), liquidity: 100n, credit: 100n }, address: LP_VAULT, block, logIndex: 1 },
+    { source: "AaveAdapter", event: "Pledged", args: { wallet: wallet(i), marketId: 1n, positionKey: key(i), credit: 100n }, address: ADAPTER, block, logIndex: 2 },
+    { source: "VaultTokenListed", event: "Transfer", args: { from: addr(0), to: proxy(i), value: 100n }, address: VAULT, block, logIndex: 7 },
   ];
 }
 
@@ -47,9 +47,10 @@ const addSpoke = (block: bigint, source = "AaveHub"): LogSpec => ({ source, even
 /** Blocks 10–14, shared by both branches. */
 const common: LogSpec[] = [
   addSpoke(10n),
-  { source: "MarketRegistry", event: "MarketRegistered", args: { marketId: 1n, integrationId: 1, pool: addr(0xf5), poolId: key(0), tokens: [addr(0xf6), addr(0xf7)], vaultToken: addr(0xf0), lpOracle: addr(0xf8), spoke: SPOKE }, address: REGISTRY, block: 10n, logIndex: 1 },
-  { source: "MarketRegistry", event: "MarketActivated", args: { marketId: 1n, chainId: 1n, spoke: SPOKE, reserveId: 1n, hub: HUB, hubAssetId: 3n }, address: REGISTRY, block: 10n, logIndex: 2 },
-  { source: "AvanaTimelock", event: "CallScheduled", args: { id: key(9), index: 0n, target: REGISTRY, value: 0n, data: "0x1234", predecessor: key(0), delay: 3_600n }, address: addr(0xa5), block: 10n, logIndex: 3 },
+  { source: "RiskModule", event: "MarketListed", args: { marketId: 1n, pool: POOL, kind: 0, bandLower: -887_270, bandUpper: 887_270, unitDecimals: 18 }, address: V3.riskModule, block: 10n, logIndex: 1 },
+  { source: "RiskModule", event: "MarketListed", args: { marketId: 2n, pool: POOL, kind: 1, bandLower: -100, bandUpper: 100, unitDecimals: 18 }, address: V3.riskModule, block: 10n, logIndex: 2 },
+  { source: "RiskModule", event: "PoolListed", args: { pool: POOL, spoke: SPOKE, fullRange: 1n, customRange: 2n, listingTick: 0, ltvBps: 9_000 }, address: V3.riskModule, block: 10n, logIndex: 3 },
+  { source: "RiskModule", event: "MarketActivated", args: { marketId: 1n, vaultToken: VAULT, reserveId: 1n, lpOracle: addr(0xf8) }, address: V3.riskModule, block: 10n, logIndex: 4 },
   config(10n, 1_000),
   ...account(1, 11n),
   ...account(2, 12n),
@@ -57,27 +58,25 @@ const common: LogSpec[] = [
   premium(1, 13n, 4, 200n),
   borrow(2, 14n, 3, 2_000n),
   premium(2, 14n, 4, 210n),
-  { source: "MarketRegistry", event: "BreakerLatched", args: { scope: 0, key: key(1), reasons: 4 }, address: REGISTRY, block: 14n, logIndex: 7 },
-  { source: "Collateralization", event: "CollateralPledged", args: { recordId: 1n, positionKey: key(1), depositor: wallet(1), integrationId: 1, proxy: proxy(1), vaultToken: addr(0xf0), credited: 100n, usdCharge: 1n, sliceUsd: 1n }, address: C, block: 14n, logIndex: 8 },
-  { source: "PayoutEscrow", event: "RemainderEscrowed", args: { token: addr(0xf3), account: wallet(2), amount: 40n }, address: addr(0xa4), block: 14n, logIndex: 9 },
+  { source: "FirstLossReserveListed", event: "Funded", args: { funder: wallet(2), amount: 40n, shares: 40n, balanceAfter: 40n }, address: addr(0xa4), block: 14n, logIndex: 9 },
 ];
 
-/** Branch a, blocks 15–18: repayments, a collateral-risk change and a seizure. */
+/** Branch a, blocks 15–18: repayments, a collateral-risk change, a partial withdrawal and a liquidation. */
 const branchA: LogSpec[] = [
   repay(1, 15n, 0, 1_000n),
   config(16n, 1_500),
   premium(1, 17n, 0, 260n),
-  { source: "Collateralization", event: "RecordReduced", args: { recordId: 1n, units: 30n, release: 0n }, address: C, block: 17n, logIndex: 1 },
-  { source: "PayoutEscrow", event: "RemainderClaimed", args: { token: addr(0xf3), account: wallet(2), recipient: wallet(2), amount: 15n }, address: addr(0xa4), block: 17n, logIndex: 2 },
-  { source: "Collateralization", event: "SeizureReconciled", args: { proxy: proxy(2), vaultToken: addr(0xf0), units: 9n, amounts: [1n, 2n] }, address: C, block: 18n, logIndex: 0 },
+  { source: "LPVault", event: "LiquidityRemoved", args: { positionKey: key(1), recipient: wallet(1), liquidity: 30n, credit: 30n, amount0: 1n, amount1: 1n }, address: LP_VAULT, block: 17n, logIndex: 1 },
+  { source: "FirstLossReserveListed", event: "DeficitCovered", args: { spoke: SPOKE, caller: wallet(2), covered: 15n, shares: 15n, balanceAfter: 25n }, address: addr(0xa4), block: 17n, logIndex: 2 },
+  { source: "LiquidationModule", event: "Liquidated", args: { account: proxy(2), marketId: 1n, liquidator: addr(0xf7), debtReserveId: 2n, debtRepaid: 50n, seized: 9n, creditUnwound: 9n, amount0: 1n, amount1: 2n }, address: V3.liquidationModule, block: 18n, logIndex: 0 },
+  { source: "LPVault", event: "PositionUnwound", args: { positionKey: key(2), recipient: addr(0xf7), liquidity: 9n, credit: 9n, amount0: 1n, amount1: 2n }, address: LP_VAULT, block: 18n, logIndex: 1 },
 ];
 
-/** Branch b, blocks 15–19: a different repayment, no risk change, a third account and a breaker reset. */
+/** Branch b, blocks 15–19: a different repayment, no risk change, and a third account. */
 const branchB: LogSpec[] = [
   repay(2, 15n, 0, 2_000n),
   ...account(3, 16n),
   borrow(3, 17n, 3, 700n),
-  { source: "MarketRegistry", event: "BreakerReset", args: { scope: 0, key: key(1), caller: REGISTRY }, address: REGISTRY, block: 18n, logIndex: 0 },
   premium(3, 19n, 0, 180n),
 ];
 
@@ -94,11 +93,12 @@ async function fresh(specs: { logs: readonly LogSpec[]; branch: string }[]) {
   return run.store.dump();
 }
 
-/** Each Spoke log through every Spoke source and each Hub log through every Hub source, as Ponder delivers them. */
+/** Each Spoke, loss-layer and vault-token log through every source that follows its contract, as Ponder delivers them. */
 const throughEverySource = (logs: readonly LogSpec[]) =>
   logs.flatMap((l) =>
-    l.source === "AaveSpoke" ? ["AaveSpoke", "AaveSpokeAdded", "AaveSpokeApproved"].map((source) => ({ ...l, source }))
-    : l.source === "AaveHub" ? ["AaveHub", "AaveHubRecorded"].map((source) => ({ ...l, source }))
+    l.source === "AaveSpoke" ? ["AaveSpoke", "AaveSpokeAdded"].map((source) => ({ ...l, source }))
+    : l.source === "FirstLossReserveListed" ? ["FirstLossReserveListed", "FirstLossReserve", "DaoDeficitOffset"].map((source) => ({ ...l, source }))
+    : l.source === "VaultTokenListed" ? ["VaultTokenListed", "VaultToken"].map((source) => ({ ...l, source }))
     : [l],
   );
 

@@ -227,6 +227,12 @@ abstract contract DeployBase is DeployInputs {
             if (vm.exists(path)) return path;
         }
         path = string.concat(dir, name, ".json");
+        // A contract another profile also compiles (for example AccessManager, which the RiskModule's restricted
+        // build imports) has one artifact per profile: the default profile's is `<Contract>.default.json`.
+        if (bytes(profile).length == 0 && !vm.exists(path)) {
+            string memory byProfile = string.concat(dir, name, ".default.json");
+            if (vm.exists(byProfile)) path = byProfile;
+        }
     }
 
     function _artifactIn(
@@ -283,18 +289,12 @@ abstract contract DeployBase is DeployInputs {
     }
 
     /// @notice The `additional_compiler_profiles` name a deployable file is restricted to in `foundry.toml`, or "" for
-    /// the default profile. Mirrors `compilation_restrictions`: via-IR at 200 runs (Collateralization, the LPVaultSwap
-    /// logic contracts, the Lens modules, the Uniswap v4 LPVault), 200 runs without IR (the Uniswap v3 and Slipstream
-    /// LPVaults).
+    /// the default profile. No deployed file has a named profile now: the RiskModule's restriction (200 runs) builds
+    /// it as `RiskModule.json`, and a `RiskModule.clvault.json` left in `out/` by an older build is the replaced
+    /// upgradeable RiskModule, never deployed.
     function _profileOf(
-        string memory file
+        string memory
     ) internal pure returns (string memory) {
-        if (
-            _eq(file, "Collateralization.sol") || _eq(file, "UniswapV4Integration.sol")
-                || (_startsWith(file, "LPVaultSwap") && _endsWith(file, "Logic.sol"))
-                || (_startsWith(file, "Lens") && _endsWith(file, "Module.sol"))
-        ) return "collateralization";
-        if (_eq(file, "UniswapV3Integration.sol") || _eq(file, "SlipstreamIntegration.sol")) return "clvault";
         return "";
     }
 

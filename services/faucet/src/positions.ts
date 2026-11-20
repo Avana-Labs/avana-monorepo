@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The starting positions of a grant on a local fork, opened as the wallet itself (anvil_impersonateAccount), through
-// the same contracts the app's actions use: LP positions minted in the listed markets, most of them pledged, a USDC
-// and a USDT debt, and Lend supplies. Tokens come from fundToken (cheatcodes). No key is involved and no front-end
+// the same contracts the app's actions use: LP positions minted in the listed markets (each pool has a Full range and
+// a Custom range market: a full-range position for the first, one spanning the band for the second), most of them
+// pledged through their integration's AaveAdapter (which routes each to its market), a USDC and a USDT debt, and Lend
+// supplies. Tokens come from fundToken (cheatcodes). No key is involved and no front-end
 // fee is charged (the faucet is not an app action).
 
 import { decodeEventLog, decodeFunctionResult, encodeFunctionData, formatUnits, getAddress, parseAbi, parseUnits, toHex, type Address, type Hex } from "viem";
@@ -10,14 +12,27 @@ import { fundToken, tokenBalance, tokenDecimals, type Rpc } from "./chain.ts";
 import { resolveLine, type ExternalEntry } from "./manifest.ts";
 import type { GrantStep } from "./setup.ts";
 
-/** The release-manifest fields the starting positions read. */
+/** The release-manifest fields (schema 2) the starting positions read. */
 export interface PositionsManifest {
   readonly avana: {
-    readonly aaveAdapter: { readonly address: string };
-    readonly marketRegistry: { readonly address: string };
-    readonly lpVaults: readonly { readonly address: string; readonly integrationId: number; readonly kind: string }[];
+    readonly integrations: readonly {
+      readonly integrationId: number;
+      readonly kind: string;
+      readonly lpVault: { readonly address: string };
+      readonly aaveAdapter: { readonly address: string };
+    }[];
   };
-  readonly markets: readonly { readonly marketId: string }[];
+  readonly markets: readonly {
+    readonly marketId: string;
+    readonly integrationId: number;
+    readonly kind: "full-range" | "custom-range";
+    /** The bytes32 pool key: a v3/Slipstream pool address left-padded. */
+    readonly pool: string;
+    readonly spoke: string;
+    readonly tokens: readonly string[];
+    readonly bandLower: number;
+    readonly bandUpper: number;
+  }[];
   readonly debtReserves: readonly { readonly spoke: string; readonly debtReserveId: string; readonly asset: string }[];
   readonly aave: { readonly hubs: readonly { readonly address: string }[]; readonly lendSpokes: readonly { readonly address: string }[] };
 }
@@ -36,11 +51,7 @@ export const STARTING_POSITIONS = {
   lendSymbols: ["USDC", "USDT", "GHO", "WETH", "WBTC", "LINK", "AAVE", "DAI", "cbBTC", "wstETH"],
 } as const;
 
-const WAD = 10n ** 18n;
 const ERC20 = parseAbi(["function approve(address spender, uint256 amount) returns (bool)"]);
-const REGISTRY = parseAbi([
-  "function getMarket(uint256 marketId) view returns ((uint64 chainId, address hub, address spoke, uint32 integrationId, address integration, address pool, bytes32 poolId, (uint8 kind, int24 tickLower, int24 tickUpper) shape, address[] tokens, uint8[] tokenDecimals, address vaultToken, uint8 decimals, address lpOracle, uint256 hubAssetId, uint256 reserveId, uint8 status, uint64 registeredAt, uint64 activatedAt))",
-]);
 const POOL = parseAbi(["function fee() view returns (uint24)", "function tickSpacing() view returns (int24)"]);
 const UNI_NPM = parseAbi([
   "function mint((address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min, address recipient, uint256 deadline)) payable returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1)",
@@ -53,10 +64,8 @@ const NFT = parseAbi([
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
 ]);
 const ADAPTER = parseAbi([
-  "function pledge(uint256 marketId, (uint32 integrationId, bytes32 positionKey) position, uint256 deadline) returns (address proxy, uint256 recordId, uint256 credited)",
-  "function proxyOf(address wallet, uint256 marketId) view returns (address)",
-  "function borrowNonce(address proxy) view returns (uint256)",
-  "function borrow(uint256 marketId, uint256 debtReserveId, uint256 amount, address receiver, uint256 deadline, uint256 minHealthFactor, uint256 expectedNonce)",
+  "function pledge(bytes32 positionKey) returns (uint256 marketId, uint128 credit)",
+  "function borrow(uint256 marketId, uint256 reserveId, uint256 amount, address recipient)",
 ]);
 const HUB = parseAbi(["function getAssetId(address underlying) view returns (uint256)"]);
 const LEND_SPOKE = parseAbi([
@@ -112,33 +121,32 @@ async function unitsForUsd(rpc: Rpc, external: readonly ExternalEntry[], symbol:
   return parseUnits(line.amount, decimals);
 }
 
-type Pledgeable = { marketId: bigint; integrationId: number; positionKey: Hex; spoke: string };
+type Pledgeable = { marketId: bigint; integrationId: number; adapter: string; positionKey: Hex; spoke: string };
 
 /** Mints one LP position of a market as the wallet and approves its LPVault; null for a market it cannot mint (Uniswap v4). */
 async function mintPosition(rpc: Rpc, wallet: Address, m: PositionsManifest, external: readonly ExternalEntry[], marketId: bigint): Promise<{ hash: Hex; position: Pledgeable; detail: string } | null> {
-  const market = await read<{ spoke: Address; integrationId: number; pool: Address; shape: { tickLower: number; tickUpper: number }; tokens: readonly Address[]; tokenDecimals: readonly number[] }>(
-    rpc,
-    m.avana.marketRegistry.address,
-    REGISTRY,
-    "getMarket",
-    [marketId],
-  );
-  const vault = m.avana.lpVaults.find((v) => v.integrationId === Number(market.integrationId));
-  if (!vault || vault.kind === "uniswap-v4") return null;
-  const [t0, t1] = market.tokens as [Address, Address];
+  const market = m.markets.find((x) => BigInt(x.marketId) === marketId)!;
+  const integration = m.avana.integrations.find((x) => x.integrationId === market.integrationId);
+  if (!integration || integration.kind === "uniswap-v4") return null;
+  const vault = { address: integration.lpVault.address, kind: integration.kind };
+  const pool = `0x${market.pool.slice(-40)}` as Address;
+  const [t0, t1] = market.tokens.map((t) => getAddress(t)) as [Address, Address];
+  const tokenDecimalsOf = [await tokenDecimals(rpc, t0), await tokenDecimals(rpc, t1)];
   const [s0, s1] = [symbolOf(external, t0), symbolOf(external, t1)];
   if (!s0 || !s1) throw new Error(`market ${marketId}: a pool token is not in the manifest`);
   const half = STARTING_POSITIONS.lpUsdEach / 2;
-  const a0 = await unitsForUsd(rpc, external, s0, half, Number(market.tokenDecimals[0]));
-  const a1 = await unitsForUsd(rpc, external, s1, half, Number(market.tokenDecimals[1]));
+  const a0 = await unitsForUsd(rpc, external, s0, half, tokenDecimalsOf[0]!);
+  const a1 = await unitsForUsd(rpc, external, s1, half, tokenDecimalsOf[1]!);
   // fundToken sets the balance: add to what the token grant gave instead of replacing it.
-  for (const [token, amount, decimals] of [[t0, a0, market.tokenDecimals[0]], [t1, a1, market.tokenDecimals[1]]] as const) {
+  for (const [token, amount, decimals] of [[t0, a0, tokenDecimalsOf[0]!], [t1, a1, tokenDecimalsOf[1]!]] as const) {
     const have = await tokenBalance(rpc, token, wallet);
     await fundToken(rpc, token, wallet, formatUnits(have + amount, Number(decimals)));
   }
   const { uni, slip } = positionManagers(external);
   const end = await deadline(rpc);
-  const common = { token0: t0, token1: t1, tickLower: market.shape.tickLower, tickUpper: market.shape.tickUpper, amount0Desired: a0, amount1Desired: a1, amount0Min: 0n, amount1Min: 0n, recipient: wallet, deadline: end };
+  // A Full range market takes exactly the full-range ticks; a Custom range market a position inside its band: the band
+  // itself (the RiskModule routes by these ticks).
+  const common = { token0: t0, token1: t1, tickLower: market.bandLower, tickUpper: market.bandUpper, amount0Desired: a0, amount1Desired: a1, amount0Min: 0n, amount1Min: 0n, recipient: wallet, deadline: end };
   const candidates =
     vault.kind === "slipstream"
       ? slip.map((s) => ({ npm: s.address, generation: s.generation }))
@@ -153,16 +161,16 @@ async function mintPosition(rpc: Rpc, wallet: Address, m: PositionsManifest, ext
       await sendAs(rpc, wallet, t1, encodeFunctionData({ abi: ERC20, functionName: "approve", args: [getAddress(npm), a1] }), "approve token1");
       const data =
         vault.kind === "slipstream"
-          ? encodeFunctionData({ abi: SLIP_NPM, functionName: "mint", args: [{ ...common, tickSpacing: Number(await read<number>(rpc, market.pool, POOL, "tickSpacing")), sqrtPriceX96: 0n }] })
-          : encodeFunctionData({ abi: UNI_NPM, functionName: "mint", args: [{ ...common, fee: Number(await read<number>(rpc, market.pool, POOL, "fee")) }] });
+          ? encodeFunctionData({ abi: SLIP_NPM, functionName: "mint", args: [{ ...common, tickSpacing: Number(await read<number>(rpc, pool, POOL, "tickSpacing")), sqrtPriceX96: 0n }] })
+          : encodeFunctionData({ abi: UNI_NPM, functionName: "mint", args: [{ ...common, fee: Number(await read<number>(rpc, pool, POOL, "fee")) }] });
       const minted = await sendAs(rpc, wallet, npm, data, "mint");
       const tokenId = mintedTokenId(minted.logs, npm, wallet);
       await sendAs(rpc, wallet, npm, encodeFunctionData({ abi: NFT, functionName: "approve", args: [getAddress(vault.address), tokenId] }), "approve the LPVault");
       const key = toHex(vault.kind === "slipstream" ? (BigInt(generation) << 248n) | tokenId : tokenId, { size: 32 });
       return {
         hash: minted.hash,
-        position: { marketId, integrationId: Number(market.integrationId), positionKey: key, spoke: market.spoke },
-        detail: `${s0}/${s1} market ${marketId}: token ${tokenId} (~$${STARTING_POSITIONS.lpUsdEach.toLocaleString("en-US")})`,
+        position: { marketId, integrationId: market.integrationId, adapter: integration.aaveAdapter.address, positionKey: key, spoke: market.spoke },
+        detail: `${s0}/${s1} ${market.kind} market ${marketId}: token ${tokenId} (~$${STARTING_POSITIONS.lpUsdEach.toLocaleString("en-US")})`,
       };
     } catch (error) {
       lastError = error;
@@ -199,8 +207,6 @@ export async function openStartingPositions(rpc: Rpc, wallet: Address, m: Positi
       return false;
     }
   };
-  const adapter = m.avana.aaveAdapter.address;
-
   await rpc.request({ method: "anvil_impersonateAccount", params: [wallet] });
   try {
     // LP positions, in manifest market order; the first `pledged` are pledged.
@@ -217,8 +223,8 @@ export async function openStartingPositions(rpc: Rpc, wallet: Address, m: Positi
     const pledged: Pledgeable[] = [];
     for (const p of minted.slice(0, STARTING_POSITIONS.pledged)) {
       const ok = await attempt(`pledge market ${p.marketId}`, async () => {
-        const data = encodeFunctionData({ abi: ADAPTER, functionName: "pledge", args: [p.marketId, { integrationId: p.integrationId, positionKey: p.positionKey }, await deadline(rpc)] });
-        const r = await sendAs(rpc, wallet, adapter, data, "pledge");
+        const data = encodeFunctionData({ abi: ADAPTER, functionName: "pledge", args: [p.positionKey] });
+        const r = await sendAs(rpc, wallet, p.adapter, data, "pledge");
         return { detail: `position ${p.positionKey} into market ${p.marketId}`, txHash: r.hash };
       });
       if (ok) pledged.push(p);
@@ -233,14 +239,8 @@ export async function openStartingPositions(rpc: Rpc, wallet: Address, m: Positi
           .find((x) => x.reserve);
         if (!token || !found?.reserve) throw new Error(`no pledged market borrows ${debt.symbol}`);
         const amount = await unitsForUsd(rpc, external, debt.symbol, debt.usd, await tokenDecimals(rpc, getAddress(token)));
-        const proxy = await read<Address>(rpc, adapter, ADAPTER, "proxyOf", [wallet, found.p.marketId]);
-        const nonce = await read<bigint>(rpc, adapter, ADAPTER, "borrowNonce", [proxy]);
-        const data = encodeFunctionData({
-          abi: ADAPTER,
-          functionName: "borrow",
-          args: [found.p.marketId, BigInt(found.reserve.debtReserveId), amount, wallet, await deadline(rpc), WAD, nonce],
-        });
-        const r = await sendAs(rpc, wallet, adapter, data, "borrow");
+        const data = encodeFunctionData({ abi: ADAPTER, functionName: "borrow", args: [found.p.marketId, BigInt(found.reserve.debtReserveId), amount, wallet] });
+        const r = await sendAs(rpc, wallet, found.p.adapter, data, "borrow");
         return { detail: `$${debt.usd.toLocaleString("en-US")} ${debt.symbol} against market ${found.p.marketId}`, txHash: r.hash };
       });
     }

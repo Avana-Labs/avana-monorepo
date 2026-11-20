@@ -8,13 +8,23 @@ import type { Rpc } from "../src/chain.ts";
 import { openStartingPositions, type PositionsManifest } from "../src/positions.ts";
 
 const WALLET = "0x00000000000000000000000000000000000A11cE";
+const POOL = `0x${"00".repeat(12)}00000000000000000000000000000000000000a4`;
+const market = (marketId: string, kind: "full-range" | "custom-range") => ({
+  marketId,
+  integrationId: 1,
+  kind,
+  pool: POOL,
+  spoke: "0x00000000000000000000000000000000000000a5",
+  tokens: ["0x00000000000000000000000000000000000000b1", "0x00000000000000000000000000000000000000b2"],
+  bandLower: kind === "full-range" ? -887_270 : -100,
+  bandUpper: kind === "full-range" ? 887_270 : 100,
+});
+/** One pool's two markets on integration 1. */
 const manifest: PositionsManifest = {
   avana: {
-    aaveAdapter: { address: "0x00000000000000000000000000000000000000a1" },
-    marketRegistry: { address: "0x00000000000000000000000000000000000000a2" },
-    lpVaults: [{ address: "0x00000000000000000000000000000000000000a3", integrationId: 1, kind: "uniswap-v3" }],
+    integrations: [{ integrationId: 1, kind: "uniswap-v3", lpVault: { address: "0x00000000000000000000000000000000000000a3" }, aaveAdapter: { address: "0x00000000000000000000000000000000000000a1" } }],
   },
-  markets: [{ marketId: "1" }, { marketId: "2" }],
+  markets: [market("1", "full-range"), market("2", "custom-range")],
   debtReserves: [],
   aave: { hubs: [], lendSpokes: [] },
 };

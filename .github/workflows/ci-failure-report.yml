@@ -1,7 +1,7 @@
 name: ci-failure-report
 
-# Records why a CI run failed, so the reason is kept after the run's page scrolls away. When contracts, spec,
-# security-slow, mutation-gate, gitleaks, services or models finishes:
+# Records why a CI run failed, so the reason is kept after the run's page scrolls away. When contracts,
+# security-slow, mutation-gate, gitleaks or services finishes:
 # - on main (push or a manual run): a failure opens a GitHub issue labelled `ci-failure` (or comments on the open issue
 #   of the same workflow and commit) with the failed jobs, failed steps, GitHub's annotations, the error lines and the
 #   log tail of each failed step and links to the run and its artifacts; the next success of that workflow on main

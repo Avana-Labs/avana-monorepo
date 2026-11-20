@@ -3,31 +3,56 @@
 // The rows of one chain snapshot, by scope. A chain has several Hubs, each with its Lend and CDP Spokes, and every row
 // names its Hub. Each number has one owner: Hub totals live only in `HubAssetRow`, a Spoke's draw on an asset only in
 // `HubAssetSpokeRow`, a CDP reserve's own flags only in `SpokeReserveRow`, a collateral market's figures only in
-// `MarketRow`, a Hub-to-Hub line's cap only in `CreditLineRow`. Every row of one snapshot is read at the same block,
-// so the identities of the scope model hold exactly between them. Integers are decimal strings in base units; rates
-// are RAY per year; prices are USD with 8 decimals.
+// `MarketRow`. Every row of one snapshot is read at the same block, so the identities of the scope model hold exactly
+// between them. Integers are decimal strings in base units; rates are RAY per year; prices are USD with 8 decimals.
 
 import type { DecimalString } from "../export.ts";
 
 export type Address = `0x${string}`;
 
+/** One collateral market of the deployment, as the release manifest records it. */
+export interface DeploymentMarket {
+  readonly marketId: bigint;
+  readonly integrationId: number;
+  /** The RiskModule of the market's integration. */
+  readonly riskModule: Address;
+  readonly kind: MarketKind;
+  readonly name: string;
+  /** The bytes32 pool key (a v3/Slipstream pool address left-padded, or a v4 PoolId). */
+  readonly pool: `0x${string}`;
+  readonly spoke: Address;
+  readonly hub: Address;
+  readonly vaultToken: Address;
+  readonly lpOracle: Address;
+  readonly reserveId: bigint;
+  readonly tokens: readonly Address[];
+}
+
+/** Each pool has two markets: Full range (exact full-range ticks) and Custom range (positions inside the band). */
+export type MarketKind = "full-range" | "custom-range";
+
 /**
- * The addresses one chain's snapshot starts from, taken from the verified release manifest. The reader adds every Hub
- * the MarketRegistry has recorded and every CDP Spoke it has approved since, so a Hub or CDP Spoke listed after
- * start-up is read without changing this.
+ * The addresses one chain's snapshot reads, taken from the verified release manifest (`chainDeploymentOf`). Hubs,
+ * CDP Spokes, markets and debt reserves are the manifest's; Lend Spokes on a Hub none of the manifest's supplies are
+ * found on chain.
  */
 export interface ChainDeployment {
   readonly chainId: number;
-  readonly lens: Address;
-  readonly marketRegistry: Address;
-  /** The manifest's Hubs with the label the app shows. */
-  readonly hubs: readonly { readonly address: Address; readonly label: string }[];
+  /** The manifest's Hubs with the label the app shows and their risk tier. */
+  readonly hubs: readonly { readonly address: Address; readonly label: string; readonly tier: number }[];
   /** The manifest's Lend Spokes: Aave standard Spokes, supply only; their reserves are the lend assets. */
   readonly lendSpokes: readonly Address[];
-  /** The manifest's CDP Spokes. */
-  readonly cdpSpokes: readonly Address[];
-  /** Every First-Loss Reserve with the asset it covers and, when the manifest names it, its Hub. */
-  readonly firstLossReserves: readonly { readonly address: Address; readonly asset: Address; readonly hub?: Address }[];
+  /** The manifest's CDP Spokes with their home Hub (the Hub their markets' vault tokens are listed on). */
+  readonly cdpSpokes: readonly { readonly address: Address; readonly hub: Address }[];
+  /** Every First-Loss Reserve with the (Hub, asset) it covers. */
+  readonly firstLossReserves: readonly { readonly address: Address; readonly asset: Address; readonly hub: Address }[];
+  /** The Aave DAO's deficit offset behind each First-Loss Reserve. */
+  readonly deficitOffsets: readonly { readonly address: Address; readonly asset: Address; readonly hub: Address }[];
+  /** One RiskModule per integration; the draw-cap coverage of a (Hub, asset) is the sum over them. */
+  readonly riskModules: readonly Address[];
+  readonly markets: readonly DeploymentMarket[];
+  /** Every CDP debt reserve the RiskModules registered; GHO's price source is fixed. */
+  readonly debtReserves: readonly { readonly spoke: Address; readonly reserveId: bigint; readonly fixedPrice: boolean }[];
 }
 
 /**
@@ -83,17 +108,22 @@ export interface HubAssetRow {
   readonly lend: LendReserve;
   /** Every Lend Spoke reserve on this Hub asset, the manifest's Lend Spokes first. */
   readonly lendReserves: readonly LendReserve[];
-  /** From `Lens.getHubAssetExposure`; null when the Lens refuses the asset. */
+  /** The asset's loss layers and draw-cap coverage; null when no First-Loss Reserve covers it. */
   readonly exposure: {
     readonly firstLossReserve: Address;
+    /** `FirstLossReserve.fundedBalance()`, base units. */
     readonly fundedBalance: DecimalString;
-    readonly line: DecimalString;
+    /** Σ over the RiskModules of `coverage(hub, asset).drawCapSum`: the CDP Spokes' draw caps, whole tokens. */
+    readonly drawCapSum: DecimalString;
+    /** Σ over the RiskModules of `coverage(hub, asset).required`, base units. */
+    readonly required: DecimalString;
+    /** required ≤ fundedBalance; borrowing the asset stops (`CoverageBelowRatio`) when it does not hold. */
     readonly coverageBoundHolds: boolean;
+    /** The Hub's deficit beyond both loss layers: max(0, deficit − fundedBalance − offsetFunded). */
     readonly uncovered: DecimalString;
-    readonly priceAdj: DecimalString;
     /** The DAO deficit offset of the pair; the zero address when none is listed. */
     readonly deficitOffset: Address;
-    /** Added assets of every deficit-offset Spoke of the pair: the second loss layer, which `uncovered` nets too. */
+    /** Added assets of the deficit offset: the second loss layer. */
     readonly offsetFunded: DecimalString;
   } | null;
   readonly blockNumber: DecimalString;
@@ -107,7 +137,7 @@ export interface HubAssetSpokeRow {
   readonly assetId: DecimalString;
   readonly spoke: Address;
   readonly kind: SpokeKind;
-  /** `MarketRegistry.hubOf(spoke)` as the Lens reports it; the zero address for a Spoke that is not a CDP Spoke. */
+  /** The CDP Spoke's home Hub from the manifest; the zero address for a Spoke that is not a CDP Spoke. */
   readonly homeHub: Address;
   readonly added: DecimalString;
   readonly addedShares: DecimalString;
@@ -139,77 +169,37 @@ export interface SpokeReserveRow {
   readonly paused: boolean;
   readonly frozen: boolean;
   readonly borrowable: boolean;
-  readonly breakerReasons: number;
-  /** None, Frozen or Paused, of the funding Hub. */
-  readonly pauseState: number;
   readonly blockNumber: DecimalString;
 }
 
-/**
- * One speed window as the next borrow or pledge would see it now (`Lens.getBorrowSpeed`, `getPledgeSpeed`): new debt or
- * booked collateral per window is at most `limit`; `used` still counts, `available` is the room now and `moreAmount`
- * frees up at `moreAt` (unix seconds, 0 when nothing is counting). `unavailable` means a read inside the RiskModule
- * failed and every other field is 0.
- */
-export interface SpeedWindow {
-  readonly limit: DecimalString;
-  readonly used: DecimalString;
-  readonly available: DecimalString;
-  readonly moreAt: number;
-  readonly moreAmount: DecimalString;
-  readonly unavailable: boolean;
-}
-
-/**
- * One debt reserve a market can borrow (BOR-024): the market's own borrow rate and what can be borrowed now. The
- * borrow passes both windows, the market's (8-decimal USD) and the (funding Hub, asset)'s (base units), so
- * `availableNow = min(market room in the asset at its price, asset room)`, base units, and more frees up from `moreAt`,
- * the earlier of the two windows' (0 when neither is counting). `speed` is null when the Lens refuses the read (the
- * Lock is held).
- */
+/** One debt reserve a market can borrow: the market's own borrow rate. */
 export interface MarketBorrowRow {
   readonly reserveId: DecimalString;
   /** `⌈drawnRate × (10⁴ + collateralRiskBps) / 10⁴⌉`, RAY per year. */
   readonly borrowRateRay: DecimalString;
-  readonly speed: {
-    readonly availableNow: DecimalString;
-    readonly moreAt: number;
-    readonly market: SpeedWindow;
-    readonly debt: SpeedWindow;
-  } | null;
 }
 
-/** One collateral market (one pool range on one CDP Spoke). */
-/** USD values have 8 decimals; `addCap` is whole vault tokens, `type(uint40).max` meaning none; 0 floor = off. */
-export interface MarketCaps {
-  readonly liquidationThresholdBps: number;
-  readonly liquidationFeeBps: number;
-  readonly hardHealthFloorWad: DecimalString;
-  readonly marketUsdCap8: DecimalString;
-  readonly topUpSliceUsd8: DecimalString;
-  /** One per pool token, in pool order: `tokenUsdCap(hub, token)`. */
-  readonly tokenUsdCaps8: readonly DecimalString[];
-  readonly addCap: DecimalString;
-}
-
+/**
+ * One collateral market: one of a pool's two markets (Full range or Custom range) on one CDP Spoke. Its band is fixed
+ * for life; both markets of a pool have the same LTV. A market whose price leaves a stable or correlated peg is frozen
+ * on its Spoke (depeg = freeze): `frozen` is the Spoke reserve's flag.
+ */
 export interface MarketRow {
   readonly chainId: number;
   readonly marketId: DecimalString;
-  /** MarketRegistry `MarketStatus` index. */
-  readonly status: number;
-  readonly pool: Address;
-  readonly poolId: `0x${string}`;
+  readonly kind: MarketKind;
+  /** `RiskModule.getMarket(marketId).active`: listed and activated. */
+  readonly active: boolean;
+  readonly pool: `0x${string}`;
   readonly tokens: readonly Address[];
   readonly tokenDecimals: readonly number[];
-  /** Pips; 0 for a dynamic-fee pool. */
-  readonly feeTier: number;
-  readonly tickLower: number;
-  readonly tickUpper: number;
+  readonly bandLower: number;
+  readonly bandUpper: number;
   readonly integrationId: number;
-  readonly ammProtocol: `0x${string}`;
   readonly vaultToken: Address;
-  /** Decimals of the vault token (6 to 18), from the Hub asset it is listed as. */
+  /** Decimals of the vault token, from the Hub asset it is listed as. */
   readonly vaultDecimals: number;
+  readonly unitDecimals: number;
   readonly name: string;
   readonly symbol: string;
   readonly lpOracle: Address;
@@ -217,31 +207,29 @@ export interface MarketRow {
   readonly spoke: Address;
   readonly reserveId: DecimalString;
   readonly hubAssetId: DecimalString;
-  /** USD, 8 decimals, per whole vault token. */
+  /** `LPOracle.latestAnswer()`, USD with 8 decimals per whole vault token; "0" when the oracle refuses to price. */
   readonly acceptedPrice: DecimalString;
-  readonly priceState: number;
+  /** False when `latestAnswer` reverted (a stale or invalid feed leg): the Spoke cannot price the collateral. */
+  readonly priceAvailable: boolean;
   readonly suppliedUnits: DecimalString;
   readonly suppliedUsd8: DecimalString;
+  /** The RiskModule's LTV, the same for both markets of a pool. */
+  readonly ltvBps: number;
+  /** The Spoke's dynamic reserve configuration of the vault token. */
   readonly collateralFactorBps: number;
   readonly maxLiquidationBonusBps: number;
+  readonly liquidationFeeBps: number;
   /** `collateralRisk` of the vault-token reserve: every borrower of the market pays `drawnRate × (1 + this)`. */
   readonly collateralRiskBps: number;
+  readonly paused: boolean;
+  readonly frozen: boolean;
   readonly liquidation: {
     readonly targetHealthFactorWad: DecimalString;
     readonly healthFactorForMaxBonusWad: DecimalString;
     readonly liquidationBonusFactorBps: number;
   } | null;
-  readonly marketHeadroomUsd8: DecimalString;
-  readonly sliceHeadroomUsd8: DecimalString;
-  readonly addHeadroom: DecimalString;
-  readonly pauseState: number;
-  readonly breakerReasons: number;
-  /** Avana's caps and the risk configuration `Lens.getMarket` carries beside the headroom (REQ-LENS-057). */
-  readonly caps: MarketCaps;
-  /** Every debt reserve enabled on the market's Spoke, with the market's rate and borrow speed. */
+  /** Every debt reserve of the market's Spoke, with the market's rate. */
   readonly borrow: readonly MarketBorrowRow[];
-  /** The market's pledge-speed window, 8-decimal USD; null when the Lens refuses the read. */
-  readonly pledgeSpeed: SpeedWindow | null;
   readonly blockNumber: DecimalString;
 }
 
@@ -263,40 +251,17 @@ export interface MarketReserveDebtRow {
 export interface HubRow {
   readonly chainId: number;
   readonly hub: Address;
-  /** The manifest's label; null for a Hub recorded after the manifest was written. */
-  readonly label: string | null;
-  /** `MarketRegistry.hubTier`, 0 when the registry has not recorded the Hub. */
+  /** The manifest's label. */
+  readonly label: string;
+  /** The manifest's risk tier (1 to 3). */
   readonly tier: number;
-  readonly recorded: boolean;
-  /** `Lens.getApplicationState(hub)`: None, Frozen or Paused; null when the Lens refuses the Hub. */
-  readonly applicationState: number | null;
   /** Every Hub asset, lend assets and vault tokens alike. */
   readonly assetCount: number;
   /** Hub assets some Lend Spoke supplies: the Hub's rows of the Lend page. */
   readonly lendAssetIds: readonly DecimalString[];
   readonly lendSpokes: readonly Address[];
-  /** CDP Spokes whose home Hub (`MarketRegistry.hubOf`) is this one. */
+  /** CDP Spokes whose home Hub is this one. */
   readonly cdpSpokes: readonly Address[];
-  readonly blockNumber: DecimalString;
-}
-
-/**
- * A Hub-to-Hub credit line: a CDP Spoke whose home Hub is another one draws on this funding Hub's asset. The cap and
- * the funding Hub's total of caps are the MarketRegistry's; the Spoke's draw is its `HubAssetSpokeRow`, joined.
- */
-export interface CreditLineRow {
-  readonly chainId: number;
-  readonly fundingHub: Address;
-  readonly assetId: DecimalString;
-  readonly asset: Address;
-  readonly spoke: Address;
-  readonly homeHub: Address;
-  /** `crossHubLineCap(fundingHub, asset, spoke)`, base units. */
-  readonly cap: DecimalString;
-  /** `crossHubLineTotal(fundingHub, asset)`: Σ caps of every cross-Hub line on this asset. */
-  readonly total: DecimalString;
-  /** `crossHubLinesEnabled()` of the chain. */
-  readonly enabled: boolean;
   readonly blockNumber: DecimalString;
 }
 
@@ -305,7 +270,6 @@ export interface ChainSnapshot {
   readonly blockNumber: DecimalString;
   readonly timestamp: number;
   readonly hubs: readonly HubRow[];
-  readonly creditLines: readonly CreditLineRow[];
   readonly hubAssets: readonly HubAssetRow[];
   readonly slices: readonly HubAssetSpokeRow[];
   readonly spokeReserves: readonly SpokeReserveRow[];

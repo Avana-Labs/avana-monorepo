@@ -150,7 +150,7 @@
         "address": "0xf10000000000000000000000000000000000001d",
         "codeHash": "0x19524accf3a7a0446121f0b28f7b54fc91ddfb96242139b78254438eaf724475",
         "startBlock": 1321,
-        "artifact": "LensSpeedModule.sol:LensSpeedModule"
+        "artifact": "LensDynamicCapModule.sol:LensDynamicCapModule"
       }
     ],
     "lensAaveSizing": {

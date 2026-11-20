@@ -3,96 +3,69 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
 import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
-import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 
 /// @title AvanaRolesUnitTest
-/// @notice The role identifiers Avana adds to OpenZeppelin `AccessControl` and `TimelockController`: each is the
-/// keccak256 of its own name, none is `DEFAULT_ADMIN_ROLE`, and together with the three `TimelockController` roles
-/// they are seven distinct identifiers, so a grant of one role never authorizes a holder of another.
-/// @dev Role identifiers part of TEST-062 (role map). Which contract checks which role, and who holds it, is tested
-/// with each contract that uses the role.
+/// @notice The role ids Avana adds to its AccessManager: three distinct non-zero ids, none the admin or public role,
+/// each with a label, and the delay `AvanaAccess` gives each role (12 hours, 4 to 5 days, 14 days).
+/// @dev Role ids part of TEST-062 (role map). Which function takes which role, and who holds it, is tested in
+/// `AccessManagerRoles.unit.t.sol` and with each contract that uses the role.
 contract AvanaRolesUnitTest is AvanaTest {
-    bytes32 internal constant DEFAULT_ADMIN_ROLE = 0x00;
+    uint64 internal constant PUBLIC_ROLE = type(uint64).max;
 
     // TEST-062 verifies: REQ-ACCESS-003, REQ-ACCESS-006, REQ-ACCESS-008, REQ-ACCESS-009
-    // Sources: 5.1 TEST-062 (role identifiers only), 1.4 role table rows of the four Avana roles
-    function test_TEST_062_roleIdsAreNameHashes() public pure {
-        assertEq(AvanaRoles.APPLICATION_ADMIN, keccak256("APPLICATION_ADMIN"));
-        assertEq(AvanaRoles.APPLICATION_PAUSE_GUARDIAN, keccak256("APPLICATION_PAUSE_GUARDIAN"));
-        assertEq(AvanaRoles.APPLICATION_FREEZE_GUARDIAN, keccak256("APPLICATION_FREEZE_GUARDIAN"));
-        assertEq(AvanaRoles.DAO_CANCELLER_ROLE, keccak256("DAO_CANCELLER_ROLE"));
-    }
-
-    // TEST-062 verifies: REQ-ACCESS-003, REQ-ACCESS-006, REQ-ACCESS-008, REQ-ACCESS-009
-    function test_TEST_062_noAvanaRoleIsDefaultAdmin() public pure {
-        bytes32[7] memory ids = _roles();
-        for (uint256 i; i < 4; ++i) {
-            assertNotEq(ids[i], DEFAULT_ADMIN_ROLE, "Avana role equals DEFAULT_ADMIN_ROLE");
-        }
-    }
-
-    // TEST-062 verifies: REQ-ACCESS-003, REQ-ACCESS-006, REQ-ACCESS-008, REQ-ACCESS-009
-    function test_TEST_062_avanaAndTimelockRolesAreDistinct() public pure {
-        bytes32[7] memory ids = _roles();
+    function test_TEST_062_roleIdsAreDistinctAndNotAdminOrPublic() public pure {
+        uint64[3] memory ids = [AvanaRoles.TIGHTEN_ROLE, AvanaRoles.GOVERNANCE_ROLE, AvanaRoles.RESERVE_WITHDRAW_ROLE];
         for (uint256 i; i < ids.length; ++i) {
+            assertNotEq(ids[i], AvanaRoles.ADMIN_ROLE, "Avana role equals ADMIN_ROLE");
+            assertNotEq(ids[i], PUBLIC_ROLE, "Avana role equals PUBLIC_ROLE");
             for (uint256 j = i + 1; j < ids.length; ++j) {
-                assertNotEq(ids[i], ids[j], "two roles share an identifier");
+                assertNotEq(ids[i], ids[j], "two roles share an id");
             }
         }
     }
 
-    // TEST-062 verifies: REQ-ACCESS-003, REQ-ACCESS-006, REQ-ACCESS-008, REQ-ACCESS-009
-    /// @notice The `TimelockController` roles Avana uses are OpenZeppelin 5.1.0's, unchanged.
-    function test_TEST_062_timelockRolesAreOpenZeppelins() public pure {
-        assertEq(_proposer(), keccak256("PROPOSER_ROLE"));
-        assertEq(_executor(), keccak256("EXECUTOR_ROLE"));
-        assertEq(_canceller(), keccak256("CANCELLER_ROLE"));
+    // TEST-062 verifies: REQ-ACCESS-003
+    function test_TEST_062_adminRoleIsTheManagersAdminRole() public view {
+        assertEq(AvanaRoles.ADMIN_ROLE, accessManager.ADMIN_ROLE());
     }
 
-    // TEST-062 verifies: REQ-ACCESS-003, REQ-ACCESS-006, REQ-ACCESS-008, REQ-ACCESS-009
-    function testFuzz_TEST_062_rolePairEqualExactlyWhenSameIndex(
-        uint8 i,
-        uint8 j
+    // TEST-062 verifies: REQ-ACCESS-003
+    function test_TEST_062_everyRoleHasALabel() public pure {
+        uint64[] memory ids = AvanaAccess.roles();
+        assertEq(ids.length, 3);
+        for (uint256 i; i < ids.length; ++i) {
+            assertGt(bytes(AvanaAccess.roleLabel(ids[i])).length, 0, "empty label");
+        }
+        assertEq(AvanaAccess.roleLabel(AvanaRoles.TIGHTEN_ROLE), "AVANA_TIGHTEN_ROLE");
+        assertEq(AvanaAccess.roleLabel(AvanaRoles.GOVERNANCE_ROLE), "AVANA_GOVERNANCE_ROLE");
+        assertEq(AvanaAccess.roleLabel(AvanaRoles.RESERVE_WITHDRAW_ROLE), "AVANA_RESERVE_WITHDRAW_ROLE");
+    }
+
+    // TEST-062 verifies: REQ-ACCESS-155
+    /// @notice The tighten delay is 12 hours and the withdraw delay 14 days; the governance delay is the configured
+    /// normal delay when it lies between 4 and 5 days, else 4 days.
+    function test_TEST_062_roleDelays() public pure {
+        assertEq(AvanaAccess.roleDelay(AvanaRoles.TIGHTEN_ROLE, 0), 12 hours);
+        assertEq(AvanaAccess.roleDelay(AvanaRoles.RESERVE_WITHDRAW_ROLE, 0), 14 days);
+        assertEq(AvanaAccess.governanceDelay(4 days), 4 days);
+        assertEq(AvanaAccess.governanceDelay(5 days), 5 days);
+        assertEq(AvanaAccess.governanceDelay(432_000), 432_000);
+        assertEq(AvanaAccess.governanceDelay(4 days + 1), 4 days + 1);
+        assertEq(AvanaAccess.governanceDelay(4 days - 1), 4 days);
+        assertEq(AvanaAccess.governanceDelay(5 days + 1), 4 days);
+        assertEq(AvanaAccess.governanceDelay(60), 4 days);
+        assertEq(AvanaAccess.governanceDelay(0), 4 days);
+    }
+
+    // TEST-062 verifies: REQ-ACCESS-155
+    function testFuzz_TEST_062_governanceDelayStaysInRange(
+        uint256 normal
     ) public pure {
-        bytes32[7] memory ids = _roles();
-        uint256 a = uint256(i) % ids.length;
-        uint256 b = uint256(j) % ids.length;
-        assertEq(ids[a] == ids[b], a == b);
-    }
-
-    function _roles() internal pure returns (bytes32[7] memory ids) {
-        ids[0] = AvanaRoles.APPLICATION_ADMIN;
-        ids[1] = AvanaRoles.APPLICATION_PAUSE_GUARDIAN;
-        ids[2] = AvanaRoles.APPLICATION_FREEZE_GUARDIAN;
-        ids[3] = AvanaRoles.DAO_CANCELLER_ROLE;
-        ids[4] = _proposer();
-        ids[5] = _executor();
-        ids[6] = _canceller();
-    }
-
-    // TimelockController exposes its role identifiers only as constants of a deployed contract; these are their values,
-    // checked against a deployed OpenZeppelin 5.1.0 TimelockController in test_TEST_062_timelockRolesMatchDeployed.
-    function _proposer() internal pure returns (bytes32) {
-        return keccak256("PROPOSER_ROLE");
-    }
-
-    function _executor() internal pure returns (bytes32) {
-        return keccak256("EXECUTOR_ROLE");
-    }
-
-    function _canceller() internal pure returns (bytes32) {
-        return keccak256("CANCELLER_ROLE");
-    }
-
-    // TEST-062 verifies: REQ-ACCESS-003, REQ-ACCESS-006, REQ-ACCESS-008, REQ-ACCESS-009
-    function test_TEST_062_timelockRolesMatchDeployed() public {
-        address[] memory none = new address[](0);
-        TimelockController timelock = new TimelockController(SHORT_DELAY, none, none, address(0));
-        assertEq(timelock.PROPOSER_ROLE(), _proposer());
-        assertEq(timelock.EXECUTOR_ROLE(), _executor());
-        assertEq(timelock.CANCELLER_ROLE(), _canceller());
-        assertEq(timelock.DEFAULT_ADMIN_ROLE(), DEFAULT_ADMIN_ROLE);
+        uint32 d = AvanaAccess.governanceDelay(normal);
+        assertGe(d, 4 days);
+        assertLe(d, 5 days);
     }
 }

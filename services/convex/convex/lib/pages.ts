@@ -145,7 +145,7 @@ export function poolSnapshot(
     spokeId: market.spoke,
     hubId: market.hub,
     ...(hubLabel ? { hubLabel } : {}),
-    feeTier: feeTierLabel(market.feeTier),
+    feeTier: market.kind === "full-range" ? "Full range" : "Custom range",
     maxLtvPct: bpsToPct(market.collateralFactorBps),
     premiumBps: market.collateralRiskBps,
     suppliedUsd: collateralUsd,
@@ -195,16 +195,17 @@ export function poolBorrowables(
       const a = assets.get(hubAssetKey(r));
       if (!a) return [];
       const symbol = symbolOf(r.asset);
-      const speed = market.borrow.find((b) => b.reserveId === r.reserveId)?.speed ?? null;
       return [
         {
           id: r.slug,
           name: symbol,
           symbol,
           borrowAprPct: rayToAprPct(marketBorrowRateRay(a.drawnRateRay, market.collateralRiskBps)),
-          availableNow: speed ? tokens(speed.availableNow, a.decimals) : null,
-          availableNowUsd: speed ? usd(speed.availableNow, a.decimals, a.priceUsd8) : null,
-          moreFrom: speed && speed.moreAt > 0 ? new Date(speed.moreAt * 1_000).toISOString() : null,
+          // The new core has no speed limits: what can be borrowed now is bounded by the Hub asset's liquidity (the
+          // Spoke's own draw-cap room is on the asset page).
+          availableNow: tokens(a.liquidity, a.decimals),
+          availableNowUsd: usd(a.liquidity, a.decimals, a.priceUsd8),
+          moreFrom: null,
         },
       ];
     })

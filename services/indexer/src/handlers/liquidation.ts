@@ -1,88 +1,86 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// LPVaultSwap settlements and registry, PayoutEscrow credits, flash liquidation helper calls.
+// Liquidations (LiquidationModule, with the FlashLiquidator's flash-loan figures when one ran it) and repayments with
+// collateral (FlashloanRepay).
 
 import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
-import { logOnly } from "../lib/logOnly.ts";
 import { recordLog } from "../lib/record.ts";
 
-ponder.on("LPVaultSwap:LiquidationSettled", async ({ event, context }) => {
-  const p = await recordLog(event, context, "LPVaultSwap.LiquidationSettled");
-  const { caller, proxy, marketId, report: r } = event.args;
-  await context.db.insert(schema.liquidation).values({
-    chainId: p.chainId,
-    txHash: p.txHash,
-    logIndex: p.logIndex,
-    blockNumber: p.blockNumber,
-    blockHash: p.blockHash,
-    caller,
-    proxy,
-    marketId,
-    debtReserveId: r.debtReserveId,
-    debtAsset: r.debtAsset,
-    debtRepaid: r.debtRepaid,
-    unitsSeized: r.unitsSeized,
-    recovered: r.recovered,
-    minOut: r.minOut,
-    callerFunds: r.callerFunds,
-    avanaFee: r.avanaFee,
-    borrowerSurplus: r.borrowerSurplus,
-    keeperOut: r.keeperOut,
-    minPayout: r.minPayout,
-    shortfall: r.shortfall,
-    routeMode: Number(r.routeMode),
-  });
+ponder.on("LiquidationModule:Liquidated", async ({ event, context }) => {
+  const p = await recordLog(event, context, "LiquidationModule.Liquidated");
+  const a = event.args;
+  await context.db
+    .insert(schema.liquidation)
+    .values({
+      chainId: p.chainId,
+      txHash: p.txHash,
+      logIndex: p.logIndex,
+      blockNumber: p.blockNumber,
+      blockHash: p.blockHash,
+      liquidationModule: event.log.address,
+      account: a.account,
+      marketId: a.marketId,
+      liquidator: a.liquidator,
+      debtReserveId: a.debtReserveId,
+      debtRepaid: a.debtRepaid,
+      seized: a.seized,
+      creditUnwound: a.creditUnwound,
+      amount0: a.amount0,
+      amount1: a.amount1,
+      feeUnits: 0n,
+      fee0: 0n,
+      fee1: 0n,
+    })
+    .onConflictDoNothing();
+  const key = { chainId: p.chainId, txHash: p.txHash, account: a.account, marketId: a.marketId };
+  await context.db.insert(schema.liquidationInTx).values({ ...key, logIndex: p.logIndex }).onConflictDoUpdate({ logIndex: p.logIndex });
 });
 
-async function setOperator(chainId: number, operator: `0x${string}`, active: boolean, block: bigint, db: any) {
-  await db
-    .insert(schema.committedOperator)
-    .values({ chainId, operator, active, lastBlock: block })
-    .onConflictDoUpdate({ active, lastBlock: block });
+/** The logIndex of the latest liquidation of (account, market) earlier in the same transaction, or undefined. */
+async function liquidationOf(context: Parameters<typeof recordLog>[1], chainId: number, txHash: `0x${string}`, account: `0x${string}`, marketId: bigint) {
+  return (await context.db.find(schema.liquidationInTx, { chainId, txHash, account, marketId }))?.logIndex;
 }
 
-ponder.on("LPVaultSwap:KeeperAdded", async ({ event, context }) => {
-  const p = await recordLog(event, context, "LPVaultSwap.KeeperAdded");
-  await setOperator(p.chainId, event.args.keeper, true, p.blockNumber, context.db);
-});
-
-ponder.on("LPVaultSwap:KeeperRemoved", async ({ event, context }) => {
-  const p = await recordLog(event, context, "LPVaultSwap.KeeperRemoved");
-  await setOperator(p.chainId, event.args.keeper, false, p.blockNumber, context.db);
-});
-
-// DeficitSurplusFunded is the part of the report's borrowerSurplus (always the full B) that a deficit liquidation paid
-// into the First-Loss Reserve; BorrowerSurplusPaid carries the rest that reached the wallet (REQ-SWAP-027).
-logOnly("LPVaultSwap", [
-  "BorrowerSurplusPaid",
-  "DeficitSurplusFunded",
-  "FlashLoanUsed",
-  "RouteFailed",
-  "ResidueReturned",
-  "PendingSettlementForwarded",
-  "Deleveraged",
-]);
-
-ponder.on("PayoutEscrow:RemainderEscrowed", async ({ event, context }) => {
-  const p = await recordLog(event, context, "PayoutEscrow.RemainderEscrowed");
-  // A replayed log (its event_log row already there) must not move a running total again.
-  if (!p.fresh) return;
-  const { token, account, amount } = event.args;
+// `FeePaid` follows its `Liquidated` in the same call: the Avana fee of that liquidation.
+ponder.on("LiquidationModule:FeePaid", async ({ event, context }) => {
+  const p = await recordLog(event, context, "LiquidationModule.FeePaid");
+  const a = event.args;
+  const logIndex = await liquidationOf(context, p.chainId, p.txHash, a.account, a.marketId);
+  if (logIndex === undefined) throw new Error(`FeePaid on chain ${p.chainId} in ${p.txHash} without its Liquidated`);
   await context.db
-    .insert(schema.escrowCredit)
-    .values({ chainId: p.chainId, token, account, claimable: amount, lastBlock: p.blockNumber })
-    .onConflictDoUpdate((row) => ({ claimable: row.claimable + amount, lastBlock: p.blockNumber }));
+    .update(schema.liquidation, { chainId: p.chainId, txHash: p.txHash, logIndex })
+    .set({ feeUnits: a.units, fee0: a.fee0, fee1: a.fee1 });
 });
 
-ponder.on("PayoutEscrow:RemainderClaimed", async ({ event, context }) => {
-  const p = await recordLog(event, context, "PayoutEscrow.RemainderClaimed");
-  // A replayed log (its event_log row already there) must not move a running total again.
-  if (!p.fresh) return;
-  const { token, account, amount } = event.args;
+// A FlashLiquidator emits `FlashLiquidated` after the liquidation it funded, in the same transaction.
+ponder.on("FlashLiquidator:FlashLiquidated", async ({ event, context }) => {
+  const p = await recordLog(event, context, "FlashLiquidator.FlashLiquidated");
+  const a = event.args;
+  const logIndex = await liquidationOf(context, p.chainId, p.txHash, a.account, a.marketId);
+  if (logIndex === undefined) throw new Error(`FlashLiquidated on chain ${p.chainId} in ${p.txHash} without its Liquidated`);
   await context.db
-    .update(schema.escrowCredit, { chainId: p.chainId, token, account })
-    .set((row) => ({ claimable: row.claimable - amount, lastBlock: p.blockNumber }));
+    .update(schema.liquidation, { chainId: p.chainId, txHash: p.txHash, logIndex })
+    .set({ flashAmount: a.flashAmount, flashPremium: a.premium, topUp: a.topUp, profit: a.profit });
 });
 
-logOnly("FlashLiquidator", ["FlashLiquidated"]);
+ponder.on("FlashloanRepay:RepaidWithCollateral", async ({ event, context }) => {
+  const p = await recordLog(event, context, "FlashloanRepay.RepaidWithCollateral");
+  const a = event.args;
+  await context.db
+    .insert(schema.collateralRepay)
+    .values({
+      chainId: p.chainId,
+      txHash: p.txHash,
+      logIndex: p.logIndex,
+      blockNumber: p.blockNumber,
+      flashloanRepay: event.log.address,
+      wallet: a.wallet,
+      positionKey: a.positionKey,
+      asset: a.asset,
+      repaid: a.repaid,
+      premium: a.premium,
+      liquidity: a.liquidity,
+    })
+    .onConflictDoNothing();
+});

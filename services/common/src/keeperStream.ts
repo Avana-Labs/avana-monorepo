@@ -1,28 +1,30 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The keeper's event stream from the indexer (services/README.md, Keeper > Discovery and caching). Unlike the
-// export, it serves blocks at the chain head, which a reorg can still remove: every page names the hash of its last
-// block, and the request names the hash of the block it continues from, so the indexer refuses a cursor that left the
-// canonical chain and the keeper rewinds to the finalized block. The rules are in services/indexer/EXPORT.md
+// The bot runner's event stream from the indexer (services/README.md, Keeper > Discovery): the accounts the bots
+// (the LiquidationBot first) watch, and the keeper registry. Unlike the export, it serves blocks at the chain head,
+// which a reorg can still remove: every page names the hash of its last block, and the request names the hash of the
+// block it continues from, so the indexer refuses a cursor that left the canonical chain and the runner rewinds to the
+// finalized block. The rules are in services/indexer/EXPORT.md
 // ("Keeper stream"); these types are the wire format.
 
 import type { DecimalString, ExportRecord, HexString } from "./export.ts";
 
 /** Bumped on any change to the page fields or the record kinds below. */
-export const KEEPER_STREAM_VERSION = 1;
+export const KEEPER_STREAM_VERSION = 2;
 
 /** At most this many records per page; a page never splits a block, so a larger block is served whole. */
 export const KEEPER_STREAM_MAX_RECORDS = 1_000;
 
-/** Events that add or refresh an account (services/README.md, Discovery: live updates). */
+/** Events that add or refresh an account: the AaveAdapter's per-(wallet, market) accounts and the Spoke's own events. */
 export const KEEPER_ACCOUNT_KINDS = [
-  "AaveAdapter.UserProxyCreated",
-  "ProxyManager.ProxyDeployed",
-  "AaveAdapter.CollateralAdded",
+  "AaveAdapter.AccountCreated",
+  "AaveAdapter.Pledged",
+  "AaveAdapter.LiquidityAdded",
+  "AaveAdapter.Withdrawn",
   "AaveAdapter.Borrowed",
   "AaveAdapter.Repaid",
-  "AaveAdapter.CollateralWithdrawn",
-  "LPVaultSwap.LiquidationSettled",
+  "FlashloanRepay.RepaidWithCollateral",
+  "LiquidationModule.Liquidated",
   "AaveSpoke.Supply",
   "AaveSpoke.Borrow",
   "AaveSpoke.Repay",
@@ -30,13 +32,11 @@ export const KEEPER_ACCOUNT_KINDS = [
   "AaveSpoke.LiquidationCall",
   "AaveSpoke.ReportDeficit",
 ] as const;
-/** Events that drive `settlePending`. */
-export const KEEPER_PENDING_KINDS = ["Collateralization.SeizureReconciled", "Collateralization.PendingSettled"] as const;
-/** Events that change the keeper's own status. */
-export const KEEPER_STATUS_KINDS = ["LPVaultSwap.KeeperAdded", "LPVaultSwap.KeeperRemoved", "MarketRegistry.AddressFrozen", "MarketRegistry.AddressUnfrozen"] as const;
+/** Events that change the bots' registration in the RiskModules' keeper registry. */
+export const KEEPER_STATUS_KINDS = ["RiskModule.KeeperAdded", "RiskModule.KeeperRemoved"] as const;
 
 /** Every kind the stream serves; any other `event_log` row is left out. */
-export const KEEPER_STREAM_KINDS: readonly string[] = [...KEEPER_ACCOUNT_KINDS, ...KEEPER_PENDING_KINDS, ...KEEPER_STATUS_KINDS];
+export const KEEPER_STREAM_KINDS: readonly string[] = [...KEEPER_ACCOUNT_KINDS, ...KEEPER_STATUS_KINDS];
 
 /** The last block a page covered, with its hash as the indexer held it. */
 export interface KeeperStreamCursor {

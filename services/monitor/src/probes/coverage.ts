@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Loss-layer, backing and pool signals: M-07 Avana's live share of each pool, M-13 the First-Loss Reserve and DAO
-// deficit offset balances against their minimums, M-14 the tail coverage ratio, M-21 the Lens backing check of each
-// market, and M-28 liquidity leaving each listed pool (the pool's in-range liquidity, judged over the hour). A pool
-// keyed by identifier (pool address(0), a Uniswap v4 PoolId) is read through the manifest's PoolManager and keyed by
-// its poolId; it is unread when the manifest names no PoolManager.
+// Loss-layer and pool signals: M-13 each First-Loss Reserve's and DAO deficit offset's funded balance against its
+// minimum, M-14 the draw-cap coverage of each covered Hub asset (the First-Loss Reserve's balance against the balance
+// the RiskModules require for the CDP Spokes' draw caps), and M-28 liquidity leaving each listed pool (the pool's
+// in-range liquidity, judged over the hour). A pool of a Uniswap v4 integration (its key a PoolId) is read through the
+// manifest's PoolManager; it is unread when the manifest names no PoolManager.
 
-import { lensAbi } from "@avana/protocol/abis";
 import { uniswapV4PoolManager } from "@avana/services-common";
-import { type ContractCall, ZERO, some } from "@avana/services-common/views";
+import { type ContractCall, some } from "@avana/services-common/views";
 import { type Address, type Hex, encodeAbiParameters, keccak256, parseAbi, toHex } from "viem";
 import { History } from "../history.ts";
 import { type Probe, text } from "../probe.ts";
@@ -25,61 +24,41 @@ export function v4LiquiditySlot(poolId: Hex): Hex {
   const state = BigInt(keccak256(encodeAbiParameters([{ type: "bytes32" }, { type: "uint256" }], [poolId, 6n])));
   return toHex(state + 3n, { size: 32 });
 }
-const minimumAbi = parseAbi(["function firstLossReserveMinimum() view returns (uint256)"]);
+const layerAbi = parseAbi(["function fundedBalance() view returns (uint256)", "function minimum() view returns (uint256)"]);
 
-/** The invariants `Lens.checkBacking` reports; each must hold. */
-export const BACKING_FLAGS = ["supplyEqualsCredited", "hubHoldsSupplied", "sharesEqualAssets", "noDrawnShares", "noDrawCap", "singleBorrowSpoke", "noLiquidityFee", "noReinvestment", "reserveFlags"] as const;
-
-export interface MarketCoverage {
-  readonly name: string;
-  readonly poolShareBps: bigint;
-  readonly poolShareMaxBps: bigint;
-  /** The backing flags that do not hold; empty when the market is backed. */
-  readonly backingBroken: readonly string[];
-}
-
-export interface Tail {
-  readonly hub: Address;
-  readonly asset: Address;
+/** A loss layer's funded balance and minimum. */
+export interface Layer {
+  readonly address: Address;
+  readonly label: string;
   readonly funded: bigint;
   readonly minimum: bigint;
-  readonly ratioBps: bigint;
-  readonly deficitOffset: Address;
-  readonly offsetFunded: bigint;
-  /** The offset's `firstLossReserveMinimum` (its daoDeficitOffset); null without an offset. */
-  readonly offsetMinimum: bigint | null;
+  readonly offset: boolean;
+}
+
+/** One covered Hub asset's draw-cap coverage, from the snapshot. */
+export interface Coverage {
+  readonly funded: bigint;
+  readonly required: bigint;
 }
 
 export interface CoverageInput {
   readonly now: number;
-  readonly markets: ReadonlyMap<string, MarketCoverage | null>;
-  readonly tails: ReadonlyMap<string, Tail | null>;
+  readonly layers: ReadonlyMap<string, Layer | null>;
+  readonly coverage: ReadonlyMap<string, Coverage>;
   readonly pools: ReadonlyMap<string, bigint | null>;
 }
 
-export const tailKey = (hub: string, asset: string) => `${hub.toLowerCase()}:${asset.toLowerCase()}`;
-
-/** M-07: above 75 % of the pool-share breaker level warns (15 % at the default 20 %), above it pages. */
-export function m07(m: MarketCoverage): Level | null {
-  if (m.poolShareMaxBps === 0n) return null;
-  return ratioLevel(m.poolShareBps, m.poolShareMaxBps, [75n, 100n], [100n, 100n], "above");
+/** M-13: a First-Loss Reserve below 150 % of its minimum warns, below 100 % pages; a DAO deficit offset below its minimum warns. */
+export function m13(l: Layer): Level | null {
+  if (l.minimum === 0n) return null;
+  if (l.offset) return l.funded < l.minimum ? "warn" : "ok";
+  return ratioLevel(l.funded, l.minimum, [150n, 100n], [100n, 100n], "below");
 }
 
-/** M-13, First-Loss Reserve: below 150 % of its minimum warns, below 100 % pages; none without a minimum. */
-export function m13Reserve(t: Tail): Level | null {
-  if (t.minimum === 0n) return null;
-  return ratioLevel(t.funded, t.minimum, [150n, 100n], [100n, 100n], "below");
-}
-
-/** M-13, DAO deficit offset: below its daoDeficitOffset warns (a monitoring alert only, Q-399). */
-export function m13Offset(t: Tail): Level | null {
-  if (t.offsetMinimum === null || t.offsetMinimum === 0n) return null;
-  return t.offsetFunded < t.offsetMinimum ? "warn" : "ok";
-}
-
-/** M-14: the tail coverage ratio below 150 % warns, below 100 % pages. */
-export function m14(t: Tail): Level {
-  return t.ratioBps < 10_000n ? "page" : t.ratioBps < 15_000n ? "warn" : "ok";
+/** M-14: the funded balance below 150 % of what the draw caps require warns, below 100 % pages (borrowing then stops). */
+export function m14(c: Coverage): Level {
+  if (c.required === 0n) return "ok";
+  return ratioLevel(c.funded, c.required, [150n, 100n], [100n, 100n], "below");
 }
 
 const asBig = (x: unknown) => BigInt(x as bigint | number);
@@ -90,53 +69,46 @@ export function coverageProbe(): Probe<CoverageInput> {
     name: "coverage",
 
     async read(ctx) {
-      const lens = ctx.manifest.avana.lens.address;
-      const markets = ctx.snapshot.markets;
-      const tails = ctx.snapshot.hubAssets.filter((a) => a.exposure !== null && a.exposure.firstLossReserve !== ZERO).map((a) => ({ hub: a.hub, asset: a.underlying }));
-      // One read per pool: `liquidity()` on a pool contract, or the PoolManager's storage for a pool keyed by id.
-      const manager = uniswapV4PoolManager(ctx.manifest);
+      const m = ctx.manifest;
+      const layers = [
+        ...m.coverage.firstLossReserves.map((l) => ({ address: l.address, label: `${l.hubLabel} ${l.symbol}`, offset: false })),
+        ...m.coverage.daoDeficitOffsets.map((l) => ({ address: l.address, label: `${l.hubLabel} ${l.symbol} DAO offset`, offset: true })),
+      ];
+      // One read per pool: `liquidity()` on a concentrated-liquidity pool, the PoolManager's storage for a v4 PoolId.
+      const v4 = new Set(m.avana.integrations.filter((x) => x.kind === "uniswap-v4").map((x) => x.integrationId));
+      const manager = uniswapV4PoolManager(m);
       const poolReads = new Map<string, ContractCall | null>();
-      for (const m of markets) {
-        const byId = m.pool.toLowerCase() === ZERO && !/^0x0{64}$/i.test(m.poolId);
-        const key = byId ? m.poolId.toLowerCase() : m.pool.toLowerCase();
+      for (const mk of ctx.snapshot.markets) {
+        const key = mk.pool.toLowerCase();
         if (poolReads.has(key)) continue;
-        if (!byId) poolReads.set(key, { address: key as Address, abi: poolAbi, functionName: "liquidity" });
+        if (!v4.has(mk.integrationId)) poolReads.set(key, { address: `0x${key.slice(-40)}` as Address, abi: poolAbi, functionName: "liquidity" });
         else poolReads.set(key, manager ? { address: manager.address, abi: extsloadAbi, functionName: "extsload", args: [v4LiquiditySlot(key as Hex)] } : null);
       }
       const pools = [...poolReads.keys()];
-      const poolCalls = [...poolReads.values()].filter((c): c is ContractCall => c !== null);
       const r = await some(ctx.views, [
-        ...markets.flatMap((m) => [
-          { address: lens, abi: lensAbi, functionName: "getCapHeadroom", args: [m.vaultToken, ZERO] },
-          { address: lens, abi: lensAbi, functionName: "checkBacking", args: [m.vaultToken] },
+        ...layers.flatMap((l): ContractCall[] => [
+          { address: l.address, abi: layerAbi, functionName: "fundedBalance" },
+          { address: l.address, abi: layerAbi, functionName: "minimum" },
         ]),
-        ...tails.map((t) => ({ address: lens, abi: lensAbi, functionName: "getTailCoverage", args: [t.hub, t.asset] })),
-        ...poolCalls,
+        ...[...poolReads.values()].filter((c): c is ContractCall => c !== null),
       ]);
       let i = 0;
-      const marketOut = new Map<string, MarketCoverage | null>();
-      for (const m of markets) {
-        const caps = r[i++] as { poolShareBps: bigint; poolShareMaxBps: bigint } | null;
-        const backing = r[i++] as Record<string, unknown> | null;
-        marketOut.set(m.marketId, caps && backing ? { name: m.name, poolShareBps: asBig(caps.poolShareBps), poolShareMaxBps: asBig(caps.poolShareMaxBps), backingBroken: BACKING_FLAGS.filter((k) => backing[k] !== true) } : null);
+      const layerOut = new Map<string, Layer | null>();
+      for (const l of layers) {
+        const funded = r[i++];
+        const minimum = r[i++];
+        layerOut.set(l.address.toLowerCase(), funded === null || minimum === null ? null : { ...l, funded: asBig(funded), minimum: asBig(minimum) });
       }
-      const tailRows = tails.map((t) => ({ t, c: r[i++] as { funded: bigint; minimum: bigint; ratioBps: bigint; deficitOffset: Address; offsetFunded: bigint } | null }));
       const poolOut = new Map<string, bigint | null>();
       for (const p of pools) {
         const call = poolReads.get(p)!;
         const l = call === null ? null : r[i++];
         poolOut.set(p, l === null ? null : call!.functionName === "extsload" ? BigInt(l as Hex) & UINT128 : asBig(l));
       }
-      // The offsets' minimums, once the coverage reads name them.
-      const offsets = tailRows.filter((x) => x.c && x.c.deficitOffset !== ZERO).map((x) => x.c!.deficitOffset);
-      const mins = await some(ctx.views, offsets.map((o) => ({ address: o, abi: minimumAbi, functionName: "firstLossReserveMinimum" })));
-      const minOf = new Map(offsets.map((o, k) => [o.toLowerCase(), mins[k]]));
-      const tailOut = new Map<string, Tail | null>();
-      for (const { t, c } of tailRows) {
-        const offsetMin = c && c.deficitOffset !== ZERO ? minOf.get(c.deficitOffset.toLowerCase()) : null;
-        tailOut.set(tailKey(t.hub, t.asset), c && offsetMin !== undefined ? { hub: t.hub, asset: t.asset, funded: asBig(c.funded), minimum: asBig(c.minimum), ratioBps: asBig(c.ratioBps), deficitOffset: c.deficitOffset, offsetFunded: asBig(c.offsetFunded), offsetMinimum: offsetMin === null ? null : asBig(offsetMin) } : null);
-      }
-      return { now: ctx.block.timestamp, markets: marketOut, tails: tailOut, pools: poolOut };
+      const coverage = new Map(
+        ctx.snapshot.hubAssets.filter((a) => a.exposure !== null).map((a) => [`${a.hub}:${a.underlying}`, { funded: BigInt(a.exposure!.fundedBalance), required: BigInt(a.exposure!.required) }]),
+      );
+      return { now: ctx.block.timestamp, layers: layerOut, coverage, pools: poolOut };
     },
 
     evaluate(input) {
@@ -144,40 +116,28 @@ export function coverageProbe(): Probe<CoverageInput> {
       const push = (signal: SignalId, subject: string, level: Level | null, detail: Record<string, string>) => {
         if (level !== null) out.push({ signal, kind: "condition", level, subject, detail });
       };
-      const unread = (signal: SignalId, subject: string) => out.push({ signal, kind: "unread", level: "ok", subject, detail: {} });
-
-      for (const [id, m] of input.markets) {
-        if (!m) {
-          unread("M-07", `market:${id}:poolShare`);
-          unread("M-21", `market:${id}:backing`);
+      for (const [address, l] of input.layers) {
+        if (!l) {
+          out.push({ signal: "M-13", kind: "unread", level: "ok", subject: `layer:${address}`, detail: {} });
           continue;
         }
-        push("M-07", `market:${id}:poolShare`, m07(m), { market: m.name, poolShareBps: m.poolShareBps.toString(10), poolShareMaxBps: m.poolShareMaxBps.toString(10) });
-        push("M-21", `market:${id}:backing`, m.backingBroken.length > 0 ? "page" : "ok", { market: m.name, ...(m.backingBroken.length > 0 ? { broken: m.backingBroken.join(",") } : {}) });
+        push("M-13", `layer:${address}`, m13(l), { layer: l.label, funded: l.funded.toString(10), minimum: l.minimum.toString(10) });
       }
-      for (const [key, t] of input.tails) {
-        const subject = (what: string) => `tail:${key}:${what}`;
-        if (!t) {
-          for (const [s, w] of [["M-13", "reserve"], ["M-13", "offset"], ["M-14", "ratio"]] as const) unread(s, subject(w));
-          continue;
-        }
-        push("M-13", subject("reserve"), m13Reserve(t), { funded: t.funded.toString(10), minimum: t.minimum.toString(10) });
-        push("M-13", subject("offset"), m13Offset(t), { deficitOffset: t.deficitOffset, offsetFunded: t.offsetFunded.toString(10), daoDeficitOffset: String(t.offsetMinimum) });
-        push("M-14", subject("ratio"), m14(t), { ratioBps: t.ratioBps.toString(10) });
+      for (const [key, c] of input.coverage) {
+        push("M-14", `coverage:${key}`, m14(c), { funded: c.funded.toString(10), required: c.required.toString(10) });
       }
       const seen = new Set<string>();
       for (const [pool, liquidity] of input.pools) {
         const subject = `pool:${pool}`;
+        seen.add(subject);
         if (liquidity === null) {
-          unread("M-28", subject);
+          out.push({ signal: "M-28", kind: "unread", level: "ok", subject, detail: {} });
           continue;
         }
-        seen.add(subject);
         history.record(subject, input.now, liquidity);
         const drop = history.dropBps(subject);
         push("M-28", subject, dropLevel(drop, 2_000n, 4_000n), { pool, liquidity: liquidity.toString(10), dropBps: drop.toString(10) });
       }
-      for (const [pool, l] of input.pools) if (l === null) seen.add(`pool:${pool}`);
       history.retain(seen);
       return out;
     },
@@ -187,8 +147,8 @@ export function coverageProbe(): Probe<CoverageInput> {
 
     evidence(input, subject) {
       const [kind, a, b] = subject.split(":");
-      if (kind === "market") return input.markets.get(a!) ? text(input.markets.get(a!)) : null;
-      if (kind === "tail") return input.tails.get(`${a}:${b}`) ? text(input.tails.get(`${a}:${b}`)) : null;
+      if (kind === "layer") return input.layers.get(a!) ? text(input.layers.get(a!)) : null;
+      if (kind === "coverage") return input.coverage.get(`${a}:${b}`) ? text(input.coverage.get(`${a}:${b}`)) : null;
       if (kind === "pool") return input.pools.get(a!) != null ? text(input.pools.get(a!)) : null;
       return null;
     },

@@ -26,7 +26,7 @@ export function loadExternal(path: string | undefined): ExternalEntry[] {
 export function loadPositionsManifest(path: string | undefined): PositionsManifest | undefined {
   if (!path) return undefined;
   const manifest = JSON.parse(readFileSync(path, "utf8")) as Partial<PositionsManifest>;
-  return manifest.avana && manifest.markets?.length && manifest.aave ? (manifest as PositionsManifest) : undefined;
+  return manifest.avana?.integrations && manifest.markets?.length && manifest.aave ? (manifest as PositionsManifest) : undefined;
 }
 
 const feedAbi = parseAbi([

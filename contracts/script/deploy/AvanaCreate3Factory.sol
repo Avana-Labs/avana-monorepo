@@ -14,7 +14,7 @@ import {CREATE3} from "solady/utils/CREATE3.sol";
 /// every chain and anyone may deploy it there first without effect (the code is fixed by its init code hash). The
 /// deployment is Solady's CREATE3 (a minimal CREATE2 proxy that CREATEs the init code), the same library the
 /// VaultTokenFactory uses. A failing constructor reverts with `DeploymentFailed()` and no revert data of its own.
-/// Example: the deployer `0xD0…` with `salt = keccak256("avana.v1.0.0.AvanaTimelock")` deploys the timelock at
+/// Example: the deployer `0xD0…` with `salt = keccak256("avana.v1.0.0.AccessManager")` deploys the AccessManager at
 /// `predict(0xD0…, salt)` on Ethereum and on Base alike; a call from any other address with the same salt lands at a
 /// different address.
 contract AvanaCreate3Factory {

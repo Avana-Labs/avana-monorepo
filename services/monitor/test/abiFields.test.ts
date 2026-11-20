@@ -5,9 +5,8 @@
 // the contracts fails here instead of in production.
 
 import { describe, expect, it } from "vitest";
-import { lensAbi, lpOracleAbi, marketRegistryAbi, parameterStoreAbi } from "@avana/protocol/abis";
+import { firstLossReserveAbi, lpOracleAbi, riskModuleAbi } from "@avana/protocol/abis";
 import type { Abi } from "viem";
-import { BACKING_FLAGS } from "../src/probes/coverage.ts";
 import { EVENT_NAMES, TOPIC_COUNT } from "../src/probes/events.ts";
 
 function outputs(abi: Abi, fn: string): string[] {
@@ -21,19 +20,10 @@ function outputs(abi: Abi, fn: string): string[] {
 
 describe("protocol names the probes read", () => {
   const cases: [string, Abi, string, string[]][] = [
-    ["ParameterStore", parameterStoreAbi as Abi, "getOracleConfig", ["usdBandLow"]],
-    ["ParameterStore", parameterStoreAbi as Abi, "getFeed", ["feedMaxAge"]],
-    ["Lens", lensAbi as Abi, "getDebtPriceState", ["source", "state", "age", "fixedPrice"]],
-    ["Lens", lensAbi as Abi, "getCapHeadroom", ["poolShareBps", "poolShareMaxBps"]],
-    ["Lens", lensAbi as Abi, "checkBacking", [...BACKING_FLAGS]],
-    ["Lens", lensAbi as Abi, "getTailCoverage", ["funded", "minimum", "ratioBps", "deficitOffset", "offsetFunded"]],
-    ["Lens", lensAbi as Abi, "getHubAsset", ["baseDrawnRateBps"]],
-    ["ParameterStore", parameterStoreAbi as Abi, "getMarketParams", ["slippageAllowanceBps"]],
-    ["ParameterStore", parameterStoreAbi as Abi, "routeDepthThreshold", ["value"]],
-    ["MarketRegistry", marketRegistryAbi as Abi, "getRoute", ["route", "usable"]],
-    ["LPOracle", lpOracleAbi as Abi, "getTokenPrices", ["prices"]],
-    ["ParameterStore", parameterStoreAbi as Abi, "borrowPriceMaxAge", ["age"]],
-    ["ParameterStore", parameterStoreAbi as Abi, "liquidationPriceMaxAge", ["age"]],
+    ["LPOracle", lpOracleAbi as Abi, "getPrices", ["price0", "price1", "sqrtPriceX96"]],
+    ["RiskModule", riskModuleAbi as Abi, "getSpoke", ["hub", "kind"]],
+    ["FirstLossReserve", firstLossReserveAbi as Abi, "fundedBalance", ["balance"]],
+    ["FirstLossReserve", firstLossReserveAbi as Abi, "minimum", ["amount"]],
   ];
   for (const [contract, abi, fn, fields] of cases) {
     it(`${contract}.${fn} has ${fields.filter(Boolean).join(", ") || "its output"}`, () => {
@@ -41,11 +31,6 @@ describe("protocol names the probes read", () => {
       for (const f of fields) if (f) expect(names).toContain(f);
     });
   }
-
-  it("checkBacking reports exactly the backing flags the probe requires", () => {
-    const bools = ((lensAbi as Abi).find((e) => e.type === "function" && e.name === "checkBacking") as unknown as { outputs: { components: { name: string; type: string }[] }[] }).outputs[0]!.components.filter((c) => c.type === "bool").map((c) => c.name);
-    expect([...BACKING_FLAGS].sort()).toEqual(bools.sort());
-  });
 
   it("finds a topic for every event the events probe reads", () => {
     expect(TOPIC_COUNT).toBe(EVENT_NAMES.length);

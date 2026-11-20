@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The Lend and Hub views on a chain with several Hubs, from rows the snapshot reader reads off the fixture chain:
-// totals add every Hub, the breakdowns keep each Hub apart, the same token on two Hubs has two pages, a Hub-to-Hub
-// credit line shows its cap, draw and headroom on both Hubs, and a Hub recorded after start-up joins the totals.
+// totals add every Hub, the breakdowns keep each Hub apart, the same token on two Hubs has two pages, a Lend page
+// shows its draw-cap coverage, and a Hub a later release step deploys joins the totals once it has code.
 
 import { describe, expect, it } from "vitest";
 import {
-  CDP_A,
+  CDP_B,
   HUB_A,
   HUB_B,
   HUB_C,
   LEND_A,
   LEND_A2,
-  SPEED_MORE_AT,
   USDC,
   type FakeChain,
   fakeChainClient,
@@ -25,7 +24,7 @@ import { defaultSlug, hubLabel } from "../convex/lib/format.ts";
 import { hubSummary, lendTotals } from "../convex/lib/hubViews.ts";
 import { assetSnapshot, hubAssetKey, lendSnapshot } from "../convex/lib/pages.ts";
 import { lendRiskParameters } from "../convex/lib/riskViews.ts";
-import { type World, creditLineViews, hubLabelOf, priceAsset, symbolOf } from "../convex/model.ts";
+import { type World, hubLabelOf, priceAsset, symbolOf } from "../convex/model.ts";
 
 const SYMBOLS: Record<string, string> = { [USDC]: "USDC", "0xdac17f958d2ee523a2206206994597c13d831ec7": "USDT", "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f": "GHO" };
 
@@ -40,7 +39,6 @@ function worldOf(snap: ChainSnapshot): World {
   const content = Object.entries(SYMBOLS).map(([key, symbol]) => ({ scope: "token", chainId: 1, key, slug: symbol.toLowerCase(), name: symbol, symbol }));
   return {
     hubs,
-    creditLines: snap.creditLines.map((l) => ({ ...l, updatedAt: 0 })),
     hubAssets,
     slices: snap.slices.map((s) => ({ ...s, updatedAt: 0 })),
     reserves,
@@ -106,30 +104,18 @@ describe("Lend views across Hubs", () => {
   });
 });
 
-describe("Hub-to-Hub credit lines", () => {
-  it("shows the line's cap, draw and headroom, joined with the Spoke's slice on the funding Hub", async () => {
+describe("draw-cap coverage", () => {
+  it("shows the CDP Spokes' draw-cap sum, the balance it requires and the funded balance on the Lend page", async () => {
     const w = worldOf(await read(fixtureHubsChain.start));
-    const [line] = creditLineViews(w, () => true);
-    expect(line).toMatchObject({ fundingHub: HUB_B, fundingHubLabel: "Core", homeHub: HUB_A, homeHubLabel: "Stable", spoke: CDP_A, symbol: "USDC", enabled: true, usedPct: 50 });
-    expect(line!.capUsd).toBeCloseTo(1_000_100, 6);
-    expect(line!.owedUsd).toBeCloseTo(500_050, 6);
-    // min(cap − owed = 500,000, draw cap room 1,000,000 − 500,000, Hub B liquidity 4,000,000), at Hub B's price.
-    expect(line!.headroomUsd).toBeCloseTo(500_050, 6);
+    const value = (id: string) => params(w, HUB_A).find((p) => p.id === id)!.value;
+    // CDP A's draw cap of 4,000,000 USDC at the fake RiskModule's 5 % needs 200,000 USDC, the First-Loss Reserve's balance.
+    expect([value("borrowCapacity"), value("coverageRequired"), value("firstLoss"), value("coverageBound")]).toEqual(["4,000,000 USDC", "200,000 USDC", "200,000 USDC", "Holds"]);
+    // Hub B's USDC has no First-Loss Reserve, so no coverage figures.
+    expect(params(w, HUB_B).find((p) => p.id === "coverageRequired")!.value).toBe("—");
+    expect(hubSummary(w.hubsByKey.get(`1:${HUB_B}`)!, "Core", w.hubAssets)).toMatchObject({ label: "Core", cdpSpokes: [CDP_B] });
   });
 
-  it("lists the line on the funding Hub as funded and on the home Hub as drawn", async () => {
-    const w = worldOf(await read(fixtureHubsChain.start));
-    const lines = creditLineViews(w, () => true);
-    const label = (h: { hub: string }) => hubLabelOf(w, 1, h.hub);
-    const b = hubSummary(w.hubsByKey.get(`1:${HUB_B}`)!, "Core", w.hubAssets, lines.filter((l) => l.fundingHub === HUB_B), lines.filter((l) => l.homeHub === HUB_B));
-    const a = hubSummary(w.hubsByKey.get(`1:${HUB_A}`)!, "Stable", w.hubAssets, lines.filter((l) => l.fundingHub === HUB_A), lines.filter((l) => l.homeHub === HUB_A));
-    expect([b.fundsLines.length, b.drawsOnLines.length, a.fundsLines.length, a.drawsOnLines.length]).toEqual([1, 0, 0, 1]);
-    expect(label(b)).toBe("Core");
-    expect(params(w, HUB_B).find((p) => p.id === "otherHubDraws")!.value).toBe("500,000 USDC");
-    expect(params(w, HUB_A).find((p) => p.id === "otherHubDraws")!.value).toBe("0 USDC");
-  });
-
-  it("adds the Borrow asset pages of a funding Hub asset, the line's included, up to the Lend page's borrowed", async () => {
+  it("adds the Borrow asset pages of a Hub asset up to the Lend page's borrowed", async () => {
     const w = worldOf(await read(fixtureHubsChain.start));
     const asset = w.hubAssets.find((x) => x.hub === HUB_B && x.underlying === USDC)!;
     const reserves = w.reserves.filter((r) => r.hub === HUB_B && r.assetId === asset.assetId);
@@ -142,39 +128,32 @@ describe("Hub-to-Hub credit lines", () => {
   });
 });
 
-describe("a Hub recorded after start-up", () => {
-  it("joins the totals, the breakdowns and the Lend pages at the next refresh", async () => {
+describe("a Hub a later release step deploys", () => {
+  it("joins the totals, the breakdowns and the Lend pages once it has code", async () => {
     const before = totalsOf(worldOf(await read(fixtureHubsChain.start)));
     const w = worldOf(await read(fixtureHubsChain.later));
     const after = totalsOf(w);
     expect(after.hubCount).toBe(3);
     const c = after.byHub.find((h) => h.hub === HUB_C)!;
     // Hub C's USDC: 2,050,000 added, the DAO deficit offset's 50,000 included.
-    expect(c).toMatchObject({ label: "hub-aa0000", slug: "ethereum-hub-aa0000", tier: 3, lendAssets: 1, suppliedUsd: 2_050_000, borrowedUsd: 500_000 });
+    expect(c).toMatchObject({ label: "Edge", slug: "ethereum-edge", tier: 3, lendAssets: 1, suppliedUsd: 2_050_000, borrowedUsd: 500_000 });
     expect(after.suppliedUsd).toBeCloseTo(before.suppliedUsd + 2_050_000, 6);
-    expect(after.byToken.find((x) => x.symbol === "USDC")!.hubs.map((h) => h.label)).toEqual(["Stable", "Core", "hub-aa0000"]);
-    expect(w.hubAssets.find((a) => a.hub === HUB_C)!.slug).toBe("ethereum-hub-aa0000-usdc");
+    expect(after.byToken.find((x) => x.symbol === "USDC")!.hubs.map((h) => h.label)).toEqual(["Stable", "Core", "Edge"]);
+    expect(w.hubAssets.find((a) => a.hub === HUB_C)!.slug).toBe("ethereum-edge-usdc");
   });
 });
 
-describe("assets a pool can borrow (BOR-024)", () => {
-  it("shows each debt reserve's amount available now and when more frees up", async () => {
+describe("assets a pool can borrow", () => {
+  it("lists every borrowable debt reserve of the market's Spoke with its rate and its Hub's liquidity", async () => {
     const w = worldOf(await read(fixtureHubsChain.start));
     const rows = readPoolBorrowables(w, "ethereum-market-1");
-    expect(rows.map((r) => [r.symbol, r.availableNow, r.availableNowUsd, r.moreFrom])).toEqual([
-      ["USDC", 500_000, 500_000, new Date(SPEED_MORE_AT * 1_000).toISOString()],
-      ["USDC", 500_000, 500_050, new Date(SPEED_MORE_AT * 1_000).toISOString()],
-      ["USDT", 500_000, 499_950, new Date(SPEED_MORE_AT * 1_000).toISOString()],
+    // Hub A USDC 7,000,000, Hub B USDC 4,000,000, Hub A USDT 3,000,000 of liquidity; no speed window frees up later.
+    expect(rows.map((r) => [r.symbol, r.availableNow, r.moreFrom]).sort()).toEqual([
+      ["USDC", 4_000_000, null],
+      ["USDC", 7_000_000, null],
+      ["USDT", 3_000_000, null],
     ]);
-  });
-
-  it("shows no amount when the Lens refuses the speed read", async () => {
-    const w = worldOf(await read({ ...fixtureHubsChain.start, locked: true }));
-    expect(readPoolBorrowables(w, "ethereum-market-1").map((r) => [r.availableNow, r.moreFrom])).toEqual([
-      [null, null],
-      [null, null],
-      [null, null],
-    ]);
+    expect(rows.every((r) => r.borrowAprPct > 0)).toBe(true);
   });
 });
 

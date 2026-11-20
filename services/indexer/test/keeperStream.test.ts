@@ -63,11 +63,10 @@ describe("keeper stream kinds", () => {
   // Each kind is `<Contract>.<Event>`; the contract's ABI must hold the event, or no handler could write the row.
   const abiOf: Record<string, Abi> = {
     AaveAdapter: abis.AaveAdapter,
-    ProxyManager: abis.ProxyManager,
-    LPVaultSwap: abis.LPVaultSwap,
+    RiskModule: abis.RiskModule,
+    LiquidationModule: abis.LiquidationModule,
+    FlashloanRepay: abis.FlashloanRepay,
     AaveSpoke: abis.AaveSpoke,
-    Collateralization: abis.Collateralization,
-    MarketRegistry: abis.MarketRegistry,
   };
 
   it("name an event of an indexed contract", () => {

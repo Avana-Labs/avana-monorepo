@@ -3,391 +3,210 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
-import {ILensHubReads} from "../../src/lens/lens/ILensHubReads.sol";
-import {IAaveAdapterBase} from "../../src/policy/aave-adapter/IAaveAdapterBase.sol";
-import {AaveAdapterFixture} from "../utils/fixtures/AaveAdapterFixture.sol";
-import {CollPoolToken} from "../utils/mocks/CollateralizationMocks.sol";
+import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {AaveAdapterTestBase} from "../utils/AaveAdapterTestBase.sol";
 
-/// @title AaveAdapterFuzzTest
-/// @notice Fuzzed AaveAdapter flows on the real local Aave V4 Spoke and Hub with the real Collateralization, vault
-/// tokens, ProxyManager and PositionProxies: tiny positions, borrow and repay with interest per debt reserve, repay
-/// sizing, the single-use nonce, the backing gap across random sequences, and the receiver rule over random receivers.
-/// forge-config: default.isolate = false
-contract AaveAdapterFuzzTest is AaveAdapterFixture {
-    address internal sink = makeAddr("sink");
+/// @notice Fuzzes routing, and random sequences of pledges, top-ups, withdrawals, borrows and repays over several
+/// wallets and NFTs. After every step: each account's supply equals its credit (never above it with share rounding),
+/// vault-token supply equals what the Hub holds and never exceeds the markets' total credit, every pledged NFT is in
+/// the LPVault under its wallet's account, and the adapter holds nothing.
+contract AaveAdapterFuzzTest is AaveAdapterTestBase {
+    uint256 internal constant WALLETS = 3;
+    uint256 internal constant MAX_KEYS = 12;
 
-    // ─── Tiny positions (TEST-073) ───
+    address[WALLETS] internal wallets;
+    bytes32[] internal keys;
+    mapping(bytes32 key => address wallet) internal ownerOfKey;
 
-    // TEST-073 verifies: REQ-ADAPTER-005, REQ-ADAPTER-068, REQ-PROXY-016, REQ-PROXY-031, SPEC-PROXY-003, Q-153
-    // Sources: 5.1 TEST-073, HYP-40
-    /// @notice A pledge of 1 to 10^6 units mints and supplies exactly the credited units; a GHO and a USDC loan of one
-    /// base unit each record at least their amount as debt and a repay-all clears each.
-    function testFuzz_TEST_073_tinyPositions(
-        uint256 unitsSeed
+    function setUp() public override {
+        super.setUp();
+        wallets = [alice, bob, carol];
+    }
+
+    // ─── Routing ───
+
+    /// @dev Full range goes to Full range, a position inside the band to Custom range, anything else is rejected.
+    function testFuzz_routing(
+        int24 lower,
+        int24 upper,
+        uint128 liquidity
     ) public {
-        uint128 units = uint128(bound(unitsSeed, 1, 1e6));
-        (, address p) = _pledgeAs(alice, MARKET_ID, units);
-        assertEq(token.totalSupply(), units, "minted the credit");
-        assertEq(_sharesOf(p, vtReserveId), units, "supplied the credit");
-        assertEq(coll.getTotalCredited(vt), units, "credited");
-        // One base unit of each asset: far below the CF-weighted value of even one unit at $2.00 (8e-7 USD).
-        uint256 usdcAmount = 1;
-        uint256 ghoAmount = units >= 1000 ? 1e9 : 1;
-        _borrowAs(alice, MARKET_ID, debtReserveId, ghoAmount);
-        _borrowAs(alice, MARKET_ID, usdcReserveId, usdcAmount);
-        assertGe(_debtOf(p, debtReserveId), ghoAmount, "GHO debt at least the amount");
-        assertGe(_debtOf(p, usdcReserveId), usdcAmount, "USDC debt at least the amount");
-        _repayAllOf(alice, p, debtReserveId);
-        _repayAllOf(alice, p, usdcReserveId);
-        assertEq(_debtOf(p, debtReserveId), 0, "GHO cleared");
-        assertEq(_debtOf(p, usdcReserveId), 0, "USDC cleared");
-        assertEq(_borrowCountOf(p), 0, "debt-free");
-    }
-
-    function _repayAllOf(
-        address wallet,
-        address proxy,
-        uint256 reserveId
-    ) internal returns (uint256 spent) {
-        uint256 d = _debtOf(proxy, reserveId);
-        if (d == 0) return 0;
-        _fund(wallet, reserveId, d);
-        uint256 deadline = _deadline();
-        vm.prank(wallet);
-        spent = adapterC.repay(wallet, MARKET_ID, reserveId, d, true, deadline);
-    }
-
-    // ─── Borrow and repay with interest (TEST-075) ───
-
-    // TEST-075 verifies: REQ-PROXY-021, REQ-PROXY-028, REQ-PROXY-029, REQ-PROXY-030, SPEC-PROXY-003, SPEC-PROXY-004, SPEC-PROXY-006, INV-043
-    // Sources: 5.1 TEST-075, MATH-AR-03, MATH-AR-07, MATH-AR-18, HYP-47
-    /// @notice Over a random sequence of borrows and partial repays on GHO (18 decimals) and USDC (6 decimals) with
-    /// time passing: each borrow raises that reserve's debt by at least the amount, each repay lowers it by at most the
-    /// amount (exactly what Aave took), no operation on one reserve changes the other's debt, and in the end the total
-    /// repaid on each reserve is at least the total borrowed.
-    function testFuzz_TEST_075_borrowRepayPerReserve(
-        uint256 seed
-    ) public {
-        (, address p) = _pledgeAs(alice, MARKET_ID, UNITS);
-        uint256 steps = bound(seed, 3, 10);
-        for (uint256 i = 0; i < steps; ++i) {
-            _step075(p, uint256(keccak256(abi.encode(seed, i))));
-        }
-        vm.warp(block.timestamp + 30 days);
-        for (uint256 k = 0; k < 2; ++k) {
-            uint256 reserve = k == 0 ? debtReserveId : usdcReserveId;
-            repaid075[k] += _repayAllOf(alice, p, reserve);
-            assertGe(repaid075[k], borrowed075[k], "total repaid at least total borrowed");
-            assertEq(_debtOf(p, reserve), 0, "cleared");
-        }
-    }
-
-    uint256[2] internal borrowed075;
-    uint256[2] internal repaid075;
-
-    function _step075(
-        address p,
-        uint256 r
-    ) internal {
-        uint256 which = r % 2;
-        uint256 reserve = which == 0 ? debtReserveId : usdcReserveId;
-        uint256 otherReserve = which == 0 ? usdcReserveId : debtReserveId;
-        vm.warp(block.timestamp + (r >> 8) % 20 days);
-        uint256 before = _debtOf(p, reserve);
-        uint256 otherBefore = _debtOf(p, otherReserve);
-        if ((r >> 64) % 3 != 0 || before == 0) {
-            uint256 amount = bound(r >> 96, 1, 600) * (which == 0 ? 1e18 : 1e6);
-            _borrowAs(alice, MARKET_ID, reserve, amount);
-            borrowed075[which] += amount;
-            assertGe(_debtOf(p, reserve), before + amount, "borrow raises debt by at least the amount");
-        } else {
-            uint256 cap = bound(r >> 96, 1, before);
-            _fund(alice, reserve, cap);
-            uint256 d = _deadline();
-            vm.prank(alice);
-            uint256 spent = adapterC.repay(alice, MARKET_ID, reserve, cap, false, d);
-            repaid075[which] += spent;
-            assertLe(spent, cap, "spent at most the pull");
-            assertLe(before - _debtOf(p, reserve), cap, "repay lowers debt by at most the amount");
-        }
-        assertEq(_debtOf(p, otherReserve), otherBefore, "other reserve untouched");
-    }
-
-    // ─── Repay sizing (SPEC-PROXY-003, SPEC-PROXY-007) ───
-
-    // TEST-248 verifies: REQ-PROXY-028, REQ-PROXY-029, REQ-PROXY-030, REQ-PROXY-031, REQ-ADAPTER-085, SPEC-PROXY-003, SPEC-PROXY-007
-    // Sources: MATH-AR-16, MATH-AR-17, HYP-16, HYP-17
-    /// @notice For a random debt, time and cap: a partial repay takes `min(cap, D)` from the payer and nothing more; a
-    /// repay-all reverts `RepayExceedsMax` below the debt and otherwise pulls the cap, refunds `cap − D` and leaves 0;
-    /// the payer's allowance ends at 0 when it approved the cap.
-    function testFuzz_TEST_248_repaySizing(
-        uint256 amountSeed,
-        uint256 warpSeed,
-        uint256 capSeed,
-        bool all,
-        bool usdc
-    ) public {
-        (, address p) = _pledgeAs(alice, MARKET_ID, UNITS);
-        uint256 reserve = usdc ? usdcReserveId : debtReserveId;
-        _borrowAs(alice, MARKET_ID, reserve, bound(amountSeed, 1, 12_000) * (usdc ? 1e6 : 1e18));
-        vm.warp(block.timestamp + bound(warpSeed, 0, 365 days));
-        uint256 debtNow = _debtOf(p, reserve);
-        uint256 cap = bound(capSeed, 1, debtNow * 2);
-        _fund(carol, reserve, cap);
-        if (all && cap < debtNow) {
-            uint256 d = _deadline();
-            vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.RepayExceedsMax.selector, debtNow, cap));
-            vm.prank(carol);
-            adapterC.repay(alice, MARKET_ID, reserve, cap, true, d);
+        lower = int24(bound(lower, FULL_LOWER / SPACING, FULL_UPPER / SPACING - 1)) * SPACING;
+        upper = int24(bound(upper, lower / SPACING + 1, FULL_UPPER / SPACING)) * SPACING;
+        liquidity = uint128(bound(liquidity, 1e9, 1e30));
+        if (uint256(keccak256(abi.encode(lower, upper))) % 4 == 0) (lower, upper) = (FULL_LOWER, FULL_UPPER);
+        bytes32 key = _mint(alice, lower, upper, liquidity);
+        bool full = lower == FULL_LOWER && upper == FULL_UPPER;
+        bool inside = lower >= BAND_LOWER && upper <= BAND_UPPER;
+        if (!full && !inside) {
+            vm.expectRevert(abi.encodeWithSelector(IAaveAdapter.NoMarketFits.selector, POOL, lower, upper));
+            _pledge(alice, key);
             return;
         }
-        _checkSizing(p, reserve, cap, debtNow, all);
-    }
-
-    // TEST-248 verifies: REQ-PROXY-030, SPEC-PROXY-003
-    /// @notice Regression for a CI counterexample of `testFuzz_TEST_248_repaySizing`: a partial GHO repay after about
-    /// 281 days of interest, where Aave's down-rounded share burn leaves the debt two base units above `D − x`.
-    function test_TEST_248_repaySizingShareRoundingRegression() public {
-        testFuzz_TEST_248_repaySizing(
-            93_904_310_331_109_744_336_746_372_785_757_855, 13_877_157_736_575, 38_567_111, false, false
-        );
-    }
-
-    function _checkSizing(
-        address p,
-        uint256 reserve,
-        uint256 cap,
-        uint256 debtNow,
-        bool all
-    ) internal {
-        CollPoolToken asset = _assetOf(reserve);
-        uint256 d = _deadline();
-        vm.prank(carol);
-        uint256 spent = adapterC.repay(alice, MARKET_ID, reserve, cap, all, d);
-        uint256 x = cap < debtNow ? cap : debtNow;
-        assertEq(cap - asset.balanceOf(carol), spent, "the payer pays exactly what Aave took");
-        assertEq(asset.allowance(carol, adapter), all ? 0 : cap - x, "allowance");
-        assertEq(asset.balanceOf(p), 0, "proxy keeps nothing");
-        if (all) {
-            assertEq(spent, debtNow, "repay-all takes the live debt");
-            assertEq(_debtOf(p, reserve), 0, "cleared");
-        } else {
-            assertEq(spent, x, "partial takes min(cap, D)");
-            _checkPartialDebtAfter(p, reserve, debtNow, x);
+        address predicted = adapter.predictAccount(alice, full ? FULL : CUSTOM);
+        vm.prank(alice);
+        try adapter.pledge(key) returns (uint256 marketId, uint128 credit) {
+            assertEq(marketId, full ? FULL : CUSTOM);
+            assertEq(adapter.accountOf(alice, marketId), predicted);
+            assertEq(_supplied(alice, marketId), credit);
+            if (full) assertEq(credit, liquidity);
+            else assertLe(credit, liquidity);
+        } catch (bytes memory err) {
+            // A sliver of a band can floor to zero credit; the LPVault refuses it.
+            assertEq(bytes4(err), bytes4(keccak256("ZeroCredit(bytes32)")));
         }
     }
 
-    /// @dev SPEC-PROXY-003 bound `D − x ≤ D' ≤ D − x + ⌈drawnIndex / RAY⌉`. Aave values the drawn debt as
-    /// `⌈S·I / RAY⌉` and burns `s = ⌊(x − premium)·RAY / I⌋` shares while the premium is cleared exactly, so
-    /// `D' − (D − x) = ⌈A + e⌉ − ⌈A⌉` with `A = S·I / RAY` and `e = (x − premium) − s·I / RAY ∈ [0, I / RAY)`; that
-    /// difference is at least 0 and below `e + 1`, so at most `⌈I / RAY⌉` (2 base units once the index exceeds RAY).
-    /// A repay below the premium restores it exactly and leaves `D' = D − x`. The index is read in the repay's block.
-    function _checkPartialDebtAfter(
-        address p,
-        uint256 reserve,
-        uint256 debtNow,
-        uint256 x
-    ) internal view {
-        uint256 index = ILensHubReads(aave.hub).getAssetDrawnIndex(reserve == usdcReserveId ? usdcAssetId : ghoAssetId);
-        uint256 slack = (index + 1e27 - 1) / 1e27;
-        uint256 debtAfter = _debtOf(p, reserve);
-        assertGe(debtAfter, debtNow - x, "debt after at least D - x");
-        assertLe(debtAfter, debtNow - x + slack, "debt after within ceil(drawnIndex / RAY) of D - x");
+    // ─── Sequences ───
+
+    /// @param ops Each word picks an action, a wallet, a key and an amount.
+    function testFuzz_sequence(
+        uint256[24] calldata ops,
+        bool rounding
+    ) public {
+        if (rounding) spoke.setSupplyHaircut(1);
+        for (uint256 i; i < ops.length; ++i) {
+            uint256 op = ops[i];
+            address w = wallets[(op >> 8) % WALLETS];
+            uint256 amount = bound(op >> 64, 1e12, 1e24);
+            uint256 action = op % 7;
+            if (action <= 1 || keys.length == 0) _doPledge(w, op, amount);
+            else if (action == 2) _doAddLiquidity(op, amount);
+            else if (action == 3) _doWithdraw(op, amount, false);
+            else if (action == 4) _doWithdraw(op, amount, true);
+            else if (action == 5) _doBorrow(w, op, amount);
+            else _doRepay(w, op, amount);
+            _checkInvariants(rounding);
+        }
     }
 
-    // TEST-165 verifies: REQ-PROXY-028, REQ-PROXY-068, REQ-PROXY-069, REQ-PROXY-084
-    /// @notice At zero debt any non-zero cap, either flag, pulls nothing and returns 0.
-    function testFuzz_TEST_165_zeroDebtPullsNothing(
-        uint256 capSeed,
-        bool all
-    ) public {
-        _pledgeAs(alice, MARKET_ID, UNITS);
-        uint256 cap = bound(capSeed, 1, 1e30);
-        _fund(carol, debtReserveId, cap);
-        uint256 d = _deadline();
-        vm.prank(carol);
-        assertEq(adapterC.repay(alice, MARKET_ID, debtReserveId, cap, all, d), 0, "returns 0");
-        assertEq(debt.balanceOf(carol), cap, "nothing pulled");
-        assertEq(debt.allowance(carol, adapter), cap, "allowance untouched");
+    function _doPledge(
+        address w,
+        uint256 op,
+        uint256 amount
+    ) internal {
+        if (keys.length >= MAX_KEYS) return;
+        bool full = (op >> 16) % 2 == 0;
+        int24 off = int24(uint24((op >> 24) % 99) + 1) * SPACING;
+        bytes32 key = full
+            ? _mint(w, FULL_LOWER, FULL_UPPER, uint128(amount))
+            : _mint(w, BAND_LOWER + off, BAND_UPPER - off, uint128(amount));
+        _pledge(w, key);
+        keys.push(key);
+        ownerOfKey[key] = w;
     }
 
-    // ─── Nonce (REQ-PROXY-015) ───
+    function _doAddLiquidity(
+        uint256 op,
+        uint256 amount
+    ) internal {
+        bytes32 key = keys[(op >> 32) % keys.length];
+        address w = ownerOfKey[key];
+        if (w == address(0)) return;
+        token0.mint(w, amount);
+        token1.mint(w, amount);
+        vm.prank(w);
+        adapter.addLiquidity(key, amount, amount, 0, 0);
+    }
 
-    // TEST-096 verifies: REQ-PROXY-015, REQ-PROXY-059, INV-019, ATTACK-036
-    // Sources: QNT-21, HYP-15
-    /// @notice Over a random sequence of borrows carrying the right nonce or a wrong one, every wrong nonce reverts
-    /// `BadNonce` and the stored nonce always equals the number of successful borrows.
-    function testFuzz_TEST_096_nonceCountsSuccesses(
-        uint256 seed
-    ) public {
-        (, address p) = _pledgeAs(alice, MARKET_ID, UNITS);
-        uint256 successes = 0;
-        uint256 steps = bound(seed, 1, 12);
-        for (uint256 i = 0; i < steps; ++i) {
-            uint256 r = uint256(keccak256(abi.encode(seed, i)));
-            uint256 current = adapterC.borrowNonce(p);
-            uint256 offset = r % 4 == 0 ? (r >> 8) % 5 + 1 : 0;
-            bool backwards = (r >> 16) % 2 == 0 && current >= offset;
-            uint256 expected = backwards ? current - offset : current + offset;
-            uint256 reserve = (r >> 24) % 2 == 0 ? debtReserveId : usdcReserveId;
-            uint256 amount = reserve == debtReserveId ? 1e18 : 1e6;
-            uint256 d = _deadline();
-            if (expected != current) {
-                vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.BadNonce.selector, current, expected));
-            } else {
-                ++successes;
+    function _doWithdraw(
+        uint256 op,
+        uint256 amount,
+        bool whole
+    ) internal {
+        bytes32 key = keys[(op >> 32) % keys.length];
+        address w = ownerOfKey[key];
+        if (w == address(0)) return;
+        uint128 recorded = vault.getPosition(key).liquidity;
+        uint128 liquidity = whole ? 0 : uint128(bound(amount, 1, recorded));
+        vm.prank(w);
+        try adapter.withdraw(key, liquidity, 0, 0, w) {
+            if (whole || liquidity >= recorded) {
+                assertEq(pm.ownerOf(uint256(key)), w);
+                ownerOfKey[key] = address(0);
             }
-            vm.prank(alice);
-            adapterC.borrow(MARKET_ID, reserve, amount, alice, d, 0, expected);
-            assertEq(adapterC.borrowNonce(p), successes, "nonce = successful borrows");
+        } catch (bytes memory err) {
+            // Only the health check, or a sliver whose credit floors to zero, may stop a withdrawal.
+            bytes4 sel = bytes4(err);
+            assertTrue(
+                sel == bytes4(keccak256("HealthFactorBelowOne()")) || sel == bytes4(keccak256("ZeroCredit(bytes32)"))
+                    || sel == bytes4(keccak256("InvalidAmount(bytes32,uint256)"))
+            );
         }
     }
 
-    // ─── Backing gap (SPEC-PROXY-008) ───
-
-    // TEST-241 verifies: REQ-ADAPTER-069, REQ-ADAPTER-005, SPEC-PROXY-008, INV-001, INV-066, INV-080, INV-088
-    // Sources: QNT-03, HYP-44
-    /// @notice A random sequence of pledges, partial removals, re-credits and withdrawals (after an optional orphan
-    /// burn that opens a gap) keeps the backing gap `G = totalCredited + pending − totalSupply` at its starting value
-    /// and `totalSupply <= totalCredited + pending` after every call.
-    function testFuzz_TEST_241_gapConstantAcrossSequences(
-        uint256 seed,
-        bool orphan
-    ) public {
-        (bytes32 first, address p) = _pledgeAs(alice, MARKET_ID, UNITS);
-        if (orphan) {
-            _borrowAs(alice, MARKET_ID, debtReserveId, 15_000e18);
-            vtPrice.set(1.5e8);
-            uint256 seized = swap.seizeAndKeep(aave.cdpSpoke, vt, vtReserveId, debtReserveId, p, 1000e18);
-            swap.burnUnderLock(MARKET_ID, vt, seized);
-            vtPrice.set(2e8);
-        }
-        orphan241 = orphan;
-        int256 g0 = _gap();
-        keys241.push(first);
-        uint256 steps = bound(seed, 2, 10);
-        for (uint256 i = 0; i < steps; ++i) {
-            _step241(uint256(keccak256(abi.encode(seed, i))));
-            assertEq(_gap(), g0, "gap unchanged");
-            assertLe(token.totalSupply(), coll.getTotalCredited(vt) + coll.getPending(vt).units, "supply backed");
-        }
-    }
-
-    bytes32[] internal keys241;
-    bool internal orphan241;
-
-    function _step241(
-        uint256 r
+    function _doBorrow(
+        address w,
+        uint256 op,
+        uint256 amount
     ) internal {
-        uint256 op = r % 4;
-        uint256 n = keys241.length;
-        uint256 d = _deadline();
-        if (op == 0 && n < 8) {
-            (bytes32 k,) = _pledgeAs(alice, MARKET_ID, uint128(bound(r >> 8, 2_000_000, 3_000_000_000)));
-            keys241.push(k);
-            return;
-        }
-        if (n < 2) return;
-        bytes32 key = keys241[1 + (r >> 8) % (n - 1)];
-        if (lpVault.depositorOf(key) != alice) return;
-        if (op == 1) {
-            uint256 credited = coll.previewRelease(INTEGRATION, key);
-            if (credited < 2) return;
-            vm.prank(alice);
-            adapterC.removeLiquidity(MARKET_ID, _ref(key), uint128(bound(r >> 16, 1, credited - 1)), _mins(), d, 0);
-        } else if (op == 2) {
-            lpVault.addUnits(key, uint128(bound(r >> 16, 1, 1e9)));
-            vm.prank(alice);
-            adapterC.recredit(MARKET_ID, _ref(key), "", d);
-        } else if (op == 3 && !orphan241) {
-            uint256 units = coll.previewRelease(INTEGRATION, key);
-            vm.prank(alice);
-            adapterC.withdraw(MARKET_ID, _ref(key), units, d, 0);
-        }
+        uint256 marketId = (op >> 40) % 2 == 0 ? FULL : CUSTOM;
+        address account = adapter.accountOf(w, marketId);
+        if (account == address(0)) return;
+        (uint256 power, uint256 owed) = spoke.headroom(account);
+        if (power <= owed) return;
+        uint256 room = power - owed;
+        vm.prank(w);
+        adapter.borrow(marketId, DEBT_RESERVE, bound(amount, 1, room), w);
     }
 
-    // ─── Receiver rule (REQ-PROXY-017) ───
-
-    // TEST-027 verifies: REQ-PROXY-017, REQ-PROXY-061, REQ-PROXY-023, INV-020
-    /// @notice A random receiver, or one drawn from the refused set, is refused with `InvalidReceiver` exactly when it
-    /// is in the set of REQ-PROXY-017; otherwise it receives exactly the borrowed amount.
-    function testFuzz_TEST_027_receiverRule(
-        address candidate,
-        uint256 pick
-    ) public {
-        (, address p) = _pledgeAs(alice, MARKET_ID, UNITS);
-        (, address bobProxy) = _pledgeAs(bob, MARKET_B, UNITS);
-        address[18] memory known = [
-            address(0),
-            p,
-            bobProxy,
-            adapter,
-            address(coll),
-            address(swap),
-            timelock,
-            address(registry),
-            address(pstore),
-            address(risk),
-            address(proxyManager),
-            address(lpVault),
-            registry.payoutEscrow(),
-            registry.flashSourceAddr(),
-            aave.hub,
-            aave.cdpSpoke,
-            aave.lendSpoke,
-            address(debt)
-        ];
-        address receiver = pick % 3 == 0 ? known[(pick >> 8) % known.length] : candidate;
-        vm.assume(receiver != address(vm) && receiver != CONSOLE);
-        bool refused = _refused(receiver);
-        uint256 nonce = adapterC.borrowNonce(p);
-        uint256 d = _deadline();
-        uint256 before = debt.balanceOf(receiver);
-        if (refused) vm.expectRevert(abi.encodeWithSelector(IAaveAdapterBase.InvalidReceiver.selector, receiver));
-        vm.prank(alice);
-        adapterC.borrow(MARKET_ID, debtReserveId, 10e18, receiver, d, 0, nonce);
-        if (!refused) assertEq(debt.balanceOf(receiver) - before, 10e18, "receiver paid exactly");
-        assertEq(adapterC.borrowNonce(p), refused ? nonce : nonce + 1, "nonce moves only on success");
+    function _doRepay(
+        address w,
+        uint256 op,
+        uint256 amount
+    ) internal {
+        uint256 marketId = (op >> 40) % 2 == 0 ? FULL : CUSTOM;
+        address account = adapter.accountOf(w, marketId);
+        if (account == address(0) || spoke.debt(account, DEBT_RESERVE) == 0) return;
+        usdc.mint(w, amount);
+        vm.prank(w);
+        adapter.repay(marketId, DEBT_RESERVE, amount, w);
     }
 
-    function _refused(
-        address a
-    ) internal view returns (bool) {
-        if (
-            a == address(0) || adapterC.walletOf(a) != address(0) || a == adapter || a == address(coll)
-                || a == address(swap) || a == timelock || a == address(registry) || a == address(pstore)
-                || a == address(risk) || a == address(proxyManager)
-        ) return true;
-        if (
-            registry.integrationIdOf(a) != 0 || a == registry.payoutEscrow() || a == registry.flashSourceAddr()
-                || registry.isRecordedHub(a) || registry.getSpoke(a).approved
-        ) return true;
-        IAaveV4Hub hub = IAaveV4Hub(aave.hub);
-        return hub.isSpokeListed(ghoAssetId, a) || hub.isUnderlyingListed(a);
-    }
-
-    // ─── Withdrawal units (REQ-PROXY-082) ───
-
-    // TEST-018 verifies: REQ-PROXY-038, REQ-PROXY-082, REQ-ADAPTER-005
-    /// @notice A withdrawal succeeds exactly with the record's credited units; any other count reverts and nothing
-    /// moves.
-    function testFuzz_TEST_018_withdrawNeedsExactUnits(
-        uint256 unitsSeed,
-        uint256 askSeed
-    ) public {
-        uint128 units = uint128(bound(unitsSeed, 1, 1e12));
-        (bytes32 k, address p) = _pledgeAs(alice, MARKET_ID, units);
-        uint256 ask = bound(askSeed, 1, uint256(units) * 2);
-        uint256 d = _deadline();
-        if (ask != units) vm.expectRevert();
-        vm.prank(alice);
-        adapterC.withdraw(MARKET_ID, _ref(k), ask, d, 0);
-        if (ask == units) {
-            assertEq(lpVault.ownerOf(k), alice, "returned");
-            assertEq(token.totalSupply(), 0, "burned");
-        } else {
-            assertEq(_sharesOf(p, vtReserveId), units, "unchanged");
+    function _checkInvariants(
+        bool rounding
+    ) internal view {
+        uint256[2] memory markets = [FULL, CUSTOM];
+        for (uint256 m; m < 2; ++m) {
+            uint256 sum;
+            for (uint256 i; i < WALLETS; ++i) {
+                address account = adapter.accountOf(wallets[i], markets[m]);
+                if (account == address(0)) continue;
+                uint256 supplied = spoke.supplied(account, markets[m]);
+                uint256 credit = vault.accountCredit(account, markets[m]);
+                if (rounding) assertLe(supplied, credit, "supply above credit");
+                else assertEq(supplied, credit, "supply differs from credit");
+                (uint256 power, uint256 owed) = spoke.headroom(account);
+                assertLe(owed, power, "account below health");
+                sum += supplied;
+            }
+            address vt = m == 0 ? address(vtFull) : address(vtCustom);
+            assertEq(vtFull.balanceOf(address(adapter)) + vtCustom.balanceOf(address(adapter)), 0);
+            assertLe(sum, _balance(vt, address(hub)));
+            assertEq(_totalSupply(vt), _balance(vt, address(hub)), "vault tokens outside the Hub");
+            // With share rounding the Hub keeps the lost units, as Aave does; without it supply never exceeds credit.
+            if (!rounding) assertLe(_totalSupply(vt), vault.getMarket(markets[m]).totalCredit, "supply above credit");
         }
+        for (uint256 i; i < keys.length; ++i) {
+            address w = ownerOfKey[keys[i]];
+            if (w == address(0)) continue;
+            assertEq(pm.ownerOf(uint256(keys[i])), address(vault));
+            address account = vault.getPosition(keys[i]).account;
+            assertEq(account, adapter.accountOf(w, vault.getPosition(keys[i]).marketId));
+        }
+        assertEq(usdc.balanceOf(address(adapter)), 0);
+    }
+
+    function _balance(
+        address token,
+        address who
+    ) internal view returns (uint256) {
+        return token == address(vtFull) ? vtFull.balanceOf(who) : vtCustom.balanceOf(who);
+    }
+
+    function _totalSupply(
+        address token
+    ) internal view returns (uint256) {
+        return token == address(vtFull) ? vtFull.totalSupply() : vtCustom.totalSupply();
     }
 }

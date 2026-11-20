@@ -31,7 +31,7 @@ export const seriesPoint = onchainTable(
   }),
 );
 
-/** Each pool a listed market uses, from `MarketRegistered`; the swap handler reads its fee here. */
+/** Each pool a listed pair of markets uses, from `RiskModule.PoolListed`; the swap handler reads its fee here. */
 export const ammPool = onchainTable(
   "amm_pool",
   (t) => ({
@@ -40,7 +40,7 @@ export const ammPool = onchainTable(
     integrationId: t.integer().notNull(),
     /** Fee in pips; for a dynamic-fee pool the value read at the last sample block. */
     feePips: t.integer().notNull(),
-    /** Block of the first `MarketRegistered` naming the pool: logs before it come from the history endpoint. */
+    /** Block of the `PoolListed` naming the pool: logs before it come from the history endpoint. */
     listedBlock: t.bigint().notNull(),
     lastBlock: t.bigint().notNull(),
   }),
@@ -48,8 +48,8 @@ export const ammPool = onchainTable(
 );
 
 /**
- * Each pool a listed market names by identifier (pool address(0), a non-zero poolId: a Uniswap v4 PoolId), from
- * `MarketRegistered`. The PoolManager handlers write series only for these pools; each swap carries its own fee.
+ * Each Uniswap v4 pool a listed pair of markets names by PoolId (the pool key of a Uniswap v4 integration), from
+ * `RiskModule.PoolListed`. The PoolManager handlers write series only for these pools; each swap carries its own fee.
  */
 export const ammPoolId = onchainTable(
   "amm_pool_id",
@@ -57,7 +57,7 @@ export const ammPoolId = onchainTable(
     chainId: t.integer().notNull(),
     poolId: t.hex().notNull(),
     integrationId: t.integer().notNull(),
-    /** Block of the first `MarketRegistered` naming the pool. */
+    /** Block of the `PoolListed` naming the pool. */
     listedBlock: t.bigint().notNull(),
     lastBlock: t.bigint().notNull(),
   }),

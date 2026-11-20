@@ -135,7 +135,6 @@ export interface DebtAsset {
   readonly fixedPrice: boolean;
   /** The fixed price source the listing deployed for a fixed-price asset (a test-network stand-in), if any. */
   readonly fixedPriceSource?: string;
-  readonly creditLineWhole?: number;
   readonly firstLossReserve: string;
   readonly daoDeficitOffset: string;
 }
@@ -157,8 +156,6 @@ export interface Model {
   readonly shortDelay: number;
   readonly maxMarketCount: number;
   readonly avanaFeeShareBps: number;
-  /** Signers the config gives the gas vault (lower-case). */
-  readonly gasVaultSigners: readonly string[];
 }
 
 export interface Deployment {
@@ -384,7 +381,6 @@ export function buildModel(d: Deployment, problems: string[]): Model {
       listed: !!l,
       fixedPrice,
       fixedPriceSource: fixedPrice && d.listingOracles[sym] ? need(`${sym} fixed price source (listing-oracles.json)`, d.listingOracles[sym]) : undefined,
-      creditLineWhole: l ? num(`${sym} creditLineWhole`, l.creditLineWhole ?? listing.creditLineWhole) : undefined,
       firstLossReserve: need(`First-Loss Reserve of ${sym} (manifest avana.firstLossReserves)`, flr?.address),
       daoDeficitOffset: need(`DAO deficit offset of ${sym} (manifest avana.daoDeficitOffsets)`, offset?.address),
     };
@@ -443,6 +439,5 @@ export function buildModel(d: Deployment, problems: string[]): Model {
     shortDelay,
     maxMarketCount: num("parameters.maxMarketCount", cfg.parameters?.maxMarketCount),
     avanaFeeShareBps: num("parameters.globals.avanaFeeShareBps", cfg.parameters?.globals?.avanaFeeShareBps),
-    gasVaultSigners: ((cfg.gasVault?.signers ?? []) as Json[]).map((s) => String(s.signer).toLowerCase()),
   };
 }

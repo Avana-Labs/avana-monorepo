@@ -3,16 +3,17 @@
 // Copyright (c) 2026 Avana Labs
 // Writes src/abis/*.ts from the Foundry build: one typed `as const` ABI per contract the services call or index, and
 // src/abis/index.ts with every export and ABI_HASH. Avana ABIs come from contracts/out (the default profile), the Aave V4
-// Spoke and Hub ABIs from contracts/out-aave (the `aave` profile, built from the pinned Aave V4 commit).
+// Spoke and Hub ABIs from contracts/out-aave (the `aave` profile, built from the pinned Aave V4 commit) and the
+// FlashLiquidator's from liquidator/out (the liquidation bot's contracts, which compile against contracts/src).
 //
 //   node packages/protocol/scripts/generate-abis.mjs                 # write the files
 //   node packages/protocol/scripts/generate-abis.mjs --check         # exit 1 if a committed file differs
-//   ... --out <dir> --out-aave <dir>                                  # read the artifacts from other build folders
+//   ... --out <dir> --out-aave <dir> --out-liquidator <dir>           # read the artifacts from other build folders
 //
 // ABI_HASH = keccak256(UTF-8 of JSON.stringify({ <artifact name>: <abi>, ... })), keys in ascending order, the ABI
 // arrays exactly as Foundry wrote them, no whitespace. The release manifest records the same value.
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { keccak256, stringToBytes } from "viem";
@@ -22,41 +23,37 @@ const REPO = resolve(PKG, "../..");
 const ABI_DIR = join(PKG, "src/abis");
 
 /**
- * [export name, build ("avana" | "aave"), artifact name], sorted by export name. Each ABI is the contract's interface,
- * which carries its events and errors, except where the interface leaves out events the deployed contract emits; those
- * two come from the contract itself. IAvanaTimelock declares only what AvanaTimelock adds to OpenZeppelin's
- * TimelockController (no CallScheduled, CallExecuted, Cancelled or role events), and IAvanaFirstLossReserve does not inherit
- * IAvanaFirstLossReserveAdmin (BorrowSpokeAllowlistUpdated, FirstLossReserveMinimumUpdated).
+ * [export name, build ("avana" | "aave" | "liquidator"), artifact name], sorted by export name. Each ABI is the
+ * contract's interface, which carries its functions, events and errors. The seven core contracts (AaveAdapter,
+ * RiskModule, LPVault, VaultToken, LPOracle, LiquidationModule, FirstLossReserve), the FlashloanRepay periphery and the
+ * FlashLiquidator are the only Avana contracts the services read, index or call.
  */
 const CONTRACTS = [
   ["aaveAdapterAbi", "avana", "IAaveAdapter"],
   ["aaveV4HubAbi", "aave", "IHub"],
   ["aaveV4SpokeAbi", "aave", "ISpoke"],
-  ["avanaGasVaultAbi", "avana", "IAvanaGasVault"],
-  ["avanaTimelockAbi", "avana", "AvanaTimelock"],
-  ["collateralizationAbi", "avana", "ICollateralization"],
-  ["firstLossReserveAbi", "avana", "AvanaFirstLossReserve"],
-  ["flashLiquidatorAbi", "avana", "IFlashLiquidator"],
-  ["lensAbi", "avana", "ILens"],
+  ["accessManagerAbi", "avana", "IAccessManager"],
+  ["firstLossReserveAbi", "avana", "IFirstLossReserve"],
+  ["flashLiquidatorAbi", "liquidator", "IFlashLiquidator"],
+  ["flashloanRepayAbi", "avana", "IFlashloanRepay"],
+  ["liquidationModuleAbi", "avana", "ILiquidationModule"],
   ["lpOracleAbi", "avana", "ILPOracle"],
   ["lpVaultAbi", "avana", "ILPVault"],
-  ["lpVaultSwapAbi", "avana", "ILPVaultSwap"],
-  ["marketRegistryAbi", "avana", "IMarketRegistry"],
-  ["parameterStoreAbi", "avana", "IParameterStore"],
-  ["payoutEscrowAbi", "avana", "IPayoutEscrow"],
-  ["proxyManagerAbi", "avana", "IProxyManager"],
   ["riskModuleAbi", "avana", "IRiskModule"],
   ["vaultTokenAbi", "avana", "IVaultToken"],
-  ["vaultTokenFactoryAbi", "avana", "IVaultTokenFactory"],
 ];
 
-const SOURCE = { avana: "contracts/out", aave: "contracts/out-aave (Aave V4, pinned commit)" };
+const SOURCE = { avana: "contracts/out", aave: "contracts/out-aave (Aave V4, pinned commit)", liquidator: "liquidator/out" };
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(name);
   return i === -1 ? fallback : resolve(process.argv[i + 1]);
 }
-const outDirs = { avana: arg("--out", join(REPO, "contracts/out")), aave: arg("--out-aave", join(REPO, "contracts/out-aave")) };
+const outDirs = {
+  avana: arg("--out", join(REPO, "contracts/out")),
+  aave: arg("--out-aave", join(REPO, "contracts/out-aave")),
+  liquidator: arg("--out-liquidator", join(REPO, "liquidator/out")),
+};
 const check = process.argv.includes("--check");
 
 const HEADER = "// SPDX-License-Identifier: BUSL-1.1\n// Copyright (c) 2026 Avana Labs\n";
@@ -65,7 +62,10 @@ const fileOf = (exportName) => exportName.replace(/Abi$/, "");
 const abis = {};
 const files = new Map();
 for (const [exportName, build, artifact] of CONTRACTS) {
-  const path = join(outDirs[build], `${artifact}.sol`, `${artifact}.json`);
+  // A file restricted to other compiler profiles too is written per profile; the default profile's copy is the one.
+  const dir = join(outDirs[build], `${artifact}.sol`);
+  const plain = join(dir, `${artifact}.json`);
+  const path = existsSync(plain) ? plain : join(dir, `${artifact}.default.json`);
   if (!existsSync(path)) throw new Error(`missing artifact ${path}; build it first (see packages/protocol/README.md)`);
   const abi = JSON.parse(readFileSync(path, "utf8")).abi;
   if (!Array.isArray(abi) || abi.length === 0) throw new Error(`${path} has no ABI`);
@@ -91,6 +91,16 @@ files.set(
 );
 
 let stale = 0;
+// A file left from a contract no longer listed is stale too: --check reports it, a write removes it.
+for (const name of readdirSync(ABI_DIR)) {
+  if (!name.endsWith(".ts") || files.has(name)) continue;
+  if (check) {
+    console.error(`stale: ${join(ABI_DIR, name)} (no longer generated)`);
+    stale++;
+  } else {
+    rmSync(join(ABI_DIR, name));
+  }
+}
 for (const [name, text] of files) {
   const path = join(ABI_DIR, name);
   if (check) {

@@ -286,40 +286,12 @@ export interface LendTotals extends HubTotals {
   readonly byToken: readonly LendTokenTotals[];
 }
 
-/** A Hub-to-Hub credit line: a CDP Spoke of `homeHub` drawing `asset` from `fundingHub`. Base units as decimal strings. */
-export interface CreditLineView {
-  readonly chainId: number;
-  readonly fundingHub: string;
-  readonly fundingHubLabel: string;
-  readonly homeHub: string;
-  readonly homeHubLabel: string;
-  readonly spoke: string;
-  readonly assetId: string;
-  readonly asset: string;
-  readonly symbol: string;
-  readonly enabled: boolean;
-  readonly cap: string;
-  readonly owed: string;
-  readonly capUsd: number;
-  readonly owedUsd: number;
-  /** What the Spoke can still draw on the line: min(cap − owed, its draw-cap room, the Hub's liquidity). */
-  readonly headroomUsd: number;
-  readonly usedPct: number;
-  /** Σ caps of every cross-Hub line on the funding Hub's asset. */
-  readonly fundingHubTotalCapUsd: number;
-  readonly blockNumber: string;
-}
-
-/** `hubs.get`: one Hub with its totals, Spokes and credit lines. */
+/** `hubs.get`: one Hub with its totals and Spokes. */
 export interface HubSummary extends HubBreakdownRow {
   readonly recorded: boolean;
   readonly applicationState: number | null;
   readonly assetCount: number;
   readonly lendSpokes: readonly string[];
   readonly cdpSpokes: readonly string[];
-  /** Lines this Hub funds: CDP Spokes of other Hubs drawing on its assets. */
-  readonly fundsLines: readonly CreditLineView[];
-  /** Lines this Hub's CDP Spokes draw on at other Hubs. */
-  readonly drawsOnLines: readonly CreditLineView[];
   readonly blockNumber: string;
 }

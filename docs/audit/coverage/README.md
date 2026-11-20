@@ -35,13 +35,13 @@ No run is recorded in this folder; the per-file branch minimums are in `contract
 | `contracts/src/oracle/debt-oracle/DebtOracleRecovery.sol` | 47 % |
 | `contracts/src/lens/lens/LensPreview.sol` | 48 % |
 | `contracts/src/lens/lens/LensBase.sol` | 54 % |
-| `contracts/src/liquidation/lp-vault-swap/LPVaultSwapPendingLogic.sol` | 58 % |
+| `contracts/src/legacy/lp-vault-swap/LPVaultSwapPendingLogic.sol` | 58 % |
 | `contracts/src/lens/lens/LensLiquidation.sol` | 58 % |
 | `contracts/src/lens/lens/LensMarket.sol` | 59 % |
 | `contracts/src/lens/lens/LensAccount.sol` | 60 % |
 | `contracts/src/oracle/lp-oracle/LPOracleRecovery.sol` | 61 % |
-| `contracts/src/liquidation/lp-vault-swap/LPVaultSwapLiquidationLogic.sol` | 62 % |
-| `contracts/src/liquidation/lp-vault-swap/LPVaultSwapDeleverageLogic.sol` | 63 % |
+| `contracts/src/legacy/lp-vault-swap/LPVaultSwapLiquidationLogic.sol` | 62 % |
+| `contracts/src/legacy/lp-vault-swap/LPVaultSwapDeleverageLogic.sol` | 63 % |
 | `contracts/src/lens/lens/LensMarkets.sol` | 71 % |
 | `contracts/src/custody/collateralization/CollateralizationLedger.sol` | 73 % |
 | `contracts/src/oracle/lp-oracle/LPOracleListing.sol` | 74 % |

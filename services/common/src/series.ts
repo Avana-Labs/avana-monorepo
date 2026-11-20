@@ -20,10 +20,8 @@ export const RESOLUTION_SECONDS: Readonly<Record<Resolution, number>> = { hour: 
  * - `pool`: one AMM pool's swaps and liquidity, `chainId:pool`, or `chainId:poolId` for a pool keyed by identifier
  *   (a Uniswap v4 PoolId).
  * - `position`: one account (PositionProxy), `chainId:spoke:proxy`.
- * - `creditLine`: one Hub-to-Hub credit line, `chainId:fundingHub:assetId:spoke`; its draw is the `hubAssetSpoke`
- *   series of the same Hub asset and Spoke.
  */
-export type SeriesScopeKind = "hubAsset" | "hubAssetSpoke" | "market" | "marketReserve" | "pool" | "position" | "creditLine";
+export type SeriesScopeKind = "hubAsset" | "hubAssetSpoke" | "market" | "marketReserve" | "pool" | "position";
 
 /** How a bucket combines two observations of one metric. */
 export type MergeRule = "first" | "last" | "sum" | "max" | "min";
@@ -39,7 +37,6 @@ export const MERGE_RULES: Readonly<Record<SeriesScopeKind, Readonly<Record<strin
   market: {},
   marketReserve: {},
   position: {},
-  creditLine: {},
   pool: {
     volume0: "sum",
     volume1: "sum",

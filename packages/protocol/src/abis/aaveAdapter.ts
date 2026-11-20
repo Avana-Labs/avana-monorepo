@@ -5,89 +5,11 @@
 export const aaveAdapterAbi = [
   {
     "type": "function",
-    "name": "APPLICATION_ADMIN",
+    "name": "LP_VAULT",
     "inputs": [],
     "outputs": [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "COLLATERALIZATION",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "collateralization",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "LOCK",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "lock",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "LP_VAULT_SWAP",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "lpVaultSwap",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "MARKET_REGISTRY",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "marketRegistry",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "PARAMETER_STORE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "parameterStore",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "PROXY_MANAGER",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "proxyManager",
+        "name": "lpVault",
         "type": "address",
         "internalType": "address"
       }
@@ -109,43 +31,10 @@ export const aaveAdapterAbi = [
   },
   {
     "type": "function",
-    "name": "TIMELOCK",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "timelock",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "VAULT_TOKEN_FACTORY",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "vaultTokenFactory",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "accountOf",
     "inputs": [
       {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "spoke",
+        "name": "wallet",
         "type": "address",
         "internalType": "address"
       },
@@ -153,19 +42,98 @@ export const aaveAdapterAbi = [
         "name": "marketId",
         "type": "uint256",
         "internalType": "uint256"
-      },
+      }
+    ],
+    "outputs": [
       {
-        "name": "vaultToken",
+        "name": "account",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "addLiquidity",
+    "inputs": [
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
       },
       {
-        "name": "reserveId",
+        "name": "amount0Desired",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount1Desired",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount0Min",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount1Min",
         "type": "uint256",
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "outputs": [
+      {
+        "name": "liquidity",
+        "type": "uint128",
+        "internalType": "uint128"
+      },
+      {
+        "name": "credit",
+        "type": "uint128",
+        "internalType": "uint128"
+      },
+      {
+        "name": "amount0",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount1",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "allowWithdraw",
+    "inputs": [
+      {
+        "name": "operator",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "maxLiquidity",
+        "type": "uint128",
+        "internalType": "uint128"
+      },
+      {
+        "name": "data",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -177,7 +145,7 @@ export const aaveAdapterAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "debtReserveId",
+        "name": "reserveId",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -187,72 +155,9 @@ export const aaveAdapterAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "receiver",
+        "name": "recipient",
         "type": "address",
         "internalType": "address"
-      },
-      {
-        "name": "deadline",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "minHealthFactor",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "expectedNonce",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "drawn",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "borrowNonce",
-    "inputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "nonce",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "burnSeized",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "vaultToken",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "units",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -268,99 +173,84 @@ export const aaveAdapterAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "position",
-        "type": "tuple",
-        "internalType": "struct PositionRef",
-        "components": [
-          {
-            "name": "integrationId",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "positionKey",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          }
-        ]
+        "name": "positionKeys",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "amounts0",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
       },
       {
-        "name": "deadline",
+        "name": "amounts1",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "pledge",
+    "inputs": [
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "credit",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "predictAccount",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "marketId",
         "type": "uint256",
         "internalType": "uint256"
       }
     ],
     "outputs": [
       {
-        "name": "fees",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
       }
     ],
-    "stateMutability": "nonpayable"
+    "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "deleverageRelease",
+    "name": "repay",
     "inputs": [
       {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
+        "name": "marketId",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
-        "name": "position",
-        "type": "tuple",
-        "internalType": "struct PositionRef",
-        "components": [
-          {
-            "name": "integrationId",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "positionKey",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          }
-        ]
-      },
-      {
-        "name": "units",
-        "type": "uint128",
-        "internalType": "uint128"
-      },
-      {
-        "name": "minAmounts",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "amounts",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      },
-      {
-        "name": "closed",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "deleverageRepay",
-    "inputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "debtReserveId",
+        "name": "reserveId",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -368,6 +258,11 @@ export const aaveAdapterAbi = [
         "name": "amount",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "wallet",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [
@@ -381,506 +276,67 @@ export const aaveAdapterAbi = [
   },
   {
     "type": "function",
-    "name": "initialize",
-    "inputs": [
-      {
-        "name": "timelock",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "pledge",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "position",
-        "type": "tuple",
-        "internalType": "struct PositionRef",
-        "components": [
-          {
-            "name": "integrationId",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "positionKey",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          }
-        ]
-      },
-      {
-        "name": "deadline",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "recordId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "credited",
-        "type": "uint128",
-        "internalType": "uint128"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "predictProxy",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "proxyOf",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "recredit",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "position",
-        "type": "tuple",
-        "internalType": "struct PositionRef",
-        "components": [
-          {
-            "name": "integrationId",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "positionKey",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          }
-        ]
-      },
-      {
-        "name": "topUp",
-        "type": "bytes",
-        "internalType": "bytes"
-      },
-      {
-        "name": "deadline",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "added",
-        "type": "uint128",
-        "internalType": "uint128"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "refreshDebtMark",
-    "inputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "releaseZeroCredit",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "position",
-        "type": "tuple",
-        "internalType": "struct PositionRef",
-        "components": [
-          {
-            "name": "integrationId",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "positionKey",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          }
-        ]
-      },
-      {
-        "name": "deadline",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "removeLiquidity",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "position",
-        "type": "tuple",
-        "internalType": "struct PositionRef",
-        "components": [
-          {
-            "name": "integrationId",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "positionKey",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          }
-        ]
-      },
-      {
-        "name": "units",
-        "type": "uint128",
-        "internalType": "uint128"
-      },
-      {
-        "name": "minAmounts",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      },
-      {
-        "name": "deadline",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "minHealthFactor",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "amounts",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "repay",
-    "inputs": [
-      {
-        "name": "borrower",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "maxRepaySpend",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "repayAll",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
-        "name": "deadline",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "spent",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "repayAllAndWithdraw",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "position",
-        "type": "tuple",
-        "internalType": "struct PositionRef",
-        "components": [
-          {
-            "name": "integrationId",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "positionKey",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          }
-        ]
-      },
-      {
-        "name": "units",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "debtReserveIds",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      },
-      {
-        "name": "maxRepaySpends",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      },
-      {
-        "name": "deadline",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "repayWithCollateral",
-    "inputs": [
-      {
-        "name": "p",
-        "type": "tuple",
-        "internalType": "struct RepayWithCollateralParams",
-        "components": [
-          {
-            "name": "marketId",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "position",
-            "type": "tuple",
-            "internalType": "struct PositionRef",
-            "components": [
-              {
-                "name": "integrationId",
-                "type": "uint32",
-                "internalType": "uint32"
-              },
-              {
-                "name": "positionKey",
-                "type": "bytes32",
-                "internalType": "bytes32"
-              }
-            ]
-          },
-          {
-            "name": "units",
-            "type": "uint128",
-            "internalType": "uint128"
-          },
-          {
-            "name": "debtReserveId",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "minAmounts",
-            "type": "uint256[]",
-            "internalType": "uint256[]"
-          },
-          {
-            "name": "minDebtRepaid",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "minAssetOut",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "deadline",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "minHealthFactor",
-            "type": "uint256",
-            "internalType": "uint256"
-          }
-        ]
-      }
-    ],
-    "outputs": [
-      {
-        "name": "debtRepaid",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "debtAssetToWallet",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "walletOf",
-    "inputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "withdraw",
     "inputs": [
       {
-        "name": "marketId",
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "liquidity",
+        "type": "uint128",
+        "internalType": "uint128"
+      },
+      {
+        "name": "amount0Min",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "position",
-        "type": "tuple",
-        "internalType": "struct PositionRef",
-        "components": [
-          {
-            "name": "integrationId",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "positionKey",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          }
-        ]
-      },
-      {
-        "name": "units",
+        "name": "amount1Min",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "deadline",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
+        "name": "recipient",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
       {
-        "name": "minHealthFactor",
+        "name": "burned",
         "type": "uint256",
         "internalType": "uint256"
       }
     ],
-    "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "AccountCreated",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "marketId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -899,16 +355,10 @@ export const aaveAdapterAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "debtReserveId",
+        "name": "reserveId",
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
-      },
-      {
-        "name": "receiver",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
       },
       {
         "name": "amount",
@@ -917,23 +367,48 @@ export const aaveAdapterAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "nonce",
-        "type": "uint256",
+        "name": "recipient",
+        "type": "address",
         "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "healthFactorAfter",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
+        "internalType": "address"
       }
     ],
     "anonymous": false
   },
   {
     "type": "event",
-    "name": "CollateralAdded",
+    "name": "LiquidityAdded",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "liquidity",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
+      },
+      {
+        "name": "credit",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Pledged",
     "inputs": [
       {
         "name": "wallet",
@@ -948,243 +423,16 @@ export const aaveAdapterAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "vaultToken",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "proxy",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      },
-      {
-        "name": "recordId",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "integrationId",
-        "type": "uint32",
-        "indexed": false,
-        "internalType": "uint32"
-      },
-      {
         "name": "positionKey",
         "type": "bytes32",
-        "indexed": false,
+        "indexed": true,
         "internalType": "bytes32"
       },
       {
-        "name": "units",
+        "name": "credit",
         "type": "uint128",
         "indexed": false,
         "internalType": "uint128"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CollateralDisabled",
-    "inputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "reserveId",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CollateralRecredited",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "vaultToken",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "recordId",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "positionKey",
-        "type": "bytes32",
-        "indexed": false,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "added",
-        "type": "uint128",
-        "indexed": false,
-        "internalType": "uint128"
-      },
-      {
-        "name": "rescueUnits",
-        "type": "uint128",
-        "indexed": false,
-        "internalType": "uint128"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CollateralReduced",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "vaultToken",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "positionKey",
-        "type": "bytes32",
-        "indexed": false,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "units",
-        "type": "uint128",
-        "indexed": false,
-        "internalType": "uint128"
-      },
-      {
-        "name": "amounts",
-        "type": "uint256[]",
-        "indexed": false,
-        "internalType": "uint256[]"
-      },
-      {
-        "name": "withDebt",
-        "type": "bool",
-        "indexed": false,
-        "internalType": "bool"
-      },
-      {
-        "name": "healthFactorAfter",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CollateralSupplied",
-    "inputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "units",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "shares",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CollateralWithdrawn",
-    "inputs": [
-      {
-        "name": "wallet",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "vaultToken",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "positionKey",
-        "type": "bytes32",
-        "indexed": false,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "units",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "withDebt",
-        "type": "bool",
-        "indexed": false,
-        "internalType": "bool"
-      },
-      {
-        "name": "healthFactorAfter",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -1194,55 +442,6 @@ export const aaveAdapterAbi = [
     "name": "Repaid",
     "inputs": [
       {
-        "name": "payer",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "borrower",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "spent",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "debtAfter",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "repayAll",
-        "type": "bool",
-        "indexed": false,
-        "internalType": "bool"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "RepaidWithCollateral",
-    "inputs": [
-      {
         "name": "wallet",
         "type": "address",
         "indexed": true,
@@ -1255,7 +454,32 @@ export const aaveAdapterAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "vaultToken",
+        "name": "reserveId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "payer",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "WithdrawAllowed",
+    "inputs": [
+      {
+        "name": "wallet",
         "type": "address",
         "indexed": true,
         "internalType": "address"
@@ -1263,76 +487,27 @@ export const aaveAdapterAbi = [
       {
         "name": "positionKey",
         "type": "bytes32",
-        "indexed": false,
+        "indexed": true,
         "internalType": "bytes32"
       },
       {
-        "name": "units",
-        "type": "uint128",
-        "indexed": false,
-        "internalType": "uint128"
-      },
-      {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "debtRepaid",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "debtAssetToWallet",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "healthFactorBefore",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "healthFactorAfter",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "SeizedUnitsBurned",
-    "inputs": [
-      {
-        "name": "marketId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "vaultToken",
+        "name": "operator",
         "type": "address",
         "indexed": true,
         "internalType": "address"
       },
       {
-        "name": "units",
-        "type": "uint256",
+        "name": "maxLiquidity",
+        "type": "uint128",
         "indexed": false,
-        "internalType": "uint256"
+        "internalType": "uint128"
       }
     ],
     "anonymous": false
   },
   {
     "type": "event",
-    "name": "UserProxyCreated",
+    "name": "Withdrawn",
     "inputs": [
       {
         "name": "wallet",
@@ -1341,173 +516,40 @@ export const aaveAdapterAbi = [
         "internalType": "address"
       },
       {
-        "name": "spoke",
+        "name": "positionKey",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "recipient",
         "type": "address",
         "indexed": true,
         "internalType": "address"
       },
       {
-        "name": "marketId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "proxy",
-        "type": "address",
+        "name": "liquidity",
+        "type": "uint128",
         "indexed": false,
-        "internalType": "address"
+        "internalType": "uint128"
+      },
+      {
+        "name": "burned",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
   },
   {
     "type": "error",
-    "name": "AccountNotEmpty",
-    "inputs": [
-      {
-        "name": "proxy",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "AddressIsFrozen",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "AdminRoleOnlyTimelock",
-    "inputs": [
-      {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "ApplicationFrozen",
+    "name": "AllowanceOpen",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "ApplicationPaused",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "AssetOutBelowMinimum",
-    "inputs": [
-      {
-        "name": "assetOut",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "minAssetOut",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "BackingMismatch",
-    "inputs": [
-      {
-        "name": "totalSupply",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "totalCredited",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "pendingUnits",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "BadNonce",
-    "inputs": [
-      {
-        "name": "currentNonce",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "expectedNonce",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "BalanceDeltaMismatch",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "CollateralNotEnabled",
-    "inputs": [
-      {
-        "name": "reserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "DeadlineExpired",
-    "inputs": [
-      {
-        "name": "deadline",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "DebtRemaining",
-    "inputs": [
-      {
-        "name": "reserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "debt",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "HealthFactorNotImproved",
+    "name": "HealthFactorDecreased",
     "inputs": [
       {
         "name": "before",
@@ -1523,82 +565,34 @@ export const aaveAdapterAbi = [
   },
   {
     "type": "error",
-    "name": "InsufficientGas",
+    "name": "InvalidAddress",
     "inputs": [
       {
-        "name": "gasLeft",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "required",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
       }
     ]
   },
   {
     "type": "error",
-    "name": "IntegrationMismatch",
+    "name": "InvalidAmount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MarketNotActive",
     "inputs": [
       {
         "name": "marketId",
         "type": "uint256",
         "internalType": "uint256"
-      },
-      {
-        "name": "integrationId",
-        "type": "uint32",
-        "internalType": "uint32"
       }
     ]
   },
   {
     "type": "error",
-    "name": "InvalidLogic",
-    "inputs": [
-      {
-        "name": "logic",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "InvalidReceiver",
-    "inputs": [
-      {
-        "name": "receiver",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "LengthMismatch",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "LockHeld",
-    "inputs": [
-      {
-        "name": "holder",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "NoDeleverageSession",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NoProxy",
+    "name": "NoAccount",
     "inputs": [
       {
         "name": "wallet",
@@ -1614,68 +608,10 @@ export const aaveAdapterAbi = [
   },
   {
     "type": "error",
-    "name": "NotDelegated",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NotLPVaultSwap",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NothingToRepay",
+    "name": "NoDebt",
     "inputs": [
       {
-        "name": "debtReserveId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "RepayExceedsMax",
-    "inputs": [
-      {
-        "name": "debt",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "maxRepaySpend",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "SupplyIncomplete",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "UnitsMismatch",
-    "inputs": [
-      {
-        "name": "expected",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "actual",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "UnknownDebtReserve",
-    "inputs": [
-      {
-        "name": "spoke",
+        "name": "account",
         "type": "address",
         "internalType": "address"
       },
@@ -1688,21 +624,36 @@ export const aaveAdapterAbi = [
   },
   {
     "type": "error",
-    "name": "UnknownMarket",
+    "name": "NoMarketFits",
     "inputs": [
       {
-        "name": "marketId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "pool",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "tickLower",
+        "type": "int24",
+        "internalType": "int24"
+      },
+      {
+        "name": "tickUpper",
+        "type": "int24",
+        "internalType": "int24"
       }
     ]
   },
   {
     "type": "error",
-    "name": "UnknownSpoke",
+    "name": "NotPositionOwner",
     "inputs": [
       {
-        "name": "spoke",
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "wallet",
         "type": "address",
         "internalType": "address"
       }
@@ -1710,12 +661,18 @@ export const aaveAdapterAbi = [
   },
   {
     "type": "error",
-    "name": "ZeroAddress",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "ZeroAmount",
-    "inputs": []
+    "name": "WithdrawNotAllowed",
+    "inputs": [
+      {
+        "name": "positionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "liquidity",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ]
   }
 ] as const;

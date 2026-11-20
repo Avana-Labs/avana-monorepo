@@ -6,92 +6,79 @@ pragma solidity 0.8.28;
 import {IAaveV4PriceFeed} from "../interfaces/external/aave/IAaveV4PriceFeed.sol";
 
 /// @title ILPOracle
-/// @notice Aave price source of one market's vault token: the USD value of one whole vault token, 8 decimals,
-/// computed on every read from Chainlink token prices and the market's composition at those prices.
+/// @notice Aave price source of one band market's vault token. One vault token is one unit of liquidity spread over
+/// the market's band `[A, B]`; its price is what `10^unitDecimals` units of that liquidity hold at the fair price `P`,
+/// valued in USD with 8 decimals. `P` comes from the market's own Chainlink feeds for token0 and token1, never from the
+/// pool, and the holdings at `P` are the AMM's own: all token0 below the band, all token1 above it.
 /// @dev Immutable and stateless: no proxy, no roles, no stored price. A feed change deploys a new LPOracle that the
-/// Aave DAO sets as the reserve's source. The borrow and liquidation gates read `getPriceStatus`.
+/// Aave DAO sets as the reserve's source. The design record is `DESIGN.md` next to this file.
 interface ILPOracle is IAaveV4PriceFeed {
-    /// @notice A constructor argument does not describe a valid market.
-    error InvalidMarket(uint256 marketId);
+    /// @notice A constructor argument is zero, out of range, or does not match the LPVault's market.
+    error InvalidParams();
 
-    /// @notice A Chainlink leg answered zero or below, above the price bound, or with a round from the future.
+    /// @notice A feed answered zero or below, or the token's price is above `LPPriceMath.MAX_PRICE`.
+    /// @param feed The feed whose answer failed, or the token's first feed when the product is out of range.
     error InvalidPrice(address feed);
 
-    /// @notice The market's composition could not be valued.
-    error InvalidComposition(uint256 marketId);
-
-    /// @notice One token's Chainlink route: one leg (TOKEN/USD) or two multiplied (TOKEN/X, then X/USD).
-    struct TokenRoute {
-        address token;
-        // USD stablecoin: valued at most $1.
-        bool isUsdStable;
+    /// @notice One token's Chainlink route: one feed (TOKEN/USD) or two multiplied (TOKEN/X, then X/USD).
+    /// @param feeds The feeds in multiplication order, one or two.
+    /// @param usdStable A USD stablecoin, valued at most $1.
+    struct TokenFeeds {
         address[] feeds;
+        bool usdStable;
     }
 
     /// @notice Constructor arguments.
+    /// @param lpVault The LPVault that lists the market; the band ticks and tokens are read from it once.
+    /// @param marketId The LPVault market the vault token belongs to.
+    /// @param unitDecimals Decimals of the market's vault token: the answer prices `10^unitDecimals` liquidity units.
+    /// @param token0 The route of the market's token0.
+    /// @param token1 The route of the market's token1.
+    /// @param description Human-readable name of the feed.
     struct Params {
+        address lpVault;
         uint256 marketId;
-        // The market's AMM integration (LPVault), which returns the composition.
-        address integration;
-        // Holds each feed's borrow and liquidation age limits.
-        address parameterStore;
+        uint8 unitDecimals;
+        TokenFeeds token0;
+        TokenFeeds token1;
         string description;
-        // Decimals of the market's vault token (the LPVault's unit decimals at binding).
-        uint8 vaultDecimals;
-        // In pool order.
-        TokenRoute[] routes;
     }
 
-    /// @notice The served price and whether its inputs are fresh enough to borrow against or to liquidate.
-    struct PriceStatus {
-        int256 answer;
-        // Oldest `updatedAt` of every leg.
-        uint64 updatedAt;
-        // Every leg within its `borrowPriceMaxAge`, none in the future.
-        bool borrowFresh;
-        // Every leg within its `liquidationPriceMaxAge`.
-        bool liquidationFresh;
-    }
-
-    /// @notice USD value of one whole vault token, 8 decimals, at least 1.
-    /// @dev Reverts `InvalidPrice` on a failed leg, like a Chainlink source Aave cannot read.
+    /// @notice USD value of one whole vault token at the fair price, 8 decimals, rounded down and at least 1.
+    /// @dev Reverts `InvalidPrice` when a feed answers zero or below, like a Chainlink source Aave cannot read. No
+    /// staleness check: Aave V4 reads no round time, and a revert here would stop liquidations as well as borrows.
     function latestAnswer() external view override returns (int256 answer);
 
-    /// @notice Always 8.
+    /// @notice Always 8, the decimals of Aave V4's oracle.
     function decimals() external pure override returns (uint8);
 
     /// @notice Fixed description.
     function description() external view override returns (string memory);
 
-    /// @notice Chainlink-shaped view of the served price; `updatedAt` is the oldest leg's.
-    function latestRoundData()
-        external
-        view
-        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
+    /// @notice Each token's price (8 decimals, stable cap applied) and the fair square-root price of the pool's
+    /// token1-per-token0 ratio in Q64.96, before the band clamp.
+    function getPrices() external view returns (uint256 price0, uint256 price1, uint160 sqrtPriceX96);
 
-    /// @notice Valuation price of each token in pool order (8 decimals, stable ceiling applied) and the oldest leg.
-    function getTokenPrices() external view returns (uint256[] memory prices, uint64 updatedAt);
+    /// @notice Raw token amounts one whole vault token holds at the fair price, each rounded down.
+    function getUnitAmounts() external view returns (uint256 amount0, uint256 amount1);
 
-    /// @notice The served price with its freshness for the borrow and liquidation gates.
-    function getPriceStatus() external view returns (PriceStatus memory status);
+    /// @notice The LPVault whose market this oracle prices.
+    function lpVault() external view returns (address vault);
 
-    /// @notice The token's Chainlink feeds, in multiplication order.
+    /// @notice The LPVault market ID.
+    function marketId() external view returns (uint256 id);
+
+    /// @notice The market's band ticks, as listed in the LPVault.
+    function band() external view returns (int24 bandLower, int24 bandUpper);
+
+    /// @notice The market's tokens, in pool order.
+    function tokens() external view returns (address token0, address token1);
+
+    /// @notice Decimals of the vault token priced; one whole vault token is `10^unitDecimals` liquidity units.
+    function unitDecimals() external view returns (uint8 d);
+
+    /// @notice The feeds of token `index` (0 or 1), in multiplication order.
     function feedsOf(
         uint256 index
     ) external view returns (address[] memory feeds);
-
-    /// @notice The MarketRegistry identifier of the market.
-    function marketId() external view returns (uint256 id);
-
-    /// @notice The market's AMM integration (LPVault).
-    function integration() external view returns (address amm);
-
-    /// @notice The market's tokens in pool order.
-    function tokens() external view returns (address[] memory list);
-
-    /// @notice Decimals of the vault token priced; one whole vault token is `10^vaultDecimals` units.
-    function vaultDecimals() external view returns (uint8 d);
-
-    /// @notice The ParameterStore holding the feeds' age limits.
-    function parameterStore() external view returns (address store);
 }

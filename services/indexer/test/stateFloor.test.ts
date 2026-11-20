@@ -53,14 +53,13 @@ describe("a log handler on a restored node", () => {
       reads.push(req.blockNumber);
       return 500;
     }) as never;
-    await run.deliver({
-      source: "MarketRegistry",
-      event: "MarketRegistered",
-      args: { marketId: 1n, integrationId: 1, pool: addr(0xf5), poolId: `0x${"00".repeat(32)}`, tokens: [addr(0xf6), addr(0xf7)], vaultToken: addr(0xf0), lpOracle: addr(0xf8), spoke: addr(0xf9) },
-      address: addr(0xfa),
-      block: 1462n,
-      logIndex: 0,
-    });
+    const pool = `0x${"00".repeat(12)}${addr(0xf5).slice(2)}` as const;
+    const riskModule = addr(0x101);
+    await run.deliverAll([
+      { source: "RiskModule", event: "MarketListed", args: { marketId: 1n, pool, kind: 0, bandLower: -887_220, bandUpper: 887_220, unitDecimals: 18 }, address: riskModule, block: 1462n, logIndex: 0 },
+      { source: "RiskModule", event: "MarketListed", args: { marketId: 2n, pool, kind: 1, bandLower: -60, bandUpper: 60, unitDecimals: 18 }, address: riskModule, block: 1462n, logIndex: 1 },
+      { source: "RiskModule", event: "PoolListed", args: { pool, spoke: addr(0xf9), fullRange: 1n, customRange: 2n, listingTick: 0, ltvBps: 9_000 }, address: riskModule, block: 1462n, logIndex: 2 },
+    ]);
     expect(reads).toEqual([17882n]);
     const schema = (await import("./harness/schema.ts")).default;
     expect(run.store.rows(schema.ammPool)).toMatchObject([{ pool: addr(0xf5), feePips: 500, listedBlock: 1462n }]);

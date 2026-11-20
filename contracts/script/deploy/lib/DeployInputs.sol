@@ -3,13 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {GlobalParams} from "../../../src/policy/parameter-store/types/ParameterStoreTypes.sol";
 import {
-    AaveInputs,
     ChainInputs,
+    CoreParams,
     GovernanceInputs,
-    HubInput,
     IntegrationInput,
+    KeeperTopUpInput,
     OperatorHelperInput
 } from "./DeployTypes.sol";
 import {Script} from "forge-std/Script.sol";
@@ -73,6 +72,9 @@ abstract contract DeployInputs is Script {
         c.chainId = vm.parseJsonUint(json, ".chainId");
         c.release = vm.envOr("AVANA_RELEASE", vm.parseJsonString(json, ".release"));
         require(c.chainId == block.chainid, string.concat("config ", network, " is for another chain"));
+        c.keepers = _addrs(json, ".keepers");
+        c.operatorHelpers = _helpers(json);
+        c.keeperTopUp = _keeperTopUp(json, c.keepers, c.operatorHelpers);
         _requireReleaseCheckout(c.release);
         c.gov = GovernanceInputs({
             governanceSafe: _addr(json, ".governance.governanceSafe"),
@@ -81,19 +83,82 @@ abstract contract DeployInputs is Script {
             aaveGovernanceExecutor: _addr(json, ".governance.aaveGovernanceExecutor"),
             jointConfigSafe: _addr(json, ".governance.jointConfigSafe")
         });
-        c.aave = _aave(json);
-        c.blockTime = uint32(vm.parseJsonUint(json, ".chain.blockTime"));
-        c.hasSequencer = vm.parseJsonBool(json, ".chain.hasSequencer");
-        c.sequencerFeed = _addr(json, ".chain.sequencerFeed");
-        c.sequencerGraceSeconds = uint32(vm.parseJsonUint(json, ".chain.sequencerGraceSeconds"));
-        c.globals = _globals(json);
-        c.initialPoolShareMaxBps = uint16(vm.parseJsonUint(json, ".parameters.initialPoolShareMaxBps"));
-        c.maxMarketCount = vm.parseJsonUint(json, ".parameters.maxMarketCount");
-        c.keeperFloor = vm.parseJsonUint(json, ".parameters.keeperFloor");
-        c.timelockNormalDelay = vm.parseJsonUint(json, ".parameters.timelockNormalDelay");
-        c.keepers = _addrs(json, ".keepers");
-        c.operatorHelpers = _helpers(json);
+        c.v3Pool = vm.keyExistsJson(json, ".aave.v3Pool") ? _addr(json, ".aave.v3Pool") : address(0);
+        c.params = _params(json);
         c.integrations = _integrations(json);
+    }
+
+    // ─── Keeper top-up wallet ───
+
+    /// @notice The network's keeper top-up wallet, checked (`_keeperTopUp`). `00_Factories` calls it first, so a chain
+    /// without one stops before anything is deployed.
+    function _requireKeeperTopUp(
+        string memory network
+    ) internal view returns (KeeperTopUpInput memory) {
+        string memory json = vm.readFile(_configPath(network));
+        return _keeperTopUp(json, _addrs(json, ".keepers"), _helpers(json));
+    }
+
+    /// @notice Every keeper signer the top-up wallet funds, once each: the `keepers`, then each operator helper's
+    /// `signer`.
+    function _keeperSigners(
+        string memory network
+    ) internal view returns (address[] memory out) {
+        string memory json = vm.readFile(_configPath(network));
+        address[] memory keepers = _addrs(json, ".keepers");
+        OperatorHelperInput[] memory helpers = _helpers(json);
+        address[] memory all = new address[](keepers.length + helpers.length);
+        uint256 n;
+        for (uint256 i = 0; i < all.length; ++i) {
+            address a = i < keepers.length ? keepers[i] : helpers[i - keepers.length].signer;
+            bool seen;
+            for (uint256 j = 0; j < n; ++j) {
+                if (all[j] == a) seen = true;
+            }
+            if (!seen) all[n++] = a;
+        }
+        out = new address[](n);
+        for (uint256 i = 0; i < n; ++i) {
+            out[i] = all[i];
+        }
+    }
+
+    /// @notice `keeperTopUp`: the wallet (`KEEPER_TOPUP_WALLET` when set, else `keeperTopUp.wallet`), `minBalanceWei`
+    /// and `targetBalanceWei`. Every chain but a local anvil node must name a wallet, with 0 < min < target, that is
+    /// not itself a keeper signer. On anvil a config without one returns zeros and `11_FundKeepers` does nothing.
+    function _keeperTopUp(
+        string memory json,
+        address[] memory keepers,
+        OperatorHelperInput[] memory helpers
+    ) internal view returns (KeeperTopUpInput memory t) {
+        t.wallet = vm.envOr("KEEPER_TOPUP_WALLET", address(0));
+        if (t.wallet == address(0) && vm.keyExistsJson(json, ".keeperTopUp.wallet")) {
+            t.wallet = _addr(json, ".keeperTopUp.wallet");
+        }
+        if (vm.keyExistsJson(json, ".keeperTopUp.minBalanceWei")) {
+            t.minBalanceWei = vm.parseJsonUint(json, ".keeperTopUp.minBalanceWei");
+        }
+        if (vm.keyExistsJson(json, ".keeperTopUp.targetBalanceWei")) {
+            t.targetBalanceWei = vm.parseJsonUint(json, ".keeperTopUp.targetBalanceWei");
+        }
+        if (t.wallet == address(0) && _isLocalChain(block.chainid)) return t;
+        require(
+            t.wallet != address(0),
+            "KEEPER_TOPUP_WALLET is missing: set keeperTopUp.wallet in the network config, or the KEEPER_TOPUP_WALLET environment variable, to the address that funds the keeper signers (required on test networks and mainnet)"
+        );
+        require(
+            t.minBalanceWei != 0 && t.targetBalanceWei > t.minBalanceWei,
+            "keeperTopUp: set minBalanceWei above 0 and targetBalanceWei above minBalanceWei (script/README.md, Keeper gas)"
+        );
+        for (uint256 i = 0; i < keepers.length; ++i) {
+            require(keepers[i] != t.wallet, "KEEPER_TOPUP_WALLET is a keeper: the top-up wallet is its own account");
+        }
+        for (uint256 i = 0; i < helpers.length; ++i) {
+            require(
+                helpers[i].signer != t.wallet,
+                "KEEPER_TOPUP_WALLET is an operator signer: the top-up wallet is its own account"
+            );
+        }
     }
 
     // ─── Release check ───
@@ -238,38 +303,15 @@ abstract contract DeployInputs is Script {
         return true;
     }
 
-    function _aave(
+    /// @notice `.parameters`: `timelockNormalDelay`, `coverageRatioBps` and the fee of `.globals`
+    /// (`avanaFeeShareBps`, `feeRecipient`).
+    function _params(
         string memory json
-    ) private view returns (AaveInputs memory a) {
-        a.accessManager = _addr(json, ".aave.accessManager");
-        a.standardSpokeImplementation = _addr(json, ".aave.standardSpokeImplementation");
-        a.v3Pool = _addr(json, ".aave.v3Pool");
-        uint256 n = _count(json, ".aave.hubs");
-        a.hubs = new HubInput[](n);
-        for (uint256 i = 0; i < n; ++i) {
-            string memory k = string.concat(".aave.hubs[", vm.toString(i), "]");
-            a.hubs[i] = HubInput(
-                _addr(json, string.concat(k, ".hub")), uint8(vm.parseJsonUint(json, string.concat(k, ".tier")))
-            );
-        }
-    }
-
-    function _globals(
-        string memory json
-    ) private view returns (GlobalParams memory g) {
-        string memory p = ".parameters.globals";
-        g.cachedWindow = uint32(vm.parseJsonUint(json, string.concat(p, ".cachedWindow")));
-        g.disagreementPauseMax = uint32(vm.parseJsonUint(json, string.concat(p, ".disagreementPauseMax")));
-        g.usdBandLow = vm.parseJsonUint(json, string.concat(p, ".usdBandLow"));
-        g.usdBandHigh = vm.parseJsonUint(json, string.concat(p, ".usdBandHigh"));
-        g.graceDuration = uint32(vm.parseJsonUint(json, string.concat(p, ".graceDuration")));
-        g.graceHealthFactor = vm.parseJsonUint(json, string.concat(p, ".graceHealthFactor"));
-        g.maxFlashFeeBps = uint16(vm.parseJsonUint(json, string.concat(p, ".maxFlashFeeBps")));
-        g.avanaFeeShareBps = uint16(vm.parseJsonUint(json, string.concat(p, ".avanaFeeShareBps")));
-        g.feeRecipient = _addr(json, string.concat(p, ".feeRecipient"));
-        g.feedAgreementMarginBps = uint16(vm.parseJsonUint(json, string.concat(p, ".feedAgreementMarginBps")));
-        g.gateRecoverySeconds = uint64(vm.parseJsonUint(json, string.concat(p, ".gateRecoverySeconds")));
-        g.maxShortfallBps = uint16(vm.parseJsonUint(json, string.concat(p, ".maxShortfallBps")));
+    ) private view returns (CoreParams memory p) {
+        p.feeShareBps = uint16(vm.parseJsonUint(json, ".parameters.globals.avanaFeeShareBps"));
+        p.feeRecipient = _addr(json, ".parameters.globals.feeRecipient");
+        p.coverageRatioBps = uint16(vm.parseJsonUint(json, ".parameters.coverageRatioBps"));
+        p.timelockNormalDelay = vm.parseJsonUint(json, ".parameters.timelockNormalDelay");
     }
 
     function _helpers(

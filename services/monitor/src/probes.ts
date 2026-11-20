@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The probes each chain runs, in order. Each keeps its own state per chain. The Safes, the Core Hub comparison and
+// The probes each chain runs, in order: the snapshot rules, feed ages, loss layers and pools, band edges and depegs,
+// keeper wallets, events and token issuers. Each keeps its own state per chain. The Safes, the Core Hub comparison and
 // the frontend run only where they are configured.
 
 import { promises as dns } from "node:dns";
@@ -10,10 +11,10 @@ import type { LivenessBook } from "./liveness.ts";
 import type { Probe } from "./probe.ts";
 import { coverageProbe } from "./probes/coverage.ts";
 import { eventsProbe } from "./probes/events.ts";
-import { gasVaultProbe } from "./probes/gasVault.ts";
 import { type FrontendDeps, frontendProbe, ghoRateProbe, issuerProbe, safesProbe } from "./probes/external.ts";
+import { marketsProbe } from "./probes/markets.ts";
 import { oracleProbe } from "./probes/oracle.ts";
-import { routesProbe } from "./probes/routes.ts";
+import { walletsProbe } from "./probes/wallets.ts";
 
 /** The frontend reads: the page body and `server` header, and the host's A, AAAA, CNAME and NS records. */
 export const liveFrontend: FrontendDeps = {
@@ -31,7 +32,15 @@ export const liveFrontend: FrontendDeps = {
 
 export function probesFor(chain: ChainConfig, config: MonitorConfig, frontendDeps: FrontendDeps = liveFrontend, liveness?: LivenessBook): Probe[] {
   const id = chain.chain.id;
-  const probes: Probe[] = [snapshotProbe() as Probe, oracleProbe() as Probe, coverageProbe() as Probe, eventsProbe() as Probe, issuerProbe() as Probe, routesProbe(config.routeCheckSeconds) as Probe, gasVaultProbe(config.gasVaultDailyWei?.get(id) ?? null) as Probe];
+  const probes: Probe[] = [
+    snapshotProbe() as Probe,
+    oracleProbe() as Probe,
+    coverageProbe() as Probe,
+    marketsProbe() as Probe,
+    walletsProbe({ ...config.keeperWallets, extra: config.keeperWallets.extra.get(id) ?? [] }) as Probe,
+    eventsProbe() as Probe,
+    issuerProbe() as Probe,
+  ];
   const safes = config.safes.get(id);
   if (safes && safes.length > 0) probes.push(safesProbe(safes, liveness ? { book: liveness, chainId: id } : undefined) as Probe);
   const core = config.coreHubGho.get(id);

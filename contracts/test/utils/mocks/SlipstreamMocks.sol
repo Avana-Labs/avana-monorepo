@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClPriceMath} from "../../../src/amm/concentrated-liquidity/ClPriceMath.sol";
+import {ClPriceMath} from "../libraries/ClPriceMath.sol";
 import {ClFeeGrowthPool, ClFeeTrackingNpm} from "./ClFeeGrowthMocks.sol";
 import {MintableToken} from "./UniswapV3Mocks.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";

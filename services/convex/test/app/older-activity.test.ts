@@ -45,7 +45,7 @@ describe("older rows", () => {
     const t = convexTest(schema, modules)
     const held = supply(300, WALLET)
     await t.run(async (ctx) => {
-      await ctx.db.insert("deployments", { chainId: 1, chainSlug: "ethereum", lens: FIXTURE_LEND, hubs: [], lendSpokes: [FIXTURE_LEND], cdpSpokes: [], firstLossReserves: [], marketRegistry: FIXTURE_LEND, timelock: FIXTURE_LEND, explorerUrl: "https://etherscan.io", nativeUsdFeed: FIXTURE_LEND, release: "r" })
+      await ctx.db.insert("deployments", { chainId: 1, chainSlug: "ethereum", hubs: [], lendSpokes: [FIXTURE_LEND], cdpSpokes: [], firstLossReserves: [], explorerUrl: "https://etherscan.io", nativeUsdFeed: FIXTURE_LEND, release: "r" })
       await ctx.db.insert("hubAssets", { ...fixtureHubAsset, slug: "ethereum-usdc", updatedAt: 0, lendReserves: [...fixtureHubAsset.lendReserves] })
       await ctx.db.insert("ingestedLogs", { key: held.key, chainId: 1, kind: held.kind, blockNumber: held.blockNumber, blockHash: held.blockHash, txHash: held.txHash, logIndex: 0, address: FIXTURE_LEND, at: 0, args: held.args, wallet: WALLET })
     })

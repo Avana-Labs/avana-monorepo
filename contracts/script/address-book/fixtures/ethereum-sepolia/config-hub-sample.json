@@ -96,7 +96,6 @@
     ]
   },
   "listing": {
-    "creditLineWhole": 100000000,
     "tokens": [
       {
         "symbol": "USDC",
@@ -305,13 +304,5 @@
     "globals": {
       "avanaFeeShareBps": 2000
     }
-  },
-  "gasVault": {
-    "maxSigners": 8,
-    "signers": [
-      {
-        "signer": "0xf100000000000000000000000000000000000022"
-      }
-    ]
   }
 }

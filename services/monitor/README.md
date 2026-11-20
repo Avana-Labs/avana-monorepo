@@ -1,13 +1,13 @@
 # services/monitor
 
-Avana's monitoring service: the signals `M-01` to `M-36` of [services/README.md](../README.md#monitoring-and-alerting) at warn and page levels, each sent to its responders with its playbook, every page re-read on a second RPC provider at the same block before it goes out, every notice logged with its block (`EMG-075`).
+Avana's monitoring service: the signals `M-01` to `M-37` of [services/README.md](../README.md#monitoring-and-alerting) at warn and page levels, each sent to its responders with its playbook, every page re-read on a second RPC provider at the same block before it goes out, every notice logged with its block (`EMG-075`).
 
 ## How it works
 
 Each chain is read every `MONITOR_INTERVAL_SECONDS` (60 by default), one round at a time:
 
-1. The keeper's findings at the head: alerts the keeper instances posted (held while they keep arriving, resolved once the head is more than two blocks past the last report) and each instance's heartbeat (3 blocks behind the head pages its on-call engineer).
-2. Each probe ([src/probes.ts](src/probes.ts)) reads its inputs at the head on the primary provider and judges them: the chain snapshot of `@avana/services-common/views`, the oracles, coverage and pools, contract events since the last round, issuer probes, route depth (every `MONITOR_ROUTE_CHECK_HOURS`, 24 by default), and where configured the Safes, the Core Hub GHO rate and the frontend. A subject whose read fails is unread: its open alert is neither resolved nor re-sent.
+1. The bot runner's findings at the head: alerts the bot runner instances (services/keeper) posted (held while they keep arriving, resolved once the head is more than two blocks past the last report) and each instance's heartbeat (3 blocks behind the head pages its on-call engineer).
+2. Each probe ([src/probes.ts](src/probes.ts)) reads its inputs at the head on the primary provider and judges them: the chain snapshot of `@avana/services-common/views`, the oracles, coverage and pools, band edges and depegs, keeper wallets, contract events since the last round, issuer probes, and where configured the Safes, the Core Hub GHO rate and the frontend. A subject whose read fails is unread: its open alert is neither resolved nor re-sent.
 3. Each page is confirmed: the probe is read again on the second provider at the same block, and the values the page was judged from must match. A page they contradict goes out as a warn with a note; with the second provider down it still pages, marked unconfirmed.
 4. The alert book turns findings into notices: a condition is sent when it opens, on each level change and when it resolves; an event every time. A page that stays true is sent once.
 5. Each notice goes to its recipients' channels (PagerDuty, an https webhook, the log), retried with backoff, and is appended to the incident log with each channel's answer.
@@ -18,48 +18,33 @@ Routing (services/README.md, Rules): warns reach the on-call engineer and the si
 
 | Signal | Probe | Reads and levels |
 |---|---|---|
-| M-01 | snapshot, oracle | Market price state (Lens `getPriceState`) and each non-GHO debt reserve's (Lens `getDebtPriceState`): Cached, an input past its `liquidationPriceMaxAge`, warns; Expired pages |
-| M-02 | — | Retired: the stateless LPOracle records no disagreement, so no probe raises it |
-| M-03 | oracle | Every Chainlink leg of the manifest against its ParameterStore `feedMaxAge`: 50 % / 90 % |
-| M-04 | oracle | Debt price age against its source feed's ParameterStore `borrowPriceMaxAge(feed)` / 90 % of `liquidationPriceMaxAge(feed)` (the feed is the Lens `source`); GHO's fixed price skipped |
-| M-05 | oracle | √(p0·p1) of LPOracle `getTokenPrices` below 0.95 / 0.90, for markets with a USD band only |
+| M-01 | snapshot | A market whose LPOracle `latestAnswer` reverts (a stale or invalid feed leg) pages: the Spoke cannot price its collateral |
+| M-03 | oracle | Every LPOracle leg (`feedsOf`, recorded in the manifest) against its heartbeat: past it warns, past 1.5 heartbeats pages |
+| M-04 | oracle | Every debt reserve's Chainlink feed, the same limits |
 | M-06 | snapshot | Collateral value per market, −10 % / −25 % from the hour's peak |
-| M-07 | coverage | Lens `getCapHeadroom` pool share: above 75 % of `poolShareMaxBps` / above it |
-| M-08 | snapshot | Market and debt-reserve breakers; a security freeze (issuer, deficit, manual, configuration drift) pages |
-| M-09 | keeper | As the keeper posts it; a keeper instance 3 blocks silent pages too |
-| M-10 | events, keeper | RouteFailed per market (1 / 3 in the hour) and the share of collateral seized by LiquidationSettled (10 % / 20 % in the hour); the keeper's simulation reverts when it posts them |
-| M-11 | routes | Every `MONITOR_ROUTE_CHECK_HOURS` (24 by default), every route slot (market, pool token, debt asset, primary or backup) swapped by `eth_call` with state overrides at 120 % and 100 % of the stress size: the ParameterStore's `routeDepthThreshold(marketId, token, debtAsset, kind)`, in base units of the debt asset, converted into the pool token at the oracle prices. A swap counts when its output covers the stress amount less the market's slippage allowance: 120 % ok, only 100 % warns, less pages; a slot whose threshold is 0 or whose token storage slots are not found warns |
-| M-12 | routes | For a GSM route, the GSM's exposure room (cap less underlying held) against the stress input (the pool-token amount worth `routeDepthThreshold`): below 2x warns, below 1x pages |
-| M-13 | coverage | Lens `getTailCoverage` funded against the reserve minimum (150 % / 100 %); the DAO deficit offset against its `firstLossReserveMinimum` (warn) |
-| M-14 | coverage | `getTailCoverage` ratio: 150 % / 100 % |
+| M-09 | keeper | As the bot runner posts it; an instance 3 blocks silent pages too |
+| M-10 | events, keeper | The share of a market's collateral seized by `LiquidationModule.Liquidated` (10 % / 20 % in the hour); the LiquidationBot's failures when it posts them |
+| M-13 | coverage | Each First-Loss Reserve's `fundedBalance()` against its `minimum()` (150 % / 100 %); each DAO deficit offset against its minimum (warn) |
+| M-14 | coverage | The First-Loss Reserve's balance against Σ `RiskModule.coverage(hub, asset).required` of the snapshot: 150 % / 100 % |
 | M-15 | snapshot | Any deficit warns; uncovered by both loss layers for 24 hours pages |
-| M-16 | keeper | As the keeper posts it, every block per debt asset: the funding Safe's balance less open reservations against the largest single `debtToCover` the caps allow (`KEEPER_LARGEST_DEBT_TO_COVER_<CHAIN>`), 150 % / 100 %; an asset without that size warns |
-| M-17 | keeper | As the keeper posts it, every block: the Aave V3 Pool's idle liquidity per debt asset (the helper's `maxFlashLoan`) against the same size, 2x / 1x, and the signer's gas balance against its median daily spend, 3 days / 1 day; a transaction above the gas ceiling pages |
+| M-16 | keeper | As the bot runner posts it: a liquidatable account the LiquidationBot cannot fund pages |
 | M-18 | snapshot | CDP Spoke owed against its draw cap: 80 % / 90 % |
 | M-19 | snapshot | Utilization 90 % / 98 %; a Lend Spoke's supply down more than 10 % within the hour pages |
-| M-20 | events | Aave configuration events and upgrades of every CDP Spoke warn; RiskModule `ConfigDriftDetected` pages |
-| M-21 | coverage, events | Lens `checkBacking` invariants and `CounterSaturated` page |
-| M-22 | events | Timelock `CallScheduled` warns; role changes, upgrades, `setShortDelaySelector`, `setNormalDelay`, `unfreezeAddress`, `restorePriceRoute` and Timelock role grants and revocations page |
-| M-23 | safes | Owners, threshold, guard slot and modules of each `MONITOR_SAFES` Safe; any change pages. Signer liveness: once a period's answer window has passed, fewer than threshold + 1 current owners answering pages (see Signer liveness) |
-| M-24 | snapshot, events, keeper | Pause state and Hub application state changes, manual trips, address freezes and unfreezes, the standby switch, pause reasons; the keeper pages when a liquidation reverts with `AddressIsFrozen` (it stops its helper on that chain) |
-| M-25 | issuers, events | `paused()` and `basisPointsRate()` of every pool token and debt asset (a change warns); a blocklist naming LPVaultSwap, an LPVault, Collateralization or the AaveAdapter pages, another Avana contract warns |
-| M-26 | keeper | As the keeper posts it: a code-check mismatch, or the Aave V3 Pool's implementation changed (flash funding stops) |
-| M-27 | frontend | The page's sha256, with the values that change on every load blanked: the app's CSP nonce wherever it appears (only one value per page, in the app's format of 48 base64 characters; any other is hashed as served), and the trace id, sampling flag and sample of Sentry's `sentry-trace` and `baggage` tags, each in its exact format; against `MONITOR_FRONTEND_SHA256` (a mismatch pages; without it a change warns); DNS records and the `server` header (a change warns). No second RPC provider applies: the confirming read fetches again |
-| M-28 | coverage | Each listed pool's in-range `liquidity()`: −20 % / −40 % within the hour |
-| M-29 | snapshot, ghoRate | Any rate-curve change warns; GHO's `baseDrawnRate` below the Core Hub's (`MONITOR_CORE_HUB_GHO`) pages |
-| M-30 | keeper | As the keeper posts it, one alert per chain: accounts only one of its discovery sources holds (the indexer stream or the RPC log backfill) warn, one-sided for `KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS` pages |
-| M-31 | keeper | As the keeper posts it, every block: the rolling 24 h gas spend from its spend log above 3x the 7-day median daily spend warns, above 5x pages |
-| M-32 | keeper | As the keeper posts it, every block while it holds: a scheduled or lazy fee class at its rolling 24 h budget (`KEEPER_DAILY_BUDGET_WEI_{SCHEDULED,LAZY}_<CHAIN>`) has stopped sending; pages |
-| M-33 | keeper | As the keeper posts it, every block: the standby signer's gas balance below `KEEPER_STANDBY_MIN_BALANCE_WEI_<CHAIN>` warns |
-| M-34 | — | Retired: the stateless oracles are never poked, so no probe raises it |
-| M-35 | gasVault | The chain's AvanaGasVault balance (`getEthBalance` through Multicall3) against what it sent per day (`ToppedUp` logs from the vault's deployment block, over the last 30 days, never below `MONITOR_GAS_VAULT_DAILY_WEI`, `chain:wei`): under 30 days warns, under 14 days pages, confirmed on the second provider; judged once the log reads have caught up with the head. No vault in the manifest: nothing |
-| M-36 | gasVault | Each `ToppedUp` whose amount is below its `requested` and each `TopUpFailed` pages once, confirmed on the second provider over the same block range |
+| M-20 | events | Aave configuration events and upgrades of every CDP Spoke warn |
+| M-22 | events | AccessManager `OperationScheduled` warns; `RoleGranted`, `RoleRevoked`, `TargetFunctionRoleUpdated`, `TargetClosed` page |
+| M-23 | safes | Owners, threshold, guard slot and modules of each `MONITOR_SAFES` Safe; any change pages. Signer liveness (see Signer liveness) |
+| M-24 | snapshot | A market's vault-token reserve or a debt reserve frozen, paused or reopened on its Spoke (a depeg's response is a freeze) |
+| M-25 | issuers, events | `paused()` and `basisPointsRate()` of every pool token and debt asset (a change warns); a blocklist naming an LPVault, AaveAdapter, LiquidationModule or FlashloanRepay pages, another Avana contract warns |
+| M-27 | frontend | The page's sha256 with the per-load values blanked, against `MONITOR_FRONTEND_SHA256` (a mismatch pages; without it a change warns); DNS records and the `server` header (a change warns) |
+| M-28 | coverage | The in-range liquidity of each pool both markets of a pair share (a v3/Slipstream pool's `liquidity()`, a v4 PoolId's through the PoolManager): −20 % / −40 % within the hour |
+| M-29 | snapshot, ghoRate | Any rate-curve change warns; GHO's `baseDrawnRate` below the Core Hub's (`MONITOR_CORE_HUB_GHO`, read from the Hub asset's rate strategy) pages |
+| M-35 | wallets | Each keeper wallet (the manifest's `roles.keepers`, the flash liquidators' operators, `MONITOR_KEEPER_WALLETS`) against the `11-fund-keepers` rule of the manifest's `keeperTopUp`: below `minBalanceWei` warns (run the step), below a third of it pages; the top-up wallet below one full refill (`targetBalanceWei` per keeper) warns. `MONITOR_KEEPER_WALLET_WARN_WEI` and `MONITOR_KEEPER_WALLET_PAGE_WEI` override the keeper limits |
+| M-36 | markets | A Custom range market's pool tick (`slot0`, or the PoolManager's slot0 of a v4 PoolId) against its band: within 10 % of the width from an edge warns, outside pages |
+| M-37 | markets | On a Stable or Correlated pair (`RiskModule.getSpoke(spoke).kind`): the pool price against the LPOracle's fair `sqrtPriceX96` more than 1 % apart, or a Stable token's Chainlink price below $0.99. The response is a freeze: it pages while the market's reserve is open ("freeze the market's vault-token reserve") and warns once it is frozen |
 
-The keeper posts `M-09`, `M-10`, `M-16`, `M-17`, `M-24`, `M-26`, `M-30`, `M-31`, `M-32` and `M-33` ([services/keeper/DESIGN.md](../keeper/DESIGN.md#monitoring-service)); the keeper confirms its block-cadence pages on chain state on its fallback provider (`M-31` and `M-32` judge its own spend log, which has nothing to confirm), and the monitor holds each alert open while it keeps arriving without reading it again.
+`M-02`, `M-05`, `M-07`, `M-08`, `M-11`, `M-12`, `M-17`, `M-21`, `M-26` and `M-30` to `M-34` are retired rows: the contracts they read (breakers, swap routes, the Lens, Collateralization, the old keeper) are gone.
 
-## Route simulation
-
-M-11 runs no fork: each swap is an `eth_call` at the latest block from LPVaultSwap's address with state overrides. The token's balance and allowance slots are found once per token by writing a marker and reading it back (Solidity and Vyper mapping layouts, slots 0 to 63 and OpenZeppelin v5's ERC-7201 base); the Lock's code is replaced by a stub whose `holder()` answers LPVaultSwap, because the real Lock keeps its holder in transient storage. The RPC provider must accept `eth_call` state overrides and a `from` that is a contract (geth, Erigon, Nethermind, Reth and anvil do). A token whose slots are not found is reported as not simulated (warn).
+The bot runner posts `M-09`, `M-10` and `M-16` ([services/keeper/DESIGN.md](../keeper/DESIGN.md)); the monitor holds each alert open while it keeps arriving without reading it again.
 
 ## Signer liveness
 

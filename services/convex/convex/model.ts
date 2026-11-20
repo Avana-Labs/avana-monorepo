@@ -3,15 +3,14 @@
 // Reads shared by the queries: the scope rows, their content and the joins between them. A Borrow asset page and
 // the Lend page join the same `hubAssets` document; nothing here copies a Hub figure into another row.
 
-import type { CreditLineRow, HubAssetRow, HubAssetSpokeRow, HubRow, MarketReserveDebtRow, MarketRow, SpokeReserveRow } from "@avana/services-common/views";
+import type { HubAssetRow, HubAssetSpokeRow, HubRow, MarketReserveDebtRow, MarketRow, SpokeReserveRow } from "@avana/services-common/views";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { combineSources, sumOver, type StoredPoint, type Values } from "./lib/charts.ts";
 import { hubLabel } from "./lib/format.ts";
-import { creditLineView } from "./lib/hubViews.ts";
 import { type PoolPricing, lpFeeAprPct } from "./lib/windows.ts";
 import { hubAssetKey, lendSnapshot, assetSnapshot, poolSnapshot } from "./lib/pages.ts";
-import type { CreditLineView, MarketSnapshotRow, PageContent, PageScope, Visual } from "./lib/uiTypes.ts";
+import type { MarketSnapshotRow, PageContent, PageScope, Visual } from "./lib/uiTypes.ts";
 
 export type ContentScope = Doc<"marketContent">["scope"];
 
@@ -21,11 +20,9 @@ export type HubAssetDoc = Stored<HubAssetRow>;
 export type SpokeReserveDoc = Stored<SpokeReserveRow>;
 export type MarketDoc = Stored<MarketRow>;
 export type HubDoc = Stored<HubRow>;
-export type CreditLineDoc = CreditLineRow & { readonly updatedAt: number };
 
 export interface World {
   readonly hubs: HubDoc[];
-  readonly creditLines: CreditLineDoc[];
   readonly hubAssets: HubAssetDoc[];
   readonly slices: (HubAssetSpokeRow & { updatedAt: number })[];
   readonly reserves: SpokeReserveDoc[];
@@ -40,7 +37,6 @@ export interface World {
 /** The typed view of stored rows; the schema stores exactly these fields. */
 export const asRows = {
   hubs: (d: Doc<"hubs">[]) => d as unknown as HubDoc[],
-  creditLines: (d: Doc<"creditLines">[]) => d as unknown as CreditLineDoc[],
   hubAssets: (d: Doc<"hubAssets">[]) => d as unknown as HubAssetDoc[],
   slices: (d: Doc<"hubAssetSpokes">[]) => d as unknown as (HubAssetSpokeRow & { updatedAt: number })[],
   reserves: (d: Doc<"spokeReserves">[]) => d as unknown as SpokeReserveDoc[],
@@ -48,11 +44,10 @@ export const asRows = {
   debts: (d: Doc<"marketReserveDebt">[]) => d as unknown as MarketReserveDebtRow[],
 };
 
-/** Every scope row. The tables hold one row per Hub, Hub asset, Spoke slice, line, reserve and market: hundreds of rows. */
+/** Every scope row. The tables hold one row per Hub, Hub asset, Spoke slice, reserve and market: hundreds of rows. */
 export async function loadWorld(ctx: QueryCtx): Promise<World> {
-  const [hubs, creditLines, hubAssets, slices, reserves, markets, debts, content] = await Promise.all([
+  const [hubs, hubAssets, slices, reserves, markets, debts, content] = await Promise.all([
     ctx.db.query("hubs").collect(),
-    ctx.db.query("creditLines").collect(),
     ctx.db.query("hubAssets").collect(),
     ctx.db.query("hubAssetSpokes").collect(),
     ctx.db.query("spokeReserves").collect(),
@@ -64,7 +59,6 @@ export async function loadWorld(ctx: QueryCtx): Promise<World> {
   const hubRows = asRows.hubs(hubs);
   return {
     hubs: hubRows,
-    creditLines: asRows.creditLines(creditLines),
     hubAssets: assets,
     slices: asRows.slices(slices),
     reserves: asRows.reserves(reserves),
@@ -79,15 +73,6 @@ export async function loadWorld(ctx: QueryCtx): Promise<World> {
 /** A Hub's label: its listing content name, else the manifest's label, else its short address. */
 export function hubLabelOf(w: World, chainId: number, hub: string): string {
   return contentOf(w, "hub", chainId, hub)?.name ?? hubLabel(w.hubsByKey.get(`${chainId}:${hub}`)?.label, hub);
-}
-
-/** Hub-to-Hub credit lines that pass `keep`, each joined with its draw (the Spoke's slice) and its asset's price. */
-export function creditLineViews(w: World, keep: (l: CreditLineDoc) => boolean): CreditLineView[] {
-  return w.creditLines.filter(keep).map((l) => {
-    const slice = w.slices.find((s) => s.chainId === l.chainId && s.hub === l.fundingHub && s.assetId === l.assetId && s.spoke === l.spoke);
-    const asset = w.assetsByKey.get(hubAssetKey({ chainId: l.chainId, hub: l.fundingHub, assetId: l.assetId }));
-    return creditLineView(l, slice, asset, (h) => hubLabelOf(w, h.chainId, h.hub), symbolOf(w, l.chainId, l.asset));
-  });
 }
 
 /**
@@ -154,7 +139,7 @@ export async function pool24h(ctx: QueryCtx, w: World, m: MarketDoc, now: number
   const pricing = poolPricing(w, m);
   const state = lastPoolState(buckets);
   const recent = [...buckets.entries()].filter(([t]) => t >= from).map(([, v]) => v);
-  const lpFeeAprPct = pricing && state ? lpFeeAprPct24h(recent, { sqrtPriceX96: state.sqrtPriceX96, tickLower: m.tickLower, tickUpper: m.tickUpper }, pricing) : undefined;
+  const lpFeeAprPct = pricing && state ? lpFeeAprPct24h(recent, { sqrtPriceX96: state.sqrtPriceX96, tickLower: m.bandLower, tickUpper: m.bandUpper }, pricing) : undefined;
   return { volumeUsd: value("volume"), feesUsd: value("fees") + otherFees * price, ...(lpFeeAprPct === undefined ? {} : { lpFeeAprPct }) };
 }
 

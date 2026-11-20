@@ -3,23 +3,24 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {Script, console2} from "forge-std/Script.sol";
 
 /// @title UpgradeOperation
-/// @notice Builds the AvanaTimelock operation that upgrades one UUPS proxy: the call
+/// @notice Builds the AccessManager operation that upgrades one UUPS proxy: the call
 /// `proxy.upgradeToAndCall(implementation, initData)`, its operation id, and the exact `schedule` and `execute`
-/// calldata the governance Safe signs. An upgrade is never on the short-delay list (`TimelockSelectors.isNeverShort`),
-/// so the delay is the normal delay, within `[MIN_NORMAL_DELAY, MAX_DELAY]` = 345,600 to 432,000 s.
+/// calldata the governance Safe signs. An upgrade takes the governance role (`AvanaAccess`), never the tighten role,
+/// so the Safe's execution delay is the governance delay, 4 to 5 days = 345,600 to 432,000 s.
 /// @dev Run only through `script/upgrade-operation.py`, which first requires a successful `security-slow.yml` run on
 /// the implementation's source commit (`TEST-263`) and passes that run's id here; without it the script refuses.
-/// Inputs (environment): `AVANA_UPGRADE_PROXY_NAME`, `AVANA_UPGRADE_PROXY`, `AVANA_UPGRADE_IMPLEMENTATION_NAME`,
-/// `AVANA_UPGRADE_IMPLEMENTATION`, `AVANA_UPGRADE_COMMIT` (40 hex characters), `AVANA_UPGRADE_SLOW_RUN` (the run id),
-/// optional `AVANA_UPGRADE_INIT_DATA` (default empty), `AVANA_UPGRADE_DELAY` (default 432,000) and
-/// `AVANA_UPGRADE_PREDECESSOR` (default zero). Writes `deployments-local/upgrades/upgrade-<proxy name>-<commit>.json`.
+/// Inputs (environment): `AVANA_UPGRADE_ACCESS_MANAGER` (the chain's AccessManager), `AVANA_UPGRADE_SCHEDULER` (the
+/// governance Safe, which schedules and executes), `AVANA_UPGRADE_PROXY_NAME`, `AVANA_UPGRADE_PROXY`,
+/// `AVANA_UPGRADE_IMPLEMENTATION_NAME`, `AVANA_UPGRADE_IMPLEMENTATION`, `AVANA_UPGRADE_COMMIT` (40 hex characters),
+/// `AVANA_UPGRADE_SLOW_RUN` (the run id), optional `AVANA_UPGRADE_INIT_DATA` (default empty) and `AVANA_UPGRADE_DELAY`
+/// (default 432,000). Writes `deployments-local/upgrades/upgrade-<proxy name>-<commit>.json`.
 contract UpgradeOperation is Script {
-    uint256 internal constant MIN_NORMAL_DELAY = 345_600;
+    uint256 internal constant MIN_GOVERNANCE_DELAY = 345_600;
     uint256 internal constant MAX_DELAY = 432_000;
 
     struct Upgrade {
@@ -31,19 +32,18 @@ contract UpgradeOperation is Script {
         string slowRun;
         bytes initData;
         uint256 delay;
-        bytes32 predecessor;
+        address accessManager;
+        address scheduler;
     }
 
     function run() external returns (bytes memory scheduleCalldata) {
         Upgrade memory u = _inputs();
         bytes memory payload = abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (u.implementation, u.initData));
-        bytes32 salt =
-            keccak256(bytes(string.concat("avana.upgrade.", u.proxyName, ".", u.implementationName, ".", u.commit)));
-        bytes32 id = keccak256(abi.encode(u.proxy, uint256(0), payload, u.predecessor, salt));
-        scheduleCalldata =
-            abi.encodeCall(TimelockController.schedule, (u.proxy, 0, payload, u.predecessor, salt, u.delay));
-        bytes memory executeCalldata =
-            abi.encodeCall(TimelockController.execute, (u.proxy, 0, payload, u.predecessor, salt));
+        // `AccessManager.hashOperation`.
+        bytes32 id = keccak256(abi.encode(u.scheduler, u.proxy, payload));
+        // `when = 0` schedules at the earliest time the Safe's execution delay allows.
+        scheduleCalldata = abi.encodeCall(IAccessManager.schedule, (u.proxy, payload, uint48(0)));
+        bytes memory executeCalldata = abi.encodeCall(IAccessManager.execute, (u.proxy, payload));
 
         string memory k = "upgrade";
         vm.serializeString(k, "proxyName", u.proxyName);
@@ -54,8 +54,8 @@ contract UpgradeOperation is Script {
         vm.serializeString(k, "securitySlowRun", u.slowRun);
         vm.serializeBytes(k, "initData", u.initData);
         vm.serializeBytes32(k, "id", id);
-        vm.serializeBytes32(k, "salt", salt);
-        vm.serializeBytes32(k, "predecessor", u.predecessor);
+        vm.serializeAddress(k, "accessManager", u.accessManager);
+        vm.serializeAddress(k, "scheduler", u.scheduler);
         vm.serializeUint(k, "delay", u.delay);
         vm.serializeBytes(k, "payload", payload);
         vm.serializeBytes(k, "executeCalldata", executeCalldata);
@@ -70,7 +70,7 @@ contract UpgradeOperation is Script {
         console2.log("security-slow run", u.slowRun);
         console2.log("operation id");
         console2.logBytes32(id);
-        console2.log("schedule calldata (target: the AvanaTimelock)");
+        console2.log("schedule calldata (target: the AccessManager, sender: the scheduler)");
         console2.logBytes(scheduleCalldata);
         console2.log("written to", path);
     }
@@ -89,7 +89,9 @@ contract UpgradeOperation is Script {
         require(bytes(u.commit).length == 40, "commit must be 40 hex characters");
         u.initData = vm.envOr("AVANA_UPGRADE_INIT_DATA", bytes(""));
         u.delay = vm.envOr("AVANA_UPGRADE_DELAY", MAX_DELAY);
-        require(u.delay >= MIN_NORMAL_DELAY && u.delay <= MAX_DELAY, "delay outside the normal-delay bounds");
-        u.predecessor = vm.envOr("AVANA_UPGRADE_PREDECESSOR", bytes32(0));
+        require(u.delay >= MIN_GOVERNANCE_DELAY && u.delay <= MAX_DELAY, "delay outside the governance-delay bounds");
+        u.accessManager = vm.envAddress("AVANA_UPGRADE_ACCESS_MANAGER");
+        u.scheduler = vm.envAddress("AVANA_UPGRADE_SCHEDULER");
+        require(u.accessManager != address(0) && u.scheduler != address(0), "zero address");
     }
 }

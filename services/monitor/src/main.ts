@@ -57,6 +57,7 @@ function provider(c: ChainConfig, url: string): ProviderReads {
         return logs.map((l) => ({ address: l.address, topics: l.topics as Hex[], data: l.data, blockNumber: BigInt(l.blockNumber!), transactionHash: l.transactionHash!, logIndex: Number(l.logIndex) }));
       },
       getStorageAt: async (address, slot) => (await client.getStorageAt({ address, slot, blockNumber: b.number })) ?? "0x",
+      getBalance: (address) => client.getBalance({ address, blockNumber: b.number }),
       call: async (from, to, data, overrides = []) => {
         try {
           const r = await client.call({ account: from, to, data, blockNumber: b.number, stateOverride: overrides.map((o) => ({ address: o.address, ...(o.code ? { code: o.code } : {}), ...(o.stateDiff ? { stateDiff: [...o.stateDiff] } : {}) })) });

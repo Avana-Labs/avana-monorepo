@@ -1,262 +1,171 @@
 # Event and read catalogue
 
-Every event the indexer handles, read from the interfaces under `contracts/src/**/I*.sol` and, for Aave V4, from the Aave ABIs built at the pinned commit (`contracts/out-aave/ISpoke.sol`, `IHub.sol`). Every handled log first writes an `event_log` row keyed `chainId + txHash + logIndex` with its block number, block hash and timestamp ([`src/lib/record.ts`](src/lib/record.ts)); the **Updates** column names the entity table it also changes. Values that change without an event are listed under [Live reads](#live-reads).
+Every event the indexer handles, read from the interfaces under `contracts/src/**/I*.sol`, `liquidator/src/IFlashLiquidator.sol` and, for Aave V4, from the Aave ABIs built at the pinned commit (`contracts/out-aave/ISpoke.sol`, `IHub.sol`). Every handled log first writes an `event_log` row keyed `chainId + txHash + logIndex` with its block number, block hash and timestamp ([`src/lib/record.ts`](src/lib/record.ts)); the **Updates** column names the entity table it also changes. Values that change without an event are listed under [Live reads](#live-reads).
 
 **Finality.** Each consumer reads at its own depth (services/README.md, Finality and reorgs):
 
 | Code | Consumer | Depth |
 |---|---|---|
-| K | Keeper | Chain head, through the indexer stream and its own RPC logs |
+| B | Bot runner (the LiquidationBot) | Chain head, through the [bot stream](EXPORT.md#keeper-stream) |
 | M | Monitoring | Chain head; every alert is confirmed on-chain before paging |
 | C | Convex | `finalized` only, through the [export](EXPORT.md) |
 
-Indexed parameters are marked `idx`. Enum values: `PriceState` Live 0, Drifting 1, Cached 2, Expired 3; `PauseState` None 0, Frozen 1, Paused 2; `PauseReason` None 0, General 1, MintPathSuspect 2; `RouteMode` PrimaryThenBackup 0, BackupOnly 1; `BreakerScope` Market 0, DebtReserve 1; `RouteSlot` None 0, Primary 1, Alternate 2.
+Indexed parameters are marked `idx`. `MarketKind`: FullRange 0, CustomRange 1.
 
-## Accounts and proxies
+**Sources.** Each chain has one core stack per AMM integration (LPVault, RiskModule, LiquidationModule, AaveAdapter, FlashloanRepay; `RiskModule.LP_VAULT` is immutable). Each contract kind is one Ponder source over every integration of the manifest ([`src/config/sources.ts`](src/config/sources.ts)), so a log's contract address tells its integration. None of Avana's core contracts is upgradeable.
+
+## Markets (RiskModule)
+
+| Event | Updates | Used by |
+|---|---|---|
+| `MarketListed(uint256 marketId idx, bytes32 pool idx, MarketKind kind, int24 bandLower, int24 bandUpper, uint8 unitDecimals)` | `market` (one row per market) | B C M |
+| `PoolListed(bytes32 pool idx, address spoke idx, uint256 fullRange, uint256 customRange, int24 listingTick, uint16 ltvBps)` | both markets' `spoke`, `listingTick`, `ltvBps`; `amm_pool` (fee read once) or `amm_pool_id` (Uniswap v4) | B C M |
+| `MarketActivated(uint256 marketId idx, address vaultToken, uint256 reserveId, address lpOracle)` | `market` (`active`, vault token, reserve, LPOracle); starts the `VaultToken` source | B C M |
+| `DebtReserveSet(address spoke idx, uint256 reserveId idx, address hub, address asset, address firstLossReserve)` | `debt_reserve`; starts the `FirstLossReserve` source | C M |
+| `DebtReserveRemoved(address spoke idx, uint256 reserveId idx)` | `debt_reserve.listed = false` | C M |
+| `KeeperAdded(address keeper idx)`, `KeeperRemoved(address keeper idx)` | `keeper` | B M |
+| `SpokeRegistered`, `SpokeWidthSet`, `CoverageRatioSet`, `FeeSet` | log | M |
+
+Each pool listed gets two markets: **Full range** (exact full-range ticks) and **Custom range** (positions inside the band: Stable ±1 %, Correlated ±5 %, Volatile 0.345x–2.898x). Both have the same LTV, and a band is fixed for life. `MarketListed` is emitted for both markets before their `PoolListed`.
+
+## Accounts
 
 | Contract | Event | Updates | Used by |
 |---|---|---|---|
-| AaveAdapter | `UserProxyCreated(address wallet idx, address spoke idx, uint256 marketId idx, address proxy)` | `account` (`adapterSeen`) | K C M |
-| ProxyManager | `ProxyDeployed(address wallet idx, address spoke idx, uint256 marketId idx, address proxy)` | `account` (`managerSeen`) | K C M |
-| VaultToken | `ProxyAdded(address proxy idx)` | log | M |
+| AaveAdapter | `AccountCreated(address wallet idx, uint256 marketId idx, address account)` | `account` (keyed under the market's Spoke) | B C M |
 
-An account is attributed once both creation events name the same wallet and market; a proxy announced by only one of them raises a monitoring alert and receives no Spoke events (`TEST-144`). The proxy address is `predictProxy(wallet, spoke, marketId)`, the CREATE2 address under the manifest's `proxyCreationCodeHash`.
+One account proxy per (wallet, market), with at most 16 positions. An account of a market whose `PoolListed` the indexer has not handled stops the indexer (fail closed).
 
 ## AaveAdapter actions
 
 | Event | Updates | Used by |
 |---|---|---|
-| `CollateralAdded(address wallet idx, uint256 marketId idx, address vaultToken idx, address proxy, uint256 recordId, uint32 integrationId, bytes32 positionKey, uint128 units)` | log | K C |
-| `Borrowed(address wallet idx, uint256 marketId idx, uint256 debtReserveId idx, address receiver, uint256 amount, uint256 nonce, uint256 healthFactorAfter)` | log | K C |
-| `Repaid(address payer idx, address borrower idx, uint256 marketId idx, uint256 debtReserveId, uint256 spent, uint256 debtAfter, bool repayAll)` | log | K C |
-| `CollateralWithdrawn(address wallet idx, uint256 marketId idx, address vaultToken idx, bytes32 positionKey, uint256 units, bool withDebt, uint256 healthFactorAfter)` | log | K C |
-| `CollateralReduced(address wallet idx, uint256 marketId idx, address vaultToken idx, bytes32 positionKey, uint128 units, uint256[] amounts, bool withDebt, uint256 healthFactorAfter)` | log | K C |
-| `CollateralRecredited(address wallet idx, uint256 marketId idx, address vaultToken idx, uint256 recordId, bytes32 positionKey, uint128 added, uint128 rescueUnits)` | log | K C |
-| `RepaidWithCollateral(address wallet idx, uint256 marketId idx, address vaultToken idx, bytes32 positionKey, uint128 units, uint256 debtReserveId, uint256 debtRepaid, uint256 debtAssetToWallet, uint256 healthFactorBefore, uint256 healthFactorAfter)` | log | K C |
-| `SeizedUnitsBurned(uint256 marketId idx, address vaultToken idx, uint256 units)` | log | C M |
-| `CollateralSupplied(address proxy idx, uint256 marketId idx, uint256 units, uint256 shares)` | log | C |
-| `CollateralDisabled(address proxy idx, uint256 reserveId)` | log | K C |
+| `Pledged(address wallet idx, uint256 marketId idx, bytes32 positionKey idx, uint128 credit)` | `position.wallet` | B C |
+| `LiquidityAdded(address wallet idx, bytes32 positionKey idx, uint128 liquidity, uint128 credit)` | log | C |
+| `Withdrawn(address wallet idx, bytes32 positionKey idx, address recipient idx, uint128 liquidity, uint256 burned)` | log | B C |
+| `WithdrawAllowed(address wallet idx, bytes32 positionKey idx, address operator idx, uint128 maxLiquidity)` | log | C |
+| `Borrowed(address wallet idx, uint256 marketId idx, uint256 reserveId idx, uint256 amount, address recipient)` | log | B C |
+| `Repaid(address wallet idx, uint256 marketId idx, uint256 reserveId idx, uint256 amount, address payer)` | log | B C |
 
-`healthFactorAfter` is the value at that block; the app and the keeper re-read it.
+The Adapter routes a pledge itself (`RiskModule.routeOf`): exact full-range ticks to the Full range market, positions inside the Custom band to the Custom range market; anything else reverts `NoMarketFits`. A `Repaid` whose payer is not the wallet is a valid third-party repay. `WithdrawAllowed` opens a repay with collateral (below).
 
-## Collateralization
+## Positions and pledges per market (LPVault)
 
 | Event | Updates | Used by |
 |---|---|---|
-| `CollateralPledged(uint256 recordId idx, bytes32 positionKey idx, address depositor idx, uint32 integrationId, address proxy, address vaultToken, uint128 credited, uint256 usdCharge, uint256 sliceUsd)` | `collateral_record` insert | C |
-| `CollateralReleased(uint256 recordId idx, bytes32 positionKey idx, address depositor idx, address proxy, address vaultToken, uint256 unitsBurned)` | `collateral_record` closed | C |
-| `RecordDebited(uint256 recordId idx, bytes32 positionKey idx, address proxy idx, address vaultToken, uint256 unitsDebited, uint256 creditedAfter, uint256[] amounts, uint256 capReleased)` | `collateral_record.credited` | C |
-| `RecordReduced(uint256 recordId idx, uint128 units, uint256 release)` | `collateral_record.credited` | C |
-| `RecordRecredited(uint256 recordId idx, uint128 added, uint256 charge, uint128 rescueUnits)` | `collateral_record.credited`, `rescueUnits` | C |
-| `SeizureSettled(address proxy idx, address vaultToken idx, uint256 units, uint256[] amounts, uint256 recordsDebited)` | log | C M |
-| `SeizureReconciled(address proxy idx, address vaultToken idx, uint256 units, uint256[] amounts)` | `pending_settlement` + units | K C M |
-| `PendingSettled(address vaultToken idx, uint256 units, uint256[] amounts)` | `pending_settlement` − units | K C |
-| `CounterSaturated(CounterKind counterKind, address hub idx, address key, uint256 valueBefore, uint256 subtracted)` | log | M (`M-21`) |
+| `PositionPledged(bytes32 positionKey idx, address account idx, uint256 marketId idx, address from, uint128 liquidity, uint128 credit)` | `position`; `market_collateral` +1 position, + liquidity, + credit, +1 pledge | B C |
+| `LiquidityAdded(bytes32 positionKey idx, address payer idx, uint128 liquidity, uint128 credit, uint256 amount0, uint256 amount1)` | `position`, `market_collateral` + liquidity, + credit | C |
+| `LiquidityRemoved(bytes32 positionKey idx, address recipient idx, uint128 liquidity, uint128 credit, uint256 amount0, uint256 amount1)` | `position`, `market_collateral` − liquidity, − credit, +1 withdrawal | B C |
+| `PositionReleased(bytes32 positionKey idx, address account idx, address recipient idx, uint128 liquidity, uint128 credit)` | `position.held = false`; `market_collateral` −1 position, +1 withdrawal | B C |
+| `PositionUnwound(bytes32 positionKey idx, address recipient idx, uint128 liquidity, uint128 credit, uint256 amount0, uint256 amount1)` | `position`, `market_collateral` − liquidity, − credit, +1 unwind (a liquidation) | B C M |
+| `MarketListed`, `FeesCollected`, `FeesHeld` | log | C |
 
-## LPVault (one per AMM integration)
+`market_collateral` keeps a pool's Full range and Custom range markets apart. A change to a position the indexer never saw pledged stops it (fail closed).
 
-| Event | Updates | Used by |
-|---|---|---|
-| `MarketBound(uint256 marketId idx, address pool, bytes32 poolId, int24 tickLower, int24 tickUpper)` | log | C |
-| `PositionReceived(bytes32 positionKey idx, uint256 marketId idx, address depositor idx, uint128 units)` | `lp_position` held | C |
-| `PositionReturned(bytes32 positionKey idx, address depositor idx)` | `lp_position` returned | C |
-| `UnitsUnwound(bytes32 positionKey idx, uint128 units, address recipient idx, uint256[] amounts)` | log | C |
-| `UnitsReleased(bytes32 positionKey idx, uint128 units, address depositor idx, uint256[] amounts)` | log | C |
-| `FeesCollected(bytes32 positionKey idx, address depositor idx, uint256[] amounts)` | log | C |
-| `StrayReceived(bytes32 positionKey idx, address from, address operator)` | `lp_position` stray | C M |
-| `StrayReturned(bytes32 positionKey idx, address recipient)` | `lp_position` returned | C |
-
-The position managers' own events (`IncreaseLiquidity`, `DecreaseLiquidity`, `Collect`) are not indexed: custody changes appear as LPVault events, and liquidity a depositor adds to a pledged position is read live with `Lens.previewRecredit`.
-
-## Vault tokens and factory
-
-| Contract | Event | Updates | Used by |
-|---|---|---|---|
-| VaultTokenFactory | `IntegrationRegistered(uint32 integrationId idx, address lpVault idx, bytes32 ammProtocol, PoolKeying poolKeying, ShapeKind shapeKind)` | log | C |
-| VaultTokenFactory | `VaultTokenDeployed(address vaultToken idx, uint256 marketId idx, address spoke idx, VaultTokenBindings bindings, address pool, bytes32 poolId, PositionShape shape)` | log; starts the VaultToken source (child address in `vaultToken`) | C |
-| VaultToken | `Transfer(address from idx, address to idx, uint256 value)` | log | C M |
-
-## LPVaultSwap and liquidation
-
-| Contract | Event | Updates | Used by |
-|---|---|---|---|
-| LPVaultSwap | `LiquidationSettled(address caller idx, address proxy idx, uint256 marketId idx, SettlementReport report)` | `liquidation` | K C M |
-| LPVaultSwap | `BorrowerSurplusPaid(address proxy idx, address wallet idx, address debtAsset idx, uint256 amount, bool escrowed)` | log | C |
-| LPVaultSwap | `DeficitSurplusFunded(address proxy idx, address firstLossReserve idx, address debtAsset idx, uint256 amount, uint256 shares)` | log | C |
-| LPVaultSwap | `FlashLoanUsed(uint256 marketId idx, address flashSource idx, address asset idx, uint256 amount, uint256 premium)` | log | M |
-| LPVaultSwap | `RouteFailed(uint256 marketId idx, address token idx, address route, bytes4 errorSelector)` | log | K M (`M-10`) |
-| LPVaultSwap | `ResidueReturned(address caller idx, address token idx, uint256 amount, bool escrowed)` | log | M |
-| LPVaultSwap | `PendingSettlementForwarded(address caller idx, uint256 marketId idx, address vaultToken, uint256 units, uint256[] amounts, address debtAsset idx, uint256 added, uint256 minPending, address firstLossReserve, uint8[] routeUsed, uint256 funded, uint256 carried)` | log | K C M |
-| LPVaultSwap | `Deleveraged(address proxy idx, uint256 marketId idx, uint256 debtReserveId idx, uint128 units, uint256 debtRepaid, uint256 recovered, uint256 flashPremium, uint256 debtAssetOut)` | log | C |
-| LPVaultSwap | `KeeperAdded(address keeper idx)`, `KeeperRemoved(address keeper idx)` | `committed_operator` | K M |
-| PayoutEscrow | `RemainderEscrowed(address token idx, address account idx, uint256 amount)` | `escrow_credit` + | C M (`M-25` when `account` is `feeRecipient`) |
-| PayoutEscrow | `RemainderClaimed(address token idx, address account idx, address recipient, uint256 amount)` | `escrow_credit` − | C |
-| Flash liquidation helpers | `FlashLiquidated(address caller idx, address recipient idx, address asset idx, uint256 flashAmount, uint256 premium, uint256 keeperOut, uint256 topUp, uint256 payout)` | log | K M |
-
-`SettlementReport` fields: `debtReserveId, debtAsset, debtRepaid, unitsSeized, amountsOut[], recovered, minOut, effectiveSlippageBps, bonusBps, callerFunds, surplus, avanaFee, keeperReward, borrowerSurplus, keeperOut, minPayout, routeMode, routeUsed[], shortfall`. A settlement is valid whoever the caller is (`Q-404`). `borrowerSurplus` is always the full surplus `B`: in a liquidation that books a deficit the First-Loss Reserve takes the `DeficitSurplusFunded` amount of the same transaction and the wallet receives the rest (`BorrowerSurplusPaid.amount`), so a consumer that needs what the borrower received subtracts that amount (REQ-SWAP-027).
-
-## Oracles
-
-No oracle is indexed. Each market's LPOracle is a stateless contract that emits no events, and a non-GHO debt reserve's price source is its asset's own Chainlink USD feed (GHO keeps its fixed source). Prices and their freshness are read live (see [Live reads](#live-reads)).
-
-## MarketRegistry
+## Vault tokens (mint and burn)
 
 | Event | Updates | Used by |
 |---|---|---|
-| `MarketRegistered(uint256 marketId idx, uint32 integrationId idx, address pool, bytes32 poolId, address[] tokens, address vaultToken, address lpOracle, address spoke idx)` | `market` insert; starts the `AmmPool` source | K C M |
-| `MarketActivated(uint256 marketId, uint256 chainId, address spoke, uint256 reserveId, address hub, uint256 hubAssetId)` | `market` Active | K C M |
-| `MarketRegistrationCancelled(uint256 marketId)`, `MarketClosed(uint256 marketId idx)` | `market.status` | K C M |
-| `MarketOffboarding(uint256 marketId)` | `market.status` Offboarding, `market.offboardedAt` (block time; the notice ends at `offboardedAt + 5 days`, the earliest time of the Aave DAO's one threshold drop to `windDownState(marketId).targetLtBps` and of `closeMarket`) | K C M |
-| `SettlementReserveSet(uint256 marketId idx, uint256 debtReserveId)` | `market.settlementReserveId` | K |
-| `DebtReserveApproved(address spoke idx, uint256 reserveId idx, address asset, address fundingHub, uint256 hubAssetId, address priceSource, address firstLossReserve)` | `debt_reserve` | K C M |
-| `DebtReserveRemoved(address spoke idx, uint256 reserveId idx)` | `debt_reserve.approved` | K C M |
-| `SpokeApproved(address spoke idx, address hub idx, uint32 integrationId idx, address implementation, address aaveOracle)` | `cdp_spoke`; starts the `AaveSpokeApproved` source | C M (`M-20`) |
-| `HubRecorded(address hub idx, uint8 tier)` | `hub`; starts the `AaveHubRecorded` source | C M |
-| `CrossHubLineSet(address fundingHub idx, address asset idx, address spoke idx, uint256 cap, uint256 total)` | `cross_hub_line` | C M |
-| `CrossHubLinesEnabledSet(bool enabled)` | `cross_hub_config` | C M |
-| `CreditLineSet(address hub idx, address asset idx, uint256 line, uint256 sum)` | `credit_line` | C M |
-| `CreditLineRecorded(address hub idx, address asset idx, address spoke idx, uint256 drawCap, uint256 sum)` | `credit_line_spoke`, `credit_line.sum` | C M |
-| `TokenListed(address token, uint8 decimals, address[] primaryRoute, address[] alternateRoute, address pegModule)`, `PriceSourceSet(address token, address[] primaryRoute, address[] alternateRoute, address[] standbyRoute)` | log | K (feed list) M |
-| `RouteSet`, `RouteDisabled`, `RouteRestored` (`uint256 marketId idx, address token, address debtAsset, uint8 kind, address route[/caller]`) | log | K (code check list) M (`M-10`, `M-11`) |
-| `PauseStateChanged(address hub idx, PauseState previous idx, PauseState current idx, address caller)` | `pause_state.state` | K C M (`M-24`) |
-| `PauseReasonChanged(address hub idx, PauseReason previous, PauseReason current, address caller idx)` | `pause_state.reason` | C M (`M-24`) |
-| `AddressFrozen(address account idx, address caller idx)`, `AddressUnfrozen(address account idx)` | `frozen_address` | K C M (`M-24`) |
-| `BreakerLatched(BreakerScope scope idx, bytes32 key idx, uint32 reasons)` | `breaker` | K C M (`M-08`) |
-| `BreakerReset(BreakerScope scope idx, bytes32 key idx, address caller idx)` | `breaker` cleared | K C M |
-| `GateBreached(bytes32 key idx, uint32 reasons, uint64 at)` | log | M (`M-08`) |
-| `StandbyRouteActivated(address token idx, RouteSlot slot, address caller idx)`, `StandbySwitchCancelled(address token idx, address caller idx)`, `PriceRouteRestored(address token idx)` | log | K M (`M-24`) |
-| `IntegrationRegistered`, `AvanaFirstLossReserveSet` (starts the First-Loss Reserve source), `FlashSourceSet`, `SpokeCodeHashApproved`, `IntegrationContractsRecorded`, `IntegrationContractsFinalized` | log | M |
+| `Transfer(address from idx, address to idx, uint256 value)` | `vault_token_supply`: a mint (from zero) adds, a burn (to zero) subtracts | C M |
+| `Approval`, `ProxyAdded(address proxy idx)` | log | M |
 
-## ParameterStore and RiskModule
+Vault tokens are followed from the manifest (`VaultTokenListed`) and from every `MarketActivated` (`VaultToken`); a log both deliver is counted once.
+
+## Liquidations and repayments with collateral
 
 | Contract | Event | Updates | Used by |
 |---|---|---|---|
-| ParameterStore | `ParameterTightened`, `ParameterLoosened` (`bytes32 name, bytes32 scope, uint256 oldValue, uint256 newValue, address caller`), `ParameterSet(bytes32 name, bytes32 scope, uint256 oldValue, uint256 newValue)` | log | K (reloads cached parameters) M |
-| ParameterStore | `MarketSpeedLimitsSet(uint256 marketId idx, MarketSpeedLimits oldLimits, MarketSpeedLimits newLimits, bool tightened)`, `DebtSpeedLimitSet(address hub idx, address asset idx, SpeedLimit oldLimit, SpeedLimit newLimit, bool tightened)` | log | M |
-| ParameterStore | `CapTightened`, `CapLoosened` (`bytes32 capKind, bytes32 scope, uint256 oldValue, uint256 newValue, address caller`), `StressFloorSet`, `MinPledgeUsdSet`, `RouteDepthThresholdSet`, `DebtAssetParamsSet` | log | C M |
-| ParameterStore | `FeedConfigured(address feed, uint8 decimals, int256 minAnswer, int256 maxAnswer, uint32 feedHeartbeat, uint16 heartbeatMargin, uint32 feedMaxAge, uint16 feedDeviationThresholdBps, uint16 heartbeatDriftBps, uint32 borrowPriceMaxAge, uint32 liquidationPriceMaxAge)` | log | M (`M-03`, `M-04`) |
-| ParameterStore | `SequencerSet(address feed, uint32 gracePeriod)`, `SecondSourceSwitched(address token idx, bool standby, address by)` | log | K M |
-| RiskModule | `ConfigDriftDetected(address spoke idx, DriftReason reason)` | log | K M (`M-20`) |
-| RiskModule | `BreakersPoked(uint256 marketId idx, uint32 reasons)` | log | M |
+| LiquidationModule | `Liquidated(address account idx, uint256 marketId idx, address liquidator idx, uint256 debtReserveId, uint256 debtRepaid, uint256 seized, uint256 creditUnwound, uint256 amount0, uint256 amount1)` | `liquidation` | B C M |
+| LiquidationModule | `FeePaid(address account idx, uint256 marketId idx, address recipient idx, uint256 units, uint256 fee0, uint256 fee1)` | the same transaction's `liquidation` row (fee) | C M |
+| FlashLiquidator | `FlashLiquidated(address account idx, uint256 marketId idx, address asset idx, uint256 flashAmount, uint256 premium, uint256 debtRepaid, uint256 topUp, uint256 profit)` | the same transaction's `liquidation` row (flash loan, premium, top-up, profit) | B M |
+| FlashloanRepay | `RepaidWithCollateral(address wallet idx, bytes32 positionKey idx, address asset idx, uint256 repaid, uint256 premium, uint128 liquidity)` | `collateral_repay` | C |
+
+Liquidation is in kind: the liquidator receives both pool tokens. A `FeePaid` or `FlashLiquidated` without the `Liquidated` before it in the same transaction stops the indexer. Repay with collateral (partial or full) is one `allowWithdraw` to the FlashloanRepay: its log sits beside the Adapter's `WithdrawAllowed`, `Repaid` and `Withdrawn` in one transaction.
+
+## First-Loss cover
+
+| Event | Updates | Used by |
+|---|---|---|
+| `Funded(address funder idx, uint256 amount, uint256 shares, uint256 balanceAfter)` | `coverage_balance` | C M |
+| `DeficitCovered(address spoke idx, address caller idx, uint256 covered, uint256 shares, uint256 balanceAfter)` | `first_loss_cover`; `coverage_balance` | C M |
+| `Withdrawn(address to idx, uint256 amount, uint256 shares, uint256 balanceAfter)` | `coverage_balance` | C M |
+| `SpokeAllowed`, `MinimumSet`, `BelowMinimum` | log | M |
+
+Loss layers are followed under three sources ([`src/config/aaveSources.ts`](src/config/aaveSources.ts)): `FirstLossReserveListed` (the manifest's First-Loss Reserves and DAO deficit offsets, from their deployment), `FirstLossReserve` (every reserve a RiskModule registers with `DebtReserveSet`) and `DaoDeficitOffset` (every Spoke a manifest Hub adds). A log several deliver is recorded once under `FirstLossReserve.<Event>`.
 
 ## Governance
 
 | Contract | Event | Updates | Used by |
 |---|---|---|---|
-| AvanaTimelock (OpenZeppelin) | `CallScheduled(bytes32 id idx, uint256 index idx, address target, uint256 value, bytes data, bytes32 predecessor, uint256 delay)` | `timelock_operation` Scheduled | M (`M-22`) |
-| AvanaTimelock | `CallExecuted(bytes32 id idx, uint256 index idx, address target, uint256 value, bytes data)`, `Cancelled(bytes32 id idx)` | `timelock_operation.status` | M |
-| AvanaTimelock | `ExpiredOperationCleaned(bytes32 id idx)` | `timelock_operation` Cleaned | M |
-| AvanaTimelock | `NormalDelayChanged(uint256 previousDelay, uint256 newDelay)`, `ShortDelaySelectorSet(address target idx, bytes4 selector idx, bool enabled)`, `PublicExecutionToggled(bool enabled)`, `CallSalt`, `MinDelayChange` | log | M (`M-22`) |
-| Every upgradeable Avana contract | `Upgraded(address implementation idx)` (ERC-1967) | `implementation` | K (manifest refresh) M (`M-22`, `M-26`) |
-| Every role-managed Avana contract and the timelock | `RoleGranted`, `RoleRevoked` (OpenZeppelin AccessControl) | `role_member` | M (`M-22`) |
-| Every role-managed Avana contract and the timelock | `RoleAdminChanged` | log | M (`M-22`) |
-
-An operation's expiry emits no event: `expiresAt = readyAt + GRACE_PERIOD` (14 days, `REQ-ACCESS-108`), and `readyAt = block timestamp of CallScheduled + delay`.
-
-## First-Loss Reserves
-
-| Event | Updates | Used by |
-|---|---|---|
-| `ReserveFunded(address funder idx, uint256 amount, uint256 shares, uint256 balanceAfter)` | `coverage_balance` | C M (`M-13`) |
-| `DeficitCovered(address borrowSpoke idx, address caller idx, uint256 covered, uint256 sharesBurned, uint256 deficitRayBefore, uint256 deficitRayAfter, uint256 balanceAfter)` | `coverage_balance` | C M (`M-13`, `M-15`) |
-| `WithdrawalExecuted(uint256 id idx, uint256 withdrawn, uint256 sharesBurned, address to idx, uint256 balanceAfter)` | `coverage_balance` | M |
-| `WithdrawalRequested(uint256 id idx, uint256 amount, address to idx, uint64 executableAt)`, `WithdrawalCancelled(uint256 id idx)`, `ReserveBelowMinimum(uint256 balance, uint256 minimum)`, `BorrowSpokeAllowlistUpdated(address spoke idx, bool allowed)`, `FirstLossReserveMinimumUpdated(uint256 oldMinimum, uint256 newMinimum)`, `AuthorityUpdated(address authority)` | log | M |
-
-A reserve is read from two sources: `AvanaFirstLossReserveListed`, the reserves the manifest lists, from their deployment blocks (the release funds a reserve before the MarketRegistry sets it, so its first `ReserveFunded` precedes `AvanaFirstLossReserveSet`), and `AvanaFirstLossReserve`, every reserve the MarketRegistry sets, from that event (a reserve set after the manifest). A chain whose manifest lists none has no `AvanaFirstLossReserveListed` source.
-
-The same events are read from the Aave DAO's deficit offsets (`DaoDeficitOffset`, a First-Loss Reserve the DAO deploys and registers on a Hub behind the pair's Avana Umbrella). They are followed from the Hub's `AddSpoke` under the `DaoDeficitOffset` source, so an offset registered after start-up is indexed with no restart; Avana's own reserves match that source too and are recorded once. Every log is kept as `AvanaFirstLossReserve.<Event>` with the emitting contract's address, and `coverage_balance` has one row per reserve or offset; `Lens.getTailCoverage` and `getHubAssetExposure` say which address is the offset.
+| AccessManager | `RoleGranted`, `RoleRevoked`, `RoleLabel`, `RoleAdminChanged`, `RoleGuardianChanged`, `RoleGrantDelayChanged`, `TargetFunctionRoleUpdated`, `TargetAdminDelayUpdated`, `TargetClosed`, `OperationScheduled`, `OperationExecuted`, `OperationCanceled` | log | M |
+| Aave Hub, Spoke | `Upgraded(address implementation idx)` | `implementation` | M |
 
 ## Aave V4 Spokes and Hub
 
-Avana's `IAaveV4Spoke` declares none of the Spoke's events, so the indexer decodes them with the Aave ABIs in `packages/protocol`, built from the pinned Aave V4 commit. Signatures at that commit (`premiumDelta` is `(int256, int256, uint256)`):
+Avana's `IAaveV4Spoke` declares none of the Spoke's events, so the indexer decodes them with the Aave ABIs in `packages/protocol`, built from the pinned Aave V4 commit (`premiumDelta` is `(int256, int256, uint256)`):
 
 | Contract | Event | Updates | Used by |
 |---|---|---|---|
-| Spoke | `Supply(uint256 reserveId idx, address caller idx, address user idx, uint256 suppliedShares, uint256 suppliedAmount)` | log | K C |
-| Spoke | `Withdraw(uint256 reserveId idx, address caller idx, address user idx, uint256 withdrawnShares, uint256 withdrawnAmount)` | log | K C M (`M-19` on the Lend Spoke) |
-| Spoke | `Borrow(uint256 reserveId idx, address caller idx, address user idx, uint256 drawnShares, uint256 drawnAmount)` | `account_debt` + shares | K C |
-| Spoke | `Repay(uint256 reserveId idx, address caller idx, address user idx, uint256 drawnShares, uint256 totalAmountRepaid, premiumDelta)` | `account_debt` − shares | K C |
-| Spoke | `LiquidationCall(uint256 collateralReserveId idx, uint256 debtReserveId idx, address user idx, address liquidator, bool receiveShares, uint256 debtAmountRestored, uint256 drawnSharesLiquidated, premiumDelta, uint256 collateralAmountRemoved, uint256 collateralSharesLiquidated, uint256 collateralSharesToLiquidator)` | `account_debt` − shares | K C M |
-| Spoke | `ReportDeficit(uint256 reserveId idx, address user idx, uint256 drawnShares, premiumDelta)` | `account_debt` deficit | K C M (`M-15`) |
-| Spoke | `SetUsingAsCollateral(uint256 reserveId idx, address caller idx, address user idx, bool usingAsCollateral)` | `account.usingAsCollateral` | K C |
-| Spoke | `UpdateUserRiskPremium(address user idx, uint256 riskPremium)` | `account_premium` (attributed accounts) | C (`Q-145`, the refresh list) |
-| Spoke | `UpdateReserveConfig(uint256 reserveId idx, ReserveConfig config)` | `reserve_config` (`collateralRisk` and the log that last changed it) | C (`Q-145`, the refresh list) M (`M-20`) |
-| Spoke | `RefreshPremiumDebt`, `RefreshAllUserDynamicConfig`, `RefreshSingleUserDynamicConfig` | log | C |
-| Spoke | `AddReserve`, `AddDynamicReserveConfig`, `UpdateDynamicReserveConfig`, `UpdateLiquidationConfig`, `UpdateReservePriceSource`, `UpdatePositionManager`, `SetUserPositionManager`, `SetSpokeImmutables`, `AuthorityUpdated` | log | M (`M-20`) |
-| Hub | `AddSpoke(uint256 assetId idx, address spoke idx)` | `hub_spoke`; starts the `AaveSpokeAdded` source | C M (`M-20`) |
-| Hub | `Add`, `Remove`, `Draw`, `Restore`, `ReportDeficit`, `EliminateDeficit`, `RefreshPremium`, `TransferShares`, `MintFeeShares`, `UpdateAsset`, `UpdateAssetConfig`, `UpdateSpokeConfig`, `AddAsset`, `Reclaim`, `Sweep`, `AuthorityUpdated` | log | M (`M-15`, `M-18`, `M-19`, `M-20`) |
+| Spoke | `Supply`, `Withdraw` | log | B C M |
+| Spoke | `Borrow(uint256 reserveId idx, address caller idx, address user idx, uint256 drawnShares, uint256 drawnAmount)` | `account_debt` + shares | B C |
+| Spoke | `Repay(uint256 reserveId idx, address caller idx, address user idx, uint256 drawnShares, uint256 totalAmountRepaid, premiumDelta)` | `account_debt` − shares | B C |
+| Spoke | `LiquidationCall(...)` | `account_debt` − shares | B C M |
+| Spoke | `ReportDeficit(uint256 reserveId idx, address user idx, uint256 drawnShares, premiumDelta)` | `account_debt` deficit | B C M |
+| Spoke | `SetUsingAsCollateral(uint256 reserveId idx, address caller idx, address user idx, bool usingAsCollateral)` | `account.usingAsCollateral` | B C |
+| Spoke | `UpdateUserRiskPremium(address user idx, uint256 riskPremium)` | `account_premium` (attributed accounts) | C (the refresh list) |
+| Spoke | `UpdateReserveConfig(uint256 reserveId idx, ReserveConfig config)` | `reserve_config` | C M (a frozen vault-token reserve is a depeg freeze) |
+| Spoke | `RefreshPremiumDebt`, `RefreshAllUserDynamicConfig`, `RefreshSingleUserDynamicConfig`, `AddReserve`, `AddDynamicReserveConfig`, `UpdateDynamicReserveConfig`, `UpdateLiquidationConfig`, `UpdateReservePriceSource`, `UpdatePositionManager`, `SetUserPositionManager`, `SetSpokeImmutables`, `AuthorityUpdated` | log | C M |
+| Hub | `AddSpoke(uint256 assetId idx, address spoke idx)` | `hub_spoke`; starts the `AaveSpokeAdded` and `DaoDeficitOffset` sources | C M |
+| Hub | `Add`, `Remove`, `Draw`, `Restore`, `ReportDeficit`, `EliminateDeficit`, `RefreshPremium`, `TransferShares`, `MintFeeShares`, `UpdateAsset`, `UpdateAssetConfig`, `UpdateSpokeConfig`, `AddAsset`, `Reclaim`, `Sweep`, `AuthorityUpdated` | log | M |
 
-A chain has several Hubs, each with its Lend and CDP Spokes. Hubs and Spokes are followed under several sources ([`src/config/aaveSources.ts`](src/config/aaveSources.ts)): `AaveHub` and `AaveSpoke` hold the manifest's Hubs and Lend and CDP Spokes from their deployment blocks; `AaveHubRecorded` every Hub the MarketRegistry records (`HubRecorded`); `AaveSpokeApproved` every CDP Spoke it approves (`SpokeApproved`); `AaveSpokeAdded` every Spoke a manifest Hub adds (`AddSpoke`). A Hub, CDP Spoke or Lend Spoke on a manifest Hub listed after start-up is therefore indexed with no restart. A log matched by two sources is recorded once under the Aave contract's kind (`AaveSpoke.Borrow`, `AaveHub.AddSpoke`), and `account_debt` moves on its first delivery only. A Lend Spoke on a Hub recorded after start-up is read by the sampler at once; its own events are indexed once the manifest names it.
-
-The refresh list (`/export/v1/premium-refresh`, [EXPORT.md](EXPORT.md#risk-premium-refresh)) names the attributed proxies with drawn debt whose last `UpdateUserRiskPremium` precedes the Spoke's last `collateralRisk` change.
-
-Every `LiquidationCall` on a CDP Spoke has `liquidator == LPVaultSwap` (`Q-222`); attribution uses `user`, never `liquidator` (`LIQ-056`). The Spoke events of a user that is not an attributed account are logged and attributed to nobody.
+Hubs and Spokes are followed under `AaveHub` and `AaveSpoke` (the manifest's, from their deployment) and `AaveSpokeAdded` (every Spoke a manifest Hub adds). A log two sources match is recorded once, and `account_debt` moves on its first delivery only. Spoke events of a user that is not an attributed account are logged and attributed to nobody; attribution uses `user`, never `liquidator`.
 
 ## AMM pools and chart series
 
-The pool of every listed market is followed from its `MarketRegistered` (`AmmPool`, a factory source on the `pool` field); Uniswap v3 and Aerodrome Slipstream pools share these signatures. Pool logs are not written to `event_log`: they only feed the pool's series, through the merge rules of `@avana/services-common/series` (volumes and fees add up, price and liquidity keep the last swap). Ponder matches a pool's logs from the block that announced it on; earlier history comes from the export's [pool-history endpoint](EXPORT.md#pool-history).
+The pools of the manifest's markets on concentrated-liquidity integrations (Uniswap v3, Aerodrome Slipstream) are followed by address (`AmmPool`; the pool key is the address left-padded); both markets of a pool share it. Pool logs are not written to `event_log`: they only feed the pool's series through the merge rules of `@avana/services-common/series`. A pool's logs are kept from its `PoolListed` on (`amm_pool`); earlier history comes from the export's [pool-history endpoint](EXPORT.md#pool-history). A pool listed after the manifest is followed from the next release manifest.
 
 | Contract | Event | Updates | Used by |
 |---|---|---|---|
-| MarketRegistry | `MarketRegistered` (above) | `amm_pool` (fee read once with `fee()`) | C |
-| Pool | `Swap(address sender idx, address recipient idx, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick)` | `series_point` pool: `volume0`, `volume1`, `fees0`, `fees1` (input side × fee), `swaps`, `sqrtPriceX96`, `tick`, `tickHigh`, `tickLow`, `liquidity` | C |
-| Pool | `Mint(address sender, address owner idx, int24 tickLower idx, int24 tickUpper idx, uint128 amount, uint256 amount0, uint256 amount1)` | `series_point` pool: `mints`, `liquidityAdded` | C |
-| Pool | `Burn(address owner idx, int24 tickLower idx, int24 tickUpper idx, uint128 amount, uint256 amount0, uint256 amount1)` | `series_point` pool: `burns`, `liquidityRemoved` | C |
+| Pool | `Swap(address sender idx, address recipient idx, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick)` | `series_point` pool: `volume0`, `volume1`, `fees0`, `fees1`, `swaps`, `sqrtPriceX96`, `tick`, `tickHigh`, `tickLow`, `liquidity` | C |
+| Pool | `Mint`, `Burn` | `series_point` pool: `mints`, `liquidityAdded`, `burns`, `liquidityRemoved` | C |
 
-A market listed with pool `address(0)` and a non-zero `poolId` (a Uniswap v4 PoolId) is followed through the chain's PoolManager (`UniswapV4PoolManager`), named by the optional manifest field `uniswapV4.poolManager` and indexed from the later of its deployment and the MarketRegistry's; a chain whose manifest has no such field has no PoolManager source. Every PoolManager log is matched on its `id` against `amm_pool_id`, and logs of pools no market lists are dropped. The series fields are those of a concentrated-liquidity pool, keyed `chainId:poolId`. Pool history before listing is not served for these pools.
+A pool of a Uniswap v4 integration is a PoolId in the chain's PoolManager (`UniswapV4PoolManager`, from the manifest's `uniswapV4.poolManager`); its `PoolListed` writes `amm_pool_id`, and PoolManager logs of other pools are dropped.
 
 | Contract | Event | Updates | Used by |
 |---|---|---|---|
-| MarketRegistry | `MarketRegistered` (above), pool `address(0)` and `poolId` non-zero | `amm_pool_id` (no read) | C |
-| PoolManager | `Swap(bytes32 id idx, address sender idx, int128 amount0, int128 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick, uint24 fee)` | `series_point` pool, as `Swap` above; the amounts are the swapper's deltas (input negative) and are negated, the fee is the log's own `fee` | C |
-| PoolManager | `ModifyLiquidity(bytes32 id idx, address sender idx, int24 tickLower, int24 tickUpper, int256 liquidityDelta, bytes32 salt)` | `series_point` pool: `mints`, `liquidityAdded` when `liquidityDelta > 0`; `burns`, `liquidityRemoved` when below 0; nothing at 0 | C |
-| PoolManager | `Donate(bytes32 id idx, address sender idx, uint256 amount0, uint256 amount1)` | `series_point` pool: added to `fees0`, `fees1` (paid to in-range liquidity) | C |
-| PoolManager | `Initialize` | not indexed: a pool is initialized before a market can list it | |
+| PoolManager | `Swap(bytes32 id idx, ...)` | `series_point` pool; the amounts are the swapper's deltas (negated), the fee is the log's own | C |
+| PoolManager | `ModifyLiquidity(bytes32 id idx, ...)` | `series_point` pool: mints or burns by the sign of `liquidityDelta` | C |
+| PoolManager | `Donate(bytes32 id idx, ...)` | `series_point` pool: added to `fees0`, `fees1` | C |
 
-The `SeriesSampler` block source runs once an hour of block time (300 blocks on Ethereum, 1,800 on Base) from the later of the Lens and the first Lend Spoke deployment on, so a full reindex rebuilds the history from archive reads. At each sample block it reads, through Ponder's client pinned to that block, every Hub of the manifest and every Hub the MarketRegistry has recorded, with all their assets and Spokes (`@avana/services-common/views`, `discovery.ts`):
+The `SeriesSampler` block source runs once an hour of block time from the later of Avana's deployment and the first Lend Spoke's. At each sample block it runs the snapshot reader (`@avana/services-common/views`) through Ponder's client pinned to that block:
 
 | Scope (`series_point.scopeKind`) | Key | Reads | Metrics |
 |---|---|---|---|
-| `hubAsset` | `chainId:hub:assetId` | MarketRegistry `getHubs`, `getSpokes`, `hubOf`, `isRecordedHub`, `hubTier`, `firstLossReserveOf`; Hub `getAssetCount`, `getAssetUnderlyingAndDecimals`, `getAssetConfig`, `getSpokeCount`, `getSpokeAddress`, `getSpoke` (discovery of every Hub, Hub asset and Spoke); every Lend Spoke's `getReserveCount`, `getReserve`, `getReserveConfig`, its `ORACLE().getReservePrice`; `Lens.getHubAsset(hub, assetId)` (added, owed split, liquidity, deficit rounded up, accrued fees, drawn rate, in one call), Hub `getAssetDrawnIndex`, `getAssetConfig`; the rate strategy's `getInterestRateData`; `Lens.getHubAssetExposure` | `priceUsd8`, `added`, `addedShares`, `drawn`, `premium`, `owed`, `liquidity`, `deficit`, `accruedFees`, `drawnIndexRay`, `drawnRateRay`, `supplyRateRay`, `utilizationBps` |
-| `hubAssetSpoke` | `chainId:hub:assetId:spoke` | Hub `getSpokeCount`, `getSpokeAddress`, `getSpoke`, `getSpokeAddedAssets`, `getSpokeTotalOwed`; `FIRST_LOSS_LAYER()` of each Spoke of an asset with a First-Loss Reserve that is none of the known kinds (finds the DAO deficit offset) | `added`, `addedShares`, `owed`, `drawnShares`, `premiumShares`, `deficit`, `addCap`, `drawCap` |
-| `creditLine` | `chainId:fundingHub:assetId:spoke` | MarketRegistry `crossHubLineCap`, `crossHubLineTotal`, `crossHubLinesEnabled`, for every CDP Spoke drawing on a Hub other than its home Hub | `cap`, `total`, `enabled` (1 or 0); the draw is the `hubAssetSpoke` series of the same Spoke |
-| `market` | `chainId:marketId` | `Lens.getMarkets`, Spoke `getReserve` (collateral risk), Hub `getAssetUnderlyingAndDecimals` (vault-token decimals); `Lens.getBorrowSpeed(marketId, debtReserveId)` per debt reserve and `Lens.getPledgeSpeed(marketId)` (read for the current rows, not charted) | `suppliedUnits`, `acceptedPrice`, `suppliedUsd8`, `marketHeadroomUsd8`, `debtUsd8`, `borrowers` |
-| `marketReserve` | `chainId:marketId:spoke:reserveId` | `Spoke.getUserDebt(reserveId, proxy)` of every attributed account of the market | `debt`, `borrowers` |
-| `position` (daily) | `chainId:spoke:proxy` | `Spoke.getUserSuppliedAssets(collateralReserveId, proxy)`, `getUserDebt` per debt reserve | `marketId`, `collateralUnits`, `collateralUsd8`, `debtUsd8` |
+| `hubAsset` | `chainId:hub:assetId` | Hub `getAssetCount`, `getAssetUnderlyingAndDecimals`, `getAssetConfig`, `getSpokeCount`, `getSpokeAddress`, `getSpoke`, `getAddedAssets`, `getAddedShares`, `getAssetOwed`, `getAssetLiquidity`, `getAssetDeficitRay`, `getAssetAccruedFees`, `getAssetDrawnRate`, `getAssetDrawnIndex`; each Lend Spoke's reserves and `ORACLE().getReservePrice`; the rate strategy; `FirstLossReserve.fundedBalance()` and every RiskModule's `coverage(hub, asset)` | `priceUsd8`, `added`, `addedShares`, `drawn`, `premium`, `owed`, `liquidity`, `deficit`, `accruedFees`, `drawnIndexRay`, `drawnRateRay`, `supplyRateRay`, `utilizationBps` |
+| `hubAssetSpoke` | `chainId:hub:assetId:spoke` | Hub `getSpokeAddedAssets`, `getSpokeTotalOwed` | `added`, `addedShares`, `owed`, `drawnShares`, `premiumShares`, `deficit`, `addCap`, `drawCap` |
+| `market` | `chainId:marketId` | `RiskModule.getMarket`, `LPOracle.latestAnswer`, the Spoke's vault-token reserve and dynamic config, Hub `getSpokeAddedAssets` | `suppliedUnits`, `acceptedPrice`, `suppliedUsd8`, `debtUsd8`, `borrowers` |
+| `marketReserve` | `chainId:marketId:spoke:reserveId` | `Spoke.getUserDebt(reserveId, account)` of every account of the market | `debt`, `borrowers` |
+| `position` (daily) | `chainId:spoke:account` | `Spoke.getUserSuppliedAssets`, `getUserDebt` per debt reserve | `marketId`, `collateralUnits`, `collateralUsd8`, `debtUsd8` |
 
-Every point of one sample carries that block, so a bucket's Spoke slices add up to its Hub totals and its market debts to the Spoke's owed amount. A sampled bucket keeps its first sample; a dynamic-fee pool's `fee()` is re-read at each sample and applies to the next hour's swaps.
+Every point of one sample carries that block, so a bucket's Spoke slices add up to its Hub totals. A Slipstream pool's dynamic `fee()` is re-read at each sample and applies to the next hour's swaps.
 
 ## Live reads
 
-These values change with time, interest or prices and emit no event, or emit only when a transaction touches them. Convex and the keeper read them over RPC at a stated block; indexed values only choose which accounts and markets to read.
+Values that change with time, interest or prices and emit no event. Convex, the bot runner and the monitor read them over RPC at a stated block; indexed values only choose which accounts and markets to read.
 
 | Value | Read | Read by |
 |---|---|---|
-| Health factor, collateral value, debt value, borrow count | `Spoke.getUserAccountData(proxy)` | K (every block, multicall pinned to the block), C (on view and after each receipt) |
-| Debt per reserve with accrued interest | `Spoke.getUserTotalDebt(reserveId, proxy)`, `Spoke.getUserPosition(reserveId, proxy)`; `Lens.getAccount(wallet, marketId).debts` | K C |
-| Liquidation sizing and gates | `Lens.previewLiquidation(proxy, debtReserveId, deadline)` | K |
-| Market price and freshness | `Lens.getPriceState(vaultToken)`; `LPOracle.getPriceStatus()`, `LPOracle.getTokenPrices()` | K C M |
-| Debt reserve price and freshness | `Lens.getDebtPriceState(spoke, debtReserveId)` (its `source` is the asset's Chainlink feed); `ParameterStore.borrowPriceMaxAge(feed)`, `liquidationPriceMaxAge(feed)` | K C M |
-| Chainlink feed rounds (`M-03`, `M-04`) | `latestRoundData()` of every feed leg in the manifest | M |
-| Breakers | `Lens.getBreakerStatus(marketId)`, `Lens.getDebtBreakerStatus(spoke, debtReserveId)`; `MarketRegistry.lastBreachAt(key)`; a breaker condition true now: `eth_call RiskModule.pokeBreakers(marketId)` | K C M |
-| Spoke setting drift | `eth_call RiskModule.pokeConfig(spoke)` | K M (`M-20`) |
-| Application state and freezes | `MarketRegistry.pauseState(hub)`, `pauseReason(hub)`, `isFrozenAddress(account)` | K C |
-| Pending seized units | `Collateralization.getPending(vaultToken)`, `Lens.getPendingSettlement(vaultToken)`, `MarketRegistry.settlementReserve(marketId)` | K |
-| Committed-operator registry | `LPVaultSwap.isApprovedKeeper(helper)`, `activeKeeperCount()`, `getKeepers()` | K M |
-| Flash liquidity and premium | `helper.maxFlashLoan(asset)`, `helper.flashPremium(asset, amount)` | K M (`M-17`) |
-| Escrow credits | `PayoutEscrow.claimable(token, account)`; `Lens.getEscrowClaimable(account, tokens)` | C |
-| Borrow nonce | `AaveAdapter.borrowNonce(proxy)` | browser (intent preparation) |
-| Backing and caps | `Lens.checkBacking(vaultToken)`, `Lens.getCapHeadroom(vaultToken, depositor)` | C M (`M-21`) |
-| Tail coverage and deficits | `Lens.getTailCoverage(debtAsset)` (with the DAO deficit offset and its funds, `deficitOffset`, `offsetFunded`), `Lens.uncoveredDeficit(hub, asset)`, `Hub.getSpokeDeficitRay(assetId, spoke)` | M (`M-14`, `M-15`) |
-| Speed limits (BOR-024) | `Lens.getBorrowSpeed(marketId, debtReserveId)` ("available to borrow now", "more from"), `Lens.getPledgeSpeed(marketId)`, through the snapshot reader | C |
-| Account previews and sizing | `Lens.getPositionFees`, `getAccountFees`, `previewBorrowAfter`, `previewRepayAfter`, `previewPledgeAfter`, `previewWithdrawAfter`, `previewMaxWithdraw`, `previewDeleverageTo`, `previewCloseAccount`, `getHubAsset` (`@avana/services-common/views`, `appViews.ts`) | browser |
-| Hub utilization and draw caps | `Hub.getAssetLiquidity`, `getAddedAssets`, `getSpokeTotalOwed`, `getSpokeConfig` | M (`M-18`, `M-19`) |
-| First-Loss Reserve balance | `AvanaFirstLossReserve.totalFunded()`, `totalCovered()`, `totalWithdrawn()` | M (`M-13`) |
-| Timelock expiry | `AvanaTimelock.getTimestamp(id)` plus `GRACE_PERIOD()` | M (`M-22`) |
-| Implementations and code | `eth_getStorageAt(proxy, 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc)`; `keccak256(eth_getCode(address))` | K (`Q-219`) M (`M-26`) |
-| Safes | `getOwners()`, `getThreshold()`, guard and module slots | M (`M-23`) |
-| Token issuers | `paused()`, `basisPointsRate()` and the issuer's blocklist reads | M (`M-25`) |
+| Health factor | `Spoke.getUserAccountData(account)` | B (every pass), C, M |
+| Debt per reserve | `Spoke.getUserTotalDebt(reserveId, account)` | B C |
+| Market record and band | `RiskModule.getMarket(marketId)`, `marketsOf(pool)`, `routeOf(pool, tickLower, tickUpper)` | B C M |
+| Vault-token price | `LPOracle.latestAnswer()`, `getPrices()` (token prices and the pool's `sqrtPriceX96`) | C M (band-edge and depeg alerts) |
+| Liquidation unwind preview | `LiquidationModule.previewUnwind(account, marketId, units)` | B |
+| Draw-cap coverage | `RiskModule.coverage(hub, asset)`, `FirstLossReserve.fundedBalance()`, `isBelowMinimum()` | C M |
+| Keeper registry | `RiskModule.getKeepers()`, `isKeeper(account)` | B M |
+| Flash path | `FlashLiquidator.isFlashBorrower()`, `flashPremium(amount)` | B |
+| Chainlink feed rounds | `latestRoundData()` of every feed leg in the manifest (`LPOracle.feedsOf`) | M |
+| Wallet gas balances | `eth_getBalance` of each keeper wallet and the keeper top-up wallet | M |
 
 ## Not indexed
 
-`VaultToken.Approval`: vault-token allowances stay between the AaveAdapter and its proxies, and no consumer reads them. `test/coverage.test.ts` fails on any other event of a followed contract that has no handler, and on a handler for an event the ABI does not have.
+`UniswapV4PoolManager.Initialize`: a pool is initialized before any market can list it. `test/coverage.test.ts` fails on any event of a followed contract that has no handler, and on a handler for an event the ABI does not have.
