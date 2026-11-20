@@ -139,7 +139,7 @@ export async function pool24h(ctx: QueryCtx, w: World, m: MarketDoc, now: number
   const pricing = poolPricing(w, m);
   const state = lastPoolState(buckets);
   const recent = [...buckets.entries()].filter(([t]) => t >= from).map(([, v]) => v);
-  const lpFeeAprPct = pricing && state ? lpFeeAprPct24h(recent, { sqrtPriceX96: state.sqrtPriceX96, tickLower: m.tickLower, tickUpper: m.tickUpper }, pricing) : undefined;
+  const lpFeeAprPct = pricing && state ? lpFeeAprPct24h(recent, { sqrtPriceX96: state.sqrtPriceX96, tickLower: m.bandLower, tickUpper: m.bandUpper }, pricing) : undefined;
   return { volumeUsd: value("volume"), feesUsd: value("fees") + otherFees * price, ...(lpFeeAprPct === undefined ? {} : { lpFeeAprPct }) };
 }
 

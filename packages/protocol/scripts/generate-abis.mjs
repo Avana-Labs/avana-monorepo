@@ -3,16 +3,17 @@
 // Copyright (c) 2026 Avana Labs
 // Writes src/abis/*.ts from the Foundry build: one typed `as const` ABI per contract the services call or index, and
 // src/abis/index.ts with every export and ABI_HASH. Avana ABIs come from contracts/out (the default profile), the Aave V4
-// Spoke and Hub ABIs from contracts/out-aave (the `aave` profile, built from the pinned Aave V4 commit).
+// Spoke and Hub ABIs from contracts/out-aave (the `aave` profile, built from the pinned Aave V4 commit) and the
+// FlashLiquidator's from liquidator/out (the liquidation bot's contracts, which compile against contracts/src).
 //
 //   node packages/protocol/scripts/generate-abis.mjs                 # write the files
 //   node packages/protocol/scripts/generate-abis.mjs --check         # exit 1 if a committed file differs
-//   ... --out <dir> --out-aave <dir>                                  # read the artifacts from other build folders
+//   ... --out <dir> --out-aave <dir> --out-liquidator <dir>           # read the artifacts from other build folders
 //
 // ABI_HASH = keccak256(UTF-8 of JSON.stringify({ <artifact name>: <abi>, ... })), keys in ascending order, the ABI
 // arrays exactly as Foundry wrote them, no whitespace. The release manifest records the same value.
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { keccak256, stringToBytes } from "viem";
@@ -22,43 +23,37 @@ const REPO = resolve(PKG, "../..");
 const ABI_DIR = join(PKG, "src/abis");
 
 /**
- * [export name, build ("avana" | "aave"), artifact name], sorted by export name. Each ABI is the contract's interface,
- * which carries its events and errors, except where the interface leaves out events the deployed contract emits; that
- * one comes from the contract itself. A "kept" ABI belongs to a contract no longer in contracts/ (the Lens, the gas
- * vault, the flash liquidator, the vault-token factory, and the contracts the seven core contracts replaced: the old
- * AaveAdapter, RiskModule and First-Loss Reserve, Collateralization, LPVaultSwap, MarketRegistry, ParameterStore,
- * PayoutEscrow and ProxyManager): its committed file is read as it is, for the services that still import it, and is
- * not rewritten.
+ * [export name, build ("avana" | "aave" | "liquidator"), artifact name], sorted by export name. Each ABI is the
+ * contract's interface, which carries its functions, events and errors. The seven core contracts (AaveAdapter,
+ * RiskModule, LPVault, VaultToken, LPOracle, LiquidationModule, FirstLossReserve), the FlashloanRepay periphery and the
+ * FlashLiquidator are the only Avana contracts the services read, index or call.
  */
 const CONTRACTS = [
-  ["aaveAdapterAbi", "kept", "ILegacyAaveAdapter"],
-  ["accessManagerAbi", "avana", "IAccessManager"],
+  ["aaveAdapterAbi", "avana", "IAaveAdapter"],
   ["aaveV4HubAbi", "aave", "IHub"],
   ["aaveV4SpokeAbi", "aave", "ISpoke"],
-  ["avanaGasVaultAbi", "kept", "IAvanaGasVault"],
-  ["collateralizationAbi", "kept", "ICollateralization"],
-  ["firstLossReserveAbi", "kept", "AvanaFirstLossReserve"],
-  ["flashLiquidatorAbi", "kept", "IFlashLiquidator"],
-  ["lensAbi", "kept", "ILens"],
+  ["accessManagerAbi", "avana", "IAccessManager"],
+  ["firstLossReserveAbi", "avana", "IFirstLossReserve"],
+  ["flashLiquidatorAbi", "liquidator", "IFlashLiquidator"],
+  ["flashloanRepayAbi", "avana", "IFlashloanRepay"],
+  ["liquidationModuleAbi", "avana", "ILiquidationModule"],
   ["lpOracleAbi", "avana", "ILPOracle"],
   ["lpVaultAbi", "avana", "ILPVault"],
-  ["lpVaultSwapAbi", "kept", "ILPVaultSwap"],
-  ["marketRegistryAbi", "kept", "IMarketRegistry"],
-  ["parameterStoreAbi", "kept", "IParameterStore"],
-  ["payoutEscrowAbi", "kept", "IPayoutEscrow"],
-  ["proxyManagerAbi", "kept", "IProxyManager"],
-  ["riskModuleAbi", "kept", "ILegacyRiskModule"],
+  ["riskModuleAbi", "avana", "IRiskModule"],
   ["vaultTokenAbi", "avana", "IVaultToken"],
-  ["vaultTokenFactoryAbi", "kept", "IVaultTokenFactory"],
 ];
 
-const SOURCE = { avana: "contracts/out", aave: "contracts/out-aave (Aave V4, pinned commit)" };
+const SOURCE = { avana: "contracts/out", aave: "contracts/out-aave (Aave V4, pinned commit)", liquidator: "liquidator/out" };
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(name);
   return i === -1 ? fallback : resolve(process.argv[i + 1]);
 }
-const outDirs = { avana: arg("--out", join(REPO, "contracts/out")), aave: arg("--out-aave", join(REPO, "contracts/out-aave")) };
+const outDirs = {
+  avana: arg("--out", join(REPO, "contracts/out")),
+  aave: arg("--out-aave", join(REPO, "contracts/out-aave")),
+  liquidator: arg("--out-liquidator", join(REPO, "liquidator/out")),
+};
 const check = process.argv.includes("--check");
 
 const HEADER = "// SPDX-License-Identifier: BUSL-1.1\n// Copyright (c) 2026 Avana Labs\n";
@@ -67,11 +62,6 @@ const fileOf = (exportName) => exportName.replace(/Abi$/, "");
 const abis = {};
 const files = new Map();
 for (const [exportName, build, artifact] of CONTRACTS) {
-  if (build === "kept") {
-    const text = readFileSync(join(ABI_DIR, `${fileOf(exportName)}.ts`), "utf8");
-    abis[artifact] = JSON.parse(text.slice(text.indexOf(" = ") + 3, text.lastIndexOf(" as const;")));
-    continue;
-  }
   // A file restricted to other compiler profiles too is written per profile; the default profile's copy is the one.
   const dir = join(outDirs[build], `${artifact}.sol`);
   const plain = join(dir, `${artifact}.json`);
@@ -101,6 +91,16 @@ files.set(
 );
 
 let stale = 0;
+// A file left from a contract no longer listed is stale too: --check reports it, a write removes it.
+for (const name of readdirSync(ABI_DIR)) {
+  if (!name.endsWith(".ts") || files.has(name)) continue;
+  if (check) {
+    console.error(`stale: ${join(ABI_DIR, name)} (no longer generated)`);
+    stale++;
+  } else {
+    rmSync(join(ABI_DIR, name));
+  }
+}
 for (const [name, text] of files) {
   const path = join(ABI_DIR, name);
   if (check) {

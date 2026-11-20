@@ -1,121 +1,103 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// MarketRegistry listing, debt reserves, pause state, address freezes and breakers.
+// RiskModule listing: every pool's two markets (Full range and Custom range), their activation, the debt reserves
+// with their First-Loss Reserves, and the keeper registry. The pool a pair of markets lists starts its series here.
 
 import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
-import { logOnly } from "../lib/logOnly.ts";
+import { clPoolAbi } from "@avana/services-common/views";
+import { integrationOfRiskModule, poolAddressOf } from "../config/integrations.ts";
+import { enumName, logOnly } from "../lib/logOnly.ts";
 import { recordLog } from "../lib/record.ts";
 import { stateReadBlock } from "../lib/stateFloor.ts";
-import { clPoolAbi } from "@avana/services-common/views";
 
-ponder.on("MarketRegistry:MarketRegistered", async ({ event, context }) => {
-  const p = await recordLog(event, context, "MarketRegistry.MarketRegistered");
-  // A replayed log must not insert the market again (the insert has no conflict rule) or undo its later status.
+/** `IRiskModule.MarketKind`. */
+export const MARKET_KIND = ["full-range", "custom-range"] as const;
+
+/** The integration of the RiskModule that emitted a log; a RiskModule the manifest does not list stops the indexer. */
+function integrationOf(chainId: number, riskModule: string) {
+  const x = integrationOfRiskModule(chainId, riskModule);
+  if (!x) throw new Error(`RiskModule ${riskModule} on chain ${chainId} is not in the manifest`);
+  return x;
+}
+
+ponder.on("RiskModule:MarketListed", async ({ event, context }) => {
+  const p = await recordLog(event, context, "RiskModule.MarketListed");
   if (!p.fresh) return;
   const a = event.args;
   await context.db.insert(schema.market).values({
     chainId: p.chainId,
     marketId: a.marketId,
-    integrationId: Number(a.integrationId),
-    spoke: a.spoke,
+    riskModule: event.log.address,
+    integrationId: integrationOf(p.chainId, event.log.address).integrationId,
     pool: a.pool,
-    poolId: a.poolId,
-    tokens: a.tokens.map((t) => t.toLowerCase()),
-    vaultToken: a.vaultToken,
-    lpOracle: a.lpOracle,
-    status: "Registered",
+    kind: enumName(MARKET_KIND, a.kind),
+    bandLower: Number(a.bandLower),
+    bandUpper: Number(a.bandUpper),
+    unitDecimals: Number(a.unitDecimals),
+    active: false,
+    listedBlock: p.blockNumber,
     lastBlock: p.blockNumber,
   });
-  // The pool's series start here; its fee is read once (a dynamic-fee pool is re-read by the hourly sampler). A pool
-  // keyed by identifier has no pool contract: the PoolManager handlers follow it by its poolId.
-  if (/^0x0{40}$/i.test(a.pool)) {
-    if (/^0x0{64}$/i.test(a.poolId)) return;
+});
+
+ponder.on("RiskModule:PoolListed", async ({ event, context }) => {
+  const p = await recordLog(event, context, "RiskModule.PoolListed");
+  const a = event.args;
+  const row = { spoke: a.spoke, listingTick: Number(a.listingTick), ltvBps: Number(a.ltvBps), lastBlock: p.blockNumber };
+  for (const marketId of [a.fullRange, a.customRange]) await context.db.update(schema.market, { chainId: p.chainId, marketId }).set(row);
+  // The pool's series start here. A Uniswap v4 pool is a PoolId the PoolManager handlers follow; a concentrated-
+  // liquidity pool is the address in the key, whose fee is read once (a dynamic-fee pool is re-read by the sampler).
+  const { integrationId, kind } = integrationOf(p.chainId, event.log.address);
+  if (kind === "uniswap-v4") {
     await context.db
       .insert(schema.ammPoolId)
-      .values({ chainId: p.chainId, poolId: a.poolId.toLowerCase() as `0x${string}`, integrationId: Number(a.integrationId), listedBlock: p.blockNumber, lastBlock: p.blockNumber })
+      .values({ chainId: p.chainId, poolId: a.pool.toLowerCase() as `0x${string}`, integrationId, listedBlock: p.blockNumber, lastBlock: p.blockNumber })
       .onConflictDoNothing();
     return;
   }
+  const pool = poolAddressOf(a.pool);
   // At the log's block, or at the state floor of a restored development node (lib/stateFloor.ts).
-  const fee = await context.client.readContract({ address: a.pool, abi: clPoolAbi, functionName: "fee", blockNumber: stateReadBlock(p.chainId, p.blockNumber) });
+  const fee = await context.client.readContract({ address: pool, abi: clPoolAbi, functionName: "fee", blockNumber: stateReadBlock(p.chainId, p.blockNumber) });
   await context.db
     .insert(schema.ammPool)
-    .values({ chainId: p.chainId, pool: a.pool.toLowerCase() as `0x${string}`, integrationId: Number(a.integrationId), feePips: Number(fee), listedBlock: p.blockNumber, lastBlock: p.blockNumber })
+    .values({ chainId: p.chainId, pool, integrationId, feePips: Number(fee), listedBlock: p.blockNumber, lastBlock: p.blockNumber })
     .onConflictDoNothing();
 });
 
-ponder.on("MarketRegistry:MarketActivated", async ({ event, context }) => {
-  const p = await recordLog(event, context, "MarketRegistry.MarketActivated");
+ponder.on("RiskModule:MarketActivated", async ({ event, context }) => {
+  const p = await recordLog(event, context, "RiskModule.MarketActivated");
   const a = event.args;
   await context.db
     .update(schema.market, { chainId: p.chainId, marketId: a.marketId })
-    .set({ status: "Active", reserveId: a.reserveId, hub: a.hub, hubAssetId: a.hubAssetId, lastBlock: p.blockNumber });
+    .set({ active: true, vaultToken: a.vaultToken, lpOracle: a.lpOracle, reserveId: a.reserveId, lastBlock: p.blockNumber });
 });
 
-for (const [name, status] of [
-  ["MarketRegistrationCancelled", "Cancelled"],
-  ["MarketClosed", "Closed"],
-] as const) {
-  ponder.on(`MarketRegistry:${name}`, async ({ event, context }) => {
-    const p = await recordLog(event, context, `MarketRegistry.${name}`);
-    await context.db.update(schema.market, { chainId: p.chainId, marketId: event.args.marketId }).set({ status, lastBlock: p.blockNumber });
-  });
-}
-
-// Offboarding is one step: the notice starts at this block and its end, `offboardedAt + 5 days`, is the earliest time of
-// both the Aave DAO's one liquidation-threshold drop and `closeMarket`.
-ponder.on("MarketRegistry:MarketOffboarding", async ({ event, context }) => {
-  const p = await recordLog(event, context, "MarketRegistry.MarketOffboarding");
-  await context.db
-    .update(schema.market, { chainId: p.chainId, marketId: event.args.marketId })
-    .set({ status: "Offboarding", offboardedAt: p.blockTimestamp, lastBlock: p.blockNumber });
-});
-
-ponder.on("MarketRegistry:SettlementReserveSet", async ({ event, context }) => {
-  const p = await recordLog(event, context, "MarketRegistry.SettlementReserveSet");
-  await context.db
-    .update(schema.market, { chainId: p.chainId, marketId: event.args.marketId })
-    .set({ settlementReserveId: event.args.debtReserveId, lastBlock: p.blockNumber });
-});
-
-ponder.on("MarketRegistry:DebtReserveApproved", async ({ event, context }) => {
-  const p = await recordLog(event, context, "MarketRegistry.DebtReserveApproved");
+ponder.on("RiskModule:DebtReserveSet", async ({ event, context }) => {
+  const p = await recordLog(event, context, "RiskModule.DebtReserveSet");
   const a = event.args;
-  const row = {
-    asset: a.asset,
-    fundingHub: a.fundingHub,
-    hubAssetId: a.hubAssetId,
-    priceSource: a.priceSource,
-    firstLossReserve: a.firstLossReserve,
-    approved: true,
-    lastBlock: p.blockNumber,
-  };
+  const row = { hub: a.hub, asset: a.asset, firstLossReserve: a.firstLossReserve, listed: true, lastBlock: p.blockNumber };
   await context.db
     .insert(schema.debtReserve)
-    .values({ chainId: p.chainId, spoke: a.spoke, debtReserveId: a.reserveId, ...row })
+    .values({ chainId: p.chainId, riskModule: event.log.address, spoke: a.spoke, debtReserveId: a.reserveId, ...row })
     .onConflictDoUpdate(row);
 });
 
-ponder.on("MarketRegistry:DebtReserveRemoved", async ({ event, context }) => {
-  const p = await recordLog(event, context, "MarketRegistry.DebtReserveRemoved");
+ponder.on("RiskModule:DebtReserveRemoved", async ({ event, context }) => {
+  const p = await recordLog(event, context, "RiskModule.DebtReserveRemoved");
   await context.db
-    .update(schema.debtReserve, { chainId: p.chainId, spoke: event.args.spoke, debtReserveId: event.args.reserveId })
-    .set({ approved: false, lastBlock: p.blockNumber });
+    .update(schema.debtReserve, { chainId: p.chainId, riskModule: event.log.address, spoke: event.args.spoke, debtReserveId: event.args.reserveId })
+    .set({ listed: false, lastBlock: p.blockNumber });
 });
 
-// GateBreached carries no scope; the breach time per key is read live with MarketRegistry.lastBreachAt(key). Hub,
-// CDP Spoke and credit-line events are handled in hubs.ts.
-logOnly("MarketRegistry", [
-  "AuthorityUpdated",
-  "IntegrationContractsFinalized",
-  "TokenListed",
-  "PriceSourceSet",
-  "RouteSet",
-  "RouteDisabled",
-  "RouteRestored",
-  "AvanaFirstLossReserveSet",
-  "FlashSourceSet",
-  "SpokeCodeHashApproved",
-  "IntegrationContractsRecorded",
-]);
+for (const [name, active] of [["KeeperAdded", true], ["KeeperRemoved", false]] as const) {
+  ponder.on(`RiskModule:${name}`, async ({ event, context }) => {
+    const p = await recordLog(event, context, `RiskModule.${name}`);
+    await context.db
+      .insert(schema.keeper)
+      .values({ chainId: p.chainId, riskModule: event.log.address, keeper: event.args.keeper, active, lastBlock: p.blockNumber })
+      .onConflictDoUpdate({ active, lastBlock: p.blockNumber });
+  });
+}
+
+logOnly("RiskModule", ["SpokeRegistered", "SpokeWidthSet", "CoverageRatioSet", "FeeSet"]);

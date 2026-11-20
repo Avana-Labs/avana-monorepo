@@ -1,27 +1,45 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The handlers on scripted logs (test/harness): account attribution needs both creation events, Spoke debt moves only
-// for attributed accounts and only once when two sources deliver the same log, every log writes its event_log row and
-// the parties it names, custody and collateral records follow their events, and the risk premium and collateral-risk
-// rows behind the refresh list.
+// The handlers on scripted logs (test/harness): a pool's two markets, account attribution from AccountCreated, Spoke
+// debt moving only for attributed accounts and only once when two sources deliver the same log, every log writing its
+// event_log row and the parties it names, positions and per-market pledge and withdrawal totals, vault-token mints and
+// burns, liquidations, repayments with collateral, First-Loss cover, the keeper registry, and the risk premium and
+// collateral-risk rows behind the refresh list.
 
 import { describe, expect, it } from "vitest";
 import schema from "ponder:schema";
 import { type LogSpec, Run, addr } from "./harness/run.ts";
+import { V3 } from "./harness/manifest.ts";
 import { lastRiskChange, refreshList } from "../src/lib/premiumRefresh.ts";
 
-const ADAPTER = addr(0xa0);
-const MANAGER = addr(0xa1);
+const ADAPTER = V3.aaveAdapter;
 const SPOKE = addr(0xb0);
 const WALLET = addr(0xc0);
 const PROXY = addr(0xc1);
 const STRANGER = addr(0xc2);
 const VAULT = addr(0xd0);
+const POOL = `0x${"00".repeat(12)}${addr(0xf5).slice(2)}` as const;
+const KEY = `0x${"00".repeat(31)}2a` as const;
+const lower = (a: string) => a.toLowerCase();
+
+/** A pool listed on integration 1: its Full range (7) and Custom range (8) markets, then the pool. */
+const listed = (block: bigint): LogSpec[] => [
+  { source: "RiskModule", event: "MarketListed", args: { marketId: 7n, pool: POOL, kind: 0, bandLower: -887_270, bandUpper: 887_270, unitDecimals: 18 }, address: V3.riskModule, block, logIndex: 0 },
+  { source: "RiskModule", event: "MarketListed", args: { marketId: 8n, pool: POOL, kind: 1, bandLower: -100, bandUpper: 100, unitDecimals: 18 }, address: V3.riskModule, block, logIndex: 1 },
+  { source: "RiskModule", event: "PoolListed", args: { pool: POOL, spoke: SPOKE, fullRange: 7n, customRange: 8n, listingTick: 0, ltvBps: 9_000 }, address: V3.riskModule, block, logIndex: 2 },
+];
 
 const created = (block: bigint, logIndex: number): LogSpec[] => [
-  { source: "AaveAdapter", event: "UserProxyCreated", args: { wallet: WALLET, spoke: SPOKE, marketId: 7n, proxy: PROXY }, address: ADAPTER, block, logIndex },
-  { source: "ProxyManager", event: "ProxyDeployed", args: { wallet: WALLET, spoke: SPOKE, marketId: 7n, proxy: PROXY }, address: MANAGER, block, logIndex: logIndex + 1 },
+  { source: "AaveAdapter", event: "AccountCreated", args: { wallet: WALLET, marketId: 7n, account: PROXY }, address: ADAPTER, block, logIndex },
 ];
+
+/** A run with the pool listed at block 5 (its fee read from the pool). */
+async function listedRun(): Promise<Run> {
+  const run = new Run();
+  run.client.readContract = async () => 100;
+  await run.deliverAll(listed(5n));
+  return run;
+}
 
 const borrow = (block: bigint, logIndex: number, user = PROXY, shares = 1_000n, source = "AaveSpoke"): LogSpec => ({
   source,
@@ -59,64 +77,168 @@ const reserveConfig = (block: bigint, logIndex: number, collateralRisk: number, 
   logIndex,
 });
 
-const lower = (a: string) => a.toLowerCase();
+describe("markets", () => {
+  it("lists a pool's Full range and Custom range markets with their bands and the LTV and Spoke they share", async () => {
+    const run = await listedRun();
+    expect(run.store.rows(schema.market).map((m) => [m.marketId, m.kind, m.bandLower, m.bandUpper, m.ltvBps, m.spoke, m.integrationId, m.active])).toEqual([
+      [7n, "full-range", -887_270, 887_270, 9_000, lower(SPOKE), 1, false],
+      [8n, "custom-range", -100, 100, 9_000, lower(SPOKE), 1, false],
+    ]);
+    expect(run.store.rows(schema.ammPool)).toMatchObject([{ pool: lower(addr(0xf5)), integrationId: 1, feePips: 100, listedBlock: 5n }]);
+  });
+
+  it("activates a market with its vault token, LPOracle and reserve", async () => {
+    const run = await listedRun();
+    await run.deliver({ source: "RiskModule", event: "MarketActivated", args: { marketId: 8n, vaultToken: VAULT, reserveId: 4n, lpOracle: addr(0xd1) }, address: V3.riskModule, block: 6n, logIndex: 0 });
+    expect(run.store.rows(schema.market).find((m) => m.marketId === 8n)).toMatchObject({ active: true, vaultToken: lower(VAULT), reserveId: 4n });
+  });
+
+  it("refuses a RiskModule the manifest does not list", async () => {
+    const run = new Run();
+    await expect(run.deliver({ ...listed(5n)[0]!, address: addr(0x999) })).rejects.toThrow(/not in the manifest/);
+  });
+
+  it("keeps each RiskModule's keeper registry and debt reserves", async () => {
+    const run = new Run();
+    await run.deliverAll([
+      { source: "RiskModule", event: "KeeperAdded", args: { keeper: addr(0xb07) }, address: V3.riskModule, block: 3n, logIndex: 0 },
+      { source: "RiskModule", event: "DebtReserveSet", args: { spoke: SPOKE, reserveId: 2n, hub: addr(0xab), asset: addr(0xac), firstLossReserve: addr(0xf1) }, address: V3.riskModule, block: 3n, logIndex: 1 },
+      { source: "RiskModule", event: "KeeperRemoved", args: { keeper: addr(0xb07) }, address: V3.riskModule, block: 4n, logIndex: 0 },
+    ]);
+    expect(run.store.rows(schema.keeper)).toMatchObject([{ keeper: lower(addr(0xb07)), active: false, lastBlock: 4n }]);
+    expect(run.store.rows(schema.debtReserve)).toMatchObject([{ debtReserveId: 2n, firstLossReserve: lower(addr(0xf1)), listed: true }]);
+  });
+});
 
 describe("account attribution and debt", () => {
-  it("attributes an account once both creation events agree, and moves its drawn shares", async () => {
-    const run = new Run();
+  it("attributes an account from AccountCreated under its market's Spoke, and moves its drawn shares", async () => {
+    const run = await listedRun();
     await run.deliverAll([...created(10n, 0), borrow(11n, 0), repay(12n, 0, 400n)]);
     const [account] = run.store.rows(schema.account);
-    expect(account).toMatchObject({ wallet: lower(WALLET), proxy: lower(PROXY), adapterSeen: true, managerSeen: true, marketId: 7n, createdBlock: 10n });
+    expect(account).toMatchObject({ wallet: lower(WALLET), proxy: lower(PROXY), spoke: lower(SPOKE), adapter: lower(ADAPTER), marketId: 7n, createdBlock: 10n });
     const [debt] = run.store.rows(schema.accountDebt);
     expect(debt).toMatchObject({ debtReserveId: 2n, drawnShares: 600n, deficitReported: false, lastBlock: 12n });
   });
 
   it("moves debt once when two sources deliver the same Spoke log", async () => {
-    const run = new Run();
-    await run.deliverAll([...created(10n, 0), borrow(11n, 0, PROXY, 1_000n, "AaveSpoke"), borrow(11n, 0, PROXY, 1_000n, "AaveSpokeAdded"), borrow(11n, 0, PROXY, 1_000n, "AaveSpokeApproved")]);
+    const run = await listedRun();
+    await run.deliverAll([...created(10n, 0), borrow(11n, 0, PROXY, 1_000n, "AaveSpoke"), borrow(11n, 0, PROXY, 1_000n, "AaveSpokeAdded")]);
     expect(run.store.rows(schema.accountDebt)[0]!.drawnShares).toBe(1_000n);
     expect(run.store.rows(schema.eventLog).filter((r) => r.kind === "AaveSpoke.Borrow")).toHaveLength(1);
   });
 
-  it("keeps the debt of an address that no creation event announced out of the account tables", async () => {
-    const run = new Run();
+  it("keeps the debt of an address the AaveAdapter did not announce out of the account tables", async () => {
+    const run = await listedRun();
     await run.deliverAll([...created(10n, 0), borrow(11n, 0, STRANGER)]);
     expect(run.store.rows(schema.accountDebt)).toEqual([]);
     expect(run.store.rows(schema.eventLog).map((r) => r.kind)).toContain("AaveSpoke.Borrow");
   });
 
-  it("refuses creation events that name different wallets for one proxy", async () => {
-    const run = new Run();
-    await run.deliver(created(10n, 0)[0]!);
-    await expect(run.deliver({ ...created(10n, 0)[1]!, args: { wallet: STRANGER, spoke: SPOKE, marketId: 7n, proxy: PROXY } })).rejects.toThrow(/disagree/);
+  it("refuses an account of a market not listed yet", async () => {
+    await expect(new Run().deliver(created(10n, 0)[0]!)).rejects.toThrow(/before its PoolListed/);
   });
 
   it("writes one log_party row per address a log names", async () => {
-    const run = new Run();
+    const run = await listedRun();
     await run.deliverAll([...created(10n, 0), borrow(11n, 0)]);
     const parties = run.store.rows(schema.logParty).filter((r) => r.blockNumber === 11n).map((r) => r.party).sort();
     expect(parties).toEqual([lower(ADAPTER), lower(PROXY)].sort());
   });
 });
 
-describe("custody", () => {
-  const KEY = `0x${"00".repeat(31)}2a` as const;
-  const LP_VAULT = addr(0xe0);
+describe("positions and market totals", () => {
+  const pledged = (marketId: bigint, liquidity: bigint, credit: bigint, block = 20n): LogSpec[] => [
+    { source: "LPVault", event: "PositionPledged", args: { positionKey: KEY, account: PROXY, marketId, from: WALLET, liquidity, credit }, address: V3.lpVault, block, logIndex: 0 },
+    { source: "AaveAdapter", event: "Pledged", args: { wallet: WALLET, marketId, positionKey: KEY, credit }, address: ADAPTER, block, logIndex: 1 },
+  ];
+  const totals = (run: Run) => run.store.rows(schema.marketCollateral).map((m) => [m.marketId, m.positions, m.liquidity, m.credit, m.pledges, m.withdrawals, m.unwinds]);
 
-  it("holds a received position until it is returned", async () => {
+  it("holds a pledged position for its wallet and counts it in its market", async () => {
     const run = new Run();
-    await run.deliver({ source: "LPVault", event: "PositionPledged", args: { positionKey: KEY, account: WALLET, marketId: 7n, from: WALLET, liquidity: 5n, credit: 5n }, address: LP_VAULT, block: 20n, logIndex: 0 });
-    expect(run.store.rows(schema.lpPosition)[0]).toMatchObject({ held: true, stray: false, depositor: lower(WALLET) });
-    await run.deliver({ source: "LPVault", event: "PositionReleased", args: { positionKey: KEY, account: WALLET, recipient: WALLET, liquidity: 5n, credit: 5n }, address: LP_VAULT, block: 21n, logIndex: 0 });
-    expect(run.store.rows(schema.lpPosition)[0]).toMatchObject({ held: false, lastBlock: 21n });
+    await run.deliverAll(pledged(8n, 1_000n, 400n));
+    expect(run.store.rows(schema.position)[0]).toMatchObject({ marketId: 8n, account: lower(PROXY), wallet: lower(WALLET), liquidity: 1_000n, credit: 400n, held: true });
+    expect(totals(run)).toEqual([[8n, 1, 1_000n, 400n, 1, 0, 0]]);
   });
 
-  it("tracks seized units waiting for settlement", async () => {
+  it("moves liquidity and credit on add, partial withdraw, liquidation unwind and release", async () => {
     const run = new Run();
-    const C = addr(0xe1);
-    await run.deliver({ source: "Collateralization", event: "SeizureReconciled", args: { proxy: PROXY, vaultToken: VAULT, units: 9n, amounts: [1n, 2n] }, address: C, block: 30n, logIndex: 0 });
-    await run.deliver({ source: "Collateralization", event: "PendingSettled", args: { vaultToken: VAULT, units: 4n, amounts: [1n, 0n] }, address: C, block: 31n, logIndex: 0 });
-    expect(run.store.rows(schema.pendingSettlement)[0]).toMatchObject({ units: 5n, lastBlock: 31n });
+    await run.deliverAll(pledged(8n, 1_000n, 400n));
+    const ev = (event: string, args: Record<string, unknown>, block: bigint): LogSpec => ({ source: "LPVault", event, args: { positionKey: KEY, ...args }, address: V3.lpVault, block, logIndex: 0 });
+    await run.deliver(ev("LiquidityAdded", { payer: WALLET, liquidity: 500n, credit: 200n, amount0: 1n, amount1: 1n }, 21n));
+    await run.deliver(ev("LiquidityRemoved", { recipient: WALLET, liquidity: 300n, credit: 120n, amount0: 1n, amount1: 1n }, 22n));
+    await run.deliver(ev("PositionUnwound", { recipient: addr(0x102), liquidity: 200n, credit: 80n, amount0: 1n, amount1: 1n }, 23n));
+    expect(run.store.rows(schema.position)[0]).toMatchObject({ liquidity: 1_000n, credit: 400n, held: true, lastBlock: 23n });
+    await run.deliver(ev("PositionReleased", { account: PROXY, recipient: WALLET, liquidity: 1_000n, credit: 400n }, 24n));
+    expect(run.store.rows(schema.position)[0]).toMatchObject({ liquidity: 0n, credit: 0n, held: false });
+    expect(totals(run)).toEqual([[8n, 0, 0n, 0n, 1, 2, 1]]);
+  });
+
+  it("keeps a pool's Full range and Custom range markets apart", async () => {
+    const run = new Run();
+    const other = `0x${"00".repeat(31)}2b` as const;
+    await run.deliverAll(pledged(8n, 1_000n, 400n));
+    await run.deliver({ source: "LPVault", event: "PositionPledged", args: { positionKey: other, account: PROXY, marketId: 7n, from: WALLET, liquidity: 50n, credit: 30n }, address: V3.lpVault, block: 25n, logIndex: 0 });
+    expect(totals(run).sort((a, b) => Number(a[0]) - Number(b[0]))).toEqual([
+      [7n, 1, 50n, 30n, 1, 0, 0],
+      [8n, 1, 1_000n, 400n, 1, 0, 0],
+    ]);
+  });
+
+  it("counts a replayed log once", async () => {
+    const run = new Run();
+    await run.deliverAll([...pledged(8n, 1_000n, 400n), pledged(8n, 1_000n, 400n)[0]!]);
+    expect(totals(run)).toEqual([[8n, 1, 1_000n, 400n, 1, 0, 0]]);
+  });
+
+  it("stops on a change to a position never pledged", async () => {
+    const run = new Run();
+    await expect(
+      run.deliver({ source: "LPVault", event: "LiquidityRemoved", args: { positionKey: KEY, recipient: WALLET, liquidity: 1n, credit: 1n, amount0: 0n, amount1: 0n }, address: V3.lpVault, block: 5n, logIndex: 0 }),
+    ).rejects.toThrow(/before its PositionPledged/);
+  });
+});
+
+describe("vault-token supply", () => {
+  it("adds mints and subtracts burns, from either vault-token source, and ignores transfers between holders", async () => {
+    const run = new Run();
+    const zero = addr(0);
+    const t = (source: string, from: string, to: string, value: bigint, block: bigint): LogSpec => ({ source, event: "Transfer", args: { from, to, value }, address: VAULT, block, logIndex: 0 });
+    await run.deliverAll([t("VaultTokenListed", zero, PROXY, 1_000n, 30n), t("VaultToken", zero, PROXY, 1_000n, 30n), t("VaultToken", PROXY, addr(0x102), 300n, 31n), t("VaultToken", addr(0x102), zero, 300n, 32n)]);
+    expect(run.store.rows(schema.vaultTokenSupply)).toMatchObject([{ vaultToken: lower(VAULT), supply: 700n, minted: 1_000n, burned: 300n, lastBlock: 32n }]);
+  });
+});
+
+describe("liquidations and repayments with collateral", () => {
+  const liquidated = (block: bigint, logIndex: number): LogSpec => ({
+    source: "LiquidationModule",
+    event: "Liquidated",
+    args: { account: PROXY, marketId: 8n, liquidator: addr(0xf7), debtReserveId: 2n, debtRepaid: 1_000n, seized: 900n, creditUnwound: 800n, amount0: 10n, amount1: 20n },
+    address: V3.liquidationModule,
+    block,
+    logIndex,
+  });
+
+  it("records a liquidation with the Avana fee of its FeePaid and the flash figures of its FlashLiquidated", async () => {
+    const run = new Run();
+    const spec = liquidated(40n, 3);
+    await run.deliver(spec);
+    // FeePaid and FlashLiquidated are later logs of the same transaction (the harness keys a tx by its first log).
+    const tx = run.store.rows(schema.liquidation)[0]!.txHash as `0x${string}`;
+    const sameTx = (s: LogSpec) => ({ ...s, block: spec.block });
+    await run.deliverIn(tx, sameTx({ source: "LiquidationModule", event: "FeePaid", args: { account: PROXY, marketId: 8n, recipient: addr(0xfe), units: 9n, fee0: 1n, fee1: 2n }, address: V3.liquidationModule, block: 40n, logIndex: 4 }));
+    await run.deliverIn(tx, sameTx({ source: "FlashLiquidator", event: "FlashLiquidated", args: { account: PROXY, marketId: 8n, asset: addr(0xac), flashAmount: 1_000n, premium: 0n, debtRepaid: 1_000n, topUp: 5n, profit: 7n }, address: addr(0xf7), block: 40n, logIndex: 5 }));
+    expect(run.store.rows(schema.liquidation)).toMatchObject([{ account: lower(PROXY), marketId: 8n, debtRepaid: 1_000n, seized: 900n, creditUnwound: 800n, feeUnits: 9n, fee0: 1n, fee1: 2n, flashAmount: 1_000n, topUp: 5n, profit: 7n }]);
+  });
+
+  it("refuses a FeePaid without its Liquidated", async () => {
+    const run = new Run();
+    await expect(run.deliver({ source: "LiquidationModule", event: "FeePaid", args: { account: PROXY, marketId: 8n, recipient: addr(0xfe), units: 9n, fee0: 1n, fee1: 2n }, address: V3.liquidationModule, block: 40n, logIndex: 4 })).rejects.toThrow(/without its Liquidated/);
+  });
+
+  it("records a repayment with collateral", async () => {
+    const run = new Run();
+    await run.deliver({ source: "FlashloanRepay", event: "RepaidWithCollateral", args: { wallet: WALLET, positionKey: KEY, asset: addr(0xac), repaid: 500n, premium: 0n, liquidity: 250n }, address: V3.flashloanRepay, block: 45n, logIndex: 0 });
+    expect(run.store.rows(schema.collateralRepay)).toMatchObject([{ wallet: lower(WALLET), positionKey: KEY, repaid: 500n, liquidity: 250n }]);
   });
 });
 
@@ -124,31 +246,31 @@ describe("First-Loss Reserves and deficit offsets", () => {
   it("records a reserve's log once when both reserve sources deliver it, and keeps its balance", async () => {
     const run = new Run();
     const reserve = addr(0xf1);
-    const funded = (source: string): LogSpec => ({ source, event: "ReserveFunded", args: { funder: WALLET, amount: 50n, shares: 50n, balanceAfter: 150n }, address: reserve, block: 40n, logIndex: 0 });
-    await run.deliverAll([funded("AvanaFirstLossReserveListed"), funded("AvanaFirstLossReserve"), funded("DaoDeficitOffset")]);
-    expect(run.store.rows(schema.eventLog).map((r) => r.kind)).toEqual(["AvanaFirstLossReserve.ReserveFunded"]);
+    const funded = (source: string): LogSpec => ({ source, event: "Funded", args: { funder: WALLET, amount: 50n, shares: 50n, balanceAfter: 150n }, address: reserve, block: 40n, logIndex: 0 });
+    await run.deliverAll([funded("FirstLossReserveListed"), funded("FirstLossReserve"), funded("DaoDeficitOffset")]);
+    expect(run.store.rows(schema.eventLog).map((r) => r.kind)).toEqual(["FirstLossReserve.Funded"]);
     expect(run.store.rows(schema.coverageBalance)).toMatchObject([{ firstLossReserve: lower(reserve), balance: 150n }]);
   });
 
-  it("records the funding of a manifest reserve before the MarketRegistry sets it", async () => {
+  it("records each deficit a reserve covers with the balance after it", async () => {
     const run = new Run();
     const reserve = addr(0xf3);
-    await run.deliver({ source: "AvanaFirstLossReserveListed", event: "ReserveFunded", args: { funder: WALLET, amount: 6n, shares: 6n, balanceAfter: 6n }, address: reserve, block: 12n, logIndex: 0 });
-    expect(run.store.rows(schema.eventLog).map((r) => r.kind)).toEqual(["AvanaFirstLossReserve.ReserveFunded"]);
-    expect(run.store.rows(schema.coverageBalance)).toMatchObject([{ firstLossReserve: lower(reserve), balance: 6n }]);
+    await run.deliver({ source: "FirstLossReserveListed", event: "DeficitCovered", args: { spoke: SPOKE, caller: addr(0xca), covered: 6n, shares: 6n, balanceAfter: 94n }, address: reserve, block: 12n, logIndex: 0 });
+    expect(run.store.rows(schema.firstLossCover)).toMatchObject([{ firstLossReserve: lower(reserve), spoke: lower(SPOKE), covered: 6n, balanceAfter: 94n }]);
+    expect(run.store.rows(schema.coverageBalance)).toMatchObject([{ firstLossReserve: lower(reserve), balance: 94n }]);
   });
 
   it("follows a deficit offset that only the Hub's AddSpoke announced", async () => {
     const run = new Run();
     const offset = addr(0xf2);
-    await run.deliver({ source: "DaoDeficitOffset", event: "ReserveFunded", args: { funder: addr(0xda0), amount: 9n, shares: 9n, balanceAfter: 9n }, address: offset, block: 41n, logIndex: 0 });
+    await run.deliver({ source: "DaoDeficitOffset", event: "Funded", args: { funder: addr(0xda0), amount: 9n, shares: 9n, balanceAfter: 9n }, address: offset, block: 41n, logIndex: 0 });
     expect(run.store.rows(schema.coverageBalance)).toMatchObject([{ firstLossReserve: lower(offset), balance: 9n }]);
   });
 });
 
 describe("risk premium refresh", () => {
   it("keeps an attributed account's last premium and ignores other users", async () => {
-    const run = new Run();
+    const run = await listedRun();
     await run.deliverAll([...created(10n, 0), premium(11n, 1, 300n), premium(12n, 0, 450n), premium(12n, 1, 999n, STRANGER)]);
     const rows = run.store.rows(schema.accountPremium);
     expect(rows).toHaveLength(1);

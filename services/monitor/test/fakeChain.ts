@@ -19,6 +19,8 @@ export interface FakeProvider {
   storage: Map<string, Hex>;
   snapshot: (b: Block) => ChainSnapshot;
   down?: boolean;
+  /** Native balances by lower-case address; 0 when absent. */
+  balances?: Map<string, bigint>;
   /** Answers simulated calls (`eth_call` with overrides). */
   call?: (from: Address, to: Address, data: Hex, overrides: readonly Override[]) => Promise<CallOutcome> | CallOutcome;
 }
@@ -28,7 +30,7 @@ export function fixtureSnapshot(b: Block, edit: (s: ChainSnapshot) => ChainSnaps
     chainId: 1,
     blockNumber: b.number.toString(10),
     timestamp: b.timestamp,
-    hubs: [{ chainId: 1, hub: FIXTURE_HUB, label: "Stable", tier: 1, recorded: true, applicationState: 0, assetCount: 1, lendAssetIds: ["1"], lendSpokes: [FIXTURE_LEND], cdpSpokes: [FIXTURE_U, FIXTURE_X], blockNumber: b.number.toString(10) }],
+    hubs: [{ chainId: 1, hub: FIXTURE_HUB, label: "Stable", tier: 1, assetCount: 1, lendAssetIds: ["1"], lendSpokes: [FIXTURE_LEND], cdpSpokes: [FIXTURE_U, FIXTURE_X], blockNumber: b.number.toString(10) }],
     hubAssets: [fixtureHubAsset],
     slices: fixtureSlices,
     spokeReserves: fixtureSpokeReserves,
@@ -75,6 +77,10 @@ export function provider(p: FakeProvider): ProviderReads {
         return p.logs.filter((l) => set.has(l.address.toLowerCase()) && topics.has((l.topics[0] ?? "").toLowerCase()) && l.blockNumber >= from && l.blockNumber <= to);
       },
       getStorageAt: async (address: Address, slot: Hex) => p.storage.get(`${address.toLowerCase()}:${slot}`) ?? `0x${"00".repeat(32)}`,
+      getBalance: async (address: Address) => {
+        if (p.down) throw new Error("ECONNREFUSED");
+        return p.balances?.get(address.toLowerCase()) ?? 0n;
+      },
       call: async (from, to, data, overrides = []) => {
         if (p.down) throw new Error("ECONNREFUSED");
         if (!p.call) return { ok: false, error: "no call handler" };
@@ -84,7 +90,7 @@ export function provider(p: FakeProvider): ProviderReads {
   };
 }
 
-export const EMPTY_MANIFEST = { chainId: 1, avana: { lens: { address: "0x00000000000000000000000000000000000000e1" }, marketRegistry: { address: "0x00000000000000000000000000000000000000e2" }, parameterStore: { address: "0x00000000000000000000000000000000000000e3" }, firstLossReserves: [] }, markets: [], debtReserves: [], aave: { hubs: [], lendSpokes: [], borrowSpokes: [] } } as unknown as ServiceManifest;
+export const EMPTY_MANIFEST = { chainId: 1, avana: { accessManager: { address: "0x00000000000000000000000000000000000000e1" }, integrations: [], flashLiquidators: [] }, markets: [], debtReserves: [], coverage: { firstLossReserves: [], daoDeficitOffsets: [] }, roles: { keepers: [], keeperTopUp: null }, aave: { hubs: [], lendSpokes: [], borrowSpokes: [] } } as unknown as ServiceManifest;
 
 export function fakeChain(head: () => Block, primary: FakeProvider, second: FakeProvider, manifest: ServiceManifest = EMPTY_MANIFEST): ChainReads {
   return { chain: CHAINS.mainnet, manifest, head: async () => head(), primary: provider(primary), second: provider(second) };

@@ -66,6 +66,10 @@ services:
     env_file: keeper/.env
     environment:
       KEEPER_INDEXER_URL: http://indexer:42069
+      KEEPER_INDEXER_KEY_FILE: /secrets/indexer.key
+      KEEPER_MONITOR_TOKEN_FILE: /secrets/monitor.token
+      LIQUIDATION_BOT_KEYSTORE: /secrets/keystore
+      LIQUIDATION_BOT_PASSWORD_FILE: /secrets/keystore.password
       KEEPER_HALT_STATE_PATH: /data/halt.json
       KEEPER_KILL_SWITCH_PORT: "9443"
       KEEPER_METRICS_PORT: "9464"
@@ -77,6 +81,9 @@ services:
       - keeper:/data
       # The kill switch's server certificate, key and client CA (mutual TLS). Never committed.
       - ${KEEPER_TLS_DIR:?set KEEPER_TLS_DIR to the folder holding server.pem, server.key and client-ca.pem}:/tls:ro
+      # The LiquidationBot's encrypted Foundry keystore and its password file, the bot stream key and the monitor token.
+      # Never committed.
+      - ${KEEPER_SECRETS_DIR:?set KEEPER_SECRETS_DIR to the folder holding keystore, keystore.password, indexer.key and monitor.token}:/secrets:ro
     ports:
       - "127.0.0.1:9443:9443"
       - "127.0.0.1:9464:9464"

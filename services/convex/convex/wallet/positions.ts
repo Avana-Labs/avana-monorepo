@@ -34,8 +34,11 @@ export const borrowAccounts = query({
     const owner = wallet.toLowerCase();
     const rows = await ctx.db.query("accounts").withIndex("by_wallet", (q) => q.eq("wallet", owner)).collect();
     const w = await loadWorld(ctx);
-    const lenses = (await ctx.db.query("deployments").collect()).map((d) => ({ chainId: d.chainId, lens: d.lens }));
-    return { lenses, ...borrowAccountRefs(w, rows) };
+    const deployments = await ctx.db.query("deployments").collect();
+    // The replaced core's Lens is gone: `lenses` stays empty for the web app until it reads `adapters`, each chain's
+    // AaveAdapters (one per integration; `accountOf(wallet, marketId)` gives the account).
+    const adapters = deployments.flatMap((d) => (d.integrations ?? []).map((x) => ({ chainId: d.chainId, integrationId: x.integrationId, aaveAdapter: x.aaveAdapter })));
+    return { lenses: [] as { chainId: number; lens: string }[], adapters, ...borrowAccountRefs(w, rows) };
   },
 });
 

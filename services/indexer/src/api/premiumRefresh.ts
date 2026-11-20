@@ -24,7 +24,7 @@ export async function buildPremiumRefresh(chainId: number, spoke: `0x${string}`)
   const premiumOf = new Map(premiums.map((p) => [p.proxy, { blockNumber: p.lastBlock, logIndex: p.lastLogIndex }]));
   const proxies = refreshList(
     change,
-    accounts.filter((a) => a.adapterSeen && a.managerSeen).map((a) => ({ proxy: a.proxy, drawnShares: drawn.get(a.proxy) ?? 0n, premiumAt: premiumOf.get(a.proxy) ?? null })),
+    accounts.map((a) => ({ proxy: a.proxy, drawnShares: drawn.get(a.proxy) ?? 0n, premiumAt: premiumOf.get(a.proxy) ?? null })),
   );
   return {
     chainId,

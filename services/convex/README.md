@@ -29,7 +29,7 @@ A chain has several Aave V4 Hubs. Each has one or more supply-only Lend Spokes (
 | `hubAssetSpokes` | chain, Hub, assetId, Spoke | One Spoke's added, owed, deficit, caps, kind (lend, cdp, coverage, deficit offset, fee receiver, other) | Lend allocation by Spoke; "borrowed via this Spoke" on a Borrow asset page |
 | `creditLines` | chain, funding Hub, assetId, Spoke | A Hub-to-Hub line's cap, the funding Hub's total of caps and whether lines are open; the draw is the Spoke's `hubAssetSpokes` row | `creditLines.list`; both Hubs' pages; "drawn by other Hubs" on the Lend page |
 | `spokeReserves` | chain, Spoke, reserveId | A CDP debt reserve's flags, debt price, breaker. No Hub totals | Borrow list asset rows, Borrow asset page |
-| `markets` | chain, marketId | A collateral market: pool, range, vault token, accepted price, collateral value, collateral factor, bonus, collateral risk, liquidation config, cap headroom; per debt reserve the market's rate, "available to borrow now" and "more from" (speed limits); the pledge-speed window | Borrow list pool rows, pool page, "Assets you can borrow" |
+| `markets` | chain, marketId | A collateral market, one of a pool's two (Full range or Custom range): pool key, band, LTV, vault token, LPOracle price, collateral value, collateral factor, bonus, collateral risk, liquidation config, the reserve's paused and frozen flags (a depegged market is frozen); per debt reserve the market's rate | Borrow list pool rows, pool page, "Assets you can borrow" |
 | `marketReserveDebt` | chain, marketId, Spoke, reserveId | Debt a market backs in one debt reserve, and its borrowers | Pool page "debt backed"; Borrow asset page split by market |
 | `positions` | chain, Spoke, proxy | An account's collateral and debt value at the last daily sample | Wallets at risk, borrower lists |
 | `series` | scope kind, scope key, resolution, bucket | Every chart point | Every chart |
@@ -41,11 +41,11 @@ Example (Ethereum, USDC, illustrative): the Hub holds 10,000,000 added (Lend Spo
 
 ## Current values
 
-`ingest/sampler.refresh` runs every 60 s per chain. At one block it reads, over Convex's own RPC (`RPC_<CHAIN>`, `RPC_<CHAIN>_FALLBACK`), the chain snapshot of `@avana/services-common/views`: every Hub of the deployment and every Hub the MarketRegistry has recorded since, with their assets and Spokes, every Lend Spoke's reserves and oracle prices, the Hub-to-Hub credit lines, each Hub asset's totals, its Spokes, rate curve and Lens exposure, every CDP Spoke's debt reserves (`Lens.getDebtReserves`) and liquidation config, and every market (`Lens.getMarkets`) with its collateral risk. One mutation writes the rows; every row carries the block. A row whose values are unchanged is left alone until its stored read is 10 minutes old (`UNCHANGED_REWRITE_MS`), so subscriptions re-run when a value changes, not at every refresh. The same reader runs in the indexer's hourly sampler, so current rows and chart points come from the same calls.
+`ingest/sampler.refresh` runs every 60 s per chain. At one block it reads, over Convex's own RPC (`RPC_<CHAIN>`, `RPC_<CHAIN>_FALLBACK`), the chain snapshot of `@avana/services-common/views`: every Hub of the deployment with its assets and Spokes, every Lend Spoke's reserves and oracle prices, each Hub asset's totals, its Spokes, rate curve and draw-cap coverage (each RiskModule's `coverage(hub, asset)` and the First-Loss Reserve's balance), every CDP debt reserve of the manifest, and every market of the manifest (two per pool) from its RiskModule record, LPOracle price and vault-token reserve. One mutation writes the rows; every row carries the block. A row whose values are unchanged is left alone until its stored read is 10 minutes old (`UNCHANGED_REWRITE_MS`), so subscriptions re-run when a value changes, not at every refresh. The same reader runs in the indexer's hourly sampler, so current rows and chart points come from the same calls.
 
-A Hub, Spoke, market, pool or asset listed on chain appears at the next run, with a default slug (`ethereum-market-4`, `ethereum-core`) until its listing metadata (which may also name a Hub, scope `hub`) loads. A Borrow asset page's default slug is `<chain>-<spoke>-<symbol>`; when one Spoke draws the same symbol from two Hubs, each of those pages adds its Hub's label (`ethereum-univ3stable-core-usdc`), and two tokens with one symbol on one Hub add the token's address (`lib/format.ts`, `assetSlugs`). The same run stores the chain's base fee, priority fee and native USD price (`deployments.nativeUsdFeed`) for the fee quote.
+A market appears once its release manifest is written (`deployments:setFromManifest`), at the next run, with a default slug (`ethereum-market-4`, `ethereum-core`) until its listing metadata (which may also name a Hub, scope `hub`) loads. A Borrow asset page's default slug is `<chain>-<spoke>-<symbol>`; when one Spoke draws the same symbol from two Hubs, each of those pages adds its Hub's label (`ethereum-univ3stable-core-usdc`), and two tokens with one symbol on one Hub add the token's address (`lib/format.ts`, `assetSlugs`). The same run stores the chain's base fee, priority fee and native USD price (`deployments.nativeUsdFeed`) for the fee quote.
 
-Debt, interest and health factor of a wallet change without events and are never served from Convex: the app reads them live at a stated block (`Spoke.getUserAccountData`, `Lens.getAccount`; [EVENTS.md](../indexer/EVENTS.md#live-reads)).
+Debt, interest and health factor of a wallet change without events and are never served from Convex: the app reads them live at a stated block (`Spoke.getUserAccountData`, `AaveAdapter.accountOf`; [EVENTS.md](../indexer/EVENTS.md#live-reads)).
 
 ## Chart series
 
@@ -89,7 +89,7 @@ The app charges 10 bps on every app action: supply, withdraw, pledge, withdraw c
 `frontendFee.quote(chainId, action, token, amount?, positionValueUsd8?, gasUnits, l1FeeWei?)` returns the fee in the fee token's base units and USD, the gas cost and the total. `token` is the token the fee is paid in: the action token, or for pledge and withdraw collateral the market's debt stablecoin.
 
 - fee, amount basis: `⌊amount × bps / 10⁴⌋` in the action token;
-- fee, LP-value basis (pledge, withdraw collateral): `⌊valueUsd8 × bps × 10^d / (10⁴ × priceUsd8)⌋` in the debt stablecoin, where `valueUsd8` is the position's LPOracle value as Lens reports it, and `d` and `priceUsd8` are the stablecoin's decimals and price;
+- fee, LP-value basis (pledge, withdraw collateral): `⌊valueUsd8 × bps × 10^d / (10⁴ × priceUsd8)⌋` in the debt stablecoin, where `valueUsd8` is the position's LPOracle value, and `d` and `priceUsd8` are the stablecoin's decimals and price;
 - either fee is then cut to the USD cap (rounded down), so the user never pays above the stated rate;
 - gas `gasUnits × (baseFee + priorityFee) + l1Fee`, where `gasUnits` is the wallet's simulation of the whole batch, fee transfer included, and `l1Fee` the OP Stack data fee on Base;
 - total: amount + fee + gas for supply, pledge, repay, repay with collateral, deleverage and swap; amount − fee − gas for withdraw, borrow and withdraw collateral.
@@ -181,13 +181,13 @@ The web app's server opens a session after it verifies a SIWE signature (`siweSe
 
 ## Wallet activity
 
-`wallet.live.accounts` reads the wallet's accounts at the head with Lens `getAccounts` over Convex's RPC (health factor, collateral and debt in USD, debts, gates), unstored and rate limited per wallet, for clients that cannot read the chain themselves.
+`wallet.live.accounts` reads the wallet's accounts at the head over Convex's RPC: each market's account from its integration's `AaveAdapter.accountOf` (one per wallet and market), then the market Spoke's `getUserAccountData` and each debt reserve's `getUserTotalDebt`, unstored and rate limited per wallet, for clients that cannot read the chain themselves.
 
 `wallet.activity.listForWallet` pages through the wallet's logs of the last 30 days (`ingestedLogs.by_wallet`, exact cursor) as dashboard rows, each with the page it belongs to and an explorer link; `wallet/history:older` serves anything older, and with `rows` also returns that page as dashboard rows: decoded as the import decodes logs, without the events Convex still holds, dated by their block's time (read from Convex's RPC by block hash once and kept in `blockTimestamps`) and with the token amount but no USD value. `deployments.explorers` returns each chain's explorer for links the app builds itself.
 
 ## Configuration
 
-Convex environment variables: `RPC_<CHAIN>` and `RPC_<CHAIN>_FALLBACK` (`MAINNET`, `BASE`), `INDEXER_EXPORT_URL`, `INDEXER_EXPORT_KEY_ID`, `INDEXER_EXPORT_SECRET` (base64, at least 32 bytes), `LISTING_CONTENT_URL`, `POOL_HISTORY_DAYS`, `CONVEX_SESSION_SECRET`. Each chain's `deployments` row is written from its verified release manifest with `deployments.setDeployment` (internal).
+Convex environment variables: `RPC_<CHAIN>` and `RPC_<CHAIN>_FALLBACK` (`MAINNET`, `BASE`), `INDEXER_EXPORT_URL`, `INDEXER_EXPORT_KEY_ID`, `INDEXER_EXPORT_SECRET` (base64, at least 32 bytes), `LISTING_CONTENT_URL`, `POOL_HISTORY_DAYS`, `CONVEX_SESSION_SECRET`. Each chain's `deployments` row is written from its verified release manifest (schema 2) with `deployments.setFromManifest` (internal; the manifest JSON, the explorer URL and the native USD feed), or field by field with `deployments.setDeployment`.
 
 ## Build and test
 

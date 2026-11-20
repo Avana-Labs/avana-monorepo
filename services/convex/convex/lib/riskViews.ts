@@ -10,8 +10,9 @@ import { type Values } from "./charts.ts";
 import { compactUsd, liquidationBonusBps, pct } from "./format.ts";
 import type { Cashflow, LiquidationRisk, PageRisk, RiskAssessment, RiskLevel, RiskParameters } from "./uiTypes.ts";
 
-const PAUSE = ["None", "Frozen", "Paused"] as const;
-const PRICE = ["Live", "Drifting", "Cached", "Expired"] as const;
+/** The vault-token reserve's state on its Spoke: a depegged Stable or Correlated market is frozen (depeg = freeze). */
+const reserveState = (m: Pick<MarketRow, "paused" | "frozen">) => (m.paused ? "Paused" : m.frozen ? "Frozen" : "Open");
+const priceLabel = (m: Pick<MarketRow, "priceAvailable">) => (m.priceAvailable ? "Live" : "Unpriced");
 const cap = (whole: string) => (BigInt(whole) === MAX_SPOKE_CAP ? "Unlimited" : Number(whole).toLocaleString("en-US"));
 /** The registry counts an unbounded draw cap as 2^128 whole tokens in a draw-cap sum. */
 const capSum = (whole: string) => (BigInt(whole) >= 2n ** 128n ? "Unlimited" : Number(whole).toLocaleString("en-US"));
@@ -69,9 +70,7 @@ export function assetRiskParameters(slug: string, reserve: SpokeReserveRow, slic
       { id: "capRoom", label: "Cap room", value: room === null ? "Unlimited" : `${tokens(room, asset.decimals).toLocaleString("en-US")} ${symbol}` },
       { id: "deficit", label: "Reported deficit", value: `${tokens(slice.deficit, asset.decimals).toLocaleString("en-US")} ${symbol}` },
       { id: "debtPrice", label: "Debt price", value: reserve.fixedPrice ? "Fixed" : `$${(Number(BigInt(reserve.debtPrice)) / 1e8).toFixed(4)}` },
-      { id: "breaker", label: "Debt breaker", value: reserve.breakerReasons === 0 ? "Clear" : `Tripped (0x${reserve.breakerReasons.toString(16)})` },
       { id: "status", label: "Reserve", value: reserve.paused ? "Paused" : reserve.frozen ? "Frozen" : reserve.borrowable ? "Borrowable" : "Not borrowable" },
-      { id: "hubPause", label: "Hub", value: PAUSE[reserve.pauseState] ?? String(reserve.pauseState) },
     ],
     updatedAt: Date.now(),
     source: "chain",
@@ -89,39 +88,31 @@ export function liquidationPenaltyRange(maxLiquidationBonus: number, bonusFactor
   return min === max ? pct(bpsToPct(max)) : `${pct(bpsToPct(min))} – ${pct(bpsToPct(max))}`;
 }
 
-/** Room the market has to borrow now in USD, summed over its debt reserves' borrow speeds (BOR-024). */
+/** Room the market has to borrow now in USD; null when not measured. */
 export type BorrowRoomUsd = number | null;
 
 export function poolRiskParameters(slug: string, market: MarketRow, headRateRay: string | null, borrowRoomUsd: BorrowRoomUsd = null): RiskParameters {
   const liq = market.liquidation;
-  const caps = (market as Partial<MarketRow>).caps;
-  const used = caps ? BigInt(caps.marketUsdCap8) - BigInt(market.marketHeadroomUsd8) : null;
+  const band = market.kind === "full-range" ? "Full range" : `Custom range, ticks ${market.bandLower} to ${market.bandUpper}`;
   return {
     slug,
     kind: "pool",
     parameters: [
       { id: "collateralFactor", label: "Collateral factor", value: pct(bpsToPct(market.collateralFactorBps)), description: "Aave V4 liquidates below a health factor of 1.00 computed with this factor." },
       { id: "collateralRisk", label: "Collateral risk", value: pct(bpsToPct(market.collateralRiskBps)), description: "Borrowers of this market pay the base rate × (1 + this premium)." },
-      ...(caps
-        ? [{ id: "depositCapacity", label: "Deposit capacity", value: `${usd8(used !== null && used > 0n ? used.toString() : "0")} / ${usd8(caps.marketUsdCap8)}`, description: "Pledged value counted against the market's USD cap, and the cap." }]
-        : []),
+      { id: "range", label: "Market", value: band, description: "Each pool has a Full range and a Custom range market; a position goes to the one whose band it fits, and a band is fixed for life." },
+      { id: "ltv", label: "LTV", value: pct(bpsToPct(market.ltvBps)), description: "The same for both markets of the pool." },
       { id: "liquidationPenalty", label: "Liquidation penalty", value: liquidationPenaltyRange(market.maxLiquidationBonusBps, liq?.liquidationBonusFactorBps ?? null), description: "Bonus a liquidator receives, from near a health factor of 1.00 to the max-bonus health factor." },
       ...(borrowRoomUsd !== null ? [{ id: "borrowCapacity", label: "Borrow capacity", value: compactUsd(borrowRoomUsd), description: "What the market's borrowers can draw now, within the market and debt speed limits." }] : []),
       ...(liq ? [{ id: "targetHealthFactor", label: "Target health factor", value: wadHf(liq.targetHealthFactorWad) }] : []),
-      ...(caps ? [{ id: "liquidationThreshold", label: "Liquidation threshold", value: pct(bpsToPct(caps.liquidationThresholdBps)) }] : []),
-      { id: "oracle", label: "Oracle source", value: `Avana LP oracle ${market.lpOracle.slice(0, 6)}…${market.lpOracle.slice(-4)}`, description: "Prices the vault token from the pool's token feeds and its TWAP." },
+      // Aave V4 liquidates below health factor 1 computed with the collateral factor: it is the liquidation threshold.
+      { id: "liquidationThreshold", label: "Liquidation threshold", value: pct(bpsToPct(market.collateralFactorBps)) },
+      { id: "oracle", label: "Oracle source", value: `Avana LP oracle ${market.lpOracle.slice(0, 6)}…${market.lpOracle.slice(-4)}`, description: "Prices the vault token from the pool tokens' Chainlink feeds at the floor of its band." },
       { id: "maxBonus", label: "Max liquidation bonus", value: pct(bpsToPct(liquidationBonusBps(market.maxLiquidationBonusBps))) },
       ...(headRateRay ? [{ id: "borrowRate", label: "Borrow APR (this market)", value: pct(rayToAprPct(marketBorrowRateRay(headRateRay, market.collateralRiskBps))) }] : []),
-      ...(caps
-        ? [
-            { id: "topUpSlice", label: "Top-up slice", value: usd8(caps.topUpSliceUsd8) },
-            { id: "liquidationFee", label: "Liquidation fee", value: pct(bpsToPct(caps.liquidationFeeBps)), description: "Share of the bonus kept by the protocol." },
-            { id: "hardHealthFloor", label: "Hard health floor", value: BigInt(caps.hardHealthFloorWad) === 0n ? "Off" : wadHf(caps.hardHealthFloorWad) },
-          ]
-        : []),
-      { id: "capHeadroom", label: "Cap headroom", value: compactUsd(Number(BigInt(market.marketHeadroomUsd8)) / 1e8) },
-      { id: "price", label: "Vault token price", value: `$${(Number(BigInt(market.acceptedPrice)) / 1e8).toFixed(4)} (${PRICE[market.priceState] ?? market.priceState})` },
-      { id: "hubPause", label: "Hub", value: PAUSE[market.pauseState] ?? String(market.pauseState) },
+      { id: "liquidationFee", label: "Liquidation fee", value: pct(bpsToPct(market.liquidationFeeBps)), description: "Share of the bonus kept by the protocol." },
+      { id: "price", label: "Vault token price", value: `$${(Number(BigInt(market.acceptedPrice)) / 1e8).toFixed(4)} (${priceLabel(market)})` },
+      { id: "reserve", label: "Market state", value: reserveState(market), description: "A Stable or Correlated market that depegs by more than 1 % is frozen." },
     ],
     updatedAt: Date.now(),
     source: "chain",
@@ -240,7 +231,7 @@ export function poolRiskAssessment(market: MarketRow, risk?: PageRisk, baseRateR
     metrics: [
       { id: "cf", label: "Collateral factor", value: pct(bpsToPct(market.collateralFactorBps)) },
       { id: "bonus", label: "Max liquidation bonus", value: pct(bpsToPct(liquidationBonusBps(market.maxLiquidationBonusBps))) },
-      { id: "price", label: "Price state", value: PRICE[market.priceState] ?? String(market.priceState) },
+      { id: "price", label: "Price state", value: priceLabel(market) },
     ],
   };
 }

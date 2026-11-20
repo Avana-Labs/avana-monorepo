@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The public contract table of a final deployment (deployments/<network>/README.md): every contract the manifest
-// names, Avana's and the third parties', with its address, proxy and implementation, runtime code hash and explorer
+// names, Avana's and the third parties', with its address, proxy target for a third-party proxy, runtime code hash and explorer
 // link, so anyone can check the deployment against the chain.
 
-import type { External, Immutable, ReleaseManifest, Upgradeable } from "./types.ts";
+import type { External, Immutable, ReleaseManifest } from "./types.ts";
 
 /** Explorer base URL per network; `--explorer` overrides it. */
 export const EXPLORERS: Readonly<Record<string, string>> = {
@@ -25,37 +25,23 @@ interface Row {
 export function contractTable(m: ReleaseManifest, explorer: string | undefined = EXPLORERS[m.network]): string {
   const rows: Row[] = [];
   const imm = (group: string, name: string, x: Immutable) => rows.push({ group, name, address: x.address, kind: "immutable", codeHash: x.codeHash });
-  const upg = (group: string, name: string, u: Upgradeable) => {
-    rows.push({ group, name, address: u.address, kind: `ERC-1967 proxy → ${u.implementation}`, codeHash: u.codeHash });
-    rows.push({ group, name: `${name} implementation`, address: u.implementation, kind: "implementation", codeHash: u.implementationCodeHash });
-    for (const l of u.logics) rows.push({ group, name: `${name} · ${l.name}`, address: l.address, kind: "logic (delegatecall target)", codeHash: l.codeHash });
-  };
   const a = m.avana;
-  upg("Avana", "AaveAdapter", a.aaveAdapter);
-  upg("Avana", "LPVaultSwap", a.lpVaultSwap);
-  upg("Avana", "MarketRegistry", a.marketRegistry);
-  upg("Avana", "ParameterStore", a.parameterStore);
-  upg("Avana", "RiskModule", a.riskModule);
-  imm("Avana", "AvanaTimelock", a.timelock);
-  imm("Avana", "Lock", a.lock);
-  imm("Avana", "Collateralization", a.collateralization);
-  imm("Avana", "VaultTokenFactory", a.vaultTokenFactory);
-  imm("Avana", "ProxyManager", a.proxyManager);
-  imm("Avana", "PayoutEscrow", a.payoutEscrow);
-  imm("Avana", "AaveV3FlashSource", a.flashSource);
-  imm("Avana", "FlashLiquidator", a.flashLiquidator);
-  if (a.gasVault) imm("Avana", "AvanaGasVault", a.gasVault);
-  a.operatorHelpers.forEach((h, i) => imm("Avana", `OperatorFlashLiquidator ${i} (signer ${h.signer})`, h));
-  a.lpVaults.forEach((v) => imm("Avana", `LPVault ${v.integrationId} (${v.kind})`, v));
-  a.firstLossReserves.forEach((c) => imm("Avana", `First-Loss Reserve (${c.asset})`, c));
-  imm("Avana", "Lens", a.lens);
-  a.lensModules.forEach((x, i) => imm("Avana", `Lens module ${i}`, x));
-  imm("Avana", "LensAaveSizing", a.lensAaveSizing);
-  for (const mk of m.markets) {
-    imm("Avana markets", `Vault token, market ${mk.marketId}`, mk.vaultToken);
-    imm("Avana markets", `LPOracle, market ${mk.marketId}`, mk.lpOracle);
-    mk.routes.forEach((r, i) => imm("Avana markets", `Swap route ${i}, market ${mk.marketId}`, r));
+  imm("Avana", "AccessManager", a.accessManager);
+  for (const x of a.integrations) {
+    const g = `Avana integration ${x.integrationId} (${x.kind})`;
+    imm(g, "LPVault", x.lpVault);
+    imm(g, "RiskModule", x.riskModule);
+    imm(g, "LiquidationModule", x.liquidationModule);
+    imm(g, "AaveAdapter", x.aaveAdapter);
+    imm(g, "FlashloanRepay", x.flashloanRepay);
+    a.flashLiquidators.filter((f) => f.integrationId === x.integrationId).forEach((f) => imm(g, `FlashLiquidator (operator ${f.operator})`, f));
   }
+  for (const mk of m.markets) {
+    imm("Avana markets", `Vault token, market ${mk.marketId} (${mk.name})`, mk.vaultToken);
+    imm("Avana markets", `LPOracle, market ${mk.marketId} (${mk.name})`, mk.lpOracle);
+  }
+  m.coverage.firstLossReserves.forEach((c) => imm("Coverage", `First-Loss Reserve ${c.hubLabel} ${c.symbol}`, c));
+  m.coverage.daoDeficitOffsets.forEach((c) => imm("Coverage", `Aave DAO deficit offset ${c.hubLabel} ${c.symbol}`, c));
   const groupName: Record<string, string> = {
     "aave-v4": "Aave V4",
     "aave-v3": "Aave V3",

@@ -8,7 +8,9 @@
 import { type Abi, type Address, type Hex, decodeEventLog, encodeAbiParameters, encodeEventTopics, keccak256, toHex } from "viem";
 import { clPoolAbi, uniswapV4PoolManagerAbi } from "@avana/services-common/views";
 import { abis } from "../../src/config/abis.ts";
+import { useManifests } from "../../src/config/integrations.ts";
 import { MemoryStore } from "./store.ts";
+import { HARNESS_MANIFESTS } from "./manifest.ts";
 import { registered } from "./registry.ts";
 // Every handler file but the hourly sampler, which reads a manifest at import; each registers on import.
 import "../../src/handlers/accounts.ts";
@@ -25,6 +27,7 @@ import "../../src/handlers/poolManager.ts";
 import "../../src/handlers/progress.ts";
 
 export { registered };
+useManifests(HARNESS_MANIFESTS);
 
 /** The ABI each Ponder source decodes with (ponder.config.ts). */
 export function abiOfSource(source: string): Abi {
@@ -32,7 +35,8 @@ export function abiOfSource(source: string): Abi {
   if (source.startsWith("AaveHub")) return abis.AaveHub as Abi;
   if (source === "AmmPool") return clPoolAbi as Abi;
   if (source === "UniswapV4PoolManager") return uniswapV4PoolManagerAbi as Abi;
-  if (source === "DaoDeficitOffset" || source === "AvanaFirstLossReserveListed") return abis.AvanaFirstLossReserve as Abi;
+  if (source === "DaoDeficitOffset" || source === "FirstLossReserveListed") return abis.FirstLossReserve as Abi;
+  if (source === "VaultTokenListed") return abis.VaultToken as Abi;
   const abi = (abis as unknown as Record<string, Abi>)[source];
   if (!abi) throw new Error(`no ABI for source ${source}`);
   return abi;
@@ -104,6 +108,14 @@ export class Run {
     await handler({ event: eventOf(spec, branch), context: { db: this.store.api(), chain: { id: this.chainId, name: "test" }, client: this.client } });
   }
 
+  /** Delivers a later log of the transaction `hash` (an earlier log's), as a contract call emitting several logs. */
+  async deliverIn(hash: Hex, spec: LogSpec, branch = "a"): Promise<void> {
+    const handler = registered.get(`${spec.source}:${spec.event}`);
+    if (!handler) throw new Error(`no handler for ${spec.source}:${spec.event}`);
+    const event = { ...eventOf(spec, branch), transaction: { hash } };
+    await handler({ event, context: { db: this.store.api(), chain: { id: this.chainId, name: "test" }, client: this.client } });
+  }
+
   async deliverAll(specs: readonly LogSpec[], branch = "a"): Promise<void> {
     for (const s of specs) await this.deliver(s, branch);
   }
@@ -115,5 +127,4 @@ export class Run {
   }
 }
 
-/** A fixed address from a small number. */
-export const addr = (n: number): Address => `0x${n.toString(16).padStart(40, "0")}` as Address;
+export { addr } from "./addr.ts";

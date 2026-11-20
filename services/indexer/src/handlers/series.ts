@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The hourly sampler: at one block an hour it reads the chain snapshot (every Hub asset of every Hub, Spoke slice, CDP
-// debt reserve and market, Hubs and Spokes listed after start-up included), the debt each market backs and each
+// debt reserve and market, both markets of each pool), the debt each market backs and each
 // account's collateral and debt, and writes them as series points. Every point of one sample
 // carries the same block, so the Spoke slices of a bucket add up to the Hub totals of the same bucket. Reads go through Ponder's client pinned to the sample block, so a reindex reads the
 // same values from the archive node and a replay changes nothing.
@@ -10,7 +10,7 @@ import { type DecimalString, MULTICALL3_ADDRESS, scopeKey } from "@avana/service
 import { type CallResult, type ContractCall, type ViewClient, clPoolAbi, readChainSnapshot, spokeViewsAbi } from "@avana/services-common/views";
 import { ponder, type Context } from "ponder:registry";
 import schema from "ponder:schema";
-import { and, eq } from "ponder";
+import { eq } from "ponder";
 import { deploymentOf } from "../config/sources.ts";
 import { writeObservation } from "../lib/seriesWrite.ts";
 import { stateFloor } from "../lib/stateFloor.ts";
@@ -65,8 +65,8 @@ ponder.on("SeriesSampler:block", async ({ event, context }) => {
     });
   }
 
-  // Accounts announced by both the AaveAdapter and the ProxyManager (TEST-144), with their collateral and debts.
-  const accounts = (await context.db.sql.select().from(schema.account).where(and(eq(schema.account.chainId, chainId), eq(schema.account.adapterSeen, true), eq(schema.account.managerSeen, true)))).filter(
+  // Accounts the AaveAdapters announced, with their collateral and debts.
+  const accounts = (await context.db.sql.select().from(schema.account).where(eq(schema.account.chainId, chainId))).filter(
     (acc) => snap.markets.some((m) => m.marketId === s(acc.marketId) && m.spoke === acc.spoke.toLowerCase()),
   );
   const reservesBySpoke = new Map<string, string[]>();
@@ -133,12 +133,12 @@ ponder.on("SeriesSampler:block", async ({ event, context }) => {
       ...at,
       kind: "market",
       key: scopeKey(chainId, m.marketId),
-      values: { suppliedUnits: m.suppliedUnits, acceptedPrice: m.acceptedPrice, suppliedUsd8: m.suppliedUsd8, marketHeadroomUsd8: m.marketHeadroomUsd8, debtUsd8: s(debtUsd8), borrowers: s(borrowers) },
+      values: { suppliedUnits: m.suppliedUnits, acceptedPrice: m.acceptedPrice, suppliedUsd8: m.suppliedUsd8, debtUsd8: s(debtUsd8), borrowers: s(borrowers) },
     });
-    // A dynamic-fee pool reports fee tier 0; its current fee is read here and applies to the next hour's swaps.
-    if (m.feeTier === 0 && !/^0x0{40}$/.test(m.pool)) {
-      const fee = (await context.client.readContract({ address: m.pool, abi: clPoolAbi, functionName: "fee" })) as number;
-      await context.db.update(schema.ammPool, { chainId, pool: m.pool }).set({ feePips: Number(fee), lastBlock: blockNumber });
-    }
+  }
+  // A dynamic-fee pool (Slipstream) reports its current fee; it is read here and applies to the next hour's swaps.
+  for (const pool of await context.db.sql.select().from(schema.ammPool).where(eq(schema.ammPool.chainId, chainId))) {
+    const fee = Number((await context.client.readContract({ address: pool.pool, abi: clPoolAbi, functionName: "fee" })) as number);
+    if (fee !== pool.feePips) await context.db.update(schema.ammPool, { chainId, pool: pool.pool }).set({ feePips: fee, lastBlock: blockNumber });
   }
 });

@@ -2,15 +2,16 @@
 // Copyright (c) 2026 Avana Labs
 // Signals read from contract events since the last round (at most 2,000 blocks per round; the first round starts at
 // the head, so a restart never re-sends old events):
-//   M-10  LPVaultSwap RouteFailed per market (1 in the hour warns, 3 page) and the share of a market's collateral
-//         seized by LiquidationSettled (10 % in the hour warns, 20 % pages), the on-chain half beside the keeper's;
-//   M-20  Aave configuration events of every CDP Spoke (warn) and the RiskModule's ConfigDriftDetected (page);
-//   M-21  Collateralization CounterSaturated (page);
-//   M-25  a token issuer's blocklist naming LPVaultSwap, an LPVault, Collateralization or the AaveAdapter (page) or
-//         another Avana contract (warn).
+//   M-10  the share of a market's collateral seized by LiquidationModule.Liquidated (10 % in the hour warns, 20 %
+//         pages), the on-chain half beside the LiquidationBot's own reports;
+//   M-20  Aave configuration events of every CDP Spoke (warn);
+//   M-22  the Avana AccessManager: an operation scheduled warns; a role granted or revoked, a function's role changed
+//         or a target closed pages;
+//   M-25  a token issuer's blocklist naming an LPVault, an AaveAdapter, a LiquidationModule or a FlashloanRepay
+//         (page) or another Avana contract (warn).
 
-import { aaveV4SpokeAbi, collateralizationAbi, lpVaultSwapAbi, marketRegistryAbi, riskModuleAbi } from "@avana/protocol/abis";
-import { type Abi, type Address, type Hex, decodeEventLog, parseAbi, toEventSelector, toFunctionSelector } from "viem";
+import { aaveV4SpokeAbi, accessManagerAbi, liquidationModuleAbi } from "@avana/protocol/abis";
+import { type Abi, type Address, type Hex, decodeEventLog, parseAbi, toEventSelector } from "viem";
 import { type Probe, type RawLog, text } from "../probe.ts";
 import type { Level, SignalId } from "../signals.ts";
 import type { Finding } from "../types.ts";
@@ -24,7 +25,7 @@ const extraAbi = parseAbi([
 const MAX_RANGE = 2_000n;
 const HOUR = 3_600;
 
-type Rule = { readonly signal: SignalId; readonly from: "spokes" | "riskModule" | "collateralization" | "lpVaultSwap" | "tokens" };
+type Rule = { readonly signal: SignalId; readonly from: "spokes" | "accessManager" | "liquidationModules" | "tokens" };
 
 /** Event name → the signal it feeds and the contracts it is read from. */
 const EVENTS: Readonly<Record<string, Rule>> = {
@@ -36,15 +37,17 @@ const EVENTS: Readonly<Record<string, Rule>> = {
   UpdatePositionManager: { signal: "M-20", from: "spokes" },
   AuthorityUpdated: { signal: "M-20", from: "spokes" },
   Upgraded: { signal: "M-20", from: "spokes" },
-  ConfigDriftDetected: { signal: "M-20", from: "riskModule" },
-  CounterSaturated: { signal: "M-21", from: "collateralization" },
-  RouteFailed: { signal: "M-10", from: "lpVaultSwap" },
-  LiquidationSettled: { signal: "M-10", from: "lpVaultSwap" },
+  OperationScheduled: { signal: "M-22", from: "accessManager" },
+  RoleGranted: { signal: "M-22", from: "accessManager" },
+  RoleRevoked: { signal: "M-22", from: "accessManager" },
+  TargetFunctionRoleUpdated: { signal: "M-22", from: "accessManager" },
+  TargetClosed: { signal: "M-22", from: "accessManager" },
+  Liquidated: { signal: "M-10", from: "liquidationModules" },
   Blacklisted: { signal: "M-25", from: "tokens" },
   AddedBlackList: { signal: "M-25", from: "tokens" },
 };
 
-const ABI = [...aaveV4SpokeAbi, ...riskModuleAbi, ...collateralizationAbi, ...marketRegistryAbi, ...lpVaultSwapAbi, ...extraAbi] as Abi;
+const ABI = [...aaveV4SpokeAbi, ...accessManagerAbi, ...liquidationModuleAbi, ...extraAbi] as Abi;
 
 /** topic0 → event name, for the events above (first definition wins; the same signature has the same topic). */
 const TOPICS: ReadonlyMap<Hex, string> = new Map(
@@ -60,7 +63,7 @@ export interface EventsInput {
   readonly logs: readonly RawLog[];
   /** The contracts each log comes from, by role. */
   readonly roles: ReadonlyMap<string, Rule["from"]>;
-  /** LPVaultSwap, the LPVaults, Collateralization, the AaveAdapter: a blocklist naming one pages M-25. */
+  /** Each integration's LPVault, AaveAdapter, LiquidationModule and FlashloanRepay: a blocklist naming one pages M-25. */
   readonly critical: ReadonlySet<string>;
   readonly avana: ReadonlySet<string>;
   /** Supplied units per market at the block, for the seized share. */
@@ -87,7 +90,6 @@ function decode(l: RawLog): Decoded | null {
 export function eventsProbe(): Probe<EventsInput> {
   let next: bigint | null = null;
   let range: { head: bigint; from: bigint } | null = null;
-  const routeFailures = new Map<string, number[]>();
   const seized = new Map<string, { t: number; units: bigint }[]>();
 
   return {
@@ -103,13 +105,13 @@ export function eventsProbe(): Probe<EventsInput> {
       const roles = new Map<string, Rule["from"]>();
       const add = (role: Rule["from"], xs: readonly string[]) => xs.forEach((a) => roles.set(a.toLowerCase(), role));
       add("spokes", [...m.aave.borrowSpokes.map((x) => x.address), ...ctx.snapshot.hubs.flatMap((h) => h.cdpSpokes)]);
-      add("riskModule", [m.avana.riskModule.address]);
-      add("collateralization", [m.avana.collateralization.address]);
-      add("lpVaultSwap", [m.avana.lpVaultSwap.address]);
+      add("accessManager", [m.avana.accessManager.address]);
+      add("liquidationModules", m.avana.integrations.map((x) => x.liquidationModule.address));
       add("tokens", [...ctx.snapshot.markets.flatMap((x) => x.tokens), ...m.debtReserves.map((d) => d.asset)]);
       const logs = from > to ? [] : await ctx.rpc.getLogs([...roles.keys()] as Address[], [...TOPICS.keys()], from, to);
-      const critical = new Set([m.avana.lpVaultSwap.address, m.avana.collateralization.address, m.avana.aaveAdapter.address, ...m.avana.lpVaults.map((v) => v.address)].map((a) => a.toLowerCase()));
-      const avana = new Set(Object.values(m.avana).flatMap((v) => (Array.isArray(v) ? v.map((x) => (x as { address: string }).address) : typeof v === "object" && v && "address" in v ? [(v as { address: string }).address] : [])).map((a) => a.toLowerCase()));
+      const core = m.avana.integrations.flatMap((x) => [x.lpVault, x.aaveAdapter, x.liquidationModule, x.flashloanRepay].map((c) => c.address.toLowerCase()));
+      const critical = new Set(core);
+      const avana = new Set([...core, m.avana.accessManager.address.toLowerCase(), ...m.avana.integrations.map((x) => x.riskModule.address.toLowerCase()), ...m.avana.flashLiquidators.map((f) => f.address.toLowerCase()), ...m.markets.map((x) => x.vaultToken.address.toLowerCase())]);
       const supplied = new Map(ctx.snapshot.markets.map((x) => [x.marketId, BigInt(x.suppliedUnits)]));
       return { from, to, timestamp: ctx.block.timestamp, logs, roles, critical, avana, supplied };
     },
@@ -125,29 +127,25 @@ export function eventsProbe(): Probe<EventsInput> {
         const d = decode(l);
         if (!d) continue;
         const rule = EVENTS[d.name];
-        // An event counts only from the contract the rule reads it from (a token's RoleGranted is not the Timelock's).
+        // An event counts only from the contract the rule reads it from (a token's RoleGranted is not the AccessManager's).
         if (!rule || input.roles.get(l.address.toLowerCase()) !== rule.from) continue;
         const a = d.args;
         switch (d.name) {
-          case "ConfigDriftDetected":
-            event("M-20", "page", l, { event: d.name, spoke: s(a.spoke), reason: s(a.reason) });
-            break;
-          case "CounterSaturated":
-            event("M-21", "page", l, { event: d.name, counterKind: s(a.counterKind), hub: s(a.hub), key: s(a.key), valueBefore: s(a.valueBefore), subtracted: s(a.subtracted) });
-            break;
-          case "RouteFailed": {
+          case "Liquidated": {
             const market = s(a.marketId);
-            routeFailures.set(market, [...(routeFailures.get(market) ?? []), input.timestamp]);
+            seized.set(market, [...(seized.get(market) ?? []), { t: input.timestamp, units: a.seized as bigint }]);
             touched.add(market);
             break;
           }
-          case "LiquidationSettled": {
-            const market = s(a.marketId);
-            const result = Object.values(a).find((v) => typeof v === "object" && v !== null && "unitsSeized" in v) as { unitsSeized: bigint } | undefined;
-            if (result) seized.set(market, [...(seized.get(market) ?? []), { t: input.timestamp, units: result.unitsSeized }]);
-            touched.add(market);
+          case "OperationScheduled":
+            event("M-22", "warn", l, { event: d.name, operationId: s(a.operationId), schedule: s(a.schedule), target: s(a.target), data: s(a.data) });
             break;
-          }
+          case "RoleGranted":
+          case "RoleRevoked":
+          case "TargetFunctionRoleUpdated":
+          case "TargetClosed":
+            event("M-22", "page", l, { event: d.name, ...Object.fromEntries(Object.entries(a).map(([k, v]) => [k, typeof v === "object" ? text(v) : s(v)])) });
+            break;
           case "Blacklisted":
           case "AddedBlackList": {
             const account = s(a._account ?? a._user).toLowerCase();
@@ -162,12 +160,6 @@ export function eventsProbe(): Probe<EventsInput> {
 
       // M-10 counts over the hour, as conditions per market, for every market with activity in the hour.
       const since = input.timestamp - HOUR;
-      for (const [market, ts] of routeFailures) {
-        const recent = ts.filter((t) => t > since);
-        if (recent.length === 0) routeFailures.delete(market);
-        const level: Level = recent.length >= 3 ? "page" : recent.length >= 1 ? "warn" : "ok";
-        out.push({ signal: "M-10", kind: "condition", level, subject: `market:${market}:routeFailed`, detail: { routeFailedInHour: String(recent.length) } });
-      }
       for (const [market, xs] of seized) {
         const recent = xs.filter((x) => x.t > since);
         if (recent.length === 0) seized.delete(market);
@@ -182,13 +174,12 @@ export function eventsProbe(): Probe<EventsInput> {
     },
 
     // The next block to read, so a restart catches up on what happened while the monitor was down, and the hour's
-    // route failures and seizures.
-    save: () => ({ next, routeFailures: new Map(routeFailures), seized: new Map(seized) }),
+    // seizures.
+    save: () => ({ next, seized: new Map(seized) }),
     restore(s) {
-      const saved = s as { next: bigint | null; routeFailures: Map<string, number[]>; seized: Map<string, { t: number; units: bigint }[]> };
+      const saved = s as { next: bigint | null; seized?: Map<string, { t: number; units: bigint }[]> };
       next = saved.next;
-      for (const [k, v] of saved.routeFailures) routeFailures.set(k, [...v]);
-      for (const [k, v] of saved.seized) seized.set(k, [...v]);
+      for (const [k, v] of saved.seized ?? []) seized.set(k, [...v]);
     },
 
     evidence(input, subject) {
@@ -199,7 +190,7 @@ export function eventsProbe(): Probe<EventsInput> {
       const market = subject.split(":")[1];
       const logs = input.logs.filter((l) => {
         const d = decode(l);
-        return d !== null && (d.name === "RouteFailed" || d.name === "LiquidationSettled") && s(d.args.marketId) === market;
+        return d !== null && d.name === "Liquidated" && s(d.args.marketId) === market;
       });
       return text({ range: [input.from, input.to], logs, supplied: input.supplied.get(market ?? "") ?? null });
     },

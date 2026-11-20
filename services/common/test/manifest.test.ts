@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { sampleManifest } from "@avana/protocol/manifest/sample";
 import { aaveTopology, loadManifest, uniswapV4PoolManager } from "../src/manifest.ts";
+import { chainDeploymentOf } from "../src/views/deployment.ts";
 
 const ABI_HASH = `0x${"ab".repeat(32)}` as const;
 const dir = mkdtempSync(join(tmpdir(), "avana-manifest-"));
@@ -23,25 +24,11 @@ function write(name: string, body: unknown): string {
 const BIG_ID = "18446744073709551617"; // 2^64 + 1: not representable as a JavaScript number
 
 const sample = sampleManifest();
-const lpOracle = { ...sample.avana.lock, artifact: "LPOracle.sol:LPOracle" };
 const manifest = {
   ...sample,
   abiHash: ABI_HASH,
-  markets: [
-    {
-      marketId: BIG_ID,
-      integrationId: 1,
-      spoke: sample.aave.borrowSpokes[0]!.address,
-      vaultToken: sample.avana.lock,
-      lpOracle,
-      reserveId: "7",
-      pool: sample.external[0]!.address,
-      tokens: [sample.external[0]!.address],
-      feeds: [],
-      routes: [],
-    },
-  ],
-  debtReserves: [{ spoke: sample.aave.borrowSpokes[0]!.address, debtReserveId: "3", asset: sample.external[0]!.address, decimals: 18, isGho: false, feeds: [] }],
+  markets: [{ ...sample.markets[0]!, marketId: BIG_ID, reserveId: "7" }, sample.markets[1]!],
+  debtReserves: [{ ...sample.debtReserves[0]!, debtReserveId: "3", decimals: 18 }],
 };
 
 describe("loadManifest", () => {
@@ -56,7 +43,7 @@ describe("loadManifest", () => {
 
   it("refuses a manifest that does not match the schema, naming every error", () => {
     const { roles: _roles, ...noRoles } = manifest;
-    const bad = { ...noRoles, avana: { ...manifest.avana, lens: { ...manifest.avana.lens, startBlock: -1 } }, coverageSpokes: [] };
+    const bad = { ...noRoles, avana: { ...manifest.avana, accessManager: { ...manifest.avana.accessManager, startBlock: -1 } }, coverageSpokes: [] };
     const err = (() => {
       try {
         loadManifest(write("bad.json", bad), ABI_HASH);
@@ -67,7 +54,7 @@ describe("loadManifest", () => {
     })();
     expect(err).toMatch(/does not match the release manifest schema/);
     expect(err).toMatch(/roles/);
-    expect(err).toMatch(/avana\.lens\.startBlock/);
+    expect(err).toMatch(/avana\.accessManager\.startBlock/);
     expect(err).toMatch(/coverageSpokes/);
   });
 
@@ -104,7 +91,7 @@ describe("aaveTopology", () => {
   };
 
   it("reads every Hub, Lend Spoke and Borrow Spoke of a manifest with three Hubs", () => {
-    const full = (x: ReturnType<typeof up>) => ({ ...x, implementationCodeHash: x.codeHash, implementationArtifact: "Hub.sol:Hub", logics: [] });
+    const full = (x: ReturnType<typeof up>) => ({ ...x, implementationCodeHash: x.codeHash });
     const schemaAave = {
       hubs: aave.hubs.map((h) => ({ ...full(h), label: h.label, tier: h.tier })),
       borrowSpokes: aave.borrowSpokes.map((x) => ({ ...full(x), label: x.label })),
@@ -138,5 +125,22 @@ describe("uniswapV4PoolManager", () => {
   it("reads the PoolManager address in lower case with its start block", () => {
     const pm = { address: "0x000000000004444C5dC75cB358380D2e3dE08A90", startBlock: 21_688_329 };
     expect(uniswapV4PoolManager({ uniswapV4: { poolManager: pm } } as never)).toEqual({ address: "0x000000000004444c5dc75cb358380d2e3de08a90", startBlock: 21_688_329 });
+  });
+});
+
+describe("chainDeploymentOf", () => {
+  it("gives the snapshot reader the manifest's Hubs, Spokes, loss layers, RiskModules, both markets of a pool and the debt reserves", () => {
+    const m = loadManifest(write("deployment.json", manifest), ABI_HASH);
+    const d = chainDeploymentOf(m);
+    const rm = sample.avana.integrations[0]!.riskModule.address.toLowerCase();
+    expect(d.riskModules).toEqual([rm]);
+    expect(d.markets.map((x) => [x.marketId, x.kind, x.riskModule, x.reserveId])).toEqual([
+      [18446744073709551617n, "full-range", rm, 7n],
+      [2n, "custom-range", rm, 32n],
+    ]);
+    expect(d.cdpSpokes).toEqual([{ address: sample.aave.borrowSpokes[0]!.address.toLowerCase(), hub: sample.aave.hubs[0]!.address.toLowerCase() }]);
+    expect(d.firstLossReserves.map((f) => f.address)).toEqual([sample.coverage.firstLossReserves[0]!.address.toLowerCase()]);
+    expect(d.deficitOffsets).toHaveLength(1);
+    expect(d.debtReserves).toEqual([{ spoke: sample.debtReserves[0]!.spoke.toLowerCase(), reserveId: 3n, fixedPrice: false }]);
   });
 });

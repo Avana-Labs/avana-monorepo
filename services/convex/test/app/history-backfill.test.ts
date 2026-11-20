@@ -96,7 +96,7 @@ describe("recording the history", () => {
     const t = convexTest(schema, modules)
     expect((await t.query(api.wallet.rewards.summary, { wallet: WALLET })).historyChecked).toBe(true)
     await t.run(async (ctx) => {
-      await ctx.db.insert("deployments", { chainId: 1, chainSlug: "ethereum", lens: SPOKE, hubs: [], lendSpokes: [], cdpSpokes: [], firstLossReserves: [], marketRegistry: SPOKE, timelock: SPOKE, explorerUrl: "", nativeUsdFeed: SPOKE, release: "r" })
+      await ctx.db.insert("deployments", { chainId: 1, chainSlug: "ethereum", hubs: [], lendSpokes: [], cdpSpokes: [], firstLossReserves: [], explorerUrl: "", nativeUsdFeed: SPOKE, release: "r" })
     })
     expect((await t.query(api.wallet.rewards.summary, { wallet: WALLET })).historyChecked).toBe(false)
     await t.mutation(internal.wallet.backfillStore.finish, finishArgs({ quests: [] }))

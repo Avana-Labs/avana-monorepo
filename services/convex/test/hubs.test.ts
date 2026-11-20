@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Avana Labs
 // The Lend and Hub views on a chain with several Hubs, from rows the snapshot reader reads off the fixture chain:
 // totals add every Hub, the breakdowns keep each Hub apart, the same token on two Hubs has two pages, a Lend page
-// shows its draw-cap coverage, and a Hub recorded after start-up joins the totals.
+// shows its draw-cap coverage, and a Hub a later release step deploys joins the totals once it has code.
 
 import { describe, expect, it } from "vitest";
 import {
@@ -12,7 +12,6 @@ import {
   HUB_C,
   LEND_A,
   LEND_A2,
-  SPEED_MORE_AT,
   USDC,
   type FakeChain,
   fakeChainClient,
@@ -109,7 +108,7 @@ describe("draw-cap coverage", () => {
   it("shows the CDP Spokes' draw-cap sum, the balance it requires and the funded balance on the Lend page", async () => {
     const w = worldOf(await read(fixtureHubsChain.start));
     const value = (id: string) => params(w, HUB_A).find((p) => p.id === id)!.value;
-    // CDP A's draw cap of 4,000,000 USDC at the fake registry's 5 % needs 200,000 USDC, the Coverage Spoke's balance.
+    // CDP A's draw cap of 4,000,000 USDC at the fake RiskModule's 5 % needs 200,000 USDC, the First-Loss Reserve's balance.
     expect([value("borrowCapacity"), value("coverageRequired"), value("firstLoss"), value("coverageBound")]).toEqual(["4,000,000 USDC", "200,000 USDC", "200,000 USDC", "Holds"]);
     // Hub B's USDC has no First-Loss Reserve, so no coverage figures.
     expect(params(w, HUB_B).find((p) => p.id === "coverageRequired")!.value).toBe("—");
@@ -129,39 +128,32 @@ describe("draw-cap coverage", () => {
   });
 });
 
-describe("a Hub recorded after start-up", () => {
-  it("joins the totals, the breakdowns and the Lend pages at the next refresh", async () => {
+describe("a Hub a later release step deploys", () => {
+  it("joins the totals, the breakdowns and the Lend pages once it has code", async () => {
     const before = totalsOf(worldOf(await read(fixtureHubsChain.start)));
     const w = worldOf(await read(fixtureHubsChain.later));
     const after = totalsOf(w);
     expect(after.hubCount).toBe(3);
     const c = after.byHub.find((h) => h.hub === HUB_C)!;
     // Hub C's USDC: 2,050,000 added, the DAO deficit offset's 50,000 included.
-    expect(c).toMatchObject({ label: "hub-aa0000", slug: "ethereum-hub-aa0000", tier: 3, lendAssets: 1, suppliedUsd: 2_050_000, borrowedUsd: 500_000 });
+    expect(c).toMatchObject({ label: "Edge", slug: "ethereum-edge", tier: 3, lendAssets: 1, suppliedUsd: 2_050_000, borrowedUsd: 500_000 });
     expect(after.suppliedUsd).toBeCloseTo(before.suppliedUsd + 2_050_000, 6);
-    expect(after.byToken.find((x) => x.symbol === "USDC")!.hubs.map((h) => h.label)).toEqual(["Stable", "Core", "hub-aa0000"]);
-    expect(w.hubAssets.find((a) => a.hub === HUB_C)!.slug).toBe("ethereum-hub-aa0000-usdc");
+    expect(after.byToken.find((x) => x.symbol === "USDC")!.hubs.map((h) => h.label)).toEqual(["Stable", "Core", "Edge"]);
+    expect(w.hubAssets.find((a) => a.hub === HUB_C)!.slug).toBe("ethereum-edge-usdc");
   });
 });
 
-describe("assets a pool can borrow (BOR-024)", () => {
-  it("shows each debt reserve's amount available now and when more frees up", async () => {
+describe("assets a pool can borrow", () => {
+  it("lists every borrowable debt reserve of the market's Spoke with its rate and its Hub's liquidity", async () => {
     const w = worldOf(await read(fixtureHubsChain.start));
     const rows = readPoolBorrowables(w, "ethereum-market-1");
-    expect(rows.map((r) => [r.symbol, r.availableNow, r.availableNowUsd, r.moreFrom])).toEqual([
-      ["USDC", 500_000, 500_000, new Date(SPEED_MORE_AT * 1_000).toISOString()],
-      ["USDC", 500_000, 500_050, new Date(SPEED_MORE_AT * 1_000).toISOString()],
-      ["USDT", 500_000, 499_950, new Date(SPEED_MORE_AT * 1_000).toISOString()],
+    // Hub A USDC 7,000,000, Hub B USDC 4,000,000, Hub A USDT 3,000,000 of liquidity; no speed window frees up later.
+    expect(rows.map((r) => [r.symbol, r.availableNow, r.moreFrom]).sort()).toEqual([
+      ["USDC", 4_000_000, null],
+      ["USDC", 7_000_000, null],
+      ["USDT", 3_000_000, null],
     ]);
-  });
-
-  it("shows no amount when the Lens refuses the speed read", async () => {
-    const w = worldOf(await read({ ...fixtureHubsChain.start, locked: true }));
-    expect(readPoolBorrowables(w, "ethereum-market-1").map((r) => [r.availableNow, r.moreFrom])).toEqual([
-      [null, null],
-      [null, null],
-      [null, null],
-    ]);
+    expect(rows.every((r) => r.borrowAprPct > 0)).toBe(true);
   });
 });
 

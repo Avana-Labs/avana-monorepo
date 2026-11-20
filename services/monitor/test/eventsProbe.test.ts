@@ -1,23 +1,27 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The events probe on scripted logs: each event to its signal and level, events counted only from the contract they
-// belong to, the block range carried across rounds and shared with the confirming read, and the M-10 hour counts.
+// belong to, the block range carried across rounds and shared with the confirming read, and the M-10 seized share.
 
 import { describe, expect, it } from "vitest";
 import type { ServiceManifest } from "@avana/services-common";
 import { FIXTURE_U, FIXTURE_USDC, fixtureMarkets } from "@avana/services-common/fixtures";
-import { collateralizationAbi, lpVaultSwapAbi, riskModuleAbi } from "@avana/protocol/abis";
-import { type Abi, type Address, type Hex, encodeAbiParameters, encodeEventTopics, encodeFunctionData, parseAbi } from "viem";
+import { accessManagerAbi, liquidationModuleAbi } from "@avana/protocol/abis";
+import { type Abi, type Address, type Hex, encodeAbiParameters, encodeEventTopics, parseAbi } from "viem";
 import { eventsProbe } from "../src/probes/events.ts";
 import type { RawLog } from "../src/probe.ts";
 import { EMPTY_MANIFEST, contextOf, fakeProvider } from "./fakeChain.ts";
 
 const A = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as Address;
-const TIMELOCK = A(0x71), REGISTRY = A(0x72), RISK = A(0x73), COLL = A(0x74), SWAP = A(0x75), ADAPTER = A(0x76), LPVAULT = A(0x77), ESCROW = A(0x78);
+const MANAGER = A(0x71), RISK = A(0x73), MODULE = A(0x74), ADAPTER = A(0x76), LPVAULT = A(0x77), REPAY = A(0x78);
 
 const manifest = {
   ...EMPTY_MANIFEST,
-  avana: { ...EMPTY_MANIFEST.avana, timelock: { address: TIMELOCK }, marketRegistry: { address: REGISTRY }, riskModule: { address: RISK }, collateralization: { address: COLL }, lpVaultSwap: { address: SWAP }, aaveAdapter: { address: ADAPTER }, payoutEscrow: { address: ESCROW }, lpVaults: [{ address: LPVAULT, integrationId: 1 }] },
+  avana: {
+    accessManager: { address: MANAGER },
+    integrations: [{ integrationId: 1, kind: "uniswap-v3", lpVault: { address: LPVAULT }, riskModule: { address: RISK }, liquidationModule: { address: MODULE }, aaveAdapter: { address: ADAPTER }, flashloanRepay: { address: REPAY } }],
+    flashLiquidators: [],
+  },
   aave: { hubs: [], lendSpokes: [], borrowSpokes: [{ address: FIXTURE_U }] },
 } as unknown as ServiceManifest;
 
@@ -38,20 +42,21 @@ describe("eventsProbe", () => {
     const p = fakeProvider();
     p.logs.push(
       log(tokenAbi, "Upgraded", { implementation: A(5) }, A(0x99), 10n), // not a watched contract
-      log(riskModuleAbi as Abi, "ConfigDriftDetected", { spoke: FIXTURE_U, reason: 2 }, RISK, 10n),
       log(tokenAbi, "Upgraded", { implementation: A(5) }, FIXTURE_U, 10n),
-      log(collateralizationAbi as Abi, "CounterSaturated", { counterKind: 1, hub: A(1), key: A(2), valueBefore: 5n, subtracted: 9n }, COLL, 10n),
-      log(tokenAbi, "Blacklisted", { _account: SWAP }, FIXTURE_USDC, 10n),
-      log(tokenAbi, "AddedBlackList", { _user: ESCROW }, FIXTURE_USDC, 10n),
+      log(accessManagerAbi as Abi, "OperationScheduled", { operationId: `0x${"11".repeat(32)}`, nonce: 1, schedule: 2_000, caller: A(9), target: RISK, data: "0x1234" }, MANAGER, 10n),
+      log(accessManagerAbi as Abi, "RoleGranted", { roleId: 101n, account: A(9), delay: 0, since: 1_000, newMember: true }, MANAGER, 10n),
+      log(accessManagerAbi as Abi, "RoleGranted", { roleId: 101n, account: A(9), delay: 0, since: 1_000, newMember: true }, A(0x98), 10n), // another contract's
+      log(tokenAbi, "Blacklisted", { _account: ADAPTER }, FIXTURE_USDC, 10n),
+      log(tokenAbi, "AddedBlackList", { _user: RISK }, FIXTURE_USDC, 10n),
       log(tokenAbi, "Blacklisted", { _account: A(0x1234) }, FIXTURE_USDC, 10n),
     );
     const probe = eventsProbe();
     const ctx = await contextOf(p, { number: 10n, timestamp: 1_000 }, manifest);
     const fs = probe.evaluate(await probe.read(ctx), ctx.block);
-    expect(fs.map((f) => `${f.signal}:${f.level}:${f.detail.event}${f.detail.call ? `:${f.detail.call}` : ""}`)).toEqual([
-      "M-20:page:ConfigDriftDetected",
+    expect(fs.map((f) => `${f.signal}:${f.level}:${f.detail.event}`)).toEqual([
       "M-20:warn:Upgraded",
-      "M-21:page:CounterSaturated",
+      "M-22:warn:OperationScheduled",
+      "M-22:page:RoleGranted",
       "M-25:page:Blacklisted",
       "M-25:warn:AddedBlackList",
     ]);
@@ -76,27 +81,22 @@ describe("eventsProbe", () => {
     expect([late.input.from, late.input.to]).toEqual([106n, 2_105n]);
   });
 
-  it("counts route failures and the seized share per market over the hour", async () => {
+  it("counts the seized share per market over the hour", async () => {
     const p = fakeProvider();
     const probe = eventsProbe();
     const market = BigInt(fixtureMarkets[0]!.marketId);
     const supplied = BigInt(fixtureMarkets[0]!.suppliedUnits);
-    const failed = (block: bigint) => log(lpVaultSwapAbi as Abi, "RouteFailed", { marketId: market, token: FIXTURE_USDC, route: A(3), errorSelector: "0x12345678" }, SWAP, block);
-    const settled = (block: bigint, unitsSeized: bigint) => {
-      const ev = (lpVaultSwapAbi as Abi).find((e) => e.type === "event" && e.name === "LiquidationSettled") as Extract<Abi[number], { type: "event" }>;
-      const tuple = ev.inputs.find((i) => !i.indexed)!;
-      const value = Object.fromEntries((tuple as unknown as { components: readonly { name: string; type: string }[] }).components.map((c) => [c.name, c.name === "unitsSeized" ? unitsSeized : c.type.endsWith("[]") ? [] : c.type === "address" ? A(0) : c.type === "bool" ? false : 0]));
-      return log(lpVaultSwapAbi as Abi, "LiquidationSettled", { caller: A(1), proxy: A(2), marketId: market, [tuple.name!]: value }, SWAP, block);
-    };
+    const liquidated = (block: bigint, seized: bigint) =>
+      log(liquidationModuleAbi as Abi, "Liquidated", { account: A(2), marketId: market, liquidator: A(1), debtReserveId: 1n, debtRepaid: 1n, seized, creditUnwound: 1n, amount0: 1n, amount1: 1n }, MODULE, block);
     const round = async (n: bigint, t: number) => {
       const ctx = await contextOf(p, { number: n, timestamp: t }, manifest);
       return Object.fromEntries(probe.evaluate(await probe.read(ctx), ctx.block).filter((f) => f.kind === "condition").map((f) => [f.subject, f.level]));
     };
-    p.logs.push(failed(1n));
-    expect(await round(1n, 1_000)).toEqual({ [`market:${market}:routeFailed`]: "warn" });
-    p.logs.push(failed(2n), failed(2n), settled(2n, (supplied * 15n) / 85n));
-    expect(await round(2n, 1_100)).toEqual({ [`market:${market}:routeFailed`]: "page", [`market:${market}:seized`]: "warn" });
-    expect(await round(3n, 4_700)).toEqual({ [`market:${market}:routeFailed`]: "ok", [`market:${market}:seized`]: "ok" });
+    p.logs.push(liquidated(1n, (supplied * 15n) / 85n));
+    expect(await round(1n, 1_000)).toEqual({ [`market:${market}:seized`]: "warn" });
+    p.logs.push(liquidated(2n, (supplied * 10n) / 85n));
+    expect(await round(2n, 1_100)).toEqual({ [`market:${market}:seized`]: "page" });
+    expect(await round(3n, 4_700)).toEqual({ [`market:${market}:seized`]: "ok" });
     expect(await round(4n, 4_800)).toEqual({});
   });
 });

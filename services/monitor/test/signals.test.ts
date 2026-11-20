@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The catalog matches services/README.md (one row per signal, M-01 to M-34, each with a responder and a playbook),
+// The catalog matches services/README.md (one row per signal, M-01 to M-37, each with a responder and a playbook),
 // and the level helpers treat the limits exactly.
 
 import { readFileSync } from "node:fs";
@@ -11,8 +11,8 @@ import { SIGNALS, maxLevel, ratioLevel, signal, thresholdLevel } from "../src/si
 const README = readFileSync(new URL("../../README.md", import.meta.url), "utf8");
 
 describe("signal catalog", () => {
-  it("lists M-01 to M-34 once each, in order", () => {
-    expect(SIGNALS.map((s) => s.id)).toEqual(Array.from({ length: 34 }, (_, i) => `M-${String(i + 1).padStart(2, "0")}`));
+  it("lists M-01 to M-37 once each, in order", () => {
+    expect(SIGNALS.map((s) => s.id)).toEqual(Array.from({ length: 37 }, (_, i) => `M-${String(i + 1).padStart(2, "0")}`));
   });
 
   it("has every signal of the services README table and names its playbook", () => {
@@ -25,14 +25,13 @@ describe("signal catalog", () => {
     for (const s of SIGNALS) expect(s.responders.length).toBeGreaterThan(0);
   });
 
-  it("takes M-30, the keeper's discovery mismatch, from the keeper feed to its on-call engineer", () => {
-    expect(signal("M-30")).toMatchObject({ source: "keeper", responders: ["keeperOnCall"], playbook: "P-08 (EMG-082)" });
+  it("keeps the replaced core's signals as retired rows", () => {
+    for (const id of ["M-08", "M-11", "M-12", "M-17", "M-21", "M-26", "M-30", "M-31", "M-32", "M-33", "M-34"] as const) expect(signal(id).name).toContain("retired");
   });
 
-  it("takes M-31 to M-33 from the keeper feed and keeps M-34 as a retired row", () => {
-    for (const id of ["M-31", "M-32", "M-33"] as const) expect(signal(id).source).toBe("keeper");
-    expect(signal("M-34")).toMatchObject({ source: "snapshot", responders: ["keeperOnCall", "operators"], playbook: "P-08 (EMG-082)" });
-    expect(signal("M-34").name).toContain("retired");
+  it("reads the keeper wallets, band edges and depegs itself, and names the freeze as the depeg response", () => {
+    for (const id of ["M-35", "M-36", "M-37"] as const) expect(signal(id).source).toBe("snapshot");
+    expect(signal("M-37").name).toContain("freeze");
   });
 
   it("refuses an unknown signal", () => {

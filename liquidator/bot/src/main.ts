@@ -2,14 +2,14 @@
 // Copyright (c) 2026 Avana Labs
 // Runs the bot: loads the settings and the keystore signer, then discovers accounts and liquidates every pass.
 //
-//   LIQUIDATOR_KEYSTORE=~/.foundry/keystores/avana-liquidator LIQUIDATOR_PASSWORD_FILE=/run/secrets/liquidator \
-//   LIQUIDATOR_RPC_URL=... LIQUIDATOR_CHAIN_ID=8453 LIQUIDATOR_ADAPTER=0x... LIQUIDATOR_LIQUIDATION_MODULE=0x... \
-//   LIQUIDATOR_DEBT_RESERVES=1,2 npm start
+//   LIQUIDATION_BOT_KEYSTORE=~/.foundry/keystores/avana-liquidator LIQUIDATION_BOT_PASSWORD_FILE=/run/secrets/liquidator \
+//   LIQUIDATION_BOT_RPC_URL=... LIQUIDATION_BOT_CHAIN_ID=8453 LIQUIDATION_BOT_ADAPTER=0x... LIQUIDATION_BOT_LIQUIDATION_MODULE=0x... \
+//   LIQUIDATION_BOT_DEBT_RESERVES=1,2 npm start
 
 import { setTimeout as sleep } from "node:timers/promises";
 import { loadConfig } from "./config.ts";
 import { AccountSet } from "./discovery.ts";
-import { Liquidator } from "./pass.ts";
+import { LiquidationBot } from "./pass.ts";
 import { loadSigner } from "./signer.ts";
 import { viemChain } from "./viemChain.ts";
 
@@ -21,7 +21,7 @@ async function main(): Promise<void> {
   const signer = await loadSigner(config.keystore, config.passwordFile);
   const chain = viemChain(config.rpcUrl, config.chainId, signer);
   const accounts = new AccountSet(chain, config.adapter, config.fromBlock);
-  const bot = new Liquidator(chain, config, signer.address, log);
+  const bot = new LiquidationBot(chain, config, signer.address, log);
   log("started", { operator: signer.address, flash: config.flashLiquidator ?? null });
   for (;;) {
     try {

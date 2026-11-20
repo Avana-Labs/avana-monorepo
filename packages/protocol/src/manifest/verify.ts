@@ -1,27 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Deployment check of a release manifest against the chain (script/README.md "Verification before
-// deployments/verified/"): every code hash, ERC-1967 implementation and admin slot (TEST-137), the runtime code of
-// every Avana contract against the release build with immutables masked (TEST-134), the role snapshot replayed from
-// RoleGranted/RoleRevoked (REQ-ACCESS-023, TEST-214), the timelock settings and the immutable wiring (REQ-ACCESS-027).
+// deployments/verified/"): every code hash, the runtime code of every Avana contract against the release build with
+// immutables masked (TEST-134), the immutable wiring of each integration's core stack, every market against the
+// RiskModule (two per pool, same LTV, fixed band), the keeper registry, and the Avana AccessManager's admin and the
+// deployer's renunciation replayed from its role events.
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  type Address,
-  type Hex,
-  type PublicClient,
-  encodeAbiParameters,
-  getAddress,
-  keccak256,
-  parseAbi,
-  parseAbiItem,
-  stringToBytes,
-  zeroHash,
-} from "viem";
-import { adminOf, codeHash, getLogsChunked, implementationOf } from "./chain.ts";
-import { minNormalDelay } from "./schema.ts";
-import type { Immutable, ReleaseManifest, Upgradeable } from "./types.ts";
+import { type Address, type Hex, type PublicClient, getAddress, parseAbi, parseAbiItem } from "viem";
+import { riskModuleAbi } from "../abis/index.ts";
+import { codeHash, getLogsChunked, implementationOf } from "./chain.ts";
+import type { Immutable, ReleaseManifest } from "./types.ts";
 
 export type Outcome = "pass" | "fail" | "pending";
 export interface Check {
@@ -30,88 +20,44 @@ export interface Check {
   readonly detail: string;
 }
 
-const ROLE = (s: string) => keccak256(stringToBytes(s));
-const V4_MARKET = parseAbi([
-  "struct PoolKey { address currency0; address currency1; uint24 fee; int24 tickSpacing; address hooks; }",
-  "struct V4Market { PoolKey key; address referencePool; }",
-  "function v4Market(uint256 marketId) view returns (V4Market)",
-]);
-const V4_KEY = [{ type: "address" }, { type: "address" }, { type: "uint24" }, { type: "int24" }, { type: "address" }] as const;
-interface V4Key {
-  readonly currency0: Address;
-  readonly currency1: Address;
-  readonly fee: number;
-  readonly tickSpacing: number;
-  readonly hooks: Address;
-}
-const ROLES: Record<string, Hex> = {
-  DEFAULT_ADMIN_ROLE: zeroHash,
-  APPLICATION_ADMIN: ROLE("APPLICATION_ADMIN"),
-  APPLICATION_PAUSE_GUARDIAN: ROLE("APPLICATION_PAUSE_GUARDIAN"),
-  APPLICATION_FREEZE_GUARDIAN: ROLE("APPLICATION_FREEZE_GUARDIAN"),
-  APPLICATION_RISK_STEWARD: ROLE("APPLICATION_RISK_STEWARD"),
-  PROPOSER_ROLE: ROLE("PROPOSER_ROLE"),
-  EXECUTOR_ROLE: ROLE("EXECUTOR_ROLE"),
-  CANCELLER_ROLE: ROLE("CANCELLER_ROLE"),
-  DAO_CANCELLER_ROLE: ROLE("DAO_CANCELLER_ROLE"),
-};
-const roleName = (h: string) => Object.entries(ROLES).find(([, v]) => v === h)?.[0] ?? h;
+const GRANTED = parseAbiItem("event RoleGranted(uint64 indexed roleId, address indexed account, uint32 delay, uint48 since, bool newMember)");
+const REVOKED = parseAbiItem("event RoleRevoked(uint64 indexed roleId, address indexed account)");
+/** OpenZeppelin AccessManager's ADMIN_ROLE. */
+const ADMIN_ROLE = 0n;
 
-const GRANTED = parseAbiItem("event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)");
-const REVOKED = parseAbiItem("event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)");
-
-/**
- * Current holders of every role of `contract`, replayed from its role events since `fromBlock`. The logs are read up to
- * the head in ranges a provider accepts (getLogsChunked).
- */
-async function roleHolders(client: PublicClient, contract: Address, fromBlock: number): Promise<Map<string, Set<string>>> {
-  const holders = new Map<string, Set<string>>();
+/** Current members of every role of an OpenZeppelin AccessManager, replayed from its role events since `fromBlock`. */
+async function managerRoles(client: PublicClient, manager: Address, fromBlock: number): Promise<Map<bigint, Set<string>>> {
+  const holders = new Map<bigint, Set<string>>();
   const head = await client.getBlockNumber();
-  const logs = await getLogsChunked(client, { address: contract, events: [GRANTED, REVOKED], fromBlock: BigInt(fromBlock), toBlock: head });
+  const logs = await getLogsChunked(client, { address: manager, events: [GRANTED, REVOKED], fromBlock: BigInt(fromBlock), toBlock: head });
   logs.sort((a, b) => Number((a.blockNumber ?? 0n) - (b.blockNumber ?? 0n)) || (a.logIndex ?? 0) - (b.logIndex ?? 0));
   for (const log of logs) {
-    const { role, account } = log.args as { role: Hex; account: Address };
-    const set = holders.get(role) ?? new Set<string>();
+    const { roleId, account } = log.args as { roleId: bigint; account: Address };
+    const set = holders.get(roleId) ?? new Set<string>();
     if (log.eventName === "RoleGranted") set.add(getAddress(account));
     else set.delete(getAddress(account));
-    holders.set(role, set);
+    holders.set(roleId, set);
   }
   return holders;
 }
 
-/** Runtime code of the release artifact with every immutable position masked (Foundry `immutableReferences`). */
+/**
+ * Runtime code of the release artifact with every immutable position masked (Foundry `immutableReferences`).
+ * `artifact` is `<File>.sol:<Contract>` in contracts/out, or `<build>:<File>.sol:<Contract>` with build `out-aave` or
+ * `liquidator` (liquidator/out).
+ */
 function artifactRuntime(contractsDir: string, artifact: string): { code: string; masks: { start: number; length: number }[] } | null {
-  let outDir = "out";
-  let spec = artifact;
-  if (artifact.startsWith("out-aave:")) {
-    outDir = "out-aave";
-    spec = artifact.slice("out-aave:".length);
-  }
-  const [file, name] = spec.split(":");
-  const dir = join(contractsDir, outDir, file!);
-  const candidates = ["collateralization", "lporacle", "clvault"].map((p) => join(dir, `${name}.${p}.json`)).concat(join(dir, `${name}.json`));
-  const profiled = candidates.find((c) => existsSync(c) && profileOf(file!) !== "" && c.includes(`.${profileOf(file!)}.json`));
-  const path = profiled ?? join(dir, `${name}.json`);
-  if (!existsSync(path)) return null;
+  const parts = artifact.split(":");
+  const [build, file, name] = parts.length === 3 ? parts : ["out", ...parts];
+  const outDir = build === "liquidator" ? join(contractsDir, "..", "liquidator", "out") : join(contractsDir, build!);
+  const dir = join(outDir, file!);
+  // A contract another compiler profile also builds has one artifact per profile; the default one is `.default.json`.
+  const path = [join(dir, `${name}.json`), join(dir, `${name}.default.json`)].find(existsSync);
+  if (!path) return null;
   const a = JSON.parse(readFileSync(path, "utf8")) as {
     deployedBytecode: { object: string; immutableReferences?: Record<string, { start: number; length: number }[]> };
   };
   return { code: a.deployedBytecode.object.replace(/^0x/, ""), masks: Object.values(a.deployedBytecode.immutableReferences ?? {}).flat() };
-}
-
-/** The compiler profile a deployable file is restricted to (script/deploy/lib/DeployBase.sol `_profileOf`). */
-export function profileOf(file: string): string {
-  if (
-    file === "Collateralization.sol" ||
-    file === "UniswapV4Integration.sol" ||
-    (file.startsWith("LPVaultSwap") && file.endsWith("Logic.sol")) ||
-    (file.startsWith("Lens") && file.endsWith("Module.sol"))
-  ) {
-    return "collateralization";
-  }
-  if (file === "UniswapV3Integration.sol" || file === "SlipstreamIntegration.sol") return "clvault";
-  if (file.startsWith("LPOracle")) return "lporacle";
-  return "";
 }
 
 function mask(code: string, masks: { start: number; length: number }[]): string {
@@ -120,166 +66,93 @@ function mask(code: string, masks: { start: number; length: number }[]): string 
   return chars.join("");
 }
 
+const GETTERS = ["LP_VAULT", "RISK_MODULE", "LIQUIDATION_MODULE", "ADAPTER", "POOL", "OPERATOR"] as const;
+const GETTER_ABI = parseAbi(GETTERS.map((n) => `function ${n}() view returns (address)`));
+const AUTHORITY = parseAbi(["function authority() view returns (address)"]);
+
 export async function verifyManifest(m: ReleaseManifest, client: PublicClient, contractsDir: string): Promise<Check[]> {
   const checks: Check[] = [];
   const add = (name: string, ok: boolean | "pending", detail = "") => checks.push({ name, outcome: ok === "pending" ? "pending" : ok ? "pass" : "fail", detail });
+  const read = (address: Address, n: (typeof GETTERS)[number]) => client.readContract({ address, abi: GETTER_ABI, functionName: n }).then((a) => getAddress(a as string));
+  const same = (a: string, b: string) => getAddress(a) === getAddress(b);
 
   add("chain id", (await client.getChainId()) === m.chainId, `manifest ${m.chainId}`);
 
-  const immutables: [string, Immutable][] = [
-    ["AvanaTimelock", m.avana.timelock],
-    ["ProxyManager", m.avana.proxyManager],
-    ["Collateralization", m.avana.collateralization],
-    ["VaultTokenFactory", m.avana.vaultTokenFactory],
-    ["PayoutEscrow", m.avana.payoutEscrow],
-    ["Lock", m.avana.lock],
-    ["Lens", m.avana.lens],
-    ["LensAaveSizing", m.avana.lensAaveSizing],
-    ["AaveV3FlashSource", m.avana.flashSource],
-    ["FlashLiquidator", m.avana.flashLiquidator],
-    ...(m.avana.gasVault ? [["AvanaGasVault", m.avana.gasVault] as [string, Immutable]] : []),
-    ...m.avana.lensModules.map((x, i): [string, Immutable] => [`Lens module ${i}`, x]),
-    ...m.avana.operatorHelpers.map((x, i): [string, Immutable] => [`OperatorFlashLiquidator ${i}`, x]),
-    ...m.avana.lpVaults.map((x): [string, Immutable] => [`LPVault ${x.integrationId} (${x.kind})`, x]),
-    ...(m.uniswapV4 ? [["Uniswap v4 PoolManager", m.uniswapV4.poolManager] as [string, Immutable]] : []),
-  ];
-  const upgradeables: [string, Upgradeable][] = [
-    ["AaveAdapter", m.avana.aaveAdapter],
-    ["LPVaultSwap", m.avana.lpVaultSwap],
-    ["MarketRegistry", m.avana.marketRegistry],
-    ["ParameterStore", m.avana.parameterStore],
-    ["RiskModule", m.avana.riskModule],
-  ];
-  const compare = async (label: string, address: Address, expectedHash: Hex, artifact: string | null) => {
-    const onChain = await codeHash(client, address).catch(() => "0x" as Hex);
-    add(`code hash ${label}`, onChain === expectedHash, address);
-    if (!artifact) return;
-    const ref = artifactRuntime(contractsDir, artifact);
-    if (!ref) return add(`release bytecode ${label}`, "pending", `artifact ${artifact} not in this build`);
-    const code = ((await client.getCode({ address })) ?? "0x").replace(/^0x/, "");
-    const same = code.length === ref.code.length && mask(code, ref.masks) === mask(ref.code, ref.masks);
-    add(`release bytecode ${label}`, same, `${artifact}, ${ref.masks.length} immutable positions masked`);
+  const compare = async (label: string, x: Pick<Immutable, "address" | "codeHash" | "artifact">) => {
+    const onChain = await codeHash(client, x.address).catch(() => "0x" as Hex);
+    add(`code hash ${label}`, onChain === x.codeHash, x.address);
+    if (!x.artifact) return;
+    const ref = artifactRuntime(contractsDir, x.artifact);
+    if (!ref) return add(`release bytecode ${label}`, "pending", `artifact ${x.artifact} not in this build`);
+    const code = ((await client.getCode({ address: x.address })) ?? "0x").replace(/^0x/, "");
+    const ok = code.length === ref.code.length && mask(code, ref.masks) === mask(ref.code, ref.masks);
+    add(`release bytecode ${label}`, ok, `${x.artifact}, ${ref.masks.length} immutable positions masked`);
   };
-  for (const [label, x] of immutables) await compare(label, x.address, x.codeHash, x.artifact);
-  for (const [label, u] of upgradeables) {
-    add(`ERC-1967 implementation ${label}`, (await implementationOf(client, u.address)) === u.implementation, u.implementation);
-    add(`no ProxyAdmin ${label}`, (await adminOf(client, u.address)) === 0n);
-    await compare(`${label} proxy`, u.address, u.codeHash, null);
-    await compare(`${label} implementation`, u.implementation, u.implementationCodeHash, u.implementationArtifact);
-    for (const l of u.logics) await compare(`${label} ${l.name}`, l.address, l.codeHash, l.artifact);
+
+  await compare("Avana AccessManager", m.avana.accessManager);
+  for (const x of m.avana.integrations) {
+    const tag = `integration ${x.integrationId} (${x.kind})`;
+    for (const k of ["lpVault", "riskModule", "liquidationModule", "aaveAdapter", "flashloanRepay"] as const) await compare(`${tag} ${k}`, x[k]);
+    // Immutable wiring: one stack per LPVault.
+    add(`${tag} RiskModule.LP_VAULT`, same(await read(x.riskModule.address, "LP_VAULT"), x.lpVault.address));
+    add(`${tag} RiskModule.LIQUIDATION_MODULE`, same(await read(x.riskModule.address, "LIQUIDATION_MODULE"), x.liquidationModule.address));
+    add(`${tag} LiquidationModule.RISK_MODULE`, same(await read(x.liquidationModule.address, "RISK_MODULE"), x.riskModule.address));
+    add(`${tag} AaveAdapter.RISK_MODULE`, same(await read(x.aaveAdapter.address, "RISK_MODULE"), x.riskModule.address));
+    add(`${tag} FlashloanRepay.ADAPTER`, same(await read(x.flashloanRepay.address, "ADAPTER"), x.aaveAdapter.address));
+    add(`${tag} FlashloanRepay.POOL`, same(await read(x.flashloanRepay.address, "POOL"), m.aave.v3Pool.address));
+    for (const k of ["lpVault", "riskModule", "liquidationModule", "aaveAdapter"] as const) {
+      const authority = await client.readContract({ address: x[k].address, abi: AUTHORITY, functionName: "authority" }).catch(() => null);
+      if (authority !== null) add(`${tag} ${k} authority`, same(authority, m.avana.accessManager.address), authority);
+    }
+    // Keeper registry: borrowing stops while it is empty.
+    const keepers = (await client.readContract({ address: x.riskModule.address, abi: riskModuleAbi, functionName: "getKeepers" })).map((k) => getAddress(k));
+    const missing = m.roles.keepers.filter((k) => !keepers.includes(getAddress(k)));
+    add(`${tag} keepers registered`, keepers.length > 0 && missing.length === 0, missing.length ? `missing: ${missing.join(", ")}` : `${keepers.length} keeper(s)`);
+  }
+  for (const f of m.avana.flashLiquidators) {
+    const x = m.avana.integrations.find((i) => i.integrationId === f.integrationId);
+    await compare(`FlashLiquidator ${f.address}`, f);
+    add(`FlashLiquidator ${f.address} LIQUIDATION_MODULE`, !!x && same(await read(f.address, "LIQUIDATION_MODULE"), x.liquidationModule.address));
+    add(`FlashLiquidator ${f.address} OPERATOR`, same(await read(f.address, "OPERATOR"), f.operator));
+    add(`FlashLiquidator ${f.address} POOL`, same(await read(f.address, "POOL"), m.aave.v3Pool.address));
+  }
+
+  // Markets: each matches the RiskModule's record, and each pool's pair is Full + Custom with one LTV.
+  for (const mk of m.markets) {
+    const tag = `market ${mk.marketId} (${mk.name})`;
+    const x = m.avana.integrations.find((i) => i.integrationId === mk.integrationId);
+    if (!x) {
+      add(tag, false, `integration ${mk.integrationId} not in the manifest`);
+      continue;
+    }
+    await compare(`${tag} vault token`, mk.vaultToken);
+    await compare(`${tag} LPOracle`, mk.lpOracle);
+    const r = await client.readContract({ address: x.riskModule.address, abi: riskModuleAbi, functionName: "getMarket", args: [BigInt(mk.marketId)] });
+    const kind = r.kind === 0 ? "full-range" : "custom-range";
+    add(`${tag} RiskModule record`,
+      kind === mk.kind && r.bandLower === mk.bandLower && r.bandUpper === mk.bandUpper && r.ltvBps === mk.ltvBps &&
+        same(r.spoke, mk.spoke) && same(r.vaultToken, mk.vaultToken.address) && same(r.lpOracle, mk.lpOracle.address) &&
+        r.reserveId === BigInt(mk.reserveId) && r.pool.toLowerCase() === mk.pool.toLowerCase(),
+      `${kind} [${r.bandLower}, ${r.bandUpper}] ltv ${r.ltvBps}`);
+    add(`${tag} active`, r.active ? true : "pending", r.active ? "" : "activated by 09_ListMarkets activate, not run yet");
+    const pair = await client.readContract({ address: x.riskModule.address, abi: riskModuleAbi, functionName: "marketsOf", args: [mk.pool] });
+    add(`${tag} pool's ${mk.kind} market`, (mk.kind === "full-range" ? pair.fullRange : pair.customRange) === BigInt(mk.marketId));
+  }
+  for (const x of [...m.coverage.firstLossReserves, ...m.coverage.daoDeficitOffsets]) await compare(`loss layer ${x.hubLabel} ${x.symbol}`, x);
+  for (const r of m.debtReserves) {
+    add(`debt reserve ${r.spoke}/${r.debtReserveId} First-Loss Reserve listed`, m.coverage.firstLossReserves.some((f) => same(f.address, r.firstLossReserve)), r.firstLossReserve);
+  }
+  for (const u of [...m.aave.hubs, ...m.aave.borrowSpokes, ...m.aave.lendSpokes, m.aave.v3Pool]) {
+    add(`ERC-1967 implementation ${u.address}`, (await implementationOf(client, u.address)) === u.implementation || u.implementation === u.address, u.implementation);
   }
   for (const e of m.external) add(`code hash ${e.group} ${e.name}`, (await codeHash(client, e.address).catch(() => "0x")) === e.codeHash, e.address);
 
-  // Timelock settings (REQ-ACCESS-027).
-  const tl = parseAbi([
-    "function normalDelay() view returns (uint256)",
-    "function MIN_NORMAL_DELAY() view returns (uint256)",
-    "function publicExecution() view returns (bool)",
-  ]);
-  const t = m.avana.timelock.address;
-  add("timelock normalDelay", Number(await client.readContract({ address: t, abi: tl, functionName: "normalDelay" })) === m.roles.timelock.normalDelay);
-  const floor = minNormalDelay(m.chainId);
-  add(`timelock MIN_NORMAL_DELAY = ${floor.toLocaleString("en-US")}`, (await client.readContract({ address: t, abi: tl, functionName: "MIN_NORMAL_DELAY" })) === BigInt(floor));
-  add("timelock publicExecution", (await client.readContract({ address: t, abi: tl, functionName: "publicExecution" })) === m.roles.timelock.publicExecution);
-
-  // Role snapshot (REQ-ACCESS-023, TEST-214): every holder is in the table, every table entry holds its role.
-  const r = m.roles;
-  const g = (xs: readonly Address[]) => new Set(xs.map((x) => getAddress(x)));
-  const expect: [string, Address, Record<string, Set<string>>, string[]][] = [
-    ["AvanaTimelock", t, {
-      DEFAULT_ADMIN_ROLE: g([t]),
-      PROPOSER_ROLE: g(r.timelock.proposers),
-      // Public execution is OpenZeppelin's EXECUTOR_ROLE held by address(0) (REQ-ACCESS-021, TEST-214).
-      EXECUTOR_ROLE: g([...r.timelock.executors, ...(r.timelock.publicExecution ? ["0x0000000000000000000000000000000000000000" as Address] : [])]),
-      CANCELLER_ROLE: g(r.timelock.cancellers),
-      DAO_CANCELLER_ROLE: g(r.timelock.daoCancellers),
-    }, []],
-    ["MarketRegistry", m.avana.marketRegistry.address, {
-      DEFAULT_ADMIN_ROLE: g([t]), APPLICATION_ADMIN: g([t]),
-      APPLICATION_PAUSE_GUARDIAN: g(r.marketRegistryGuardians), APPLICATION_FREEZE_GUARDIAN: g(r.marketRegistryGuardians),
-    }, ["APPLICATION_PAUSE_GUARDIAN", "APPLICATION_FREEZE_GUARDIAN"]],
-    ["ParameterStore", m.avana.parameterStore.address, {
-      DEFAULT_ADMIN_ROLE: g([t]), APPLICATION_ADMIN: g([t]),
-      APPLICATION_PAUSE_GUARDIAN: g(r.parameterStorePauseGuardians), APPLICATION_RISK_STEWARD: g(r.riskStewards),
-    }, ["APPLICATION_PAUSE_GUARDIAN", "APPLICATION_RISK_STEWARD"]],
-    ["AaveAdapter", m.avana.aaveAdapter.address, { DEFAULT_ADMIN_ROLE: g([t]), APPLICATION_ADMIN: g([t]) }, []],
-    ["RiskModule", m.avana.riskModule.address, { DEFAULT_ADMIN_ROLE: g([t]), APPLICATION_ADMIN: g([t]) }, []],
-    ["LPVaultSwap", m.avana.lpVaultSwap.address, { DEFAULT_ADMIN_ROLE: g([t]), APPLICATION_ADMIN: g([t]) }, []],
-  ];
+  // The Avana AccessManager: the Aave governance executor is its only admin and the deployer holds no role.
+  const roles = await managerRoles(client, m.avana.accessManager.address, m.avana.accessManager.startBlock);
+  const admins = [...(roles.get(ADMIN_ROLE) ?? [])];
+  add("AccessManager ADMIN_ROLE", admins.length === 1 && same(admins[0]!, m.roles.aaveGovernanceExecutor), admins.join(", "));
   const deployer = getAddress(m.deployer);
-  for (const [label, address, table, firstOperation] of expect) {
-    const held = await roleHolders(client, address, m.avana.timelock.startBlock);
-    for (const [role, holders] of held) {
-      if (!Object.values(ROLES).includes(role as Hex) && holders.size > 0) add(`${label} unknown role`, false, `${role}: ${[...holders].join(", ")}`);
-    }
-    for (const [name, want] of Object.entries(table)) {
-      const have = held.get(ROLES[name]!) ?? new Set<string>();
-      const extra = [...have].filter((a) => !want.has(a));
-      const missing = [...want].filter((a) => !have.has(a));
-      const label2 = `${label} ${name}`;
-      if (extra.length > 0) add(label2, false, `holders outside the table: ${extra.join(", ")}`);
-      else if (missing.length > 0 && firstOperation.includes(name) && have.size === 0) add(label2, "pending", "granted by the guardian-roles operation, not executed yet");
-      else add(label2, missing.length === 0, missing.length ? `missing: ${missing.join(", ")}` : `${want.size} holder(s)`);
-    }
-    const deployerRoles = [...held].filter(([, h]) => h.has(deployer)).map(([role]) => roleName(role));
-    add(`${label}: deployer holds no role`, deployerRoles.length === 0, deployerRoles.join(", "));
-  }
-
-  // Immutable wiring (REQ-VTOKEN-044, REQ-ESCROW-001).
-  const getter = (n: string) => parseAbi([`function ${n}() view returns (address)`]);
-  const read = (address: Address, n: string) => client.readContract({ address, abi: getter(n), functionName: n }) as Promise<Address>;
-  add("VaultTokenFactory.TIMELOCK", (await read(m.avana.vaultTokenFactory.address, "TIMELOCK")) === t);
-  add("PayoutEscrow.LP_VAULT_SWAP", (await read(m.avana.payoutEscrow.address, "LP_VAULT_SWAP")) === m.avana.lpVaultSwap.address);
-  // The gas vault (REQ-GASV-002): its treasury is the manifest's feeRecipient and no operator helper's funding Safe,
-  // its timelock the chain's AvanaTimelock, its guardian the Emergency Guardian.
-  const gv = m.avana.gasVault;
-  if (gv) {
-    add("AvanaGasVault.TREASURY", (await read(gv.address, "TREASURY")) === m.feeRecipient && gv.treasury === m.feeRecipient, gv.treasury);
-    add("AvanaGasVault.TREASURY is no FUNDING_SAFE", m.avana.operatorHelpers.every((h) => h.fundingSafe !== gv.treasury));
-    add("AvanaGasVault.TIMELOCK", (await read(gv.address, "TIMELOCK")) === t && gv.timelock === t);
-    add("AvanaGasVault.GUARDIAN", (await read(gv.address, "GUARDIAN")) === m.roles.emergencyGuardian && gv.guardian === m.roles.emergencyGuardian);
-  } else {
-    add("AvanaGasVault deployed", "pending", "deployed by step 12-gas-vault, not run yet");
-  }
-  for (const v of m.avana.lpVaults) {
-    add(`LPVault ${v.integrationId} TIMELOCK`, (await read(v.address, "TIMELOCK")) === t);
-    add(`LPVault ${v.integrationId} MARKET_REGISTRY`, (await read(v.address, "MARKET_REGISTRY")) === m.avana.marketRegistry.address);
-    // A Uniswap v4 LPVault reads the manifest's PoolManager (the address the indexer follows).
-    if (v.kind === "uniswap-v4") {
-      const pm = await read(v.address, "POOL_MANAGER");
-      add(`LPVault ${v.integrationId} POOL_MANAGER`, !!m.uniswapV4 && pm === getAddress(m.uniswapV4.poolManager.address), pm);
-    }
-  }
-  // Listed markets: vault tokens, routes and the stateless LPOracles are the recorded code; First-Loss Reserves and the
-  // DAO deficit offsets are the recorded code.
-  for (const mk of m.markets) {
-    await compare(`market ${mk.marketId} vault token`, mk.vaultToken.address, mk.vaultToken.codeHash, null);
-    for (const [i, r] of mk.routes.entries()) await compare(`market ${mk.marketId} route ${i}`, r.address, r.codeHash, r.artifact);
-    await compare(`market ${mk.marketId} LPOracle`, mk.lpOracle.address, mk.lpOracle.codeHash, mk.lpOracle.artifact);
-    // A Uniswap v4 market: the PoolKey its LPVault bound hashes to the recorded PoolId.
-    const vault = m.avana.lpVaults.find((x) => x.integrationId === mk.integrationId);
-    if (vault?.kind === "uniswap-v4") {
-      const k = ((await client.readContract({ address: vault.address, abi: V4_MARKET, functionName: "v4Market", args: [BigInt(mk.marketId)] })) as { key: V4Key }).key;
-      const id = keccak256(encodeAbiParameters(V4_KEY, [k.currency0, k.currency1, k.fee, k.tickSpacing, k.hooks]));
-      add(`market ${mk.marketId} PoolId`, !!mk.poolId && id === mk.poolId.toLowerCase(), id);
-    }
-  }
-  for (const x of [...m.avana.firstLossReserves, ...m.avana.daoDeficitOffsets]) {
-    await compare(`loss layer ${x.hub} ${x.asset}`, x.address, x.codeHash, x.artifact);
-  }
-
-  // Each integration is registered with its LPVault, which is also its pricing: each market's stateless LPOracle reads
-  // the composition from it (REQ-CONFIG-016).
-  const integrationOf = parseAbi(["function integrationOf(uint32 integrationId) view returns (address lpVault, address pricing)"]);
-  for (const v of m.avana.lpVaults) {
-    const [lpVault, pricing] = (await client.readContract({
-      address: m.avana.marketRegistry.address, abi: integrationOf, functionName: "integrationOf", args: [v.integrationId],
-    })) as readonly [Address, Address];
-    if (lpVault === "0x0000000000000000000000000000000000000000") {
-      add(`integration ${v.integrationId} registered`, "pending", "registered by the chain-wiring operation, not executed yet");
-    } else {
-      add(`integration ${v.integrationId} registered`, lpVault === v.address && pricing === v.address, `${lpVault} ${pricing}`);
-    }
-  }
+  const held = [...roles].filter(([, h]) => h.has(deployer)).map(([id]) => id.toString());
+  add("AccessManager: deployer holds no role", held.length === 0, held.join(", "));
   return checks;
 }

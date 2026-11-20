@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The part of a verified release manifest (deployments/verified/) that the indexer and the keeper read.
+// The part of a verified release manifest (deployments/verified/) that the indexer, the bot runner, the monitor, the
+// faucet and Convex read.
 // The full schema belongs to packages/protocol; this view names only the fields the services use, so a field
 // the services rely on cannot disappear from the schema without a type error here.
 
@@ -14,14 +15,25 @@ export interface Deployed {
   readonly startBlock: number;
 }
 
-/** An ERC-1967 proxy: the keeper's code check compares its implementation slot with `implementation` (Q-219). */
+/** A third-party ERC-1967 proxy (Aave V4 Hubs and Spokes, the Aave V3 Pool). */
 export interface Upgradeable extends Deployed {
   readonly implementation: Address;
 }
 
-/** An immutable contract: the keeper's code check compares `keccak256(runtime code)` with `codeHash`. */
+/** A contract with its runtime code hash. Avana's core contracts are not upgradeable. */
 export interface Immutable extends Deployed {
   readonly codeHash: Hex;
+}
+
+/** One AMM integration's core stack: the LPVault and the RiskModule, LiquidationModule, AaveAdapter and FlashloanRepay bound to it. */
+export interface ManifestIntegration {
+  readonly integrationId: number;
+  readonly kind: string;
+  readonly lpVault: Immutable;
+  readonly riskModule: Immutable;
+  readonly liquidationModule: Immutable;
+  readonly aaveAdapter: Immutable;
+  readonly flashloanRepay: Immutable;
 }
 
 export interface ServiceManifest {
@@ -31,35 +43,19 @@ export interface ServiceManifest {
   /** Hash of the ABIs in the release build; every service refuses to run on a mismatch (TEST-149). */
   readonly abiHash: Hex;
   readonly avana: {
-    readonly aaveAdapter: Upgradeable;
-    readonly lpVaultSwap: Upgradeable;
-    readonly marketRegistry: Upgradeable;
-    readonly parameterStore: Upgradeable;
-    readonly riskModule: Upgradeable;
-    readonly timelock: Immutable;
-    readonly proxyManager: Immutable;
-    readonly collateralization: Immutable;
-    readonly vaultTokenFactory: Immutable;
-    readonly payoutEscrow: Immutable;
-    readonly lock: Immutable;
-    readonly lens: Immutable;
-    /** The core flash source; it serves only `deleverage` (LIQ-081). */
-    readonly flashSource: Immutable;
-    /** The public flash liquidation helper (REQ-HELPER-015). */
-    readonly flashLiquidator: Immutable;
-    /** The chain's AvanaGasVault, which refills the keeper signers; null while it is not deployed. */
-    readonly gasVault: (Immutable & { readonly treasury: Address; readonly timelock: Address; readonly guardian: Address; readonly maxSigners: number }) | null;
-    /** One operator helper per keeper instance, bound to that instance's signer and funding Safe (REQ-HELPER-011). */
-    readonly operatorHelpers: readonly (Immutable & { readonly signer: Address; readonly fundingSafe: Address })[];
-    /** One LPVault per AMM integration on this chain. */
-    readonly lpVaults: readonly (Immutable & { readonly integrationId: number })[];
-    /** One First-Loss Reserve per (Hub, covered debt asset). */
-    readonly firstLossReserves: readonly (Immutable & { readonly asset: Address; readonly hub: Address })[];
-    /** `PROXY_CREATION_CODE_HASH` of the ProxyManager; proxies are attributed only if their CREATE2 address matches. */
-    readonly proxyCreationCodeHash: Hex;
+    readonly accessManager: Immutable;
+    readonly integrations: readonly ManifestIntegration[];
+    /** Operator flash liquidators, each callable only by its operator (the liquidation bot's keystore). */
+    readonly flashLiquidators: readonly (Immutable & { readonly integrationId: number; readonly operator: Address })[];
   };
   readonly markets: readonly ManifestMarket[];
   readonly debtReserves: readonly ManifestDebtReserve[];
+  readonly coverage: {
+    /** One First-Loss Reserve per (Hub, debt asset). */
+    readonly firstLossReserves: readonly LossLayer[];
+    /** The Aave DAO's deficit offset behind each First-Loss Reserve. */
+    readonly daoDeficitOffsets: readonly LossLayer[];
+  };
   readonly aave: {
     /** Every Aave V4 Hub of the deployment, with its label and risk tier (1 to 3). */
     readonly hubs: readonly ManifestHub[];
@@ -67,8 +63,14 @@ export interface ServiceManifest {
     readonly borrowSpokes: readonly Upgradeable[];
     /** Every Lend Spoke: an Aave standard Spoke, supply only, on one Hub. */
     readonly lendSpokes: readonly ManifestLendSpoke[];
-    /** The Aave V3 Pool the helper flash-borrows every debt asset from, GHO included; its only lender. */
+    /** The Aave V3 Pool the flash liquidators and FlashloanRepay borrow from. */
     readonly v3Pool: Upgradeable;
+  };
+  readonly roles: {
+    /** The liquidation bots registered in the RiskModules' keeper registry. */
+    readonly keepers: readonly Address[];
+    /** The keeper top-up wallet and its refill rule (`11_FundKeepers`); null when the deploy config names none. */
+    readonly keeperTopUp: { readonly wallet: Address; readonly minBalanceWei: string; readonly targetBalanceWei: string } | null;
   };
   /** Chainlink sequencer-uptime feed on an L2, null on Ethereum. */
   readonly sequencerFeed: Address | null;
@@ -76,7 +78,15 @@ export interface ServiceManifest {
   readonly uniswapV4?: { readonly poolManager: Deployed };
 }
 
-/** An Aave V4 Hub with the label the app shows and its risk tier (`MarketRegistry.hubTier`). */
+/** A loss layer of one (Hub, debt asset). */
+export interface LossLayer extends Immutable {
+  readonly hub: Address;
+  readonly hubLabel: string;
+  readonly asset: Address;
+  readonly symbol: string;
+}
+
+/** An Aave V4 Hub with the label the app shows and its risk tier. */
 export interface ManifestHub extends Upgradeable {
   readonly label: string;
   readonly tier: number;
@@ -86,21 +96,31 @@ export interface ManifestLendSpoke extends Upgradeable {
   readonly label: string;
 }
 
+export type MarketKind = "full-range" | "custom-range";
+
 export interface ManifestMarket {
   readonly marketId: bigint;
-  /** Selects the market's LPVault in `avana.lpVaults`. */
+  readonly name: string;
+  /** Selects the market's core stack in `avana.integrations`. */
   readonly integrationId: number;
+  /** Each pool has two markets: Full range (exact full-range ticks) and Custom range (positions inside the band). */
+  readonly kind: MarketKind;
+  /** The bytes32 pool key (a v3/Slipstream pool address left-padded, or a v4 PoolId). */
+  readonly pool: Hex;
   readonly spoke: Address;
+  readonly hub: Address;
   readonly vaultToken: Immutable;
-  /** The market's stateless LPOracle, a plain contract. */
   readonly lpOracle: Immutable;
   readonly reserveId: bigint;
-  readonly pool: Address;
-  readonly tokens: readonly Address[];
-  /** Every Chainlink leg of both tokens' price routes; the monitor reads their ages (M-03). */
+  readonly tokens: readonly [Address, Address];
+  /** The band, fixed for life. */
+  readonly bandLower: number;
+  readonly bandUpper: number;
+  /** The same for both markets of a pool. */
+  readonly ltvBps: number;
+  readonly unitDecimals: number;
+  /** Every Chainlink leg of both tokens' price routes; the monitor reads their ages. */
   readonly feeds: readonly { readonly feed: Address; readonly heartbeatSeconds: number }[];
-  /** Swap routes into each debt asset; the keeper code-checks them and keeps the flash loan off their reserves. */
-  readonly routes: readonly Immutable[];
 }
 
 export interface ManifestDebtReserve {
@@ -109,9 +129,15 @@ export interface ManifestDebtReserve {
   readonly asset: Address;
   readonly decimals: number;
   readonly isGho: boolean;
-  /** The asset's Chainlink USD feeds. Aave reads the primary one as the reserve's price, except for GHO, whose price
-   * source is fixed. */
+  readonly firstLossReserve: Address;
   readonly feeds: readonly { readonly feed: Address; readonly heartbeatSeconds: number }[];
+}
+
+/** The core stack a market belongs to; throws when the manifest lists none. */
+export function integrationOf(m: Pick<ServiceManifest, "avana">, integrationId: number): ManifestIntegration {
+  const x = m.avana.integrations.find((i) => i.integrationId === integrationId);
+  if (!x) throw new Error(`manifest lists no integration ${integrationId}`);
+  return x;
 }
 
 /**

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Account attribution (AaveAdapter + ProxyManager) and the Spoke events of attributed accounts (TEST-144).
-// A Spoke event for an address that neither creation event announced is logged and attributed to nobody.
-// Attribution never uses the LiquidationCall `liquidator` field (LIQ-056).
+// Account attribution (AaveAdapter.AccountCreated: one account proxy per wallet and market) and the Spoke events of
+// attributed accounts. A Spoke event for an address the AaveAdapter did not announce is logged and attributed to
+// nobody. Attribution never uses the LiquidationCall `liquidator` field (LIQ-056).
 
 import { ponder } from "ponder:registry";
 import schema from "ponder:schema";
@@ -10,21 +10,21 @@ import type { Hex } from "viem";
 import { AAVE_SPOKE_SOURCES } from "../config/aaveSources.ts";
 import { type LogEventLike, recordLog } from "../lib/record.ts";
 
-type Creation = { wallet: Hex; spoke: Hex; marketId: bigint; proxy: Hex };
-
-async function announce(event: LogEventLike, context: Parameters<typeof recordLog>[1], kind: string, by: "adapter" | "manager") {
-  const p = await recordLog(event, context, kind);
-  const a = event.args as Creation;
-  const flags = { adapterSeen: by === "adapter", managerSeen: by === "manager" };
+ponder.on("AaveAdapter:AccountCreated", async ({ event, context }) => {
+  const p = await recordLog(event, context, "AaveAdapter.AccountCreated");
+  const { wallet, marketId, account } = event.args;
+  // The market's Spoke keys the account; a market is listed before any account of it exists (fail closed otherwise).
+  const market = await context.db.find(schema.market, { chainId: p.chainId, marketId });
+  if (!market?.spoke) throw new Error(`AccountCreated for market ${marketId} on chain ${p.chainId} before its PoolListed`);
   await context.db
     .insert(schema.account)
     .values({
       chainId: p.chainId,
-      spoke: a.spoke,
-      proxy: a.proxy,
-      wallet: a.wallet,
-      marketId: a.marketId,
-      ...flags,
+      spoke: market.spoke,
+      proxy: account,
+      wallet,
+      marketId,
+      adapter: event.log.address,
       usingAsCollateral: false,
       createdBlock: p.blockNumber,
       createdBlockHash: p.blockHash,
@@ -32,20 +32,7 @@ async function announce(event: LogEventLike, context: Parameters<typeof recordLo
       createdLogIndex: p.logIndex,
       lastBlock: p.blockNumber,
     })
-    .onConflictDoUpdate((row) => {
-      if (row.wallet !== a.wallet || row.marketId !== a.marketId) {
-        throw new Error(`creation events disagree for proxy ${a.proxy} on chain ${p.chainId}`);
-      }
-      return by === "adapter" ? { adapterSeen: true, lastBlock: p.blockNumber } : { managerSeen: true, lastBlock: p.blockNumber };
-    });
-}
-
-ponder.on("AaveAdapter:UserProxyCreated", async ({ event, context }) => {
-  await announce(event, context, "AaveAdapter.UserProxyCreated", "adapter");
-});
-
-ponder.on("ProxyManager:ProxyDeployed", async ({ event, context }) => {
-  await announce(event, context, "ProxyManager.ProxyDeployed", "manager");
+    .onConflictDoNothing();
 });
 
 for (const source of AAVE_SPOKE_SOURCES) {
