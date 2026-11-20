@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVault} from "../../src/vault/interfaces/ILPVault.sol";
 import {ILiquidationModule} from "../../src/liquidation/interfaces/ILiquidationModule.sol";
+import {ILPVault} from "../../src/vault/interfaces/ILPVault.sol";
 import {LiquidationModuleTestBase} from "../utils/LiquidationModuleTestBase.sol";
 import {LiquidationModuleHandler} from "./handlers/LiquidationModuleHandler.sol";
 

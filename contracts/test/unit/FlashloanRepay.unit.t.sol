@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAaveAdapter} from "../../src/adapter/interfaces/IAaveAdapter.sol";
 import {FlashloanRepay} from "../../src/periphery/FlashloanRepay.sol";
 import {IFlashloanRepay} from "../../src/periphery/interfaces/IFlashloanRepay.sol";
 import {Swap, SwapCalls} from "../../src/periphery/libraries/SwapCalls.sol";
-import {IAaveAdapter} from "../../src/adapter/interfaces/IAaveAdapter.sol";
 import {FlashloanRepayTestBase} from "../utils/FlashloanRepayTestBase.sol";
 import {MockSwapRouter} from "../utils/mocks/FlashloanRepayMocks.sol";
 

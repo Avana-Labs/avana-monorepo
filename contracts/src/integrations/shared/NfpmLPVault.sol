@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LPVault} from "../../vault/LPVault.sol";
 import {INonfungiblePositionManager} from "../../dependencies/uniswap/INonfungiblePositionManager.sol";
+import {LPVault} from "../../vault/LPVault.sol";
 import {INfpmPositions} from "./interfaces/INfpmPositions.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";

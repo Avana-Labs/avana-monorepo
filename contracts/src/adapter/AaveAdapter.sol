@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVault} from "../vault/interfaces/ILPVault.sol";
 import {IAaveV4Spoke} from "../dependencies/aave/IAaveV4Spoke.sol";
-import {IVaultToken} from "../token/interfaces/IVaultToken.sol";
 import {IRiskModule} from "../risk/interfaces/IRiskModule.sol";
+import {IVaultToken} from "../token/interfaces/IVaultToken.sol";
+import {ILPVault} from "../vault/interfaces/ILPVault.sol";
 import {AaveAdapterStorage} from "./AaveAdapterStorage.sol";
 import {AccountProxy} from "./AccountProxy.sol";
 import {IAaveAdapter} from "./interfaces/IAaveAdapter.sol";

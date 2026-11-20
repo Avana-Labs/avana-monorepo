@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IVaultToken} from "../../src/token/interfaces/IVaultToken.sol";
 import {VaultToken} from "../../src/token/VaultToken.sol";
+import {IVaultToken} from "../../src/token/interfaces/IVaultToken.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";

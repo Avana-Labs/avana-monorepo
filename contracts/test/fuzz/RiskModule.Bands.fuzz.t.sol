@@ -6,8 +6,8 @@ pragma solidity 0.8.28;
 import {ClTickMath} from "../../src/integrations/shared/ClTickMath.sol";
 import {ILPOracle} from "../../src/oracle/interfaces/ILPOracle.sol";
 import {LPPriceMath} from "../../src/oracle/libraries/LPPriceMath.sol";
-import {IRiskModule} from "../../src/risk/interfaces/IRiskModule.sol";
 import {RiskModule} from "../../src/risk/RiskModule.sol";
+import {IRiskModule} from "../../src/risk/interfaces/IRiskModule.sol";
 import {BandMath} from "../../src/risk/libraries/BandMath.sol";
 import {BandTestFeed, BandTestToken} from "../utils/mocks/BandOracleMocks.sol";
 import {

@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IAggregatorV3} from "../dependencies/chainlink/IAggregatorV3.sol";
 import {ClTickMath} from "../integrations/shared/ClTickMath.sol";
 import {ILPVault} from "../vault/interfaces/ILPVault.sol";
-import {IAggregatorV3} from "../dependencies/chainlink/IAggregatorV3.sol";
 import {ILPOracle} from "./interfaces/ILPOracle.sol";
 import {LPPriceMath} from "./libraries/LPPriceMath.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";

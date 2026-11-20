@@ -3,12 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {INonfungiblePositionManager} from "../../src/dependencies/uniswap/INonfungiblePositionManager.sol";
 import {ClTickMath} from "../../src/integrations/shared/ClTickMath.sol";
 import {INfpmPositions} from "../../src/integrations/shared/interfaces/INfpmPositions.sol";
 import {UniswapV3Integration} from "../../src/integrations/uniswap-v3/UniswapV3Integration.sol";
 import {ILPVault} from "../../src/vault/interfaces/ILPVault.sol";
 import {FloorCreditMath} from "../../src/vault/libraries/FloorCreditMath.sol";
-import {INonfungiblePositionManager} from "../../src/dependencies/uniswap/INonfungiblePositionManager.sol";
 import {ClPoolFixture, ClTestToken, IClPool} from "../utils/fixtures/ClPoolFixture.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 

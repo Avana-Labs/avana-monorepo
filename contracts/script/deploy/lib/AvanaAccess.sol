@@ -3,11 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IFirstLossReserve} from "../../../src/reserve/interfaces/IFirstLossReserve.sol";
-import {ILPVault} from "../../../src/vault/interfaces/ILPVault.sol";
 import {AvanaRoles} from "../../../src/access/AvanaRoles.sol";
+import {IFirstLossReserve} from "../../../src/reserve/interfaces/IFirstLossReserve.sol";
 import {IRiskModule} from "../../../src/risk/interfaces/IRiskModule.sol";
 import {IVaultToken} from "../../../src/token/interfaces/IVaultToken.sol";
+import {ILPVault} from "../../../src/vault/interfaces/ILPVault.sol";
 
 /// @title AvanaAccess
 /// @notice Avana's AccessManager roles, their labels, the execution delay of each role and the map of every restricted

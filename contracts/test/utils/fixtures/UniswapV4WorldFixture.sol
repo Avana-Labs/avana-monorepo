@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {UniswapV4State} from "../../../src/integrations/uniswap-v4/UniswapV4State.sol";
 import {IUniswapV4PoolManager} from "../../../src/dependencies/uniswap-v4/IUniswapV4PoolManager.sol";
 import {IUniswapV4PositionManager} from "../../../src/dependencies/uniswap-v4/IUniswapV4PositionManager.sol";
+import {UniswapV4State} from "../../../src/integrations/uniswap-v4/UniswapV4State.sol";
 import {ClPriceMath} from "../libraries/ClPriceMath.sol";
 import {ClPoolFixture, ClTestToken, IClPool} from "./ClPoolFixture.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";

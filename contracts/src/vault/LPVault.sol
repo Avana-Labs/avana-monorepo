@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {ClTickMath} from "../integrations/shared/ClTickMath.sol";
-import {ILPVault} from "./interfaces/ILPVault.sol";
 import {LPVaultStorage} from "./LPVaultStorage.sol";
+import {ILPVault} from "./interfaces/ILPVault.sol";
 import {FloorCreditMath} from "./libraries/FloorCreditMath.sol";
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

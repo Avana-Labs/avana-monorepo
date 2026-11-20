@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILiquidationModule} from "../../src/liquidation/interfaces/ILiquidationModule.sol";
 import {LiquidationModule} from "../../src/liquidation/LiquidationModule.sol";
+import {ILiquidationModule} from "../../src/liquidation/interfaces/ILiquidationModule.sol";
 import {LiquidationMath} from "../../src/liquidation/libraries/LiquidationMath.sol";
 import {IVaultToken} from "../../src/token/interfaces/IVaultToken.sol";
 import {LiquidationModuleTestBase} from "../utils/LiquidationModuleTestBase.sol";

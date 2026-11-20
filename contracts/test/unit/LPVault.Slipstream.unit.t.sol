@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ISlipstreamIntegration} from "../../src/integrations/slipstream/interfaces/ISlipstreamIntegration.sol";
 import {SlipstreamIntegration} from "../../src/integrations/slipstream/SlipstreamIntegration.sol";
+import {ISlipstreamIntegration} from "../../src/integrations/slipstream/interfaces/ISlipstreamIntegration.sol";
 import {ILPVault} from "../../src/vault/interfaces/ILPVault.sol";
 import {FloorCreditMath} from "../../src/vault/libraries/FloorCreditMath.sol";
 import {MockCLFactory, MockCLGauge, MockCLPool, MockSlipstreamNPM} from "../utils/mocks/SlipstreamMocks.sol";

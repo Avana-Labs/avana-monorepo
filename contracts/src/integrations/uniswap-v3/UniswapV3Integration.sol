@@ -3,12 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LPVault} from "../../vault/LPVault.sol";
 import {INonfungiblePositionManager} from "../../dependencies/uniswap/INonfungiblePositionManager.sol";
 import {IUniswapV3Factory} from "../../dependencies/uniswap/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "../../dependencies/uniswap/IUniswapV3Pool.sol";
-import {INfpmPositions} from "../shared/interfaces/INfpmPositions.sol";
+import {LPVault} from "../../vault/LPVault.sol";
 import {NfpmLPVault} from "../shared/NfpmLPVault.sol";
+import {INfpmPositions} from "../shared/interfaces/INfpmPositions.sol";
 import {IUniswapV3Integration} from "./interfaces/IUniswapV3Integration.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 

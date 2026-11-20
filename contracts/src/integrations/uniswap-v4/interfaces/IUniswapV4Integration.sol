@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVault} from "../../../vault/interfaces/ILPVault.sol";
 import {UniswapV4PoolKey} from "../../../dependencies/uniswap-v4/IUniswapV4PoolManager.sol";
+import {ILPVault} from "../../../vault/interfaces/ILPVault.sol";
 
 /// @title IUniswapV4Integration
 /// @notice The Uniswap v4 LPVault: custody of PositionManager positions of hookless v4 pools, keyed by

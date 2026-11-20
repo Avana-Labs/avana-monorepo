@@ -3,11 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVault} from "../../src/vault/interfaces/ILPVault.sol";
 import {AaveAdapter} from "../../src/adapter/AaveAdapter.sol";
 import {IRiskModule} from "../../src/risk/interfaces/IRiskModule.sol";
-import {IVaultToken} from "../../src/token/interfaces/IVaultToken.sol";
 import {VaultToken} from "../../src/token/VaultToken.sol";
+import {IVaultToken} from "../../src/token/interfaces/IVaultToken.sol";
+import {ILPVault} from "../../src/vault/interfaces/ILPVault.sol";
 import {AdapterTestHub, AdapterTestRiskModule, AdapterTestSpoke} from "./mocks/AaveAdapterTestMocks.sol";
 import {LPVaultTestToken, MockLPVault, MockPositionManager} from "./mocks/LPVaultMocks.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";

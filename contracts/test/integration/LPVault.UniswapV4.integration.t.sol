@@ -3,16 +3,13 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {IUniswapV4PoolManager, UniswapV4PoolKey} from "../../src/dependencies/uniswap-v4/IUniswapV4PoolManager.sol";
 import {ClTickMath} from "../../src/integrations/shared/ClTickMath.sol";
-import {IUniswapV4Integration} from "../../src/integrations/uniswap-v4/interfaces/IUniswapV4Integration.sol";
 import {UniswapV4Integration} from "../../src/integrations/uniswap-v4/UniswapV4Integration.sol";
 import {UniswapV4State} from "../../src/integrations/uniswap-v4/UniswapV4State.sol";
+import {IUniswapV4Integration} from "../../src/integrations/uniswap-v4/interfaces/IUniswapV4Integration.sol";
 import {ILPVault} from "../../src/vault/interfaces/ILPVault.sol";
 import {FloorCreditMath} from "../../src/vault/libraries/FloorCreditMath.sol";
-import {
-    IUniswapV4PoolManager,
-    UniswapV4PoolKey
-} from "../../src/dependencies/uniswap-v4/IUniswapV4PoolManager.sol";
 import {ClTestToken} from "../utils/fixtures/ClPoolFixture.sol";
 import {UniswapV4WorldFixture} from "../utils/fixtures/UniswapV4WorldFixture.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";

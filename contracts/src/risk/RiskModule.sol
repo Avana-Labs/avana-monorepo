@@ -3,16 +3,16 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClTickMath} from "../integrations/shared/ClTickMath.sol";
-import {IFirstLossReserve} from "../reserve/interfaces/IFirstLossReserve.sol";
-import {ILPVault} from "../vault/interfaces/ILPVault.sol";
-import {FloorCreditMath} from "../vault/libraries/FloorCreditMath.sol";
 import {IAaveV4Hub} from "../dependencies/aave/IAaveV4Hub.sol";
 import {IAaveV4Spoke} from "../dependencies/aave/IAaveV4Spoke.sol";
+import {ClTickMath} from "../integrations/shared/ClTickMath.sol";
 import {LPPriceMath} from "../oracle/libraries/LPPriceMath.sol";
+import {IFirstLossReserve} from "../reserve/interfaces/IFirstLossReserve.sol";
 import {IVaultToken} from "../token/interfaces/IVaultToken.sol";
-import {IRiskModule} from "./interfaces/IRiskModule.sol";
+import {ILPVault} from "../vault/interfaces/ILPVault.sol";
+import {FloorCreditMath} from "../vault/libraries/FloorCreditMath.sol";
 import {RiskModuleStorage} from "./RiskModuleStorage.sol";
+import {IRiskModule} from "./interfaces/IRiskModule.sol";
 import {AaveConfigLogic} from "./libraries/AaveConfigLogic.sol";
 import {BandMath} from "./libraries/BandMath.sol";
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";

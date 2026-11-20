@@ -8,7 +8,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {TransientSlot} from "@openzeppelin/contracts/utils/TransientSlot.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {ILPVault} from "avana/vault/interfaces/ILPVault.sol";
 import {IAaveV3ACLManager} from "avana/dependencies/aave/IAaveV3ACLManager.sol";
 import {IAaveV3FlashLoanReceiver} from "avana/dependencies/aave/IAaveV3FlashLoanReceiver.sol";
 import {IAaveV3Pool} from "avana/dependencies/aave/IAaveV3Pool.sol";
@@ -17,6 +16,7 @@ import {IAaveV4Spoke} from "avana/dependencies/aave/IAaveV4Spoke.sol";
 import {ILiquidationModule} from "avana/liquidation/interfaces/ILiquidationModule.sol";
 import {SwapCalls} from "avana/periphery/libraries/SwapCalls.sol";
 import {IRiskModule} from "avana/risk/interfaces/IRiskModule.sol";
+import {ILPVault} from "avana/vault/interfaces/ILPVault.sol";
 
 /// @title FlashLiquidator
 /// @notice Flash loan, liquidation in kind, sale of the pool tokens, repayment, profit to the bot.
