@@ -3,8 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
+import {ClTickMath} from "../../src/amm/concentrated-liquidity/ClTickMath.sol";
 import {ILPOracle} from "../../src/oracle/ILPOracle.sol";
 import {LPOracle} from "../../src/oracle/LPOracle.sol";
+import {LPPriceMath} from "../../src/oracle/LPPriceMath.sol";
 import {BandTestFeed, BandTestToken, BandTestVault} from "../utils/mocks/BandOracleMocks.sol";
 import {Test} from "forge-std/Test.sol";
 
@@ -256,5 +258,18 @@ contract LPOracleUnitTest is Test {
     ) internal {
         vm.expectRevert(ILPOracle.InvalidParams.selector);
         new LPOracle(p);
+    }
+
+    // ─── LPPriceMath bounds ───
+
+    function test_sqrtPriceX96_clampsAboveTheTickRange() public pure {
+        (uint256 raw, bool high) = LPPriceMath.rawSqrtPrice(1e21, 1, 0, 18);
+        assertTrue(high);
+        assertEq(raw, 0);
+        assertEq(LPPriceMath.sqrtPriceX96(1e21, 1, 0, 18), ClTickMath.MAX_SQRT_PRICE - 1);
+    }
+
+    function test_sqrtPriceX96_clampsBelowTheTickRange() public pure {
+        assertEq(LPPriceMath.sqrtPriceX96(1, 1e21, 18, 0), ClTickMath.MIN_SQRT_PRICE);
     }
 }

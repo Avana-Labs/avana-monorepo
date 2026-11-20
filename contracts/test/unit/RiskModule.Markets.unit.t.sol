@@ -376,6 +376,30 @@ contract RiskModuleMarketsUnitTest is Test {
         rm.listPool(p);
     }
 
+    function test_listPool_revertsOnZeroFeedOrTooManyDecimals() public {
+        IRiskModule.ListPoolParams memory p = _params();
+        p.token0.feeds = new address[](1);
+        vm.expectRevert(abi.encodeWithSelector(IRiskModule.InvalidPriceFeed.selector, address(0)));
+        rm.listPool(p);
+        p = _params();
+        BandTestFeed wide = new BandTestFeed(19, 1800e19);
+        p.token0.feeds = new address[](1);
+        p.token0.feeds[0] = address(wide);
+        vm.expectRevert(abi.encodeWithSelector(IRiskModule.InvalidPriceFeed.selector, address(wide)));
+        rm.listPool(p);
+    }
+
+    function test_listPool_bandPastTheTickRangeReportsClampedEdges() public {
+        IRiskModule.ListPoolParams memory p = _params();
+        p.width = IRiskModule.Width(887_272, 887_272);
+        p.listingTick = type(int24).max;
+        vm.expectPartialRevert(IRiskModule.BandNotNarrowerThanFullRange.selector);
+        rm.listPool(p);
+        p.listingTick = type(int24).min;
+        vm.expectPartialRevert(IRiskModule.BandNotNarrowerThanFullRange.selector);
+        rm.listPool(p);
+    }
+
     function test_listPool_twoFeedRoute() public {
         BandTestFeed ethPerUnit = new BandTestFeed(18, 1e18);
         IRiskModule.ListPoolParams memory p = _params();

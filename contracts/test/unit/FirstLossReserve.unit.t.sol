@@ -145,6 +145,12 @@ contract FirstLossReserveUnitTest is FirstLossReserveFixture {
         assertFalse(avanaLayer.isAllowedSpoke(cdp));
     }
 
+    function test_setAllowedSpoke_revertsOnZeroAddress() public {
+        vm.prank(aaveGovernanceExecutor);
+        vm.expectRevert(IFirstLossReserve.ZeroAddress.selector);
+        avanaLayer.setAllowedSpoke(address(0), true);
+    }
+
     // ─── Withdrawal ───
 
     function test_withdraw_needsTheFourteenDaySchedule() public {
@@ -177,5 +183,20 @@ contract FirstLossReserveUnitTest is FirstLossReserveFixture {
         vm.prank(aaveGovernanceExecutor);
         vm.expectRevert(abi.encodeWithSelector(IFirstLossReserve.DeficitOutstanding.selector, cdp));
         manager.execute(address(avanaLayer), data);
+    }
+
+    function test_withdraw_revertsOnZeroAmountAndBadRecipient() public {
+        bytes memory zero = abi.encodeCall(IFirstLossReserve.withdraw, (0, avanaLabs));
+        bytes memory toSelf = abi.encodeCall(IFirstLossReserve.withdraw, (1e18, address(avanaLayer)));
+        IAccessManager manager = IAccessManager(aave.accessManager);
+        vm.startPrank(aaveGovernanceExecutor);
+        manager.schedule(address(avanaLayer), zero, 0);
+        manager.schedule(address(avanaLayer), toSelf, 0);
+        vm.warp(block.timestamp + 14 days);
+        vm.expectRevert(IFirstLossReserve.ZeroAmount.selector);
+        manager.execute(address(avanaLayer), zero);
+        vm.expectRevert(abi.encodeWithSelector(IFirstLossReserve.InvalidRecipient.selector, address(avanaLayer)));
+        manager.execute(address(avanaLayer), toSelf);
+        vm.stopPrank();
     }
 }
