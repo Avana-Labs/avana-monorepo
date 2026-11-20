@@ -6,18 +6,19 @@
  *   ozMulDivIsFloor        OpenZeppelin Math.mulDiv(x, y, den) returns floor(x * y / den) whenever den > 0 and that
  *                          quotient is a word, and reverts exactly when it is not
  *   fullMathMulDivIsFloor  the same for Uniswap v4-core FullMath.mulDiv
- *   ozSqrtIsFloorSqrt      OpenZeppelin Math.sqrt(a) is the integer square root: r * r <= a < (r + 1) * (r + 1)
+ *   ozSqrtLowerBound<k>,   OpenZeppelin Math.sqrt(a) is the integer square root, r * r <= a < (r + 1) * (r + 1), on
+ *   ozSqrtUpperBound<k>    each band 2^(k-32) <= a < 2^k (k = 32, 64, ..., 256; the first band starts at 0). The eight
+ *                          bands cover every word, so together they are the Math.sqrt summary.
  *
- * Why the split. As single rules the two mulDiv claims failed on counterexamples the Prover itself flagged as
- * "Imprecision detected" in the 512-bit code's bitwise operations (`BWXOr(2, 9) = 11, but is 0` in OpenZeppelin's
- * modular inverse, a `BWAnd` in FullMath's). Those operations are exact only under `precise_bitwise_ops`, which in
- * turn bounds every CVL integer to a word, so the 512-bit claim cannot be stated there directly. The claim is
- * therefore proved in two modes, all in this spec:
+ * mulDiv in two modes. As single rules the two mulDiv claims failed on counterexamples the Prover flagged as
+ * "Imprecision detected" in the 512-bit code's bitwise operations. Those are exact only under `precise_bitwise_ops`,
+ * which bounds every CVL integer to a word, so the 512-bit claim is split:
  *
- *   word mode (LPOracleSummariesPrecise.conf, precise_bitwise_ops), every term a word with no overflow:
- *     ozMulDivLimbs, fullMathMulDivLimbs   mulDiv reverts exactly when den == 0 or hi >= den, where (hi, lo) are the
- *                                          limbs of x * y; otherwise, with (rh, rl) the limbs of r * den and
- *                                          rem = mulmod(x, y, den), rem < den and (rh, rl) + rem == (hi, lo)
+ *   word mode (LPOracleSummariesPrecise.conf), no operation that wraps a word:
+ *     ozMulDivReverts, fullMathMulDivReverts      mulDiv reverts exactly when den == 0 or hi >= den, with (hi, lo) the
+ *                                                 limbs of x * y
+ *     ozMulDivRemainder, fullMathMulDivRemainder  otherwise, with (rh, rl) the limbs of r * den and
+ *                                                 rem = mulmod(x, y, den): rem < den and (rh, rl) + rem == (hi, lo)
  *   integer mode (LPOracleSummaries.conf):
  *     mul512IsProduct                      the harness limbs are the product: hi * 2^256 + lo == x * y
  *     floorFromRemainder, floorDivAtLeast  one-step floor-division lemmas over fresh integers
@@ -25,11 +26,7 @@
  *                                          require the rules above at their own terms (named on each line) and
  *                                          assert the claim, linear in the named terms
  *
- * The word-mode asserts use no operation that wraps, so they mean the same integer facts in both modes.
- *
- * Math.sqrt (no bitwise operations) timed out as one rule. It is split by the input's size, which fixes the branches of
- * the initial estimate, and into its two bounds: ozSqrtLowerBound* (r * r <= a) and ozSqrtUpperBound* (a < (r + 1)^2)
- * for a < 2^64, [2^64, 2^128), [2^128, 2^192) and [2^192, 2^256); ozSqrtIsFloorSqrt requires the eight.
+ * A reverted mulDiv call returns no word, so the rules pass r on only when the call did not revert (`rOk`).
  */
 
 definition W() returns mathint = 2^256;
@@ -44,36 +41,54 @@ definition limbsAddUp(mathint rh, mathint rl, mathint rem, mathint hi, mathint l
 // Word mode (LPOracleSummariesPrecise.conf)
 // ---------------------------------------------------------------------------------------------------------------------
 
-rule ozMulDivLimbs(uint256 x, uint256 y, uint256 den) {
+rule ozMulDivReverts(uint256 x, uint256 y, uint256 den) {
     env e;
     require e.msg.value == 0;
     uint256 hi;
     uint256 lo;
     hi, lo = mul512(e, x, y);
-    uint256 r = ozMulDiv@withrevert(e, x, y, den);
-    bool reverted = lastReverted;
-    uint256 rem = mulMod(e, x, y, den);
-    uint256 rh;
-    uint256 rl;
-    rh, rl = mul512(e, r, den);
-    assert reverted <=> (den == 0 || hi >= den), "mulDiv reverts other than on a zero denominator or an overflow";
-    assert !reverted => (rem < den && limbsAddUp(rh, rl, rem, hi, lo)), "r * den + x * y mod den is not x * y";
+    ozMulDiv@withrevert(e, x, y, den);
+    assert lastReverted <=> (den == 0 || hi >= den), "mulDiv reverts other than on a zero denominator or an overflow";
 }
 
-rule fullMathMulDivLimbs(uint256 x, uint256 y, uint256 den) {
+rule ozMulDivRemainder(uint256 x, uint256 y, uint256 den) {
     env e;
     require e.msg.value == 0;
     uint256 hi;
     uint256 lo;
     hi, lo = mul512(e, x, y);
-    uint256 r = fullMathMulDiv@withrevert(e, x, y, den);
-    bool reverted = lastReverted;
+    require den > 0 && hi < den;
+    uint256 r = ozMulDiv(e, x, y, den);
     uint256 rem = mulMod(e, x, y, den);
     uint256 rh;
     uint256 rl;
     rh, rl = mul512(e, r, den);
-    assert reverted <=> (den == 0 || hi >= den), "mulDiv reverts other than on a zero denominator or an overflow";
-    assert !reverted => (rem < den && limbsAddUp(rh, rl, rem, hi, lo)), "r * den + x * y mod den is not x * y";
+    assert rem < den && limbsAddUp(rh, rl, rem, hi, lo), "r * den + x * y mod den is not x * y";
+}
+
+rule fullMathMulDivReverts(uint256 x, uint256 y, uint256 den) {
+    env e;
+    require e.msg.value == 0;
+    uint256 hi;
+    uint256 lo;
+    hi, lo = mul512(e, x, y);
+    fullMathMulDiv@withrevert(e, x, y, den);
+    assert lastReverted <=> (den == 0 || hi >= den), "mulDiv reverts other than on a zero denominator or an overflow";
+}
+
+rule fullMathMulDivRemainder(uint256 x, uint256 y, uint256 den) {
+    env e;
+    require e.msg.value == 0;
+    uint256 hi;
+    uint256 lo;
+    hi, lo = mul512(e, x, y);
+    require den > 0 && hi < den;
+    uint256 r = fullMathMulDiv(e, x, y, den);
+    uint256 rem = mulMod(e, x, y, den);
+    uint256 rh;
+    uint256 rl;
+    rh, rl = mul512(e, r, den);
+    assert rem < den && limbsAddUp(rh, rl, rem, hi, lo), "r * den + x * y mod den is not x * y";
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -88,8 +103,9 @@ rule mul512IsProduct(uint256 x, uint256 y) {
     assert hi * W() + lo == x * y, "the limbs are not the product";
 }
 
+// n >= 0: CVL division truncates toward zero, so for a negative n the floor and the quotient differ.
 rule floorFromRemainder(mathint n, mathint d, mathint q, mathint rem) {
-    require d > 0 && 0 <= rem && rem < d && q * d + rem == n;
+    require n >= 0 && d > 0 && 0 <= rem && rem < d && q * d + rem == n;
     assert q == n / d, "q is not floor(n / d)";
 }
 
@@ -111,21 +127,23 @@ rule ozMulDivIsFloor(uint256 x, uint256 y, uint256 den) {
     hi, lo = mul512(e, x, y);
     uint256 r = ozMulDiv@withrevert(e, x, y, den);
     bool reverted = lastReverted;
+    uint256 rOk = reverted ? 0 : r;
     uint256 rem = mulMod(e, x, y, den);
     uint256 rh;
     uint256 rl;
-    rh, rl = mul512(e, r, den);
+    rh, rl = mul512(e, rOk, den);
 
-    // ozMulDivLimbs
+    // ozMulDivReverts
     require reverted <=> (den == 0 || hi >= den);
-    require !reverted => (rem < den && limbsAddUp(rh, rl, rem, hi, lo));
-    // mul512IsProduct at (x, y) and at (r, den)
+    // ozMulDivRemainder
+    require (den > 0 && hi < den) => (rem < den && limbsAddUp(rh, rl, rem, hi, lo));
+    // mul512IsProduct at (x, y) and at (rOk, den)
     require hi * W() + lo == x * y;
-    require rh * W() + rl == r * den;
+    require rh * W() + rl == rOk * den;
     // floorDivAtLeast(n = x * y, q = den, t = 2^256): a quotient past a word means hi >= den
     require (x * y >= 0 && den > 0 && x * y >= W() * den) => (x * y) / den >= W();
-    // floorFromRemainder(n = x * y, d = den, q = r, rem)
-    require (den > 0 && 0 <= rem && rem < den && r * den + rem == x * y) => r == (x * y) / den;
+    // floorFromRemainder(n = x * y, d = den, q = rOk, rem)
+    require (x * y >= 0 && den > 0 && 0 <= rem && rem < den && rOk * den + rem == x * y) => rOk == (x * y) / den;
 
     assert (den > 0 && q <= max_uint256) => (!reverted && to_mathint(r) == q), "mulDiv is not floor(x * y / den)";
 }
@@ -139,94 +157,139 @@ rule fullMathMulDivIsFloor(uint256 x, uint256 y, uint256 den) {
     hi, lo = mul512(e, x, y);
     uint256 r = fullMathMulDiv@withrevert(e, x, y, den);
     bool reverted = lastReverted;
+    uint256 rOk = reverted ? 0 : r;
     uint256 rem = mulMod(e, x, y, den);
     uint256 rh;
     uint256 rl;
-    rh, rl = mul512(e, r, den);
+    rh, rl = mul512(e, rOk, den);
 
-    // fullMathMulDivLimbs
+    // fullMathMulDivReverts
     require reverted <=> (den == 0 || hi >= den);
-    require !reverted => (rem < den && limbsAddUp(rh, rl, rem, hi, lo));
-    // mul512IsProduct at (x, y) and at (r, den)
+    // fullMathMulDivRemainder
+    require (den > 0 && hi < den) => (rem < den && limbsAddUp(rh, rl, rem, hi, lo));
+    // mul512IsProduct at (x, y) and at (rOk, den)
     require hi * W() + lo == x * y;
-    require rh * W() + rl == r * den;
-    // floorDivAtLeast(n = x * y, q = den, t = 2^256)
+    require rh * W() + rl == rOk * den;
+    // floorDivAtLeast(n = x * y, q = den, t = 2^256): a quotient past a word means hi >= den
     require (x * y >= 0 && den > 0 && x * y >= W() * den) => (x * y) / den >= W();
-    // floorFromRemainder(n = x * y, d = den, q = r, rem)
-    require (den > 0 && 0 <= rem && rem < den && r * den + rem == x * y) => r == (x * y) / den;
+    // floorFromRemainder(n = x * y, d = den, q = rOk, rem)
+    require (x * y >= 0 && den > 0 && 0 <= rem && rem < den && rOk * den + rem == x * y) => rOk == (x * y) / den;
 
     assert (den > 0 && q <= max_uint256) => (!reverted && to_mathint(r) == q), "mulDiv is not floor(x * y / den)";
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Integer mode: Math.sqrt, by input size and by bound
+// Integer mode: Math.sqrt, by input band and by bound
 // ---------------------------------------------------------------------------------------------------------------------
 
-definition inBand(mathint a, mathint lowExp, mathint highExp) returns bool = 2^lowExp <= a && a < 2^highExp;
+rule ozSqrtLowerBound32(uint256 a) {
+    env e;
+    require to_mathint(a) < 2^32;
+    mathint r = ozSqrt(e, a);
+    assert r * r <= to_mathint(a), "sqrt is above the integer square root";
+}
+
+rule ozSqrtUpperBound32(uint256 a) {
+    env e;
+    require to_mathint(a) < 2^32;
+    mathint r = ozSqrt(e, a);
+    assert to_mathint(a) < (r + 1) * (r + 1), "sqrt is below the integer square root";
+}
 
 rule ozSqrtLowerBound64(uint256 a) {
     env e;
-    require to_mathint(a) < 2^64;
-    mathint r = ozSqrt(e, a);
-    assert r * r <= to_mathint(a), "sqrt is above the integer square root";
-}
-
-rule ozSqrtLowerBound128(uint256 a) {
-    env e;
-    require inBand(a, 64, 128);
-    mathint r = ozSqrt(e, a);
-    assert r * r <= to_mathint(a), "sqrt is above the integer square root";
-}
-
-rule ozSqrtLowerBound192(uint256 a) {
-    env e;
-    require inBand(a, 128, 192);
-    mathint r = ozSqrt(e, a);
-    assert r * r <= to_mathint(a), "sqrt is above the integer square root";
-}
-
-rule ozSqrtLowerBound256(uint256 a) {
-    env e;
-    require to_mathint(a) >= 2^192;
+    require to_mathint(a) >= 2^32 && to_mathint(a) < 2^64;
     mathint r = ozSqrt(e, a);
     assert r * r <= to_mathint(a), "sqrt is above the integer square root";
 }
 
 rule ozSqrtUpperBound64(uint256 a) {
     env e;
-    require to_mathint(a) < 2^64;
+    require to_mathint(a) >= 2^32 && to_mathint(a) < 2^64;
     mathint r = ozSqrt(e, a);
     assert to_mathint(a) < (r + 1) * (r + 1), "sqrt is below the integer square root";
+}
+
+rule ozSqrtLowerBound96(uint256 a) {
+    env e;
+    require to_mathint(a) >= 2^64 && to_mathint(a) < 2^96;
+    mathint r = ozSqrt(e, a);
+    assert r * r <= to_mathint(a), "sqrt is above the integer square root";
+}
+
+rule ozSqrtUpperBound96(uint256 a) {
+    env e;
+    require to_mathint(a) >= 2^64 && to_mathint(a) < 2^96;
+    mathint r = ozSqrt(e, a);
+    assert to_mathint(a) < (r + 1) * (r + 1), "sqrt is below the integer square root";
+}
+
+rule ozSqrtLowerBound128(uint256 a) {
+    env e;
+    require to_mathint(a) >= 2^96 && to_mathint(a) < 2^128;
+    mathint r = ozSqrt(e, a);
+    assert r * r <= to_mathint(a), "sqrt is above the integer square root";
 }
 
 rule ozSqrtUpperBound128(uint256 a) {
     env e;
-    require inBand(a, 64, 128);
+    require to_mathint(a) >= 2^96 && to_mathint(a) < 2^128;
     mathint r = ozSqrt(e, a);
     assert to_mathint(a) < (r + 1) * (r + 1), "sqrt is below the integer square root";
+}
+
+rule ozSqrtLowerBound160(uint256 a) {
+    env e;
+    require to_mathint(a) >= 2^128 && to_mathint(a) < 2^160;
+    mathint r = ozSqrt(e, a);
+    assert r * r <= to_mathint(a), "sqrt is above the integer square root";
+}
+
+rule ozSqrtUpperBound160(uint256 a) {
+    env e;
+    require to_mathint(a) >= 2^128 && to_mathint(a) < 2^160;
+    mathint r = ozSqrt(e, a);
+    assert to_mathint(a) < (r + 1) * (r + 1), "sqrt is below the integer square root";
+}
+
+rule ozSqrtLowerBound192(uint256 a) {
+    env e;
+    require to_mathint(a) >= 2^160 && to_mathint(a) < 2^192;
+    mathint r = ozSqrt(e, a);
+    assert r * r <= to_mathint(a), "sqrt is above the integer square root";
 }
 
 rule ozSqrtUpperBound192(uint256 a) {
     env e;
-    require inBand(a, 128, 192);
+    require to_mathint(a) >= 2^160 && to_mathint(a) < 2^192;
     mathint r = ozSqrt(e, a);
     assert to_mathint(a) < (r + 1) * (r + 1), "sqrt is below the integer square root";
+}
+
+rule ozSqrtLowerBound224(uint256 a) {
+    env e;
+    require to_mathint(a) >= 2^192 && to_mathint(a) < 2^224;
+    mathint r = ozSqrt(e, a);
+    assert r * r <= to_mathint(a), "sqrt is above the integer square root";
+}
+
+rule ozSqrtUpperBound224(uint256 a) {
+    env e;
+    require to_mathint(a) >= 2^192 && to_mathint(a) < 2^224;
+    mathint r = ozSqrt(e, a);
+    assert to_mathint(a) < (r + 1) * (r + 1), "sqrt is below the integer square root";
+}
+
+rule ozSqrtLowerBound256(uint256 a) {
+    env e;
+    require to_mathint(a) >= 2^224;
+    mathint r = ozSqrt(e, a);
+    assert r * r <= to_mathint(a), "sqrt is above the integer square root";
 }
 
 rule ozSqrtUpperBound256(uint256 a) {
     env e;
-    require to_mathint(a) >= 2^192;
+    require to_mathint(a) >= 2^224;
     mathint r = ozSqrt(e, a);
     assert to_mathint(a) < (r + 1) * (r + 1), "sqrt is below the integer square root";
-}
-
-rule ozSqrtIsFloorSqrt(uint256 a) {
-    env e;
-    mathint r = ozSqrt(e, a);
-    // ozSqrtLowerBound64/128/192/256 and ozSqrtUpperBound64/128/192/256, each on its band of a
-    require to_mathint(a) < 2^64 => (r * r <= to_mathint(a) && to_mathint(a) < (r + 1) * (r + 1));
-    require inBand(a, 64, 128) => (r * r <= to_mathint(a) && to_mathint(a) < (r + 1) * (r + 1));
-    require inBand(a, 128, 192) => (r * r <= to_mathint(a) && to_mathint(a) < (r + 1) * (r + 1));
-    require to_mathint(a) >= 2^192 => (r * r <= to_mathint(a) && to_mathint(a) < (r + 1) * (r + 1));
-    assert r * r <= to_mathint(a) && to_mathint(a) < (r + 1) * (r + 1), "sqrt is not the integer square root";
 }
