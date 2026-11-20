@@ -2,7 +2,7 @@
 
 Release manifests of Avana's deployments, one per chain and release, and the public contract table of each final deployment.
 
-A release manifest names every contract of one deployment: each Avana contract with its runtime code hash and deployment block, each ERC-1967 proxy with its implementation and the logic contracts that implementation delegates to, the PositionProxy creation-code hash, the governance role table, the fee recipient, and every third-party contract the deployment relies on (Aave V4 Hubs, Spokes and oracles, the Aave V3 Pool, Uniswap v3, Aerodrome Slipstream, tokens, price feeds). The keeper and the indexer start only from a manifest (`AVANA_MANIFEST`) and refuse one whose ABI hash differs from the ABIs they were built with.
+A release manifest (schema 2) names every contract of one deployment: the Avana AccessManager and each AMM integration's core stack (LPVault, RiskModule, LiquidationModule, AaveAdapter, FlashloanRepay) with runtime code hashes and deployment blocks, the operator flash liquidators, the markets (two per pool: Full range and Custom range, with band, LTV, vault token and LPOracle), the debt reserves with their First-Loss Reserves, the loss layers, the governance accounts, the RiskModules' keeper registry and the keeper top-up wallet with its refill rule, the fee recipient, and every third-party contract the deployment relies on (Aave V4 Hubs, Spokes and oracles, the Aave V3 Pool, Uniswap v3 and v4, Aerodrome Slipstream, tokens, price feeds). It is produced from the deploy outputs `avana.json`, `markets.json` and `coverage.json` and the chain. The indexer, the bot runner, the monitor and Convex start only from a manifest (`AVANA_MANIFEST`) and refuse one whose ABI hash differs from the ABIs they were built with.
 
 ## Layout
 
@@ -30,9 +30,10 @@ From `packages/protocol`:
 ```bash
 # After the deploy scripts have run on <network>:
 npm run manifest -- produce --network sepolia --rpc-env RPC_SEPOLIA --release v1.0.0
-# Deployment checks against the chain: code hashes, ERC-1967 implementation and admin slots, runtime code against the
-# release build with immutables masked (TEST-134), role snapshot from RoleGranted/RoleRevoked (TEST-214), timelock
-# settings and immutable wiring (REQ-ACCESS-027). Exit 1 on any failed check; pending checks are listed.
+# Deployment checks against the chain: code hashes, runtime code against the release build with immutables masked
+# (TEST-134), the immutable wiring of each core stack, every market against its RiskModule record (two per pool, one
+# LTV), the keeper registry, and the AccessManager's admin and the deployer's renunciation replayed from its role
+# events. Exit 1 on any failed check; pending checks are listed.
 npm run manifest -- verify --manifest ../../deployments/sepolia/v1.0.0.json --rpc-env RPC_SEPOLIA
 # Final deployment only: verify, copy to verified/ and write the public table <network>/README.md.
 npm run manifest -- publish --manifest ../../deployments/sepolia/v1.0.0.json --rpc-env RPC_SEPOLIA
