@@ -10,7 +10,7 @@
 import { parseAbi } from "viem";
 
 /**
- * The RiskModule's market record and draw-cap coverage (contracts/src/policy/risk-module/IRiskModule.sol). The market
+ * The RiskModule's market record and draw-cap coverage (contracts/src/risk/interfaces/IRiskModule.sol). The market
  * struct decodes by position, so a field added in the middle must be added here in the same place.
  */
 export const riskModuleViewsAbi = parseAbi([

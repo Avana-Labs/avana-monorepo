@@ -10,6 +10,10 @@ import { useWalletGate } from "@/app/lib/web3/wallet-gate"
 import { markGetStartedIntent } from "@/app/lib/web3/get-started-intent"
 import { walletButtonClasses, walletGradient, type WalletControlSize } from "@/app/components/wallet-control-shared"
 
+/** How often, and how long, a pending Get Started click waits for ConnectKit's `show` before giving up. */
+const OPEN_POLL_MS = 50
+const OPEN_WAIT_MS = 10_000
+
 /** Wallets already auto-prompted this page load; the header mounts this control twice. */
 const autoSignInPrompted = new Set<string>()
 
@@ -61,36 +65,35 @@ export function ConnectedWalletControl({ size }: { size: WalletControlSize }) {
 
   const { base, brand, pill } = walletButtonClasses(size)
 
-  // A guest who clicked "Connect" while idle triggered the SDK load; this control has now
-  // mounted. Honor that intent by opening the ConnectKit modal via its own `show` (the
-  // reliable opener), so a single click is enough. Retry briefly until `show` is wired.
+  // Pending Get Started clicks open the ConnectKit modal through its own `show` (the reliable opener), so a single
+  // click is enough.
   const showRef = useRef<(() => void) | null>(null)
-  const autoOpenHandledRef = useRef(false)
+  // A Get Started click (this control's mount after the SDK loaded, or `openRequest` when a click elsewhere on the
+  // page came while it was mounted) leaves one ask with the gate. Taking it marks it pending here until the modal
+  // opens, so an effect re-run (StrictMode, a status change) never drops it, and ConnectKit's `show` may take a few
+  // seconds to be wired on a cold load: the ask waits for it up to OPEN_WAIT_MS.
+  const pendingOpenRef = useRef(false)
   useEffect(() => {
-    if (autoOpenHandledRef.current) return
-    if (!consumeAutoOpen()) return
-    autoOpenHandledRef.current = true
-    let tries = 0
+    if (consumeAutoOpen()) pendingOpenRef.current = true
+    if (!pendingOpenRef.current) return
+    if (accountStatus === "connected") {
+      pendingOpenRef.current = false
+      return
+    }
+    let waited = 0
     const id = setInterval(() => {
-      tries += 1
+      waited += OPEN_POLL_MS
       if (showRef.current) {
-        showRef.current()
+        pendingOpenRef.current = false
         clearInterval(id)
-      } else if (tries >= 20) {
+        showRef.current()
+      } else if (waited >= OPEN_WAIT_MS) {
+        pendingOpenRef.current = false
         clearInterval(id)
       }
-    }, 30)
+    }, OPEN_POLL_MS)
     return () => clearInterval(id)
-  }, [consumeAutoOpen])
-
-  // A Get Started click elsewhere on the page (detail pages, home box) while the SDK is already
-  // mounted bumps `openRequest`; open the modal for it. The value at mount is not a new request.
-  const seenOpenRequestRef = useRef(openRequest)
-  useEffect(() => {
-    if (openRequest === seenOpenRequestRef.current) return
-    seenOpenRequestRef.current = openRequest
-    if (accountStatus !== "connected") showRef.current?.()
-  }, [openRequest, accountStatus])
+  }, [openRequest, accountStatus, consumeAutoOpen])
 
   return (
     <ConnectKitButton.Custom>

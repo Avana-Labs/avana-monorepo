@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {LiquidationModule} from "../../../src/liquidation/liquidation-module/LiquidationModule.sol";
-import {LiquidationMath} from "../../../src/liquidation/liquidation-module/libraries/LiquidationMath.sol";
+import {LiquidationModule} from "../../../src/liquidation/LiquidationModule.sol";
+import {LiquidationMath} from "../../../src/liquidation/libraries/LiquidationMath.sol";
 
 /// @title LiquidationModuleHarness
 /// @notice The LiquidationModule with external wrappers of the internal `LiquidationMath` steps, so one verified

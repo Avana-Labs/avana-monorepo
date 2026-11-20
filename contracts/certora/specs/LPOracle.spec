@@ -1,5 +1,5 @@
 /*
- * LPOracle (src/oracle/LPOracle.sol, arithmetic in src/oracle/LPPriceMath.sol, design in src/oracle/DESIGN.md),
+ * LPOracle (src/oracle/LPOracle.sol, arithmetic in src/oracle/libraries/LPPriceMath.sol, design in src/oracle/DESIGN.md),
  * through LPOracleHarness (test/utils/harness/LPOracleHarness.sol), which is the LPOracle plus external wrappers of
  * the internal LPPriceMath steps.
  *

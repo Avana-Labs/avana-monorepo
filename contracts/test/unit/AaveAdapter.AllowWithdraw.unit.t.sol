@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {IAaveAdapter} from "../../src/adapter/interfaces/IAaveAdapter.sol";
 import {AaveAdapterTestBase} from "../utils/AaveAdapterTestBase.sol";
 import {MockWithdrawOperator} from "../utils/mocks/FlashloanRepayMocks.sol";
 

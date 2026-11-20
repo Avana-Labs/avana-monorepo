@@ -1,5 +1,5 @@
 /*
- * FirstLossReserve (src/coverage/first-loss-reserve/FirstLossReserve.sol, interface IFirstLossReserve.sol, design
+ * FirstLossReserve (src/reserve/FirstLossReserve.sol, interface IFirstLossReserve.sol, design
  * DESIGN.md): Avana's first-loss layer and the DAO deficit offset of one (Hub, asset), holding Hub added shares.
  *
  *   onlyAuthorizedCallerCoversDeficit     coverDeficit succeeds only for a caller the AccessManager authorizes

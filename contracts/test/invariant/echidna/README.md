@@ -14,7 +14,7 @@ Property harnesses that both Echidna and Medusa run (`script/security-slow.sh ec
 
 | Harness | Subject | Properties | Assertion entry points |
 |---|---|---|---|
-| `AvanaRolesProperties` | `src/governance/roles/AvanaRoles.sol` | each role is the keccak256 of its name; no role is `DEFAULT_ADMIN_ROLE`; the four Avana roles and the three `TimelockController` roles are pairwise distinct | `checkRolePair(i, j)`: identifiers equal exactly when the indexes are |
+| `AvanaRolesProperties` | `src/access/AvanaRoles.sol` | each role is the keccak256 of its name; no role is `DEFAULT_ADMIN_ROLE`; the four Avana roles and the three `TimelockController` roles are pairwise distinct | `checkRolePair(i, j)`: identifiers equal exactly when the indexes are |
 
 The core contracts are fuzzed by the Foundry invariant suites in `test/invariant/` and checked symbolically by Halmos (`test/halmos/`), hevm (every `src/` contract) and Certora. A new harness here joins the slow tier on its next run.
 

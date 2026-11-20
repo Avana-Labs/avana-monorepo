@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AvanaRoles} from "../../../src/governance/roles/AvanaRoles.sol";
+import {AvanaRoles} from "../../../src/access/AvanaRoles.sol";
 
 /// @title AvanaRolesProperties
 /// @notice Echidna and Medusa properties of the role ids in `AvanaRoles`. The three Avana roles are three distinct,

@@ -1,6 +1,6 @@
 /*
- * RiskModule bands (src/policy/risk-module/RiskModule.sol, band arithmetic in libraries/BandMath.sol, design in
- * src/policy/risk-module/DESIGN.md decisions 1 and 3), through RiskModuleHarness
+ * RiskModule bands (src/risk/RiskModule.sol, band arithmetic in libraries/BandMath.sol, design in
+ * src/risk/DESIGN.md decisions 1 and 3), through RiskModuleHarness
  * (test/utils/harness/RiskModuleHarness.sol), which adds `listingTickOf`: the tick of the Chainlink listing price that
  * `listPool` computes, by the same internal code path.
  *

@@ -14,20 +14,20 @@ Seven contracts, each in its own folder under [`contracts/src/`](contracts/src/)
 
 | Contract | Folder | Role |
 |---|---|---|
-| AaveAdapter | [`policy/aave-adapter`](contracts/src/policy/aave-adapter/) | User entry point: pledge, add liquidity, borrow, repay, withdraw, collect fees. Holds one thin Aave account proxy per user and routes each pledge to its market. |
-| RiskModule | [`policy/risk-module`](contracts/src/policy/risk-module/) | Lists pools and their two band markets, registers Spokes and debt reserves, checks every borrow and sets the fee share and keepers. |
-| LPVault | [`custody/lp-vault`](contracts/src/custody/lp-vault/) | Holds the NFTs, credits each position its floor credit at pledge and unwinds liquidity on liquidation. |
-| VaultToken | [`vault-token`](contracts/src/vault-token/) | ERC-20 collateral, one unit per unit of floor credit; transfers only along the pledge and liquidation paths. |
+| AaveAdapter | [`adapter`](contracts/src/adapter/) | User entry point: pledge, add liquidity, borrow, repay, withdraw, collect fees. Holds one thin Aave account proxy per user and routes each pledge to its market. |
+| RiskModule | [`risk`](contracts/src/risk/) | Lists pools and their two band markets, registers Spokes and debt reserves, checks every borrow and sets the fee share and keepers. |
+| LPVault | [`vault`](contracts/src/vault/) | Holds the NFTs, credits each position its floor credit at pledge and unwinds liquidity on liquidation. |
+| VaultToken | [`token`](contracts/src/token/) | ERC-20 collateral, one unit per unit of floor credit; transfers only along the pledge and liquidation paths. |
 | LPOracle | [`oracle`](contracts/src/oracle/) | Stateless price of one band market's vault token; Aave V4 reads it as the reserve's price source. |
-| LiquidationModule | [`liquidation/liquidation-module`](contracts/src/liquidation/liquidation-module/) | Runs Aave's `liquidationCall`, burns the seized units, unwinds only that much liquidity and pays the liquidator in kind. |
-| FirstLossReserve | [`coverage/first-loss-reserve`](contracts/src/coverage/first-loss-reserve/) | Covers Spoke deficits: Avana's reserve first, then the DAO Deficit Offset. |
+| LiquidationModule | [`liquidation`](contracts/src/liquidation/) | Runs Aave's `liquidationCall`, burns the seized units, unwinds only that much liquidity and pays the liquidator in kind. |
+| FirstLossReserve | [`reserve`](contracts/src/reserve/) | Covers Spoke deficits: Avana's reserve first, then the DAO Deficit Offset. |
 
 Outside the core:
 
 | Component | Folder | Role |
 |---|---|---|
-| FlashloanRepay | [`contracts/src/periphery/flashloan-repay`](contracts/src/periphery/flashloan-repay/) | Repay with collateral through an Aave V3 flash loan and a one-call withdraw allowance. |
-| AMM integrations | [`contracts/src/amm`](contracts/src/amm/) | Uniswap v3, Uniswap v4 and Aerodrome Slipstream position math. |
+| FlashloanRepay | [`contracts/src/periphery`](contracts/src/periphery/) | Repay with collateral through an Aave V3 flash loan and a one-call withdraw allowance. |
+| AMM integrations | [`contracts/src/integrations`](contracts/src/integrations/) | Uniswap v3, Uniswap v4 and Aerodrome Slipstream position math. |
 | Liquidator | [`packages/liquidator/`](packages/liquidator/) | `FlashLiquidator` contract and the TypeScript liquidation bot. |
 
 Flows end to end: [`contracts/LIFECYCLES.md`](contracts/LIFECYCLES.md).

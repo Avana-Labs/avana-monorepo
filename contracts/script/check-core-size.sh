@@ -39,20 +39,20 @@ MAX_POLICY = 1_500
 
 # Core contract -> its folder under src/.
 CORE = {
-    "AaveAdapter": "policy/aave-adapter",
-    "RiskModule": "policy/risk-module",
-    "LPVault": "custody/lp-vault",
-    "VaultToken": "vault-token",
+    "AaveAdapter": "adapter",
+    "RiskModule": "risk",
+    "LPVault": "vault",
+    "VaultToken": "token",
     "LPOracle": "oracle",
-    "LiquidationModule": "liquidation/liquidation-module",
-    "FirstLossReserve": "coverage/first-loss-reserve",
+    "LiquidationModule": "liquidation",
+    "FirstLossReserve": "reserve",
 }
 POLICY = ("AaveAdapter", "RiskModule")
 # Folders outside the core count.
 OUTSIDE = {
-    "AMM parts": "amm",
-    "role ids": "governance",
-    "external interfaces": "interfaces/external",
+    "AMM parts": "integrations",
+    "role ids": "access",
+    "external interfaces": "dependencies",
     "periphery": "periphery",
 }
 

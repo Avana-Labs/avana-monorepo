@@ -1,5 +1,5 @@
 /*
- * AaveAdapter (src/policy/aave-adapter/AaveAdapter.sol, interface IAaveAdapter.sol, design DESIGN.md): one thin
+ * AaveAdapter (src/adapter/AaveAdapter.sol, interface IAaveAdapter.sol, design DESIGN.md): one thin
  * AccountProxy per (wallet, market) as the Aave user, with the adapter as its position manager, and automatic routing.
  * The routing rule itself (`RiskModule.routeOf`) is proved in AaveAdapterRouting.spec; here the adapter's use of it.
  *

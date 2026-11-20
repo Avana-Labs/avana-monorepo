@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveAdapter} from "../../src/policy/aave-adapter/IAaveAdapter.sol";
+import {IAaveAdapter} from "../../src/adapter/interfaces/IAaveAdapter.sol";
 import {AaveAdapterTestBase} from "../utils/AaveAdapterTestBase.sol";
 
 /// @notice Fuzzes routing, and random sequences of pledges, top-ups, withdrawals, borrows and repays over several

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
+import {AvanaRoles} from "../../src/access/AvanaRoles.sol";
 import {AvanaCreate3Factory} from "./AvanaCreate3Factory.sol";
 import {IAccessManagerOps} from "./lib/AccessOperations.sol";
 import {AvanaAccess} from "./lib/AvanaAccess.sol";

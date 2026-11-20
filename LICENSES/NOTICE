@@ -14,17 +14,17 @@ Uniswap v3-core and v3-periphery
   Copyright (c) 2021 Uniswap Labs
   Licensed under the GNU General Public License v2.0 or later (LICENSES/GPL-2.0.txt).
   Ported in contracts/test/differential/reference/avana_reference.py; interface
-  subsets copied in contracts/src/interfaces/external/uniswap/.
+  subsets copied in contracts/src/dependencies/uniswap/.
 
 Uniswap v4-core
   Copyright 2023 Universal Navigation Inc.
   MIT License (THIRD_PARTY_LICENSES.md, "MIT License"). TickMath ported in
-  contracts/src/amm/concentrated-liquidity/ClTickMath.sol; Avana's changes to
+  contracts/src/integrations/shared/ClTickMath.sol; Avana's changes to
   that file are MIT as well.
 
 Aerodrome Slipstream
   Copyright (c) 2023 Perpetual Cyclist Services LLC
-  Interface subsets copied in contracts/src/interfaces/external/aerodrome/,
+  Interface subsets copied in contracts/src/dependencies/aerodrome/,
   under GPL-2.0-or-later (LICENSES/GPL-2.0.txt).
 
 Aave V4
@@ -36,23 +36,23 @@ Aave V4
 
 Aave V3 (aave-v3-core, aave-v3-origin)
   Copyright (c) Aave
-  contracts/src/interfaces/external/aave/IAaveV3ACLManager.sol under AGPL-3.0
+  contracts/src/dependencies/aave/IAaveV3ACLManager.sol under AGPL-3.0
   (LICENSES/AGPL-3.0.txt); IAaveV3Pool.sol, IAaveV3PoolAddressesProvider.sol and
   IAaveV3FlashLoanReceiver.sol under the MIT License.
 
 GHO (gho-core)
   Copyright (c) 2023 Aave
-  Interface subsets copied in contracts/src/interfaces/external/gho/, under the
+  Interface subsets copied in contracts/src/dependencies/gho/, under the
   MIT License.
 
 Chainlink (chainlink-evm, libocr)
   Copyright (c) 2018 SmartContract ChainLink Limited SEZC
-  Interface subsets copied in contracts/src/interfaces/external/chainlink/,
+  Interface subsets copied in contracts/src/dependencies/chainlink/,
   under the MIT License.
 
 Sky (usds, dss-lite-psm)
   Copyright (C) 2023 Dai Foundation
-  Interface subsets copied in contracts/src/interfaces/external/sky/, under
+  Interface subsets copied in contracts/src/dependencies/sky/, under
   AGPL-3.0-or-later (LICENSES/AGPL-3.0.txt).
 
 -------------------------------------------------------------------------------

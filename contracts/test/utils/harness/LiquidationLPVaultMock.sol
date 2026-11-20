@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVault} from "../../../src/custody/lp-vault/ILPVault.sol";
+import {ILPVault} from "../../../src/vault/interfaces/ILPVault.sol";
 
 /// @title LiquidationLPVaultMock
 /// @notice Storage-backed stand-in for the LPVault's `getMarket`, linked as the LiquidationModule's LP_VAULT in

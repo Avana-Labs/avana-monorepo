@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
-import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
+import {IAaveV4Hub} from "../../src/dependencies/aave/IAaveV4Hub.sol";
+import {IAaveV4Spoke} from "../../src/dependencies/aave/IAaveV4Spoke.sol";
 import {AaveCalls} from "./lib/AaveCalls.sol";
 import {CoreStack} from "./lib/DeployTypes.sol";
 

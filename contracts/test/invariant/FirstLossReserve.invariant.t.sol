@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {FirstLossReserve} from "../../src/coverage/first-loss-reserve/FirstLossReserve.sol";
+import {FirstLossReserve} from "../../src/reserve/FirstLossReserve.sol";
 import {FirstLossReserveFixture} from "../utils/fixtures/FirstLossReserveFixture.sol";
 import {Test} from "forge-std/Test.sol";
 

@@ -6,51 +6,51 @@
   "files_details": {
     "files_details": [
       {
-        "file_path": "src/amm/IAmmIntegration.sol",
+        "file_path": "src/integrations/IAmmIntegration.sol",
         "n_sloc": 78
       },
       {
-        "file_path": "src/amm/IAmmIntegrationHooks.sol",
+        "file_path": "src/integrations/IAmmIntegrationHooks.sol",
         "n_sloc": 21
       },
       {
-        "file_path": "src/amm/IClIntegration.sol",
+        "file_path": "src/integrations/IClIntegration.sol",
         "n_sloc": 21
       },
       {
-        "file_path": "src/amm/slipstream/ISlipstreamIntegration.sol",
+        "file_path": "src/integrations/slipstream/interfaces/ISlipstreamIntegration.sol",
         "n_sloc": 16
       },
       {
-        "file_path": "src/amm/types/ClMarketConfig.sol",
+        "file_path": "src/integrations/types/ClMarketConfig.sol",
         "n_sloc": 13
       },
       {
-        "file_path": "src/amm/types/FeeMode.sol",
+        "file_path": "src/integrations/types/FeeMode.sol",
         "n_sloc": 5
       },
       {
-        "file_path": "src/amm/types/IntegrationCapabilities.sol",
+        "file_path": "src/integrations/types/IntegrationCapabilities.sol",
         "n_sloc": 15
       },
       {
-        "file_path": "src/amm/types/PoolKeying.sol",
+        "file_path": "src/integrations/types/PoolKeying.sol",
         "n_sloc": 5
       },
       {
-        "file_path": "src/amm/types/PricingMode.sol",
+        "file_path": "src/integrations/types/PricingMode.sol",
         "n_sloc": 5
       },
       {
-        "file_path": "src/amm/types/RiskMetadata.sol",
+        "file_path": "src/integrations/types/RiskMetadata.sol",
         "n_sloc": 9
       },
       {
-        "file_path": "src/amm/types/RiskStatus.sol",
+        "file_path": "src/integrations/types/RiskStatus.sol",
         "n_sloc": 5
       },
       {
-        "file_path": "src/amm/uniswap-v3/IUniswapV3Integration.sol",
+        "file_path": "src/integrations/uniswap-v3/interfaces/IUniswapV3Integration.sol",
         "n_sloc": 6
       },
       {
@@ -158,15 +158,15 @@
         "n_sloc": 5
       },
       {
-        "file_path": "src/custody/lp-vault/ILPVault.sol",
+        "file_path": "src/vault/interfaces/ILPVault.sol",
         "n_sloc": 18
       },
       {
-        "file_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+        "file_path": "src/vault/ILPVaultErrors.sol",
         "n_sloc": 27
       },
       {
-        "file_path": "src/custody/lp-vault/ILPVaultEvents.sol",
+        "file_path": "src/vault/ILPVaultEvents.sol",
         "n_sloc": 13
       },
       {
@@ -182,7 +182,7 @@
         "n_sloc": 28
       },
       {
-        "file_path": "src/governance/roles/AvanaRoles.sol",
+        "file_path": "src/access/AvanaRoles.sol",
         "n_sloc": 7
       },
       {
@@ -470,39 +470,39 @@
         "n_sloc": 12
       },
       {
-        "file_path": "src/policy/aave-adapter/IAaveAdapter.sol",
+        "file_path": "src/adapter/interfaces/IAaveAdapter.sol",
         "n_sloc": 17
       },
       {
-        "file_path": "src/policy/aave-adapter/IAaveAdapterAdmin.sol",
+        "file_path": "src/adapter/IAaveAdapterAdmin.sol",
         "n_sloc": 6
       },
       {
-        "file_path": "src/policy/aave-adapter/IAaveAdapterCollateral.sol",
+        "file_path": "src/adapter/IAaveAdapterCollateral.sol",
         "n_sloc": 22
       },
       {
-        "file_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+        "file_path": "src/adapter/IAaveAdapterErrors.sol",
         "n_sloc": 30
       },
       {
-        "file_path": "src/policy/aave-adapter/IAaveAdapterEvents.sol",
+        "file_path": "src/adapter/IAaveAdapterEvents.sol",
         "n_sloc": 75
       },
       {
-        "file_path": "src/policy/aave-adapter/IAaveAdapterSettlement.sol",
+        "file_path": "src/adapter/IAaveAdapterSettlement.sol",
         "n_sloc": 20
       },
       {
-        "file_path": "src/policy/aave-adapter/IAaveAdapterUser.sol",
+        "file_path": "src/adapter/IAaveAdapterUser.sol",
         "n_sloc": 51
       },
       {
-        "file_path": "src/policy/aave-adapter/IAaveAdapterViews.sol",
+        "file_path": "src/adapter/IAaveAdapterViews.sol",
         "n_sloc": 30
       },
       {
-        "file_path": "src/policy/aave-adapter/types/RepayWithCollateralParams.sol",
+        "file_path": "src/adapter/types/RepayWithCollateralParams.sol",
         "n_sloc": 12
       },
       {
@@ -798,31 +798,31 @@
         "n_sloc": 8
       },
       {
-        "file_path": "src/policy/risk-module/IRiskModule.sol",
+        "file_path": "src/risk/interfaces/IRiskModule.sol",
         "n_sloc": 6
       },
       {
-        "file_path": "src/policy/risk-module/IRiskModuleAdmin.sol",
+        "file_path": "src/risk/IRiskModuleAdmin.sol",
         "n_sloc": 6
       },
       {
-        "file_path": "src/policy/risk-module/IRiskModuleChecks.sol",
+        "file_path": "src/risk/IRiskModuleChecks.sol",
         "n_sloc": 47
       },
       {
-        "file_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+        "file_path": "src/risk/IRiskModuleErrors.sol",
         "n_sloc": 46
       },
       {
-        "file_path": "src/policy/risk-module/IRiskModuleViews.sol",
+        "file_path": "src/risk/IRiskModuleViews.sol",
         "n_sloc": 45
       },
       {
-        "file_path": "src/policy/risk-module/RiskModuleConstants.sol",
+        "file_path": "src/risk/RiskModuleConstants.sol",
         "n_sloc": 7
       },
       {
-        "file_path": "src/policy/risk-module/types/PledgeCharge.sol",
+        "file_path": "src/risk/types/PledgeCharge.sol",
         "n_sloc": 7
       },
       {
@@ -958,19 +958,19 @@
         "n_sloc": 16
       },
       {
-        "file_path": "src/vault-token/vault-token-factory/IVaultTokenFactory.sol",
+        "file_path": "src/token/vault-token-factory/IVaultTokenFactory.sol",
         "n_sloc": 63
       },
       {
-        "file_path": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
+        "file_path": "src/token/vault-token-factory/VaultTokenFactory.sol",
         "n_sloc": 213
       },
       {
-        "file_path": "src/vault-token/vault-token/IVaultToken.sol",
+        "file_path": "src/token/vault-token/IVaultToken.sol",
         "n_sloc": 42
       },
       {
-        "file_path": "src/vault-token/vault-token/VaultToken.sol",
+        "file_path": "src/token/vault-token/VaultToken.sol",
         "n_sloc": 174
       }
     ]
@@ -1846,14 +1846,14 @@
             "hint": "State is changed at: `d.decimals = decimals`, `d.minAnswer = minAnswer`, `d.maxAnswer = maxAnswer`, `d.feedHeartbeat = def.feedHeartbeat`, `d.heartbeatMargin = def.heartbeatMargin`, `d.feedMaxAge = age`, `d.feedDeviationThresholdBps = def.feedDeviationThresholdBps`, `d.heartbeatDriftBps = def.heartbeatDriftBps`, `d.borrowPriceMaxAge = age`, `d.liquidationPriceMaxAge = age`"
           },
           {
-            "contract_path": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
+            "contract_path": "src/token/vault-token-factory/VaultTokenFactory.sol",
             "line_no": 98,
             "src": "5606:176",
             "src_char": "5594:176",
             "hint": "State is changed at: `_lpVaultOf[integrationId] = lpVault`, `_isLpVault[lpVault] = true`"
           },
           {
-            "contract_path": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
+            "contract_path": "src/token/vault-token-factory/VaultTokenFactory.sol",
             "line_no": 101,
             "src": "5830:42",
             "src_char": "5818:42",
@@ -2135,145 +2135,145 @@
         "detector_name": "unused-error",
         "instances": [
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 12,
             "src": "624:29",
             "src_char": "624:29"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 16,
             "src": "847:20",
             "src_char": "847:20"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 20,
             "src": "996:26",
             "src_char": "996:26"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 25,
             "src": "1207:38",
             "src_char": "1207:38"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 30,
             "src": "1541:20",
             "src_char": "1541:20"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 35,
             "src": "1806:21",
             "src_char": "1806:21"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 39,
             "src": "1951:21",
             "src_char": "1951:21"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 47,
             "src": "2415:54",
             "src_char": "2415:54"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 52,
             "src": "2704:19",
             "src_char": "2704:19"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 56,
             "src": "2891:22",
             "src_char": "2891:22"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 60,
             "src": "3090:27",
             "src_char": "3090:27"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 64,
             "src": "3232:18",
             "src_char": "3232:18"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 68,
             "src": "3448:21",
             "src_char": "3448:21"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 72,
             "src": "3614:21",
             "src_char": "3614:21"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 76,
             "src": "3819:17",
             "src_char": "3819:17"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 80,
             "src": "4010:25",
             "src_char": "4010:25"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 84,
             "src": "4210:23",
             "src_char": "4210:23"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 88,
             "src": "4382:20",
             "src_char": "4382:20"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 94,
             "src": "4609:55",
             "src_char": "4609:55"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 101,
             "src": "4903:69",
             "src_char": "4903:69"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 105,
             "src": "5114:21",
             "src_char": "5114:21"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 109,
             "src": "5272:22",
             "src_char": "5272:22"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 113,
             "src": "5460:15",
             "src_char": "5460:15"
           },
           {
-            "contract_path": "src/custody/lp-vault/ILPVaultErrors.sol",
+            "contract_path": "src/vault/ILPVaultErrors.sol",
             "line_no": 117,
             "src": "5649:26",
             "src_char": "5649:26"
@@ -2555,163 +2555,163 @@
             "src_char": "1844:59"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 10,
             "src": "501:26",
             "src_char": "501:26"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 17,
             "src": "1025:26",
             "src_char": "1025:26"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 22,
             "src": "1217:40",
             "src_char": "1217:40"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 28,
             "src": "1510:60",
             "src_char": "1510:60"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 32,
             "src": "1764:19",
             "src_char": "1764:19"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 37,
             "src": "1966:40",
             "src_char": "1966:40"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 43,
             "src": "2261:48",
             "src_char": "2261:48"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 48,
             "src": "2488:34",
             "src_char": "2488:34"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 54,
             "src": "2763:59",
             "src_char": "2763:59"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 59,
             "src": "3064:38",
             "src_char": "3064:38"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 65,
             "src": "3337:66",
             "src_char": "3337:66"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 70,
             "src": "3732:23",
             "src_char": "3732:23"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 76,
             "src": "4065:31",
             "src_char": "4065:31"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 82,
             "src": "4372:59",
             "src_char": "4372:59"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 88,
             "src": "4729:53",
             "src_char": "4729:53"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 94,
             "src": "5078:54",
             "src_char": "5078:54"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 102,
             "src": "5668:88",
             "src_char": "5668:88"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 106,
             "src": "5914:25",
             "src_char": "5914:25"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 111,
             "src": "6158:23",
             "src_char": "6158:23"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 115,
             "src": "6286:20",
             "src_char": "6286:20"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 121,
             "src": "6598:39",
             "src_char": "6598:39"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 126,
             "src": "6856:44",
             "src_char": "6856:44"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 132,
             "src": "7238:65",
             "src_char": "7238:65"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 137,
             "src": "7526:28",
             "src_char": "7526:28"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 143,
             "src": "7801:59",
             "src_char": "7801:59"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 147,
             "src": "8069:29",
             "src_char": "8069:29"
           },
           {
-            "contract_path": "src/policy/aave-adapter/IAaveAdapterErrors.sol",
+            "contract_path": "src/adapter/IAaveAdapterErrors.sol",
             "line_no": 152,
             "src": "8308:46",
             "src_char": "8308:46"
@@ -2723,247 +2723,247 @@
             "src_char": "5743:70"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 13,
             "src": "457:40",
             "src_char": "457:40"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 18,
             "src": "726:42",
             "src_char": "726:42"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 22,
             "src": "925:25",
             "src_char": "925:25"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 27,
             "src": "1205:21",
             "src_char": "1205:21"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 33,
             "src": "1587:22",
             "src_char": "1587:22"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 37,
             "src": "1696:22",
             "src_char": "1696:22"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 42,
             "src": "1930:36",
             "src_char": "1930:36"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 46,
             "src": "2102:31",
             "src_char": "2102:31"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 50,
             "src": "2255:28",
             "src_char": "2255:28"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 54,
             "src": "2428:25",
             "src_char": "2428:25"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 58,
             "src": "2613:26",
             "src_char": "2613:26"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 63,
             "src": "2805:35",
             "src_char": "2805:35"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 67,
             "src": "3003:26",
             "src_char": "3003:26"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 72,
             "src": "3244:29",
             "src_char": "3244:29"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 77,
             "src": "3575:26",
             "src_char": "3575:26"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 84,
             "src": "4028:62",
             "src_char": "4028:62"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 90,
             "src": "4414:42",
             "src_char": "4414:42"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 96,
             "src": "4790:51",
             "src_char": "4786:51"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 101,
             "src": "4981:34",
             "src_char": "4977:34"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 106,
             "src": "5202:43",
             "src_char": "5198:43"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 112,
             "src": "5569:56",
             "src_char": "5565:56"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 118,
             "src": "5854:55",
             "src_char": "5850:55"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 125,
             "src": "6267:45",
             "src_char": "6263:45"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 133,
             "src": "6795:74",
             "src_char": "6791:74"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 139,
             "src": "7117:71",
             "src_char": "7113:71"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 144,
             "src": "7357:43",
             "src_char": "7353:43"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 149,
             "src": "7631:47",
             "src_char": "7627:47"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 154,
             "src": "7893:39",
             "src_char": "7889:39"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 160,
             "src": "8250:48",
             "src_char": "8246:48"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 166,
             "src": "8670:65",
             "src_char": "8666:65"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 172,
             "src": "9052:55",
             "src_char": "9048:55"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 179,
             "src": "9417:79",
             "src_char": "9413:79"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 186,
             "src": "9921:85",
             "src_char": "9917:85"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 192,
             "src": "10325:71",
             "src_char": "10321:71"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 198,
             "src": "10623:59",
             "src_char": "10619:59"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 206,
             "src": "11231:38",
             "src_char": "11226:38"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 212,
             "src": "11496:66",
             "src_char": "11491:66"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 216,
             "src": "11748:22",
             "src_char": "11743:22"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 221,
             "src": "12016:42",
             "src_char": "12011:42"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 228,
             "src": "12577:43",
             "src_char": "12572:43"
           },
           {
-            "contract_path": "src/policy/risk-module/IRiskModuleErrors.sol",
+            "contract_path": "src/risk/IRiskModuleErrors.sol",
             "line_no": 234,
             "src": "12869:57",
             "src_char": "12864:57"

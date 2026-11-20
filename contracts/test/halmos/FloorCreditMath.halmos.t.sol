@@ -3,14 +3,14 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClTickMath} from "../../src/amm/concentrated-liquidity/ClTickMath.sol";
-import {FloorCreditMath} from "../../src/custody/lp-vault/libraries/FloorCreditMath.sol";
+import {ClTickMath} from "../../src/integrations/shared/ClTickMath.sol";
+import {FloorCreditMath} from "../../src/vault/libraries/FloorCreditMath.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title FloorCreditMathHalmosTest
 /// @notice Bounded symbolic check that `FloorCreditMath.credit` computes the floor credit of
-/// contracts/src/custody/lp-vault/FLOOR-CREDIT-PROOF.md: with `x, y` the position's and `X, Y` the band's square-root prices
+/// contracts/src/vault/FLOOR-CREDIT-PROOF.md: with `x, y` the position's and `X, Y` the band's square-root prices
 /// and `U = 2^128 − 1`, it returns `min(⌊a0·U/u0⌋, ⌊a1·U/u1⌋)`, where `a0 = ⌊L·2^96·(y − x)/(x·y)⌋` and
 /// `a1 = ⌊L·(y − x)/2^96⌋` are the position's amounts at the band edges and `u0 = ⌈U·2^96·(Y − X)/(X·Y)⌉`,
 /// `u1 = ⌈U·(Y − X)/2^96⌉` those of `U` band units. The inequality the credit satisfies is proven on paper; rounding and
