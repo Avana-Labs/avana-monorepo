@@ -31,4 +31,39 @@ contract LPOracleSummariesHarness {
     ) external pure returns (uint256) {
         return Math.sqrt(a);
     }
+
+    /// @notice The 512-bit product `x * y` as `(hi, lo)`, by schoolbook multiplication of 128-bit halves (no partial
+    /// product overflows), so the spec can state a 512-bit fact with 256-bit words.
+    function mul512(
+        uint256 x,
+        uint256 y
+    ) external pure returns (uint256 hi, uint256 lo) {
+        unchecked {
+            uint256 m = type(uint128).max;
+            uint256 xl = x & m;
+            uint256 xh = x >> 128;
+            uint256 yl = y & m;
+            uint256 yh = y >> 128;
+            uint256 ll = xl * yl;
+            uint256 mid = xl * yh;
+            uint256 hl = xh * yl;
+            uint256 carryMid = 0;
+            mid += hl;
+            if (mid < hl) carryMid = 1;
+            lo = ll + (mid << 128);
+            uint256 carryLo = lo < ll ? 1 : 0;
+            hi = xh * yh + (mid >> 128) + (carryMid << 128) + carryLo;
+        }
+    }
+
+    /// @notice `mulmod(x, y, m)`, 0 for `m == 0` (the opcode's value) instead of Solidity's panic.
+    function mulMod(
+        uint256 x,
+        uint256 y,
+        uint256 m
+    ) external pure returns (uint256 r) {
+        assembly ("memory-safe") {
+            r := mulmod(x, y, m)
+        }
+    }
 }

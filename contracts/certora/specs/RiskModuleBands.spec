@@ -51,7 +51,19 @@ methods {
     // and `listingTickOf` get the same tick for the same price, whatever the tick is.
     function ClTickMath.getTickAtSqrtPrice(uint160 sqrtPriceX96) internal returns (int24)
         => tickAtSqrtPrice(sqrtPriceX96);
+
+    // The rest of the listing-price and decimals arithmetic, for the same two reasons: BandMath.unitDecimals searches
+    // decimals 6 to 18 in a loop that loop_iter 2 cuts, and each call runs the band amounts and value through 512-bit
+    // mulDiv twice per step; LPPriceMath.sqrtPriceX96 runs mulDiv and sqrt. No rule reads the decimals or the price
+    // itself, only the tick, so both are over-approximated: any decimals, and a price that is a function of its inputs
+    // (so `listPool` and `listingTickOf` agree). Every real behaviour is among the summarised ones.
+    function BandMath.unitDecimals(uint160, int24, int24, uint256, uint256, uint8, uint8) internal returns (uint8)
+        => NONDET;
+    function LPPriceMath.sqrtPriceX96(uint256 p0, uint256 p1, uint8 d0, uint8 d1) internal returns (uint160)
+        => sqrtPriceOf(p0, p1, d0, d1);
 }
+
+ghost sqrtPriceOf(uint256, uint256, uint8, uint8) returns uint160;
 
 definition MAX_TICK() returns mathint = 887272;
 definition MIN_SPACINGS() returns mathint = 4;
