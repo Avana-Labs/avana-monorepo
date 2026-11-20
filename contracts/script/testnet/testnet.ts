@@ -22,6 +22,16 @@ import { verifyRelease } from "./verify.ts";
 import { FUNDED_ROLES, SIGNER_ROLES, type TestnetRoles, configFile, testnetRoles } from "./keys.ts";
 import { rpcSummary, useHealthyRpc } from "./rpc.ts";
 
+/**
+ * The keeper signer's refill band per test network, in wei: 11-fund-keepers tops a signer below `minBalanceWei` up to
+ * `targetBalanceWei` from the keeper top-up wallet. From the gas review in script/README.md (Keeper gas): minimum 3
+ * days of keeper spend, target 7 days plus a liquidation burst, rounded up.
+ */
+export const KEEPER_TOP_UP: Record<string, { minBalanceWei: string; targetBalanceWei: string }> = {
+  sepolia: { minBalanceWei: "40000000000000000", targetBalanceWei: "250000000000000000" },
+  "base-sepolia": { minBalanceWei: "500000000000000", targetBalanceWei: "2000000000000000" },
+};
+
 /** The timelock's normal delay on a test network, seconds (its floor there is 60 s, REQ-ACCESS-187). */
 export const NORMAL_DELAY = 120;
 /** One timelock operation's execution gas budget on a test network: under the 2^24 per-transaction cap (EIP-7825). */
@@ -153,7 +163,8 @@ export async function testnetConfig(c: LocalChain, rel: string): Promise<string>
 export const baseRoles = ({ signers: s, addresses: a }: TestnetRoles) => ({ deployer: s.deployer, keeper: a.KEEPER, treasury: a.TREASURY, guardian: a.AAVE_PROTOCOL_GUARDIAN });
 
 /**
- * What a test network's config changes in the local stack's: its roles, release, normal delay and operation gas budget,
+ * What a test network's config changes in the local stack's: its roles (with the keeper top-up wallet and its refill band,
+ * KEEPER_TOP_UP), release, normal delay and operation gas budget,
  * and the native-ETH Uniswap v4 pools' size (NATIVE_V4_POOL_USD), and nothing else. testnet.test.ts checks every other value against the local stack's config, built from the same
  * test values (script/local/test-values.json, the one source of the market parameters).
  */
@@ -170,6 +181,10 @@ export function testnetPatch({ signers: s, addresses: a }: TestnetRoles, executo
     cfg.aaveLocal.payloadsController = s.payloadsController;
     cfg.aave.governanceExecutor = executor;
     for (const h of cfg.operatorHelpers) h.fundingSafe = s.governance;
+    // The keeper top-up wallet and the keeper signer's refill band on this network (script/README.md, Keeper gas).
+    const band = KEEPER_TOP_UP[cfg.network];
+    if (!band) throw new Error(`no keeper top-up band for ${cfg.network}`);
+    cfg.keeperTopUp = { wallet: s.keeperTopUp, ...band };
     // The native-ETH Uniswap v4 pools: seeded with the deployer's real test ETH, so a few dollars each.
     shrinkNativeV4Pools(cfg);
   };

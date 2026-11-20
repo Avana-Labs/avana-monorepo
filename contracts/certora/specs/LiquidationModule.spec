@@ -24,7 +24,12 @@
  * `debtToCover` of the debt reserve's underlying from the module and credits it some seized vault-token units, and
  * records its arguments; `getLiquidationBonus` is a ghost; `getReserve` a ghost underlying per reserve; the LPVault's
  * `unwind` pays some amounts of the market's two tokens to its recipient and records them; position, oracle and account
- * reads are NONDET. The RiskModule and LPVault `getMarket` reads are the storage mocks of the conf.
+ * reads are NONDET. The RiskModule and LPVault `getMarket` reads are the storage mocks of the conf. OpenZeppelin
+ * `Math.mulDiv` is floor(x * y / den) (proved in LPOracleSummaries.spec): without it the Prover's model of the
+ * 512-bit code returned wrong quotients, the false counterexamples of the 19-Nov run.
+ *
+ * `_plan` and `_candidates` build their arrays at the final length (no assembly length rewrite), so the Prover's
+ * pointer analysis can resolve the calls in `liquidate` and the summaries above apply there.
  */
 
 import "setup/Erc20Model.spec";
@@ -58,9 +63,20 @@ methods {
     function _.tokens() external => NONDET;
     function _.getUnitAmounts() external => NONDET;
     function _.unitDecimals() external => NONDET;
+
+    // Proven against the library bytecode in LPOracleSummaries.spec (ozMulDivIsFloor).
+    function Math.mulDiv(uint256 x, uint256 y, uint256 den) internal returns (uint256) => mulDivFloor(x, y, den);
 }
 
 definition BPS() returns mathint = 10000;
+
+// floor(x * y / den); the library reverts when den is 0 or the quotient is not a word, so those paths are dropped.
+function mulDivFloor(uint256 x, uint256 y, uint256 den) returns uint256 {
+    require den > 0;
+    mathint q = (x * y) / den;
+    require q <= max_uint256;
+    return require_uint256(q);
+}
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Models
@@ -145,10 +161,23 @@ rule liquidateGoesThroughAaveLiquidationCall(ILiquidationModule.LiquidationParam
 // The partial unwind
 // ---------------------------------------------------------------------------------------------------------------------
 
+// With the Math.mulDiv summary, creditFor is q = floor(units * credit / cap).
 rule unwindCreditAtMostSeizedUnits(uint256 units, uint256 credit, uint256 cap) {
     env e;
     require 0 < cap && units <= cap && credit <= cap;
     uint256 c = creditFor(e, units, credit, cap);
+    mathint n = units * credit;
+    mathint q = n / cap;
+
+    // floorDivAtMost(n, cap)
+    require (n >= 0 && cap > 0) => q * cap <= n;
+    // productMonotone(a = credit, b = cap, k = units) and productMonotone(a = units, b = cap, k = credit)
+    require (credit <= cap && units >= 0) => credit * units <= cap * units;
+    require (units <= cap && credit >= 0) => units * credit <= cap * credit;
+    // cancelPositiveFactor(p = q, q = units, k = cap) and cancelPositiveFactor(p = q, q = credit, k = cap)
+    require (cap > 0 && q * cap <= units * cap) => q <= units;
+    require (cap > 0 && q * cap <= credit * cap) => q <= credit;
+
     assert c <= units, "the unwind removes more credit than the units seized";
     assert c <= credit, "the unwind removes more than the position's credit";
 }
@@ -175,10 +204,41 @@ rule liquidationFeeIsTwentyPercentOfBonus(ILiquidationModule.LiquidationParams p
     assert r.feeUnits == feeUnits(e, r.seized, liquidationBonus, 2000), "the fee is not 20% of Aave's bonus";
 }
 
+// With the Math.mulDiv summary, feePart is q = floor(amount * fee / seized).
 rule feePartAtMostAmount(uint256 amount, uint256 fee, uint256 seized) {
     env e;
     require 0 < seized && fee <= seized;
-    assert feePart(e, amount, fee, seized) <= amount, "the fee part exceeds the unwound amount";
+    uint256 part = feePart(e, amount, fee, seized);
+    mathint n = amount * fee;
+    mathint q = n / seized;
+
+    // floorDivAtMost(n, seized)
+    require (n >= 0 && seized > 0) => q * seized <= n;
+    // productMonotone(a = fee, b = seized, k = amount)
+    require (fee <= seized && amount >= 0) => fee * amount <= seized * amount;
+    // cancelPositiveFactor(p = q, q = amount, k = seized)
+    require (seized > 0 && q * seized <= amount * seized) => q <= amount;
+
+    assert part <= amount, "the fee part exceeds the unwound amount";
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Lemmas: one nonlinear step each, over fresh integers. The rules above require them at their own terms.
+// ---------------------------------------------------------------------------------------------------------------------
+
+rule floorDivAtMost(mathint n, mathint q) {
+    require n >= 0 && q > 0;
+    assert (n / q) * q <= n, "floor(n / q) * q exceeds n";
+}
+
+rule productMonotone(mathint a, mathint b, mathint k) {
+    require a <= b && k >= 0;
+    assert a * k <= b * k, "multiplying by a non-negative reversed an order";
+}
+
+rule cancelPositiveFactor(mathint p, mathint q, mathint k) {
+    require k > 0 && p * k <= q * k;
+    assert p <= q, "a positive factor did not cancel";
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

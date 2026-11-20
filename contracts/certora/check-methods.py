@@ -12,8 +12,9 @@ same return types where the entry states them), in the ABI it binds to:
   function c.f(...)         contract C of a multi-contract conf, bound by `using C as c;`: the interface of C
   function _.f(...)         any external contract: some ABI in out/ that declares f with these parameter types
 
-Internal entries and `unresolved external` entries are refused: no implementation exists to name internal functions,
-and every external call of a verified contract is bound to an interface function by name.
+Internal entries and `unresolved external` entries are refused, so every external call of a verified contract is bound
+to an interface function by name. The one exception is an internal library function in INTERNAL_SUMMARIES, whose
+summary another spec proves against the library bytecode.
 
 Types are compared on the ABI `internalType`: structs and enums by their declared name (with or without the
 declaring interface as qualifier), contract types as `address`, arrays element-wise.
@@ -51,7 +52,15 @@ ACCESS_CONTROL: set[str] = set()
 
 # Verified contracts that are test harnesses with no interface: their specs call the harness's functions directly and
 # have no methods block, so there is nothing to check against an ABI (the fast tier builds src/ only).
-HARNESS_WITHOUT_METHODS = {"FloorCreditMathHarness"}
+HARNESS_WITHOUT_METHODS = {"FloorCreditMathHarness", "LPOracleSummariesHarness"}
+
+# Internal library functions a spec summarises, each with the spec that proves the summary against the library
+# bytecode.
+INTERNAL_SUMMARIES = {
+    "Math.mulDiv": "LPOracleSummaries.spec",
+    "FullMath.mulDiv": "LPOracleSummaries.spec",
+    "Math.sqrt": "LPOracleSummaries.spec",
+}
 
 # Specs verified by no conf: the contract whose interface their unqualified entries bind to.
 SPEC_WITHOUT_CONF: dict[str, str] = {}
@@ -267,6 +276,14 @@ def main() -> int:
                     errors += 1
                     continue
                 checked += 1
+                if e["visibility"] == "internal" and f"{e['target']}.{e['name']}" in INTERNAL_SUMMARIES:
+                    proof = INTERNAL_SUMMARIES[f"{e['target']}.{e['name']}"]
+                    if not (HERE / "specs" / proof).is_file():
+                        print(f"ERROR {rel}: internal summary {e['target']}.{e['name']} names {proof}, which does not exist")
+                        errors += 1
+                    elif args.verbose:
+                        print(f"ok    {rel}: {e['target']}.{e['name']} internal, proved in {proof}")
+                    continue
                 if e["visibility"] != "external":
                     print(f"ERROR {rel}: `{e['name']}` is not an external entry; only interface functions may be named")
                     errors += 1

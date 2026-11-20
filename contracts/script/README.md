@@ -18,10 +18,11 @@ The order follows the contract inventory and constructor immutables of [1.2 Cont
 | `deploy/08_AaveLossLayersPayload.s.sol` | every chain (AAVE side) | The `AvanaLossLayers` AIP: each layer on its Hub asset with `HUB_DEFICIT_ELIMINATOR_ROLE`, its functions mapped to the coverage, reserve-admin and withdraw roles (`withdraw` held with the reserve's 14-day `WITHDRAWAL_DELAY`), the CDP Spokes allowed and the minimums set. Calls written to `aip-AvanaLossLayers.json`; run through the executor stand-in on test networks. |
 | `deploy/09_ListMarkets.s.sol` | every chain | `AVANA_LISTING_STEP`: `setup` (CDP Spokes, debt reserves with their First-Loss Reserves, fee, coverage ratio, keepers), `markets` (`listPool`: each pool as a Full range and a Custom range market), `vault-tokens` (each market's VaultToken and LPOracle, their roles sent by the DAO; writes `markets.json`), `activate` (`activateMarket`). Governance operations are written for the Safe and scheduled on anvil. |
 | `deploy/10_AaveListingPayload.s.sol` | every chain (AAVE side) | The `AvanaMarkets` AIP: each AaveAdapter a position manager on its CDP Spokes, the debt reserves borrowable, and each vault token a Hub asset and a CDP Spoke collateral reserve priced by its LPOracle (collateral factor the market's LTV, liquidation fee 0, no draw, no share transfers). |
+| `deploy/11_FundKeepers.s.sol` | every chain | The keeper top-up wallet (`KEEPER_TOPUP_WALLET`, else the config's `keeperTopUp.wallet`) refills each keeper signer (`keepers` and each operator helper's `signer`) below `keeperTopUp.minBalanceWei` to `keeperTopUp.targetBalanceWei`, one transfer each, signed by the wallet. Safe to rerun; see [Keeper gas](#keeper-gas). |
 | `deploy/step.sh` (`make step-<name>`) | every chain | Runs one named step of the deployment recipe with its environment and sender; the list of steps, in order, is at the top of the file. The rehearsal calls the same names. Every step is incremental: it reads the chain and acts only on what the config adds (a Hub, a Spoke, an asset, a market, a route), and with nothing new it schedules, proposes and deploys nothing, so running a step again is safe. `AVANA_CONFIG` (a path from `contracts/`) points every step at another config file. |
 | `deploy/aave/AvanaAaveV4Payload.sol`, `deploy/lib/AavePayloads.sol` | — | The one payload contract every Avana AIP deploys (an `AaveV4Payload` whose actions are ABI-encoded data in SSTORE2 chunks, with plain `_postExecute` calls from the executor) and the builder that ships it. |
 | `deploy/lib/` | — | `DeployInputs` (network config with `$<file>:<path>` references to earlier outputs), `DeployBase` (artifact loading per compiler profile, CREATE and namespaced CREATE3), `CoreRecord` (reads `avana.json` and `coverage.json` back), `AvanaAccess` (roles, delays and the map of every restricted function to its role), `AccessOperations` (AccessManager operations for the Safe), `AaveCalls` and `AavePayloads` (Aave-side AIPs), `DeploymentOutput`. |
-| `deploy/config/<network>.json` | — | Every input of a network: governance accounts, Aave addresses or references, chain constants, initial parameters, keepers, operator helpers, AMM integrations, and on test networks the Aave V4 layout, the world (tokens, prices, pools) and the Aave payload. No secret. |
+| `deploy/config/<network>.json` | — | Every input of a network: governance accounts, Aave addresses or references, chain constants, initial parameters, keepers, operator helpers, the keeper top-up wallet and its refill band (`keeperTopUp`: `wallet`, `minBalanceWei`, `targetBalanceWei`; required off anvil), AMM integrations, and on test networks the Aave V4 layout, the world (tokens, prices, pools) and the Aave payload. No secret. |
 | `e2e/e2e-local.sh`, `e2e/day2-additions.ts`, `e2e/services-smoke.sh`, `e2e/scenarios/run.ts` | local and CI (`e2e-local.yml`) | The local rehearsal: anvil, steps 00–10 through market activation, then a day-2 pass (`e2e/day2-additions.ts` adds a Hub with its Lend and CDP Spokes, a lend-only asset, a borrowable asset on a listed Spoke with routes for its market, a collateral token and two markets; every step runs again with `AVANA_CONFIG` on that config) and a pass that runs every step once more and fails if any acts (each timelock wait followed by a fresh round on every feed, `e2e/refresh-feeds.ts`; `E2E_RESUME=<step>` reruns from a step on the saved chain), the release manifest produced and verified (`packages/protocol`, `npm run manifest`), the keeper, the indexer and a local Convex deployment on that manifest (`e2e/convex-check.ts`: every listed market and debt reserve has its page with data and its listing text), the scenarios; each step pass, fail or not-run in `deployments-local/anvil/e2e-status.json`. |
 | `check-ai-credit.sh`, `check-ai-credit.test.sh` | the `commit-msg` hook (`lefthook.yml`) and CI (`commit-messages.yml`, every pull request); the test in CI (`contracts.yml` scripts job) | Fails on an AI credit in a commit message or pull request text: an AI co-author trailer, the AI vendor's noreply address, or a "Generated with" line naming an AI tool. CI checks only the pull request's own commits (base..head), so commits already on main are not checked. |
 | `check-file-size.sh` | CI and local | Fails when an implementation file in `src/` exceeds 500 lines of code or an interface file exceeds 300 lines (`Q-240`); see [File layout and size limits](../README.md#file-layout-and-size-limits). |
@@ -82,6 +83,54 @@ Every listed pool gets two ERC-20 markets with the same LTV (the lower of the tw
 
 `test/integration/DeployScripts.integration.t.sol` runs every step in this order on the real local Aave V4 and real Uniswap v3 pools.
 
+## Keeper gas
+
+The keeper signers (the config's `keepers` and each operator helper's `signer`) pay their own gas. The **keeper top-up wallet** holds the chain's keeper gas and refills them: `11-fund-keepers` sends each signer below `keeperTopUp.minBalanceWei` back up to `keeperTopUp.targetBalanceWei`, one transfer each, signed by the wallet. It is the rule the removed AvanaGasVault applied, without the contract: run it after `09-execute-listing-activate`, then whenever a signer runs low (a signer at or above its minimum gets nothing). The wallet is required on test networks and mainnet (`KEEPER_TOPUP_WALLET` or `keeperTopUp.wallet`); it signs from its encrypted Foundry keystore (one of `AVANA_KEYSTORE_PATHS`, or `AVANA_SIGNER_FLAGS="--account <topup> --sender 0x…"`), never from a key in the environment. On test networks `script/testnet/testnet.ts` names it from the private config's `KEEPER_TOPUP_WALLET` keystore and sets the band (`KEEPER_TOP_UP`).
+
+### Deploy gas per step
+
+Measured by `test/integration/DeployScripts.integration.t.sol` (`forge test -j 2 --match-path test/integration/DeployScripts.integration.t.sol -vv` logs `gas <step>`): one integration (Uniswap v3), one Hub, one debt asset, two pools listed as four markets. Each figure is the step's execution gas plus, per broadcast transaction, the intrinsic 21,000 gas and its calldata; it is an upper bound, since it includes the script's own config reads. Prices: Sepolia **1.0 gwei** (base fee 14 to 19 wei and a 1 gwei median priority fee over the 1,024 blocks from 12,171,329, `eth_feeHistory` on a public Sepolia RPC, 2026-11-19); Base Sepolia **0.0072 gwei** (base fee 0.005 gwei, flat over the 1,024 blocks from 61,091,274, plus the 90th-percentile tip 0.0022 gwei, same day). Base Sepolia's L1 data fee is left out of the rows: its `GasPriceOracle` (`0x4200…000F`) quoted `getL1FeeUpperBound(1000)` = 786 wei per 1,000 bytes that day (L1 base fee 14 wei), under 0.000000002 ETH for the whole deploy's calldata.
+
+| Step | Transactions | Gas | Sepolia ETH | Base Sepolia ETH |
+|---|---:|---:|---:|---:|
+| `00-factories` | 1 | 272,029 | 0.00027 | 0.0000020 |
+| `03-avana` | 28 | 21,921,513 | 0.02192 | 0.0001578 |
+| `07-deploy-first-loss-reserves` | 2 | 6,559,402 | 0.00656 | 0.0000472 |
+| `08-aave-loss-layers-aip` | 17 | 5,708,509 | 0.00571 | 0.0000411 |
+| `07-fund-first-loss-reserves` | 3 | 792,587 | 0.00079 | 0.0000057 |
+| `09-listing-setup` | 1 | 3,669,510 | 0.00367 | 0.0000264 |
+| `09-execute-listing-setup` (05) | 5 | 671,127 | 0.00067 | 0.0000048 |
+| `09-listing-markets` | 1 | 2,013,697 | 0.00201 | 0.0000145 |
+| `09-execute-listing-markets` (05) | 2 | 1,159,637 | 0.00116 | 0.0000083 |
+| `09-vault-tokens` | 9 | 14,875,390 | 0.01488 | 0.0001071 |
+| `10-aave-markets-aip` | 14 | 6,703,671 | 0.00670 | 0.0000483 |
+| `09-listing-activate` | 1 | 749,559 | 0.00075 | 0.0000054 |
+| `09-execute-listing-activate` (05) | 4 | 885,347 | 0.00089 | 0.0000064 |
+| `11-fund-keepers` | 1 | 133,299 | 0.00013 | 0.0000010 |
+| **Total** | **89** | **66,115,277** | **0.0661** | **0.00048** |
+
+The steps grow with the listing: `03-avana` by about 22M gas per integration, and each pool (two markets) adds about 13.2M across `09-listing-markets`, `09-vault-tokens`, `10-aave-markets-aip`, `09-listing-activate` and their executions. The test networks' first release (three integrations; Sepolia's Hub files list 10 pools, 20 markets, Base Sepolia's 12 pools, 24 markets) therefore takes about **216M gas on Sepolia (0.22 ETH at 1 gwei)** and **242M gas on Base Sepolia (0.0017 ETH at 0.0072 gwei)** for steps 03 to 11. Steps 01 and 02 (Avana's own Aave V4 and the test world) are not counted. Keep three times that on the deployer for fee spikes: 0.65 ETH on Sepolia, 0.006 ETH on Base Sepolia.
+
+### Keeper spend per day and the top-up wallet
+
+Since the refactor the keepers send only liquidations. The oracles are stateless (no pokes), there is no pending settlement, bands are fixed at listing, and a depeg is an alert the risk steward answers with a freeze from its Safe, so the band and depeg monitors send nothing. The wallet's own refills are one 21,000-gas transfer per signer at most once a day.
+
+| Item | Gas | Basis |
+|---|---:|---|
+| One liquidation | 1,300,000 | about 1M for `LiquidationModule.liquidate` and the NFT unwind (LiquidationModule DESIGN.md), plus the flash path's Aave V3 flash loan and two SwapRouter02 swaps |
+| Daily spend `D` per signer (test network) | 13,000,000 | 10 liquidations a day from the scenarios and price moves; one signer per network (`KEEPER` is both the keeper and the operator helper signer) |
+| Burst `B` | 65,000,000 at twice the price | 50 liquidations: every account the stress shock makes liquidatable on a 20 to 24 market test world |
+| Wallet refill | 21,000 | one transfer per signer per refill |
+
+The band follows the AvanaGasVault's rule: `minBalanceWei` = 3 `D`, `targetBalanceWei` = 7 `D` + `B`, and the wallet holds a first fill to the target plus 30 days of `D` and one `B`.
+
+| Network | `D` per day | `minBalanceWei` | `targetBalanceWei` | Wallet need | **Recommended `KEEPER_TOPUP_WALLET` balance** |
+|---|---:|---:|---:|---:|---:|
+| Sepolia (1.0 gwei) | 0.013 ETH | 0.04 ETH | 0.25 ETH | 0.77 ETH | **1.0 ETH** |
+| Base Sepolia (0.0072 gwei; L1 data about 500 wei a transaction) | 0.000094 ETH | 0.0005 ETH | 0.002 ETH | 0.0058 ETH | **0.01 ETH** |
+
+The headroom (about 30% on Sepolia, 70% on Base Sepolia) covers a priority fee above 1 gwei or a busier test day. Re-derive `D` and the band before a listing that adds markets, from the keepers' measured spend once it exists, and on mainnet from the chain's own gas price; the anvil config uses 3 and 10 ETH.
+
 
 ## Verification before `deployments/verified/`
 
@@ -115,6 +164,7 @@ Scripts read manifests with `vm.readFile` and `vm.parseJson*` (`fs_permissions` 
 | `AVANA_RELEASE` | `03`, `04`, `09` | Release tag used in salts and output file names, default the config's `release`. Checked on every run (see [Releases and tags](#releases-and-tags)) |
 | `AVANA_RELEASE_RECORD` | `03` | Path from `contracts/` of the release workflow's `release.json` for this tag, default `deployments-local/<network>/release.json` when present; `03` refuses to deploy unless its release, commit, CREATE3 factory, salts and (for this deployer) addresses match |
 | `AVANA_OPERATION_GAS_BUDGET` | `09` (`markets`) | Execution gas budget of each listing operation; overrides the config's `.chain.operationGasBudget` (default 40,000,000) |
+| `KEEPER_TOPUP_WALLET` | every step off anvil, `11` | Address of the keeper top-up wallet; overrides the config's `keeperTopUp.wallet`. Required on test networks and mainnet (in the environment or the config): `step.sh` stops every step without it, and `00_Factories`, `03_DeployAvana` and `11_FundKeepers` check it before their first transaction (a real address, `0 < minBalanceWei < targetBalanceWei`, not a keeper signer). Optional on anvil |
 | `AVANA_FIXTURE` | hostile suites | `fork` runs the hostile-component tests on the Ethereum fork |
 
 Every name is listed, without values, in [`../.env.example`](../.env.example); Foundry and the Makefile read the values from `contracts/.env`.
@@ -135,9 +185,13 @@ anvil --auto-impersonate --code-size-limit 49152 --gas-limit 60000000 &
 AVANA_NETWORK=anvil AVANA_RPC_URL=http://127.0.0.1:8545 script/deploy/step.sh 00-factories
 AVANA_NETWORK=anvil AVANA_RPC_URL=http://127.0.0.1:8545 script/deploy/step.sh 01-aave-v4
 
-# Off anvil: a keystore or Ledger signer, the release tag checked out
-AVANA_NETWORK=sepolia AVANA_RPC_URL="$RPC_SEPOLIA" AVANA_RELEASE=<tag> \
+# Off anvil: a keystore or Ledger signer, the release tag checked out, the keeper top-up wallet named
+AVANA_NETWORK=sepolia AVANA_RPC_URL="$RPC_SEPOLIA" AVANA_RELEASE=<tag> KEEPER_TOPUP_WALLET=0x… \
   AVANA_SIGNER_FLAGS="--account deployer --sender 0x…" script/deploy/step.sh 03-avana
+
+# The keeper signers refilled by the top-up wallet, from its keystore (password from a file or the prompt)
+AVANA_NETWORK=sepolia AVANA_RPC_URL="$RPC_SEPOLIA" KEEPER_TOPUP_WALLET=0x… \
+  AVANA_SIGNER_FLAGS="--account keeper-topup --sender 0x…" script/deploy/step.sh 11-fund-keepers
 
 # Dry run of the Avana deployment on a mainnet fork (simulated, nothing broadcast)
 AVANA_NETWORK=ethereum AVANA_RELEASE=<tag> forge script script/deploy/03_DeployAvana.s.sol --fork-url "$RPC_MAINNET" --fork-block-number "$MAINNET_FORK_BLOCK"
