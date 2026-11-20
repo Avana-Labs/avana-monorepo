@@ -173,6 +173,23 @@ contract FirstLossReserveUnitTest is FirstLossReserveFixture {
         assertEq(gho.balanceOf(avanaLabs), 1000e18);
     }
 
+    /// @notice A scheduled withdrawal that takes the layer under its minimum raises the alert, so a withdrawal cannot
+    /// drain the first-loss cover below the committed size without monitoring seeing it.
+    function test_withdraw_belowMinimumRaisesTheAlert() public {
+        uint256 min = avanaLayer.minimum();
+        uint256 balance = avanaLayer.fundedBalance();
+        bytes memory data = abi.encodeCall(IFirstLossReserve.withdraw, (balance - min + 1000e18, avanaLabs));
+        IAccessManager manager = IAccessManager(aave.accessManager);
+        vm.prank(aaveGovernanceExecutor);
+        manager.schedule(address(avanaLayer), data, 0);
+        vm.warp(block.timestamp + 14 days);
+        vm.expectEmit(address(avanaLayer));
+        emit IFirstLossReserve.BelowMinimum(min - 1000e18, min);
+        vm.prank(aaveGovernanceExecutor);
+        manager.execute(address(avanaLayer), data);
+        assertTrue(avanaLayer.isBelowMinimum());
+    }
+
     function test_withdraw_blockedWhileDeficitOutstanding() public {
         _reportDeficit(ghoAssetId, cdp, 10e18);
         bytes memory data = abi.encodeCall(IFirstLossReserve.withdraw, (1000e18, avanaLabs));

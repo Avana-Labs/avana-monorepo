@@ -100,6 +100,12 @@ contract LiquidationModuleUnitTest is LiquidationModuleTestBase {
         assertEq(steps.length, 1);
         assertEq(steps[0].positionKey, wide, "band-wide first");
         assertEq(shortfall, 0);
+        // Past the band-wide position the plan moves on to the narrow one: the sort keeps every position, so no
+        // position drops out of the plan and none is unwound twice.
+        (steps,) = module.previewUnwind(account, CUSTOM, uint256(wideCredit) + 10e18);
+        assertEq(steps.length, 2);
+        assertEq(steps[0].positionKey, wide, "band-wide first");
+        assertEq(steps[1].positionKey, narrow, "then the narrow one");
 
         _liquidate(CUSTOM, account, 40e18);
         assertEq(vault.getPosition(narrow).credit, narrowCredit, "narrow untouched");
@@ -168,6 +174,16 @@ contract LiquidationModuleUnitTest is LiquidationModuleTestBase {
     function test_feeUnits_arfcExample() public pure {
         assertEq(LiquidationMath.feeUnits(4998e18, 10_200, 2000), 19.6e18);
         assertEq(LiquidationMath.feeUnits(4998e18, 10_000, 2000), 0, "no bonus, no fee");
+        // At a 100% bonus half the seized units are bonus: 1,000 seized hold 500 of bonus, Avana's 20% is 100.
+        assertEq(LiquidationMath.feeUnits(1000e18, 20_000, 2000), 100e18, "100% bonus");
+    }
+
+    /// @notice A WETH/USDC position's worth at the oracle prices: 1 WETH (18 decimals) at $3,000 and 3,000 USDC
+    /// (6 decimals) at $1 are worth $6,000 in 18 decimals, whichever side each token is on. A wrong worth moves the
+    /// least-excess-first order and the credit unwound per seized unit.
+    function test_value_wethUsdcAtOraclePrices() public pure {
+        assertEq(LiquidationMath.value(1e18, 3000e6, 3000e8, 1e8, 18, 6), 6000e18, "WETH as token0");
+        assertEq(LiquidationMath.value(3000e6, 1e18, 1e8, 3000e8, 6, 18), 6000e18, "WETH as token1");
         assertEq(LiquidationMath.feeUnits(4998e18, 10_200, 0), 0, "no share, no fee");
     }
 
@@ -252,5 +268,8 @@ contract LiquidationModuleUnitTest is LiquidationModuleTestBase {
         assertEq(usdc.balanceOf(address(module)), 0, "no debt token left");
         assertEq(vtFull.balanceOf(address(module)), 0, "no full vault tokens left");
         assertEq(vtCustom.balanceOf(address(module)), 0, "no custom vault tokens left");
+        // An allowance left on the Spoke would let it pull the debt token of the next liquidator, who pays this
+        // module first, for a liquidation that liquidator did not ask for.
+        assertEq(usdc.allowance(address(module), address(spoke)), 0, "no allowance left on the Spoke");
     }
 }

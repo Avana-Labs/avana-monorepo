@@ -230,6 +230,36 @@ contract LPVaultUniswapV3IntegrationTest is ClPoolFixture {
         assertEq(fa0 + fa1, 0);
     }
 
+    /// @notice A position opened after the pool earned fees, then left above and below by the price: at each stop the
+    /// view equals what the NonfungiblePositionManager pays, so the fees reported for an out-of-range position (above:
+    /// growth `upper - lower`, below: `lower - upper`, back inside after both ticks were crossed) are the real ones.
+    function test_fees_viewMatchesCollectAboveBelowAndBackInRange() public {
+        _trade();
+        (bytes32 k,) = _mintPosition(-600, 600);
+        _pledge(k);
+        _checkFeesPaid(k, 1500);
+        _checkFeesPaid(k, -1500);
+        _checkFeesPaid(k, 0);
+    }
+
+    /// @dev Swaps to `tick`, then checks that `collectFees` pays exactly `feesOf`, and that some fee was earned.
+    function _checkFeesPaid(
+        bytes32 k,
+        int24 tick
+    ) internal {
+        _swapTo(pool, ClTickMath.getSqrtPriceAtTick(tick));
+        (uint256 v0, uint256 v1) = vault.feesOf(k);
+        assertGt(v0 + v1, 0, "fees earned on the way");
+        uint256 b0 = t0.balanceOf(recipient);
+        uint256 b1 = t1.balanceOf(recipient);
+        bytes32[] memory keys = new bytes32[](1);
+        keys[0] = k;
+        vm.prank(adapter);
+        vault.collectFees(account, keys, recipient);
+        assertEq(t0.balanceOf(recipient) - b0, v0, "token0 paid as viewed");
+        assertEq(t1.balanceOf(recipient) - b1, v1, "token1 paid as viewed");
+    }
+
     function test_fees_stayWithThePositionThroughAPartialRemoval() public {
         (bytes32 key, uint128 l0) = _mintPosition(-1200, 1200);
         _pledge(key);

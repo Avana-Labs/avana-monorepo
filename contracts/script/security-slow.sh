@@ -479,8 +479,9 @@ hevm_chain_start() {
 hevm_chain_stop() { [ -n "$HEVM_ANVIL_PID" ] && kill "$HEVM_ANVIL_PID" 2>/dev/null; HEVM_ANVIL_PID=""; }
 
 # hevm_symbolic <log> <args...>: hevm against the chain's latest block; 0 on QED, 1 on a counterexample or error, 2 on
-# a partial exploration, 3 when HEVM_ENTRY_TIMEOUT ended the run (no result). The bound is per run, so a CI job that
-# runs a batch of targets ends each one in time: CollateralizationProperties.pledge took 3 h 51 min in run 43677588077
+# a partial exploration, 3 when HEVM_ENTRY_TIMEOUT ended the run (no result), 4 when the SECURITY_MEMORY_MAX scope
+# killed it (no result). The bound is per run, so a CI job that runs a batch of targets ends each one in time:
+# CollateralizationProperties.pledge took 3 h 51 min in run 43677588077
 # (24 counterexamples, none reproduced, no iteration bound reached) and an AvanaTimelockProperties entry point ran
 # into the 4-hour job limit.
 # Block context: hevm 0.58 takes the block number, coinbase, base fee and prevrandao of the fetched block but leaves
@@ -520,6 +521,7 @@ hevm_symbolic() {
     echo "hevm: timed out after $HEVM_ENTRY_TIMEOUT s (HEVM_ENTRY_TIMEOUT)" >>"$log"
     return 3
   fi
+  { [ "$rc" -eq 137 ] || grep -q 'killed by SIGKILL' "$log"; } && return 4
   if grep -q 'QED' "$log" && ! grep -qi 'partially explore' "$log"; then return 0; fi
   if grep -qiE 'counterexample|discovered the following|internal error' "$log"; then return 1; fi
   if grep -qi 'partially explore' "$log"; then return 2; fi
@@ -640,14 +642,38 @@ hevm_targets() {
     seen+=" src:$name"
     cast rpc --rpc-url "$HEVM_RPC" anvil_setCode "$HEVM_SRC_ADDRESS" "0x$(cat "$hex")" >/dev/null &&
       cast rpc --rpc-url "$HEVM_RPC" anvil_mine >/dev/null || return 1
-    hevm_symbolic "$OUT/hevm/src-$name.log" --address "$HEVM_SRC_ADDRESS" --only-deployed
-    rc=$?
-    case $rc in
-      0) echo "hevm src $name: QED" ;;
-      2) echo "hevm src $name: no assertion violation found, explored partially (see $OUT/hevm/src-$name.log)" ;;
-      3) echo "hevm src $name: no assertion violation found, timed out after $HEVM_ENTRY_TIMEOUT s (see $OUT/hevm/src-$name.log)" ;;
-      *) echo "hevm src $name: FAIL (see $OUT/hevm/src-$name.log)"; status=1 ;;
-    esac
+    local sigs="" sig slog
+    # These two implementations exhaust a runner when hevm explores the full selector dispatcher at once. Keep the
+    # check complete by exploring each ABI entry separately; any result short of QED fails CI for these targets.
+    if [ "$name" = AaveAdapter ] || [ "$name" = FlashloanRepay ]; then
+      sigs=$("$PY" script/security-targets.py external-sigs "$BUILD" "$name") || return 1
+    fi
+    if [ -n "$sigs" ]; then
+      while IFS= read -r sig; do
+        [ -n "$sig" ] || continue
+        slog="$OUT/hevm/src-$name.${sig//[^a-zA-Z0-9_]/_}.log"
+        hevm_symbolic "$slog" --address "$HEVM_SRC_ADDRESS" --only-deployed --sig "$sig"
+        rc=$?
+        case $rc in
+          0) echo "hevm src $name.$sig: QED" ;;
+          2) echo "hevm src $name.$sig: FAIL, explored only partially (see $slog)"; status=1 ;;
+          3) echo "hevm src $name.$sig: FAIL, timed out after $HEVM_ENTRY_TIMEOUT s (see $slog)"; status=1 ;;
+          4) echo "hevm src $name.$sig: FAIL, killed at the memory cap, no result (see $slog)"; status=1 ;;
+          *) echo "hevm src $name.$sig: FAIL (see $slog)"; status=1 ;;
+        esac
+      done <<<"$sigs"
+    else
+      slog="$OUT/hevm/src-$name.log"
+      hevm_symbolic "$slog" --address "$HEVM_SRC_ADDRESS" --only-deployed
+      rc=$?
+      case $rc in
+        0) echo "hevm src $name: QED" ;;
+        2) echo "hevm src $name: no assertion violation found, explored partially (see $slog)" ;;
+        3) echo "hevm src $name: no assertion violation found, timed out after $HEVM_ENTRY_TIMEOUT s (see $slog)" ;;
+        4) echo "hevm src $name: FAIL, killed at the memory cap, no result (see $slog)"; status=1 ;;
+        *) echo "hevm src $name: FAIL (see $slog)"; status=1 ;;
+      esac
+    fi
   done <<<"$list"
 
   if ! selected "${HEVM_TARGETS:-}" test; then

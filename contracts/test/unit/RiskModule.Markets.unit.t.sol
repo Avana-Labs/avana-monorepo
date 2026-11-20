@@ -219,6 +219,10 @@ contract RiskModuleMarketsUnitTest is Test {
         assertEq(rm.spokeWidth(IRiskModule.SpokeKind.Stable).above, 60);
         vm.expectRevert(abi.encodeWithSelector(IRiskModule.InvalidWidth.selector, 0, 60));
         rm.setSpokeWidth(IRiskModule.SpokeKind.Stable, IRiskModule.Width(0, 60));
+        // A side wider than the whole tick range (2 * 887,272 ticks) is a misconfiguration, never a band.
+        vm.expectRevert(abi.encodeWithSelector(IRiskModule.InvalidWidth.selector, 1_774_545, 60));
+        rm.setSpokeWidth(IRiskModule.SpokeKind.Stable, IRiskModule.Width(1_774_545, 60));
+        rm.setSpokeWidth(IRiskModule.SpokeKind.Stable, IRiskModule.Width(1_774_544, 60));
         vm.expectRevert(abi.encodeWithSelector(IRiskModule.InvalidSpoke.selector, address(0)));
         rm.setSpokeWidth(IRiskModule.SpokeKind.None, IRiskModule.Width(1, 1));
     }
@@ -288,6 +292,18 @@ contract RiskModuleMarketsUnitTest is Test {
         assertLt(c.bandUpper - c.bandLower, 500 + 2 * SPACING);
     }
 
+    /// @notice A per-pool width with one side zero is rejected, not listed as a band that ends at the listing tick
+    /// and leaves the price no room on that side.
+    function test_listPool_revertsOnOneSidedWidthOverride() public {
+        IRiskModule.ListPoolParams memory p = _params();
+        p.width = IRiskModule.Width(0, 300);
+        vm.expectRevert(abi.encodeWithSelector(IRiskModule.InvalidWidth.selector, 0, 300));
+        rm.listPool(p);
+        p.width = IRiskModule.Width(300, 0);
+        vm.expectRevert(abi.encodeWithSelector(IRiskModule.InvalidWidth.selector, 300, 0));
+        rm.listPool(p);
+    }
+
     function test_listPool_stableSpokeDefault() public {
         rm.registerSpoke(address(spoke), address(hub), IRiskModule.SpokeKind.Stable);
         (, uint256 custom) = _list();
@@ -337,6 +353,16 @@ contract RiskModuleMarketsUnitTest is Test {
         p.listingTick += 2624;
         vm.expectPartialRevert(IRiskModule.PriceOutsideBand.selector);
         rm.listPool(p);
+    }
+
+    /// @notice A USD stablecoin feed above $1 is read at $1, as the LPOracle reads it: USDC at $1.05 does not move the
+    /// listing price of WETH/USDC out of the band set at the $1 price, so listing does not depend on a stable's premium.
+    function test_listPool_stablecoinAboveOneDollarReadsAtOneDollar() public {
+        rm.registerSpoke(address(spoke), address(hub), IRiskModule.SpokeKind.Stable);
+        IRiskModule.ListPoolParams memory p = _params();
+        usdcUsd.set(1.05e8);
+        (uint256 full,) = rm.listPool(p);
+        assertEq(rm.getMarket(full).pool, POOL);
     }
 
     function test_listPool_volatileBandHoldsAThirtyPercentMove() public {

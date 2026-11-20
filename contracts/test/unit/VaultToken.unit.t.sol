@@ -80,6 +80,14 @@ contract VaultTokenUnitTest is Test {
         assertEq(token.authority(), address(am));
     }
 
+    /// @dev A token deployed for a market other than 1 reports that market: the adapter and the registry pair the token
+    ///      with its market by this id, so a token reading another id would be priced and seized under the wrong market.
+    function test_constructor_marketIdOfItsOwnMarket() public {
+        IVaultToken.Params memory p = _params();
+        p.marketId = 7;
+        assertEq(new VaultToken(p).marketId(), 7);
+    }
+
     function test_revert_constructor() public {
         IVaultToken.Params memory p = _params();
         p.hub = address(0);

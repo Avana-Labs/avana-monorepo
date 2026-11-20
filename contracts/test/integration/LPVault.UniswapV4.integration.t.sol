@@ -153,6 +153,66 @@ contract LPVaultUniswapV4IntegrationTest is UniswapV4WorldFixture {
         assertEq(t0.balanceOf(address(vault)), 0);
     }
 
+    /// @notice A position earns both token fees while the price crosses its range, then is checked above, below and
+    /// inside the range: the view equals the PositionManager payout at each stop, including outside-growth ordering.
+    function test_feesOf_matchesCollectAboveBelowAndBackInRange() public {
+        (bytes32 pk,) = _position(key, -600, 600, 1e20);
+        _pledge(pk, MARKET);
+        _washV4(key, 1e20);
+        (uint256 f0, uint256 f1) = vault.feesOf(pk);
+        assertGt(f0, 0, "fees accrued in token0 while price crossed the range");
+        assertGt(f1, 0, "fees accrued in token1 while price crossed the range");
+        _checkFeesPaid(pk, 1500);
+        _checkFeesPaid(pk, -1500);
+        _checkFeesPaid(pk, 0);
+    }
+
+    /// @notice Fees earned before a top-up stay the position's: they are taken and held first, not spent on the new
+    /// liquidity, so the payer pays the whole top-up and the owner still collects the fees.
+    function test_addLiquidity_keepsTheFeesEarnedBefore() public {
+        (bytes32 pk,) = _position(key, -1200, 1200, 1e20);
+        _pledge(pk, MARKET);
+        _washV4(key, 1e20);
+        (uint256 f0, uint256 f1) = vault.feesOf(pk);
+        assertGt(f0, 0);
+        assertGt(f1, 0);
+        vm.prank(adapter);
+        vault.addLiquidity(pk, address(this), 1e18, 1e18, 0, 0);
+        (uint256 g0, uint256 g1) = vault.feesOf(pk);
+        assertEq(g0, f0, "token0 fees kept");
+        assertEq(g1, f1, "token1 fees kept");
+        bytes32[] memory keys = new bytes32[](1);
+        keys[0] = pk;
+        address owner = makeAddr("owner");
+        vm.prank(adapter);
+        vault.collectFees(account, keys, owner);
+        assertEq(t0.balanceOf(owner), f0);
+        assertEq(t1.balanceOf(owner), f1);
+    }
+
+    /// @notice A top-up bound by token1 takes only the token0 it uses and returns the rest, on an ERC-20 pair and on a
+    /// native-ETH pair (whose unused ETH is wrapped back), and leaves nothing in the PositionManager.
+    function test_addLiquidity_token1BoundReturnsTheUnusedToken0() public {
+        _checkAddToken1Bound(key, MARKET, address(t0), address(t1));
+        _checkAddToken1Bound(nativeKey, NATIVE_MARKET, address(weth), address(t1));
+    }
+
+    /// @notice A top-up of a range below the price takes only token1, and the liquidity added is what that token1 buys.
+    function test_addLiquidity_belowThePriceTakesOnlyToken1() public {
+        (bytes32 pk, uint128 l0) = _position(key, -1200, -600, 1e20);
+        _pledge(pk, MARKET);
+        uint256 before1 = t1.balanceOf(address(this));
+        vm.prank(adapter);
+        (uint128 added,, uint256 a0, uint256 a1) = vault.addLiquidity(pk, address(this), 1e18, 1e18, 0, 0);
+        assertGt(added, 0);
+        assertEq(a0, 0, "a range below the price holds no token0");
+        assertLe(a1, 1e18);
+        assertGt(a1, 1e18 - 1e6, "nearly all of the token1 is used");
+        assertEq(before1 - t1.balanceOf(address(this)), a1);
+        assertEq(vault.getPosition(pk).liquidity, l0 + added);
+        assertEq(_live(key, pk), l0 + added);
+    }
+
     function test_unwindThenRelease() public {
         (bytes32 k,) = _position(key, -1200, 1200, 1e20);
         uint128 credit = _pledge(k, MARKET);
@@ -198,6 +258,48 @@ contract LPVaultUniswapV4IntegrationTest is UniswapV4WorldFixture {
         assertEq(p.liquidity, l0 + added);
         assertEq(p.credit, c0 + credit);
         assertEq(_live(k, pk), p.liquidity);
+        assertEq(IERC20(token0).balanceOf(address(vault)), 0);
+        assertEq(IERC20(token1).balanceOf(address(vault)), 0);
+    }
+
+    /// @dev Swaps `key` to `tick`, then checks that `collectFees` pays exactly `feesOf`, and that some fee was earned.
+    function _checkFeesPaid(
+        bytes32 pk,
+        int24 tick
+    ) internal {
+        _swapV4To(key, ClTickMath.getSqrtPriceAtTick(tick));
+        (uint256 v0, uint256 v1) = vault.feesOf(pk);
+        assertGt(v0 + v1, 0, "fees earned on the way");
+        uint256 b0 = t0.balanceOf(recipient);
+        uint256 b1 = t1.balanceOf(recipient);
+        bytes32[] memory keys = new bytes32[](1);
+        keys[0] = pk;
+        vm.prank(adapter);
+        vault.collectFees(account, keys, recipient);
+        assertEq(t0.balanceOf(recipient) - b0, v0, "token0 paid as viewed");
+        assertEq(t1.balanceOf(recipient) - b1, v1, "token1 paid as viewed");
+    }
+
+    function _checkAddToken1Bound(
+        PoolKey memory k,
+        uint256 marketId,
+        address token0,
+        address token1
+    ) internal {
+        (bytes32 pk,) = _position(k, -1200, 1200, 1e20);
+        _pledge(pk, marketId);
+        uint256 before0 = IERC20(token0).balanceOf(address(this));
+        uint256 before1 = IERC20(token1).balanceOf(address(this));
+        vm.prank(adapter);
+        (uint128 added,, uint256 a0, uint256 a1) = vault.addLiquidity(pk, address(this), 3e18, 1e18, 0, 0);
+        assertGt(added, 0);
+        assertEq(before0 - IERC20(token0).balanceOf(address(this)), a0);
+        assertEq(before1 - IERC20(token1).balanceOf(address(this)), a1);
+        assertGt(a1, 1e18 - 1e6, "token1 binds");
+        assertLt(a0, 2e18, "the unused token0 comes back");
+        assertEq(address(posm).balance, 0, "no ETH left in the PositionManager");
+        assertEq(IERC20(token0).balanceOf(address(posm)), 0);
+        assertEq(IERC20(token1).balanceOf(address(posm)), 0);
         assertEq(IERC20(token0).balanceOf(address(vault)), 0);
         assertEq(IERC20(token1).balanceOf(address(vault)), 0);
     }
