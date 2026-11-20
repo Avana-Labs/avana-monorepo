@@ -10,3 +10,6 @@ pledged position is in [the LPVault lifecycle](../vault/LIFECYCLE.md).
 - `slipstream/SlipstreamIntegration.sol`: four position-manager generations; the generation is the key's high byte.
 - `uniswap-v4/UniswapV4Integration.sol`: the PositionManager of hookless pools; a pool is its `PoolId`, registered with
   `registerPool(key)` first. Fees are taken in their own batch before each liquidity change.
+- `uniswap-v2/UniswapV2Integration.sol`: Uniswap v2 LP tokens, wrapped one pair per NFT by
+  `uniswap-v2/UniswapV2Positions.sol`; full range with liquidity `lp · √k / supply`, Full range markets only. Fees
+  compound into the LP; `mint` and `burn` move liquidity. See [the v2 design record](uniswap-v2/DESIGN.md).

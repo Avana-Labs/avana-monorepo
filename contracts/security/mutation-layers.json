@@ -10,6 +10,7 @@
     ],
     "2.2": [
       {"src": "src/integrations/shared", "tests": "test/{unit,integration}/LPVault*"},
+      {"src": "src/integrations/uniswap-v2", "tests": "test/{unit,integration}/LPVault.UniswapV2*"},
       {"src": "src/integrations/uniswap-v3", "tests": "test/{unit,integration}/LPVault*"},
       {"src": "src/integrations/slipstream", "tests": "test/{unit,integration}/LPVault*"},
       {"src": "src/integrations/uniswap-v4", "tests": "test/{unit,fuzz,integration}/LPVault*"}

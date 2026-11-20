@@ -13,6 +13,8 @@
   "files": {
     "src/integrations/shared/ClTickMath.sol": 98,
     "src/integrations/slipstream/SlipstreamIntegration.sol": 90,
+    "src/integrations/uniswap-v2/UniswapV2Integration.sol": 100,
+    "src/integrations/uniswap-v2/UniswapV2Positions.sol": 100,
     "src/integrations/uniswap-v3/UniswapV3Integration.sol": 88,
     "src/risk/RiskModule.sol": 100,
     "src/token/VaultToken.sol": 100,
