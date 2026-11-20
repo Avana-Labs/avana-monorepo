@@ -28,6 +28,12 @@
 #   10-aave-markets-aip           AAVE  adapters as position managers, debt reserves borrowable, vault-token reserves
 #   09-listing-activate           activateMarket for each market (timelock)
 #   09-execute-listing-activate
+#   11-fund-keepers                     the keeper top-up wallet refills each keeper signer below its minimum to its
+#                                       target (rerun whenever a signer runs low; script/README.md, Keeper gas)
+#
+# Keeper top-up wallet: on every chain but a local node, KEEPER_TOPUP_WALLET (an address) or the config's
+# keeperTopUp.wallet is required, and every step stops at once without it. 11-fund-keepers signs as that wallet: its
+# encrypted keystore is one of AVANA_KEYSTORE_PATHS, or AVANA_SIGNER_FLAGS names it (`--account <topup> --sender 0x…`).
 #
 # Signing: on anvil every sender is unlocked (anvil --auto-impersonate): the deployer is AVANA_DEPLOYER (default the
 # first anvil account) and the Safe, the Aave executor's PayloadsController and the faucet come from the network
@@ -75,11 +81,22 @@ case "$step" in
   10-aave-markets-aip) script=10_AaveListingPayload.s.sol ;;
   09-listing-activate) script=09_ListMarkets.s.sol; envs+=(AVANA_LISTING_STEP=activate); schedule=1 ;;
   09-execute-listing-activate) script=05_ExecuteOperations.s.sol; envs+=(AVANA_OPERATIONS=listing-activate) ;;
+  11-fund-keepers) script=11_FundKeepers.s.sol ;;
   *) echo "unknown step $step; the steps are listed at the top of script/deploy/step.sh" >&2; exit 2 ;;
 esac
 
 local_net=0
 case "$(cast chain-id)" in 31337 | 31338) local_net=1 ;; esac
+# Off a local node the keeper top-up wallet is required: stop before any step when neither KEEPER_TOPUP_WALLET nor the
+# config names one (DeployInputs._keeperTopUp checks the rest: the address, the balances, not a keeper).
+if [ $local_net -eq 0 ] && [ -z "${KEEPER_TOPUP_WALLET:-}" ]; then
+  config="${AVANA_CONFIG:-script/deploy/config/$AVANA_NETWORK.json}"
+  if [ ! -f "$config" ] || ! tr -d ' \t\r\n' < "$config" | grep -q '"keeperTopUp":{[^}]*"wallet":"[^"]\{1,\}"'; then
+    echo "KEEPER_TOPUP_WALLET is missing: set keeperTopUp.wallet in $config, or the KEEPER_TOPUP_WALLET environment" \
+      "variable, to the address that funds the keeper signers (required on test networks and mainnet)" >&2
+    exit 2
+  fi
+fi
 if [ $local_net -eq 1 ]; then
   sender="$deployer"
   # The scheduling steps broadcast as the deployer and schedule as the Safe (09-vault-tokens: send as the DAO).

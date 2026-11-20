@@ -5,6 +5,8 @@ DEPLOYER=<keystore name>
 GOVERNANCE=<keystore name>
 PAYLOADS_CONTROLLER=<keystore name>
 ORACLES=<keystore name>,<keystore name>,<keystore name>,<keystore name>
+# Required: the keeper top-up wallet's keystore. It funds the keeper signer (11-fund-keepers); fund it with test ETH.
+KEEPER_TOPUP_WALLET=<keystore name>
 TREASURY=<address>
 KEEPER=<address>
 AAVE_PROTOCOL_GUARDIAN=<address>

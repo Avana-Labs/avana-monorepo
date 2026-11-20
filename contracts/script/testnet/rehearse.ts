@@ -57,14 +57,14 @@ function makeRoles(home: string): string {
   const pw = join(home, "pass");
   if (!existsSync(pw)) writeFileSync(pw, randomBytes(32).toString("hex"), { mode: 0o600 });
   const password = readFileSync(pw, "utf8");
-  const names = Array.from({ length: 12 }, (_, i) => `k${i}`);
+  const names = Array.from({ length: 13 }, (_, i) => `k${i}`);
   for (const k of names) if (!existsSync(join(ks, k))) cast(["wallet", "new", ks, k], { CAST_PASSWORD: password });
   const file = join(home, "config.env");
   if (!existsSync(file)) {
     // Five keystores only lend their addresses to the roles that sign nothing; their keys go with the directory.
     const address = (k: string) => cast(["wallet", "address", "--keystore", join(ks, k), "--password-file", pw]);
     const lines = [
-      `KEYSTORE_DIR=${ks}`, `PASSWORD_FILE=${pw}`, "DEPLOYER=k0", "GOVERNANCE=k1", "PAYLOADS_CONTROLLER=k2", "ORACLES=k3,k4,k5,k6",
+      `KEYSTORE_DIR=${ks}`, `PASSWORD_FILE=${pw}`, "DEPLOYER=k0", "GOVERNANCE=k1", "PAYLOADS_CONTROLLER=k2", "ORACLES=k3,k4,k5,k6", "KEEPER_TOPUP_WALLET=k12",
       ...["TREASURY", "KEEPER", "AAVE_PROTOCOL_GUARDIAN", "EMERGENCY_GUARDIAN", "JOINT_CONFIG_SAFE"].map((r, i) => `${r}=${address(`k${7 + i}`)}`),
     ];
     writeFileSync(file, `${lines.join("\n")}\n`);

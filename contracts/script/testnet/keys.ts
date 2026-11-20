@@ -5,6 +5,8 @@
 // (KEY=VALUE lines, test-network-config.example in this folder):
 //   KEYSTORE_DIR, PASSWORD_FILE                the encrypted Foundry keystores and the file of their shared password
 //   DEPLOYER, GOVERNANCE, PAYLOADS_CONTROLLER  the keystore (its file name in KEYSTORE_DIR) that signs as each role
+//   KEEPER_TOPUP_WALLET                        the keystore of the keeper top-up wallet, which funds the keeper signer
+//                                              (step 11-fund-keepers); required
 //   ORACLES                                    the four OCR2 oracles' keystores, comma-separated
 //   TREASURY, KEEPER, AAVE_PROTOCOL_GUARDIAN, EMERGENCY_GUARDIAN, JOINT_CONFIG_SAFE   addresses that sign nothing
 // A keystore's address is read from it at run time, decrypted with the password file; no key is written anywhere.
@@ -18,13 +20,13 @@ import { decryptKeystore } from "../../../services/keeper/src/adapters/localKeys
 export const CONFIG_ENV = "AVANA_TESTNET_CONFIG";
 
 /** The roles that sign deploy transactions, each from a keystore. */
-export const SIGNER_ROLES = ["deployer", "governance", "payloadsController", "oracle0", "oracle1", "oracle2", "oracle3"] as const;
+export const SIGNER_ROLES = ["deployer", "governance", "payloadsController", "keeperTopUp", "oracle0", "oracle1", "oracle2", "oracle3"] as const;
 export type SignerRole = (typeof SIGNER_ROLES)[number];
 /** The roles that are only an address. */
 export const ADDRESS_ROLES = ["TREASURY", "KEEPER", "AAVE_PROTOCOL_GUARDIAN", "EMERGENCY_GUARDIAN", "JOINT_CONFIG_SAFE"] as const;
 export type AddressRole = (typeof ADDRESS_ROLES)[number];
 /** The signers that send transactions, so need test ETH (the other three oracles only sign reports). */
-export const FUNDED_ROLES = ["deployer", "governance", "payloadsController", "oracle0"] as const satisfies readonly SignerRole[];
+export const FUNDED_ROLES = ["deployer", "governance", "payloadsController", "keeperTopUp", "oracle0"] as const satisfies readonly SignerRole[];
 
 export type Address = `0x${string}`;
 export interface TestnetRoles {
@@ -64,12 +66,17 @@ export function keysOf(f: Record<string, string | undefined>): { keys?: TestnetK
     deployer: f.DEPLOYER,
     governance: f.GOVERNANCE,
     payloadsController: f.PAYLOADS_CONTROLLER,
+    keeperTopUp: f.KEEPER_TOPUP_WALLET,
     oracle0: oracles[0],
     oracle1: oracles[1],
     oracle2: oracles[2],
     oracle3: oracles[3],
   };
-  for (const [role, n] of Object.entries(names)) if (!n || /[\\/]/.test(n)) errors.push(`${role}: no keystore name (a file name in KEYSTORE_DIR)`);
+  for (const [role, n] of Object.entries(names)) {
+    if (n && !/[\\/]/.test(n)) continue;
+    if (role === "keeperTopUp") errors.push("KEEPER_TOPUP_WALLET: no keystore name (a file name in KEYSTORE_DIR); the keeper top-up wallet is required");
+    else errors.push(`${role}: no keystore name (a file name in KEYSTORE_DIR)`);
+  }
   if (new Set(Object.values(names)).size !== SIGNER_ROLES.length) errors.push("every signing role needs its own keystore");
   if (errors.length) return { errors };
   return { keys: { passwordFile: f.PASSWORD_FILE!, keystores: Object.fromEntries(Object.entries(names).map(([r, n]) => [r, join(dir!, n!)])) as Record<SignerRole, string> }, errors };
@@ -148,6 +155,8 @@ export function testnetSignerEnv(): NodeJS.ProcessEnv {
   const oracles = [keystores.oracle0, keystores.oracle1, keystores.oracle2, keystores.oracle3];
   return {
     AVANA_DEPLOYER: s.deployer,
+    // The keeper top-up wallet every step requires off a local node (step.sh), and the sender of 11-fund-keepers.
+    KEEPER_TOPUP_WALLET: s.keeperTopUp,
     AVANA_KEYSTORE_PATHS: SIGNER_ROLES.map((r) => keystores[r]).join(";"),
     AVANA_KEYSTORE_PASSWORD_FILE: passwordFile,
     AVANA_SCHEDULE_OPERATIONS: "1",

@@ -139,6 +139,11 @@
       "maxTopUpBps": 100
     }
   ],
+  "keeperTopUp": {
+    "wallet": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+    "minBalanceWei": "3000000000000000000",
+    "targetBalanceWei": "10000000000000000000"
+  },
   "integrations": [
     {
       "integrationId": 1,
