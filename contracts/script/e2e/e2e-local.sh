@@ -279,9 +279,6 @@ if [[ " $STEPS " == *" deploy "* ]]; then
     place_executor &&
     run_script 02-test-world &&
     run_script 03-avana &&
-    run_script 04-access-operations &&
-    advance 432001 wait-access-operations &&
-    run_script 05-execute-access-operations &&
     run_script 06-aave-deployment-aip &&
     run_script 07-deploy-first-loss-reserves &&
     run_script 08-aave-loss-layers-aip &&
@@ -289,16 +286,15 @@ if [[ " $STEPS " == *" deploy "* ]]; then
     run_script 09-listing-setup &&
     advance 432001 wait-listing-setup &&
     run_script 09-execute-listing-setup &&
-    run_script 09-debt-oracles &&
-    run_script 10-aave-debt-reserves-aip &&
-    run_script 09-market-metadata &&
     run_script 09-listing-markets &&
     advance 432001 wait-listing-markets &&
     run_script 09-execute-listing-markets &&
+    run_script 09-vault-tokens &&
     run_script 10-aave-markets-aip &&
     run_script 09-listing-activate &&
-    advance 43201 wait-listing-activate &&
-    run_script 09-execute-listing-activate
+    advance 432001 wait-listing-activate &&
+    run_script 09-execute-listing-activate &&
+    run_script 11-fund-keepers
 fi
 
 # Later releases: the operator's changes after the first deployment, through the same named steps, each acting only
@@ -313,9 +309,6 @@ grow() { # phase "generator [args]" config
   export AVANA_CONFIG="$3"
   PHASE="$1:"
   run_script 01-aave-v4 &&
-    run_script 04-access-operations &&
-    advance 432001 "${PHASE}wait-access-operations" &&
-    run_script 05-execute-access-operations &&
     run_script 06-aave-deployment-aip &&
     run_script 07-deploy-first-loss-reserves &&
     run_script 08-aave-loss-layers-aip &&
@@ -323,16 +316,15 @@ grow() { # phase "generator [args]" config
     run_script 09-listing-setup &&
     advance 432001 "${PHASE}wait-listing-setup" &&
     run_script 09-execute-listing-setup &&
-    run_script 09-debt-oracles &&
-    run_script 10-aave-debt-reserves-aip &&
-    run_script 09-market-metadata &&
     run_script 09-listing-markets &&
     advance 432001 "${PHASE}wait-listing-markets" &&
     run_script 09-execute-listing-markets &&
+    run_script 09-vault-tokens &&
     run_script 10-aave-markets-aip &&
     run_script 09-listing-activate &&
-    advance 43201 "${PHASE}wait-listing-activate" &&
-    run_script 09-execute-listing-activate
+    advance 432001 "${PHASE}wait-listing-activate" &&
+    run_script 09-execute-listing-activate &&
+    run_script 11-fund-keepers
   local ok=$?
   PHASE=""
   return $ok
@@ -388,18 +380,18 @@ fi
 if [ -n "$GROW_FAILED" ]; then
   record rerun not-run "the $GROW_FAILED phase failed: fix it and resume (E2E_RESUME) before every step runs again"
 elif [ -n "$GREW" ]; then
-  for s in 01-aave-v4 04-access-operations 06-aave-deployment-aip 07-deploy-first-loss-reserves 08-aave-loss-layers-aip \
-    07-fund-first-loss-reserves 09-listing-setup 09-debt-oracles 10-aave-debt-reserves-aip 09-market-metadata \
-    09-listing-markets 10-aave-markets-aip 09-listing-activate; do run_idle "$s" || break; done
+  for s in 01-aave-v4 06-aave-deployment-aip 07-deploy-first-loss-reserves 08-aave-loss-layers-aip \
+    07-fund-first-loss-reserves 09-listing-setup 09-listing-markets 09-vault-tokens 10-aave-markets-aip \
+    09-listing-activate 11-fund-keepers; do run_idle "$s" || break; done
 fi
 
 # Hostile tokens (REQ-ARCH-014): each case of script/e2e/hostile-additions.ts runs the release steps from an anvil
 # snapshot, which is reverted afterwards, and must be refused at some step with the expected error. A case that lists
 # is a finding. Steps that pass before the refusal (the Aave side lists the asset, setup is scheduled) are reverted too.
-HOSTILE_FLOW=(01-aave-v4 04-access-operations @432001 05-execute-access-operations 06-aave-deployment-aip
+HOSTILE_FLOW=(01-aave-v4 06-aave-deployment-aip
   07-deploy-first-loss-reserves 08-aave-loss-layers-aip 07-fund-first-loss-reserves 09-listing-setup @432001
-  09-execute-listing-setup 09-debt-oracles 10-aave-debt-reserves-aip 09-market-metadata 09-listing-markets @432001
-  09-execute-listing-markets 10-aave-markets-aip 09-listing-activate @43201 09-execute-listing-activate)
+  09-execute-listing-setup 09-listing-markets @432001
+  09-execute-listing-markets 09-vault-tokens 10-aave-markets-aip 09-listing-activate @432001 09-execute-listing-activate)
 # The outputs a hostile case may rewrite, kept and put back with tar (Git Bash on Windows has no rsync): every entry of
 # the output directory but the logs, the backup itself and the node's state; put back over a directory cleared of the
 # same entries, so a file a case added goes too. The case configs stay.

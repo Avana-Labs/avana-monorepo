@@ -141,8 +141,6 @@ export const apply = internalMutation({
   },
 });
 
-const LENS_STORE_ABI = parseAbi(["function PARAMETER_STORE() view returns (address)"]);
-const STORE_FEE_ABI = parseAbi(["function feeRecipient() view returns (address)"]);
 
 /**
  * Awards fee points for a confirmed transaction: the ERC-20 transfers from the wallet to the ParameterStore's
@@ -217,9 +215,8 @@ async function trackOnce(ctx: ActionCtx, chainId: number): Promise<void> {
     if (receipt?.success && i.status === "pending" && (FEE_ACTIONS as readonly string[]).includes(i.kind)) {
       try {
         if (feeRecipient === undefined) {
-          const lens = (await ctx.runQuery(internal.ingest.apply.state, { chainId })).deployment?.lens;
-          const store = lens ? await client.readContract({ address: lens as `0x${string}`, abi: LENS_STORE_ABI, functionName: "PARAMETER_STORE" }) : null;
-          feeRecipient = store ? await client.readContract({ address: store, abi: STORE_FEE_ABI, functionName: "feeRecipient" }) : null;
+          // The manifest's fee recipient, recorded on the deployment row.
+          feeRecipient = (await ctx.runQuery(internal.ingest.apply.state, { chainId })).deployment?.feeRecipient ?? null;
         }
         const transfers = feeRecipient ? feeTransfers(logs, i.wallet, feeRecipient) : [];
         if (transfers.length > 0) await ctx.runMutation(internal.intents.awardFee, { wallet: i.wallet, chainId, txHash: i.txHash, transfers });

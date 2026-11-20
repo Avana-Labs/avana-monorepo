@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Current values: every 60 s per chain the sampler reads the snapshot (Hubs, Hub assets with their draw-cap coverage,
-// Spoke slices, CDP debt reserves, markets) at one block over Convex's RPC and writes the rows the pages read, with
-// the gas price for the fee quote. A Hub, Spoke, market, pool or asset listed on chain appears at the next run; its
-// content arrives with the listing metadata.
+// Spoke slices, CDP debt reserves, markets: two per pool) at one block over Convex's RPC and writes the rows the pages
+// read, with the gas price for the fee quote. A market listed on chain appears once its release manifest is written
+// (`deployments:setFromManifest`); its content arrives with the listing metadata.
 
 import { v } from "convex/values";
 import { parseAbi } from "viem";
@@ -18,16 +18,25 @@ const feedAbi = parseAbi(["function latestRoundData() view returns (uint80, int2
 
 type Hex = `0x${string}`;
 
-/** The sampler's starting addresses; Hubs and CDP Spokes listed later are found by the reader on chain. */
+/** The addresses the sampler reads, from the deployment row the manifest wrote. */
 export function chainDeployment(d: Doc<"deployments">): ChainDeployment {
+  const ZERO = "0x0000000000000000000000000000000000000000" as Hex;
+  const riskModuleOf = new Map((d.integrations ?? []).map((x) => [x.integrationId, x.riskModule as Hex]));
   return {
     chainId: d.chainId,
-    lens: d.lens as Hex,
-    marketRegistry: d.marketRegistry as Hex,
-    hubs: d.hubs.map((h) => ({ address: h.address as Hex, label: h.label })),
+    hubs: d.hubs.map((h) => ({ address: h.address as Hex, label: h.label, tier: h.tier })),
     lendSpokes: d.lendSpokes as Hex[],
-    cdpSpokes: d.cdpSpokes as Hex[],
-    firstLossReserves: d.firstLossReserves.map((c) => ({ address: c.address as Hex, asset: c.asset as Hex, ...(c.hub ? { hub: c.hub as Hex } : {}) })),
+    cdpSpokes: d.cdpSpokes.map((s) => ({ address: s.address as Hex, hub: (s.hub ?? ZERO) as Hex })),
+    firstLossReserves: d.firstLossReserves.map((c) => ({ address: c.address as Hex, asset: c.asset as Hex, hub: (c.hub ?? ZERO) as Hex })),
+    deficitOffsets: (d.deficitOffsets ?? []).map((c) => ({ address: c.address as Hex, asset: c.asset as Hex, hub: c.hub as Hex })),
+    riskModules: (d.integrations ?? []).map((x) => x.riskModule as Hex),
+    markets: (d.markets ?? []).flatMap((m) => {
+      const riskModule = riskModuleOf.get(m.integrationId);
+      return riskModule
+        ? [{ ...m, marketId: BigInt(m.marketId), reserveId: BigInt(m.reserveId), riskModule, pool: m.pool as Hex, spoke: m.spoke as Hex, hub: m.hub as Hex, vaultToken: m.vaultToken as Hex, lpOracle: m.lpOracle as Hex, tokens: m.tokens as Hex[] }]
+        : [];
+    }),
+    debtReserves: (d.debtReserves ?? []).map((r) => ({ spoke: r.spoke as Hex, reserveId: BigInt(r.reserveId), fixedPrice: r.fixedPrice })),
   };
 }
 

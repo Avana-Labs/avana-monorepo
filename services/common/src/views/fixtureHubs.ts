@@ -220,9 +220,15 @@ const deploymentMarket = (m: FakeMarket, name: string) => ({
   tokens: [USDC, USDT],
 });
 
-/** What the manifest gives the services: every Hub, Spoke and market of the release, Hub C's included. */
-export const fixtureHubsDeployment: ChainDeployment = {
+/**
+ * What the manifest gives the services: every Hub, Spoke and market of the release, Hub C's included. `lens` and
+ * `marketRegistry` are the replaced core's addresses, kept only for the web app's local seed script until it writes the
+ * new deployment record; no reader uses them.
+ */
+export const fixtureHubsDeployment: ChainDeployment & { readonly lens: Address; readonly marketRegistry: Address } = {
   chainId: 1,
+  lens: a("99", 1),
+  marketRegistry: a("80", 2),
   hubs: [
     { address: HUB_A, label: "Stable", tier: 1 },
     { address: HUB_B, label: "Core", tier: 2 },

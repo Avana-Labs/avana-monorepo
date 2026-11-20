@@ -45,7 +45,7 @@ export const getPriceSnapshot = query({
     const protocol = [
       // One price per token and chain: a token on several Hubs is priced on the Hub `priceAsset` picks.
       ...w.hubAssets.filter((a) => priceAsset(w, a.chainId, a.underlying) === a).map((a) => ({ symbol: symbolOf(w, a.chainId, a.underlying).toLowerCase(), priceUsd: Number(BigInt(a.priceUsd8)) / 1e8, confidence: 1, source: "lendSpokeOracle" as const, status: status(a.updatedAt), updatedAt: a.updatedAt })),
-      ...w.markets.map((m) => ({ symbol: m.symbol.toLowerCase(), priceUsd: Number(BigInt(m.acceptedPrice)) / 1e8, confidence: m.priceState === 0 ? 1 : 0.5, source: "lpOracle" as const, status: status(m.updatedAt), updatedAt: m.updatedAt })),
+      ...w.markets.map((m) => ({ symbol: m.symbol.toLowerCase(), priceUsd: Number(BigInt(m.acceptedPrice)) / 1e8, confidence: m.priceAvailable ? 1 : 0.5, source: "lpOracle" as const, status: status(m.updatedAt), updatedAt: m.updatedAt })),
     ];
     // An unchanged quote is not rewritten (`upsertPrices`), so a row is as recent as the provider's last check. A coin
     // missing from that check's response keeps the check's time too; these prices are for display only.

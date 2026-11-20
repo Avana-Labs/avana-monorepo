@@ -17,31 +17,53 @@ const dec = v.string();
 
 /** The block a row was read at; every row of one refresh carries the same one. */
 const read = { blockNumber: dec, updatedAt: v.number() };
-/** One speed window of the RiskModule as `Lens.getBorrowSpeed` / `getPledgeSpeed` report it (`SpeedWindow`). */
-const speedWindow = v.object({ limit: dec, used: dec, available: dec, moreAt: v.number(), moreAmount: dec, unavailable: v.boolean() });
 
 export default defineSchema({
   /**
-   * Per chain: the addresses the sampler starts from and the RPC/explorer settings, from the verified release
-   * manifest. Hubs the MarketRegistry records and CDP Spokes it approves later are found on chain at each refresh.
+   * Per chain: the addresses the sampler reads and the RPC/explorer settings, from the verified release manifest
+   * (`deployments:setFromManifest`): Hubs, Spokes, loss layers, each integration's core stack, the markets (two per
+   * pool) and the debt reserves.
    */
   deployments: defineTable({
     chainId: v.number(),
     chainSlug: v.string(),
-    lens: address,
     hubs: v.array(v.object({ address, label: v.string(), tier: v.number() })),
     lendSpokes: v.array(address),
-    cdpSpokes: v.array(address),
+    /** Each CDP Spoke with its home Hub (absent for a Spoke with no market yet). */
+    cdpSpokes: v.array(v.object({ address, hub: v.optional(address) })),
     firstLossReserves: v.array(v.object({ address, asset: address, hub: v.optional(address) })),
-    marketRegistry: address,
-    timelock: address,
+    deficitOffsets: v.optional(v.array(v.object({ address, asset: address, hub: address }))),
+    accessManager: v.optional(address),
+    /** One core stack per AMM integration. */
+    integrations: v.optional(
+      v.array(v.object({ integrationId: v.number(), kind: v.string(), lpVault: address, riskModule: address, liquidationModule: address, aaveAdapter: address, flashloanRepay: address })),
+    ),
+    /** The manifest's markets, two per pool. */
+    markets: v.optional(
+      v.array(
+        v.object({
+          marketId: dec,
+          integrationId: v.number(),
+          kind: v.union(v.literal("full-range"), v.literal("custom-range")),
+          name: v.string(),
+          pool: hex,
+          spoke: address,
+          hub: address,
+          vaultToken: address,
+          lpOracle: address,
+          reserveId: dec,
+          tokens: v.array(address),
+        }),
+      ),
+    ),
+    debtReserves: v.optional(v.array(v.object({ spoke: address, reserveId: dec, fixedPrice: v.boolean() }))),
+    /** The Avana fee recipient (the manifest's `feeRecipient`): the front-end fee's destination. */
+    feeRecipient: v.optional(address),
     explorerUrl: v.string(),
     /** Chainlink native/USD feed (8 decimals) used to value gas. */
     nativeUsdFeed: address,
     release: v.string(),
-    /** The About card's contracts from the manifest: `avana.lpVaults[]`, `avana.riskModule`, each Spoke's oracle. */
-    lpVaults: v.optional(v.array(v.object({ integrationId: v.number(), address }))),
-    riskModule: v.optional(address),
+    /** Each Spoke's oracle, for the About card. */
     spokeOracles: v.optional(v.array(v.object({ spoke: address, oracle: address }))),
     /** The manifest's `external` list: third-party contracts (swap venues, tokens, feeds) by group and name. */
     external: v.optional(v.array(v.object({ group: v.string(), name: v.string(), address, standIn: v.boolean() }))),
@@ -54,8 +76,6 @@ export default defineSchema({
     slug: v.string(),
     label: v.union(v.null(), v.string()),
     tier: v.number(),
-    recorded: v.boolean(),
-    applicationState: v.union(v.null(), v.number()),
     assetCount: v.number(),
     lendAssetIds: v.array(dec),
     lendSpokes: v.array(address),
@@ -95,7 +115,7 @@ export default defineSchema({
     lendReserves: v.array(v.object({ spoke: address, reserveId: dec, paused: v.boolean(), frozen: v.boolean() })),
     exposure: v.union(
       v.null(),
-      v.object({ firstLossReserve: address, fundedBalance: dec, drawCapSum: dec, required: dec, coverageBoundHolds: v.boolean(), uncovered: dec, priceAdj: dec, deficitOffset: address, offsetFunded: dec }),
+      v.object({ firstLossReserve: address, fundedBalance: dec, drawCapSum: dec, required: dec, coverageBoundHolds: v.boolean(), uncovered: dec, deficitOffset: address, offsetFunded: dec }),
     ),
     timestamp: v.number(),
     ...read,
@@ -141,8 +161,6 @@ export default defineSchema({
     paused: v.boolean(),
     frozen: v.boolean(),
     borrowable: v.boolean(),
-    breakerReasons: v.number(),
-    pauseState: v.number(),
     ...read,
   })
     .index("by_key", ["chainId", "spoke", "reserveId"])
@@ -154,18 +172,26 @@ export default defineSchema({
     chainId: v.number(),
     marketId: dec,
     slug: v.string(),
-    status: v.number(),
-    pool: address,
-    poolId: hex,
+    /** Each pool has two markets: "full-range" (exact full-range ticks) and "custom-range" (positions inside the band). */
+    kind: v.union(v.literal("full-range"), v.literal("custom-range")),
+    /** `RiskModule.getMarket(marketId).active`. */
+    active: v.boolean(),
+    /** The bytes32 pool key (a v3/Slipstream pool address left-padded, or a v4 PoolId). */
+    pool: hex,
     tokens: v.array(address),
     tokenDecimals: v.array(v.number()),
-    feeTier: v.number(),
+    /** The band, fixed for life. */
+    bandLower: v.number(),
+    bandUpper: v.number(),
+    /** The band again under the names the web app's balance reader still uses; removed with the web app's step. */
     tickLower: v.number(),
     tickUpper: v.number(),
-    integrationId: v.number(),
+    /** The integration kind as bytes32 (`keccak256("AERODROME_SLIPSTREAM")`, `"UNISWAP_V3"` or `"UNISWAP_V4"`), for the same reader. */
     ammProtocol: hex,
+    integrationId: v.number(),
     vaultToken: address,
     vaultDecimals: v.number(),
+    unitDecimals: v.number(),
     name: v.string(),
     symbol: v.string(),
     lpOracle: address,
@@ -174,44 +200,25 @@ export default defineSchema({
     reserveId: dec,
     hubAssetId: dec,
     acceptedPrice: dec,
-    priceState: v.number(),
+    /** False while the LPOracle refuses to price (a stale or invalid feed leg). */
+    priceAvailable: v.boolean(),
     suppliedUnits: dec,
     suppliedUsd8: dec,
+    /** The RiskModule's LTV, the same for both markets of a pool. */
+    ltvBps: v.number(),
     collateralFactorBps: v.number(),
     maxLiquidationBonusBps: v.number(),
+    liquidationFeeBps: v.number(),
     collateralRiskBps: v.number(),
+    /** The vault-token reserve's flags on its Spoke: a depegged Stable or Correlated market is frozen. */
+    paused: v.boolean(),
+    frozen: v.boolean(),
     liquidation: v.union(
       v.null(),
       v.object({ targetHealthFactorWad: dec, healthFactorForMaxBonusWad: dec, liquidationBonusFactorBps: v.number() }),
     ),
-    marketHeadroomUsd8: dec,
-    sliceHeadroomUsd8: dec,
-    addHeadroom: dec,
-    pauseState: v.number(),
-    breakerReasons: v.number(),
-    /** Avana's caps (USD 8 decimals) and the risk configuration beside them (Lens `MarketView`, REQ-LENS-057). */
-    caps: v.optional(
-      v.object({
-        liquidationThresholdBps: v.number(),
-        liquidationFeeBps: v.number(),
-        hardHealthFloorWad: dec,
-        marketUsdCap8: dec,
-        topUpSliceUsd8: dec,
-        // Retired with the per-depositor cap: written by older exports only.
-        depositorUsdCap8: v.optional(dec),
-        tokenUsdCaps8: v.array(dec),
-        addCap: dec,
-      }),
-    ),
-    /** Each debt reserve of the market's Spoke: the market's borrow rate and what it can borrow now (BOR-024). */
-    borrow: v.array(
-      v.object({
-        reserveId: dec,
-        borrowRateRay: dec,
-        speed: v.union(v.null(), v.object({ availableNow: dec, moreAt: v.number(), market: speedWindow, debt: speedWindow })),
-      }),
-    ),
-    pledgeSpeed: v.union(v.null(), speedWindow),
+    /** Each debt reserve of the market's Spoke with the market's borrow rate. */
+    borrow: v.array(v.object({ reserveId: dec, borrowRateRay: dec })),
     ...read,
   })
     .index("by_key", ["chainId", "marketId"])

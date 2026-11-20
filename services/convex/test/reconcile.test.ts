@@ -87,10 +87,10 @@ describe("a CDP Spoke's split by market reconciles to the Spoke's owed amount", 
       poolSnapshot(m, fixtureMarketDebt.filter((d) => d.marketId === m.marketId), reserves, assets, { volumeUsd: 0, feesUsd: 0 }, null),
     );
     expect(pools.reduce((acc, p) => acc + p.borrowedUsd, 0)).toBeCloseTo(borrowU.borrowedUsd, 4);
-    expect(pools[0]).toMatchObject({ scope: "pool", suppliedUsd: 2_000_000, maxLtvPct: 80, premiumBps: 500, feeTier: "0.01%", lpPriceUsd: 2 });
+    expect(pools[0]).toMatchObject({ scope: "pool", suppliedUsd: 2_000_000, maxLtvPct: 90, premiumBps: 500, feeTier: "Full range", lpPriceUsd: 2 });
     expect(pools[0]!.utilizationPct).toBeCloseTo(30, 4);
-    // Available is what the market can borrow now under the speed limits ($250,000 of USDC), not its cap headroom.
-    expect(pools[0]!.availableUsd).toBeCloseTo(250_000, 6);
+    // Available is what the market can borrow now: the Hub's USDC liquidity (7,000,000 at $1).
+    expect(pools[0]!.availableUsd).toBeCloseTo(7_000_000, 6);
     // Each pool row names its Hub, which the Hubs filter lists.
     expect(pools.map((p) => p.hubId)).toEqual(markets.map((m) => m.hub));
   });

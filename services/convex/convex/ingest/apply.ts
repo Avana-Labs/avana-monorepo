@@ -4,6 +4,7 @@
 // rows, listing operations, checkpoint), one series page, one pool-history range, or one snapshot of current rows.
 
 import { v } from "convex/values";
+import { keccak256, toHex } from "viem";
 import type { ExportPage } from "@avana/services-common/export";
 import { type SeriesExportPage, type SeriesRecord, mergeValues } from "@avana/services-common/series";
 import type { ChainSnapshot } from "@avana/services-common/views";
@@ -16,6 +17,11 @@ import { noteFirstSeen } from "../lib/membership.ts";
 import { activateReferral } from "../lib/referrals.ts";
 import { addSupplyVolume, awardQuestForLog, supplyUsdOfLog } from "../lib/rewards.ts";
 import { assetSlugs, defaultSlug, hubLabel } from "../lib/format.ts";
+
+/** The integration kind as the web app's balance reader names it (`keccak256` of the protocol tag). */
+export function ammProtocolOf(kind: string | undefined): `0x${string}` {
+  return keccak256(toHex(kind === "slipstream" ? "AERODROME_SLIPSTREAM" : kind === "uniswap-v4" ? "UNISWAP_V4" : "UNISWAP_V3"));
+}
 
 /** A row of the history table every 1,000 blocks: the rebuild's starting points. */
 const HISTORY_EVERY = 1_000n;
@@ -74,6 +80,8 @@ export const applySnapshot = internalMutation({
     const symbol = async (token: string) => (await ctx.db.query("marketContent").withIndex("by_key", (q) => q.eq("scope", "token").eq("chainId", s.chainId).eq("key", token)).unique())?.symbol ?? token.slice(2, 8);
     const labels = new Map(s.hubs.map((h) => [h.hub, hubLabel(h.label, h.hub)]));
     const labelOf = (hub: string) => labels.get(hub as `0x${string}`) ?? hubLabel(null, hub);
+    const deployment = await ctx.db.query("deployments").withIndex("by_chain", (q) => q.eq("chainId", s.chainId)).unique();
+    const kindOf = new Map((deployment?.integrations ?? []).map((x) => [x.integrationId, x.kind]));
     for (const h of s.hubs) {
       const slug = (await contentSlug(ctx, "hub", s.chainId, h.hub)) ?? defaultSlug.hub(s.chainId, labelOf(h.hub));
       const row = { ...h, lendAssetIds: [...h.lendAssetIds], lendSpokes: [...h.lendSpokes], cdpSpokes: [...h.cdpSpokes], slug, updatedAt: now };
@@ -126,7 +134,17 @@ export const applySnapshot = internalMutation({
     }
     for (const m of s.markets) {
       const slug = (await contentSlug(ctx, "pool", s.chainId, m.marketId)) ?? defaultSlug.pool(s.chainId, m.marketId);
-      const row = { ...m, tokens: [...m.tokens], tokenDecimals: [...m.tokenDecimals], caps: { ...m.caps, tokenUsdCaps8: [...m.caps.tokenUsdCaps8] }, borrow: [...m.borrow], slug, updatedAt: now };
+      const row = {
+        ...m,
+        tokens: [...m.tokens],
+        tokenDecimals: [...m.tokenDecimals],
+        borrow: [...m.borrow],
+        tickLower: m.bandLower,
+        tickUpper: m.bandUpper,
+        ammProtocol: ammProtocolOf(kindOf.get(m.integrationId)),
+        slug,
+        updatedAt: now,
+      };
       const existing = await ctx.db.query("markets").withIndex("by_key", (q) => q.eq("chainId", m.chainId).eq("marketId", m.marketId)).unique();
       if (existing) {
         if (needsWrite(existing, row)) await ctx.db.replace(existing._id, row);

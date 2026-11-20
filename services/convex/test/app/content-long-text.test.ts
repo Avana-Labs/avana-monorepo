@@ -6,6 +6,7 @@
 import { convexTest } from "convex-test"
 import { describe, expect, test } from "vitest"
 import { fixtureMarkets } from "@avana/services-common/fixtures"
+import { ammProtocolOf } from "../../convex/ingest/apply"
 import schema from "../../convex/schema"
 import { readContent } from "../../convex/details"
 import { loadWorld } from "../../convex/model"
@@ -16,7 +17,7 @@ async function pageWith(longText?: string) {
   const t = convexTest(schema, modules)
   const m = fixtureMarkets[0]!
   await t.run(async (ctx) => {
-    await ctx.db.insert("markets", { ...m, slug: "ethereum-usdc-usdt", updatedAt: 0 } as never)
+    await ctx.db.insert("markets", { ...m, tickLower: m.bandLower, tickUpper: m.bandUpper, ammProtocol: ammProtocolOf("uniswap-v3"), slug: "ethereum-usdc-usdt", updatedAt: 0 } as never)
     await ctx.db.insert("marketContent", {
       scope: "pool",
       chainId: m.chainId,

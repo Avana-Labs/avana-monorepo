@@ -19,7 +19,7 @@ function setup() {
   const t = convexTest(schema, modules)
   const seed = (open: boolean) =>
     t.run(async (ctx) => {
-      await ctx.db.insert("deployments", { chainId: 1, chainSlug: "ethereum", lens: ADDR, hubs: [], lendSpokes: [], cdpSpokes: [], firstLossReserves: [], marketRegistry: ADDR, timelock: ADDR, explorerUrl: "", nativeUsdFeed: ADDR, release: "r" })
+      await ctx.db.insert("deployments", { chainId: 1, chainSlug: "ethereum", hubs: [], lendSpokes: [], cdpSpokes: [], firstLossReserves: [], explorerUrl: "", nativeUsdFeed: ADDR, release: "r" })
       if (open) await ctx.db.insert("intents", { wallet: WALLET, chainId: 1, txHash: `0x${"11".repeat(32)}`, kind: "borrow", status: "pending", submittedAt: Date.now(), open: true, checkedAt: 0, updatedAt: Date.now() })
     })
   const tracker = () => t.run((ctx) => ctx.db.query("intentTrackers").withIndex("by_chain", (q) => q.eq("chainId", 1)).unique())

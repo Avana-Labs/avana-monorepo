@@ -83,8 +83,9 @@ export function hubSummary(hub: Slugged<HubRow>, label: string, assets: readonly
   const mine = assets.filter((a) => a.chainId === hub.chainId && a.hub === hub.hub);
   return {
     ...breakdownRow(hub, label, mine),
-    recorded: hub.recorded,
-    applicationState: hub.applicationState,
+    // Every Hub comes from the release manifest; the new core has no application pause state.
+    recorded: true,
+    applicationState: null,
     assetCount: hub.assetCount,
     lendSpokes: [...hub.lendSpokes],
     cdpSpokes: [...hub.cdpSpokes],

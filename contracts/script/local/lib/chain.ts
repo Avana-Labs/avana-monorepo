@@ -588,9 +588,9 @@ function manifest(c: LocalChain, env: NodeJS.ProcessEnv, log: string): string {
 }
 
 /**
- * The timelock delays a chain's release waits, in seconds: the config's normal delay and the timelock's short delay (60 s
- * on a test network, REQ-ACCESS-187). The local chains keep the production delays (432,000 s and 43,200 s), the
- * rehearsal's, whose step names their ledgers hold.
+ * The AccessManager delays a chain's release waits, in seconds: the governance delay (the config's
+ * `timelockNormalDelay`) and the tighten delay (60 s on a test network). The local chains keep the production delays
+ * (432,000 s and 43,200 s), the rehearsal's, whose step names their ledgers hold.
  */
 export function releaseDelays(c: LocalChain, config?: string): { normal: number; short: number } {
   if (!c.testnet) return { normal: 432_000, short: 43_200 };
@@ -603,7 +603,7 @@ export function releaseDelays(c: LocalChain, config?: string): { normal: number;
 export function firstRelease(c: LocalChain, d = releaseDelays(c)): string[] {
   const head = c.testnet ? ["multicall3", "00-factories", "place-executor", "01-aave-v4"] : ["multicall3", "00-factories", "01-aave-v4", "place-executor"];
   return [
-    ...head, "02-test-world", "03-avana", "04-access-operations", `advance:${d.normal + 1}`, "05-execute-access-operations",
+    ...head, "02-test-world", "03-avana",
     "06-aave-deployment-aip", "07-deploy-first-loss-reserves", "08-aave-loss-layers-aip", "07-fund-first-loss-reserves",
     ...listingSetupSteps(d), "11-fund-keepers", "swap-contracts", "manifest", "treasury",
   ];
@@ -612,8 +612,8 @@ export function firstRelease(c: LocalChain, d = releaseDelays(c)): string[] {
 /** The steps of a later release: each acts only on what the config adds (the rehearsal's day-2 phase). */
 export function laterRelease(c: LocalChain, d = releaseDelays(c)): string[] {
   return [
-    "01-aave-v4", "04-access-operations", `advance:${d.normal + 1}`, "05-execute-access-operations", "06-aave-deployment-aip",
-    "07-deploy-first-loss-reserves", "08-aave-loss-layers-aip", "07-fund-first-loss-reserves", ...listingSteps(d, c.testnet !== undefined), "manifest",
+    "01-aave-v4", "06-aave-deployment-aip",
+    "07-deploy-first-loss-reserves", "08-aave-loss-layers-aip", "07-fund-first-loss-reserves", ...listingSteps(d, c.testnet !== undefined), "11-fund-keepers", "manifest",
   ];
 }
 
@@ -622,20 +622,21 @@ const LOCAL_DELAYS = { normal: 432_000, short: 43_200 };
 export const FIRST_RELEASE = firstRelease({ testnet: undefined } as LocalChain, LOCAL_DELAYS);
 export const LATER_RELEASE = laterRelease({ testnet: undefined } as LocalChain, LOCAL_DELAYS);
 
-/** The listing's setup: integrations, tokens, debt assets and Spokes, the debt oracles and the Aave debt reserves. */
+/** The listing's setup: CDP Spokes, debt reserves with their First-Loss Reserves, fee, coverage ratio and keepers. */
 function listingSetupSteps(d: { normal: number }) {
-  return ["09-listing-setup", `advance:${d.normal + 1}`, "09-execute-listing-setup", "09-debt-oracles", "10-aave-debt-reserves-aip"];
+  return ["09-listing-setup", `advance:${d.normal + 1}`, "09-execute-listing-setup"];
 }
 
 /**
- * A listing: its setup, then the markets (metadata, listing operation, Aave side) and their activation. On a test
- * network the listing first waits for the pools' TWAP history (waitForTwapHistory).
+ * A listing: its setup, then the markets (each pool as a Full range and a Custom range market), their vault tokens and
+ * LPOracles, the Aave side and their activation (all governance operations: the governance delay). On a test network
+ * the listing first waits for the pools' TWAP history (waitForTwapHistory).
  */
 function listingSteps(d: { normal: number; short: number }, testnet = false) {
   return [
     ...listingSetupSteps(d),
-    "09-market-metadata", ...(testnet ? ["twap-history"] : []), "09-listing-markets", `advance:${d.normal + 1}`, "09-execute-listing-markets", "10-aave-markets-aip",
-    "09-listing-activate", `advance:${d.short + 1}`, "09-execute-listing-activate",
+    ...(testnet ? ["twap-history"] : []), "09-listing-markets", `advance:${d.normal + 1}`, "09-execute-listing-markets", "09-vault-tokens", "10-aave-markets-aip",
+    "09-listing-activate", `advance:${d.normal + 1}`, "09-execute-listing-activate",
   ];
 }
 
