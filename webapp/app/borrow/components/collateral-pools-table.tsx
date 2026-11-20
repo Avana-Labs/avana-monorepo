@@ -129,9 +129,11 @@ function CollateralAssetCell({ pool }: { pool: BorrowPoolRow }) {
 // Borrow pools store a single risk ratio (max LTV, which is the collateral factor). The
 // liquidation threshold sits a fixed spread above it — derive the display LT through the
 // canonical helper so it matches the credit engine's enforced threshold. The CF column shows
-// CF on top and a small "LT:" below.
-function poolLiquidationThresholdPct(pool: BorrowPoolRow) {
-  return liquidationThresholdPctFromMaxLtvPct(pool.ltv)
+// CF on top and a small "LT:" below, only when the threshold differs from the CF.
+/** The "LT:" caption's value, or null when the threshold equals the max LTV (Aave V4: one factor), so it adds nothing. */
+export function liquidationThresholdCaption(pool: Pick<BorrowPoolRow, "ltv">): string | null {
+  const lt = formatLtvPct(liquidationThresholdPctFromMaxLtvPct(pool.ltv))
+  return lt === formatLtvPct(pool.ltv) ? null : lt
 }
 
 // Memoized pool row: router/currency/translation are read from hooks internally, so the
@@ -172,9 +174,11 @@ const CollateralPoolRow = memo(function CollateralPoolRow({
       <td className={cn(TABLE_CELL_PADDING, TABLE_CELL_NUMERIC, TABLE_ROW_HOVER_BG)}>{compact(pool.tvlUsd)}</td>
       <td className={cn(TABLE_CELL_PADDING, TABLE_ROW_HOVER_BG)}>
         <div className={cn(TABLE_CELL_NUMERIC, "font-data")}>{formatLtvPct(pool.ltv)}</div>
-        <div className={cn(TABLE_CELL_CAPTION, "font-data tabular-nums")}>
-          {t("LT")}: {formatLtvPct(poolLiquidationThresholdPct(pool))}
-        </div>
+        {liquidationThresholdCaption(pool) ? (
+          <div className={cn(TABLE_CELL_CAPTION, "font-data tabular-nums")}>
+            {t("LT")}: {liquidationThresholdCaption(pool)}
+          </div>
+        ) : null}
       </td>
       <td className={cn(TABLE_CELL_PADDING, TABLE_ROW_HOVER_BG)}>
         <CapacityFilled value={pool.capacityFilledPct} />

@@ -7,7 +7,8 @@ import { useTranslation } from "@/app/lib/i18n/use-translation"
 import { askAIHref } from "@/app/lib/ask-ai/navigation"
 
 // The "Ask AI" entry point. Two shapes:
-//   • text chip (default) — a filled pill beside Preferences in the full desktop header.
+//   • text chip (default) — a filled inner pill that nests on the RIGHT of the
+//     header search bar, YouTube-style. SearchTrigger renders it inside the pill.
 //   • iconOnly — a bare sparkle button used standalone in the phone / small-desktop
 //     headers, beside the search icon.
 export function AskAssistantTrigger({

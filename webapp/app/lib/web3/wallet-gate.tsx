@@ -59,7 +59,11 @@ export function WalletGateProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const activate = useCallback(() => goActive(false), [goActive])
+  // Every click asks for the modal, also one made while the SDK is still loading (activated, not yet active) or
+  // before the wallet control has mounted: the control opens it for the pending ask once it can (`consumeAutoOpen`),
+  // so the first click is always enough.
   const connect = useCallback(() => {
+    autoOpenRef.current = true
     if (activatedRef.current) setOpenRequest((count) => count + 1)
     else goActive(true)
   }, [goActive])
