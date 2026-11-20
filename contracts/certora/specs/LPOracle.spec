@@ -51,7 +51,7 @@ methods {
     function _.decimals() external => NONDET;
 
     // Proven against the library bytecode in LPOracleSummaries.spec (ozMulDivIsFloor, fullMathMulDivIsFloor,
-    // ozSqrtIsFloorSqrt).
+    // ozSqrtLowerBound* and ozSqrtUpperBound*, whose bands cover every word).
     function Math.mulDiv(uint256 x, uint256 y, uint256 den) internal returns (uint256) => mulDivFloor(x, y, den);
     function FullMath.mulDiv(uint256 x, uint256 y, uint256 den) internal returns (uint256) => mulDivFloor(x, y, den);
     function Math.sqrt(uint256 a) internal returns (uint256) => floorSqrtOf(a);
@@ -76,7 +76,8 @@ function mulDivFloor(uint256 x, uint256 y, uint256 den) returns uint256 {
 // The integer square root, as a function of its input so that rules can name it.
 ghost isqrtGhost(mathint) returns mathint;
 
-// isqrtGhost(x) is floor(sqrt(x)) for every word x (ozSqrtIsFloorSqrt).
+// isqrtGhost(x) is floor(sqrt(x)) for every word x (ozSqrtLowerBound*, ozSqrtUpperBound*: their bands cover every
+// word).
 function requireFloorSqrt(mathint x) {
     mathint r = isqrtGhost(x);
     require (0 <= x && x <= max_uint256) => (r >= 0 && r * r <= x && x < (r + 1) * (r + 1));
@@ -150,7 +151,7 @@ rule sqrtPriceMonotoneInPrices(uint256 p0, uint256 p0b, uint256 p1, uint256 p1b,
     require (num * Q192() >= 0 && den > 0 && num * Q192() < 2^256 * den) => x < 2^256;
     // floorDivAtLeast(n = numB * 2^128, q = denB, t = 2^192): the third branch's quotient is at least 2^192
     require (numB * Q128() >= 0 && denB > 0 && numB * Q128() >= 2^192 * denB) => yB >= 2^192;
-    // ozSqrtIsFloorSqrt (LPOracleSummaries.spec), through the Math.sqrt summary, at each quotient
+    // ozSqrtLowerBound*, ozSqrtUpperBound* (LPOracleSummaries.spec), through the Math.sqrt summary, at each quotient
     requireFloorSqrt(x);
     requireFloorSqrt(xB);
     requireFloorSqrt(y);
