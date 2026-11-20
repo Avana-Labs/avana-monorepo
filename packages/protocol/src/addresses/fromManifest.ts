@@ -5,7 +5,7 @@
 // checks. scripts/generate-addresses.mjs applies it to every verified manifest; nothing here is written by hand per chain.
 
 import type { Address, Hex } from "viem";
-import type { ReleaseManifest } from "../manifest/types.ts";
+import type { MarketKind, ReleaseManifest } from "../manifest/types.ts";
 
 export interface AvanaAddresses {
   readonly chainId: number;
@@ -15,32 +15,33 @@ export interface AvanaAddresses {
   readonly abiHash: Hex;
   /** Lowest deployment block of the Avana contracts; where an event scan starts. */
   readonly startBlock: number;
-  readonly contracts: {
-    readonly aaveAdapter: Address;
-    readonly lpVaultSwap: Address;
-    readonly marketRegistry: Address;
-    readonly parameterStore: Address;
+  readonly accessManager: Address;
+  /** One core stack per AMM integration. */
+  readonly integrations: readonly {
+    readonly integrationId: number;
+    readonly kind: string;
+    readonly lpVault: Address;
     readonly riskModule: Address;
-    readonly timelock: Address;
-    readonly proxyManager: Address;
-    readonly collateralization: Address;
-    readonly vaultTokenFactory: Address;
-    readonly payoutEscrow: Address;
-    readonly lock: Address;
-    readonly lens: Address;
-    readonly flashSource: Address;
-    readonly flashLiquidator: Address;
-  };
-  readonly lpVaults: readonly { readonly integrationId: number; readonly kind: string; readonly address: Address }[];
+    readonly liquidationModule: Address;
+    readonly aaveAdapter: Address;
+    readonly flashloanRepay: Address;
+  }[];
+  readonly flashLiquidators: readonly { readonly integrationId: number; readonly address: Address; readonly operator: Address }[];
+  /** Two per pool: Full range and Custom range. */
   readonly markets: readonly {
     readonly marketId: string;
+    readonly name: string;
     readonly integrationId: number;
+    readonly kind: MarketKind;
+    readonly pool: Hex;
     readonly spoke: Address;
     readonly reserveId: string;
     readonly vaultToken: Address;
     readonly lpOracle: Address;
-    readonly pool: Address;
     readonly tokens: readonly Address[];
+    readonly bandLower: number;
+    readonly bandUpper: number;
+    readonly ltvBps: number;
   }[];
   readonly debtReserves: readonly {
     readonly spoke: Address;
@@ -48,6 +49,7 @@ export interface AvanaAddresses {
     readonly asset: Address;
     readonly decimals: number;
     readonly isGho: boolean;
+    readonly firstLossReserve: Address;
   }[];
   readonly aave: {
     readonly hubs: readonly { readonly label: string; readonly tier: number; readonly address: Address }[];
@@ -60,40 +62,39 @@ export interface AvanaAddresses {
 /** The address view of one manifest. */
 export function addressesFromManifest(m: ReleaseManifest): AvanaAddresses {
   const a = m.avana;
-  const core = [a.aaveAdapter, a.lpVaultSwap, a.marketRegistry, a.parameterStore, a.riskModule, a.timelock, a.proxyManager, a.collateralization, a.vaultTokenFactory, a.payoutEscrow, a.lock, a.lens, a.flashSource, a.flashLiquidator];
+  const core = a.integrations.flatMap((x) => [x.lpVault, x.riskModule, x.liquidationModule, x.aaveAdapter, x.flashloanRepay]);
   return {
     chainId: m.chainId,
     network: m.network,
     release: m.release,
     commit: m.commit,
     abiHash: m.abiHash,
-    startBlock: Math.min(...core.map((c) => c.startBlock)),
-    contracts: {
-      aaveAdapter: a.aaveAdapter.address,
-      lpVaultSwap: a.lpVaultSwap.address,
-      marketRegistry: a.marketRegistry.address,
-      parameterStore: a.parameterStore.address,
-      riskModule: a.riskModule.address,
-      timelock: a.timelock.address,
-      proxyManager: a.proxyManager.address,
-      collateralization: a.collateralization.address,
-      vaultTokenFactory: a.vaultTokenFactory.address,
-      payoutEscrow: a.payoutEscrow.address,
-      lock: a.lock.address,
-      lens: a.lens.address,
-      flashSource: a.flashSource.address,
-      flashLiquidator: a.flashLiquidator.address,
-    },
-    lpVaults: a.lpVaults.map((v) => ({ integrationId: v.integrationId, kind: v.kind, address: v.address })),
+    startBlock: Math.min(a.accessManager.startBlock, ...core.map((c) => c.startBlock)),
+    accessManager: a.accessManager.address,
+    integrations: a.integrations.map((x) => ({
+      integrationId: x.integrationId,
+      kind: x.kind,
+      lpVault: x.lpVault.address,
+      riskModule: x.riskModule.address,
+      liquidationModule: x.liquidationModule.address,
+      aaveAdapter: x.aaveAdapter.address,
+      flashloanRepay: x.flashloanRepay.address,
+    })),
+    flashLiquidators: a.flashLiquidators.map((f) => ({ integrationId: f.integrationId, address: f.address, operator: f.operator })),
     markets: m.markets.map((k) => ({
       marketId: k.marketId,
+      name: k.name,
       integrationId: k.integrationId,
+      kind: k.kind,
+      pool: k.pool,
       spoke: k.spoke,
       reserveId: k.reserveId,
       vaultToken: k.vaultToken.address,
       lpOracle: k.lpOracle.address,
-      pool: k.pool,
       tokens: [...k.tokens],
+      bandLower: k.bandLower,
+      bandUpper: k.bandUpper,
+      ltvBps: k.ltvBps,
     })),
     debtReserves: m.debtReserves.map((r) => ({
       spoke: r.spoke,
@@ -101,6 +102,7 @@ export function addressesFromManifest(m: ReleaseManifest): AvanaAddresses {
       asset: r.asset,
       decimals: r.decimals,
       isGho: r.isGho,
+      firstLossReserve: r.firstLossReserve,
     })),
     aave: {
       hubs: m.aave.hubs.map((h) => ({ label: h.label, tier: h.tier, address: h.address })),

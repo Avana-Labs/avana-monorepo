@@ -56,38 +56,6 @@
           "type": "string",
           "pattern": "^0x[0-9a-f]{64}$"
         },
-        "implementationArtifact": {
-          "type": "string"
-        },
-        "logics": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "address": {
-                "type": "string",
-                "pattern": "^0x[0-9a-fA-F]{40}$"
-              },
-              "codeHash": {
-                "type": "string",
-                "pattern": "^0x[0-9a-f]{64}$"
-              },
-              "artifact": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "name",
-              "address",
-              "codeHash",
-              "artifact"
-            ],
-            "additionalProperties": false
-          }
-        },
         "startBlock": {
           "type": "integer",
           "minimum": 0
@@ -98,8 +66,6 @@
         "codeHash",
         "implementation",
         "implementationCodeHash",
-        "implementationArtifact",
-        "logics",
         "startBlock"
       ],
       "additionalProperties": false
@@ -123,38 +89,6 @@
           "type": "string",
           "pattern": "^0x[0-9a-f]{64}$"
         },
-        "implementationArtifact": {
-          "type": "string"
-        },
-        "logics": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "address": {
-                "type": "string",
-                "pattern": "^0x[0-9a-fA-F]{40}$"
-              },
-              "codeHash": {
-                "type": "string",
-                "pattern": "^0x[0-9a-f]{64}$"
-              },
-              "artifact": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "name",
-              "address",
-              "codeHash",
-              "artifact"
-            ],
-            "additionalProperties": false
-          }
-        },
         "startBlock": {
           "type": "integer",
           "minimum": 0
@@ -168,87 +102,8 @@
         "codeHash",
         "implementation",
         "implementationCodeHash",
-        "implementationArtifact",
-        "logics",
         "startBlock",
         "label"
-      ],
-      "additionalProperties": false
-    },
-    "hub": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string",
-          "pattern": "^0x[0-9a-fA-F]{40}$"
-        },
-        "codeHash": {
-          "type": "string",
-          "pattern": "^0x[0-9a-f]{64}$"
-        },
-        "implementation": {
-          "type": "string",
-          "pattern": "^0x[0-9a-fA-F]{40}$"
-        },
-        "implementationCodeHash": {
-          "type": "string",
-          "pattern": "^0x[0-9a-f]{64}$"
-        },
-        "implementationArtifact": {
-          "type": "string"
-        },
-        "logics": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "address": {
-                "type": "string",
-                "pattern": "^0x[0-9a-fA-F]{40}$"
-              },
-              "codeHash": {
-                "type": "string",
-                "pattern": "^0x[0-9a-f]{64}$"
-              },
-              "artifact": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "name",
-              "address",
-              "codeHash",
-              "artifact"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "startBlock": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "label": {
-          "type": "string"
-        },
-        "tier": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 3
-        }
-      },
-      "required": [
-        "address",
-        "codeHash",
-        "implementation",
-        "implementationCodeHash",
-        "implementationArtifact",
-        "logics",
-        "startBlock",
-        "label",
-        "tier"
       ],
       "additionalProperties": false
     },
@@ -259,11 +114,28 @@
           "type": "string",
           "pattern": "^[0-9]+$"
         },
+        "name": {
+          "type": "string"
+        },
         "integrationId": {
           "type": "integer",
           "minimum": 1
         },
+        "kind": {
+          "enum": [
+            "full-range",
+            "custom-range"
+          ]
+        },
+        "pool": {
+          "type": "string",
+          "pattern": "^0x[0-9a-f]{64}$"
+        },
         "spoke": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
+        },
+        "hub": {
           "type": "string",
           "pattern": "^0x[0-9a-fA-F]{40}$"
         },
@@ -277,20 +149,34 @@
           "type": "string",
           "pattern": "^[0-9]+$"
         },
-        "pool": {
-          "type": "string",
-          "pattern": "^0x[0-9a-fA-F]{40}$"
-        },
-        "poolId": {
-          "type": "string",
-          "pattern": "^0x[0-9a-f]{64}$"
-        },
         "tokens": {
           "type": "array",
           "items": {
             "type": "string",
             "pattern": "^0x[0-9a-fA-F]{40}$"
-          }
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "bandLower": {
+          "type": "integer",
+          "minimum": -887272,
+          "maximum": 887272
+        },
+        "bandUpper": {
+          "type": "integer",
+          "minimum": -887272,
+          "maximum": 887272
+        },
+        "ltvBps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "unitDecimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 36
         },
         "feeds": {
           "type": "array",
@@ -312,25 +198,25 @@
             ],
             "additionalProperties": false
           }
-        },
-        "routes": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/immutable"
-          }
         }
       },
       "required": [
         "marketId",
+        "name",
         "integrationId",
+        "kind",
+        "pool",
         "spoke",
+        "hub",
         "vaultToken",
         "lpOracle",
         "reserveId",
-        "pool",
         "tokens",
-        "feeds",
-        "routes"
+        "bandLower",
+        "bandUpper",
+        "ltvBps",
+        "unitDecimals",
+        "feeds"
       ],
       "additionalProperties": false
     },
@@ -356,6 +242,10 @@
         },
         "isGho": {
           "type": "boolean"
+        },
+        "firstLossReserve": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
         },
         "feeds": {
           "type": "array",
@@ -385,6 +275,7 @@
         "asset",
         "decimals",
         "isGho",
+        "firstLossReserve",
         "feeds"
       ],
       "additionalProperties": false
@@ -393,7 +284,7 @@
   "type": "object",
   "properties": {
     "schemaVersion": {
-      "const": 1
+      "const": 2
     },
     "chainId": {
       "type": "integer",
@@ -441,105 +332,54 @@
     "avana": {
       "type": "object",
       "properties": {
-        "aaveAdapter": {
-          "$ref": "#/$defs/upgradeable"
-        },
-        "lpVaultSwap": {
-          "$ref": "#/$defs/upgradeable"
-        },
-        "marketRegistry": {
-          "$ref": "#/$defs/upgradeable"
-        },
-        "parameterStore": {
-          "$ref": "#/$defs/upgradeable"
-        },
-        "riskModule": {
-          "$ref": "#/$defs/upgradeable"
-        },
-        "timelock": {
+        "accessManager": {
           "$ref": "#/$defs/immutable"
         },
-        "proxyManager": {
-          "$ref": "#/$defs/immutable"
-        },
-        "collateralization": {
-          "$ref": "#/$defs/immutable"
-        },
-        "vaultTokenFactory": {
-          "$ref": "#/$defs/immutable"
-        },
-        "payoutEscrow": {
-          "$ref": "#/$defs/immutable"
-        },
-        "lock": {
-          "$ref": "#/$defs/immutable"
-        },
-        "lens": {
-          "$ref": "#/$defs/immutable"
-        },
-        "lensModules": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/immutable"
-          }
-        },
-        "lensAaveSizing": {
-          "$ref": "#/$defs/immutable"
-        },
-        "flashSource": {
-          "$ref": "#/$defs/immutable"
-        },
-        "flashLiquidator": {
-          "$ref": "#/$defs/immutable"
-        },
-        "operatorHelpers": {
+        "integrations": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "address": {
-                "type": "string",
-                "pattern": "^0x[0-9a-fA-F]{40}$"
-              },
-              "codeHash": {
-                "type": "string",
-                "pattern": "^0x[0-9a-f]{64}$"
-              },
-              "startBlock": {
+              "integrationId": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 1
               },
-              "artifact": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
+              "kind": {
+                "enum": [
+                  "uniswap-v3",
+                  "slipstream",
+                  "uniswap-v4"
                 ]
               },
-              "signer": {
-                "type": "string",
-                "pattern": "^0x[0-9a-fA-F]{40}$"
+              "lpVault": {
+                "$ref": "#/$defs/immutable"
               },
-              "fundingSafe": {
-                "type": "string",
-                "pattern": "^0x[0-9a-fA-F]{40}$"
+              "riskModule": {
+                "$ref": "#/$defs/immutable"
+              },
+              "liquidationModule": {
+                "$ref": "#/$defs/immutable"
+              },
+              "aaveAdapter": {
+                "$ref": "#/$defs/immutable"
+              },
+              "flashloanRepay": {
+                "$ref": "#/$defs/immutable"
               }
             },
             "required": [
-              "address",
-              "codeHash",
-              "startBlock",
-              "artifact",
-              "signer",
-              "fundingSafe"
+              "integrationId",
+              "kind",
+              "lpVault",
+              "riskModule",
+              "liquidationModule",
+              "aaveAdapter",
+              "flashloanRepay"
             ],
             "additionalProperties": false
           }
         },
-        "lpVaults": {
+        "flashLiquidators": {
           "type": "array",
           "items": {
             "type": "object",
@@ -570,12 +410,9 @@
                 "type": "integer",
                 "minimum": 1
               },
-              "kind": {
-                "enum": [
-                  "uniswap-v3",
-                  "slipstream",
-                  "uniswap-v4"
-                ]
+              "operator": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
               }
             },
             "required": [
@@ -584,11 +421,34 @@
               "startBlock",
               "artifact",
               "integrationId",
-              "kind"
+              "operator"
             ],
             "additionalProperties": false
           }
-        },
+        }
+      },
+      "required": [
+        "accessManager",
+        "integrations",
+        "flashLiquidators"
+      ],
+      "additionalProperties": false
+    },
+    "markets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/market"
+      }
+    },
+    "debtReserves": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/debtReserve"
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "properties": {
         "firstLossReserves": {
           "type": "array",
           "items": {
@@ -616,13 +476,23 @@
                   }
                 ]
               },
+              "hub": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "hubLabel": {
+                "type": "string"
+              },
               "asset": {
                 "type": "string",
                 "pattern": "^0x[0-9a-fA-F]{40}$"
               },
-              "hub": {
+              "symbol": {
+                "type": "string"
+              },
+              "minimum": {
                 "type": "string",
-                "pattern": "^0x[0-9a-fA-F]{40}$"
+                "pattern": "^[0-9]+$"
               }
             },
             "required": [
@@ -630,8 +500,11 @@
               "codeHash",
               "startBlock",
               "artifact",
+              "hub",
+              "hubLabel",
               "asset",
-              "hub"
+              "symbol",
+              "minimum"
             ],
             "additionalProperties": false
           }
@@ -663,13 +536,23 @@
                   }
                 ]
               },
+              "hub": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "hubLabel": {
+                "type": "string"
+              },
               "asset": {
                 "type": "string",
                 "pattern": "^0x[0-9a-fA-F]{40}$"
               },
-              "hub": {
+              "symbol": {
+                "type": "string"
+              },
+              "minimum": {
                 "type": "string",
-                "pattern": "^0x[0-9a-fA-F]{40}$"
+                "pattern": "^[0-9]+$"
               }
             },
             "required": [
@@ -677,116 +560,21 @@
               "codeHash",
               "startBlock",
               "artifact",
+              "hub",
+              "hubLabel",
               "asset",
-              "hub"
+              "symbol",
+              "minimum"
             ],
             "additionalProperties": false
           }
-        },
-        "proxyCreationCodeHash": {
-          "type": "string",
-          "pattern": "^0x[0-9a-f]{64}$"
-        },
-        "gasVault": {
-          "anyOf": [
-            {
-              "type": "object",
-              "properties": {
-                "address": {
-                  "type": "string",
-                  "pattern": "^0x[0-9a-fA-F]{40}$"
-                },
-                "codeHash": {
-                  "type": "string",
-                  "pattern": "^0x[0-9a-f]{64}$"
-                },
-                "startBlock": {
-                  "type": "integer",
-                  "minimum": 0
-                },
-                "artifact": {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "treasury": {
-                  "type": "string",
-                  "pattern": "^0x[0-9a-fA-F]{40}$"
-                },
-                "timelock": {
-                  "type": "string",
-                  "pattern": "^0x[0-9a-fA-F]{40}$"
-                },
-                "guardian": {
-                  "type": "string",
-                  "pattern": "^0x[0-9a-fA-F]{40}$"
-                },
-                "maxSigners": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 8
-                }
-              },
-              "required": [
-                "address",
-                "codeHash",
-                "startBlock",
-                "artifact",
-                "treasury",
-                "timelock",
-                "guardian",
-                "maxSigners"
-              ],
-              "additionalProperties": false
-            },
-            {
-              "type": "null"
-            }
-          ]
         }
       },
       "required": [
-        "aaveAdapter",
-        "lpVaultSwap",
-        "marketRegistry",
-        "parameterStore",
-        "riskModule",
-        "timelock",
-        "proxyManager",
-        "collateralization",
-        "vaultTokenFactory",
-        "payoutEscrow",
-        "lock",
-        "lens",
-        "lensModules",
-        "lensAaveSizing",
-        "flashSource",
-        "flashLiquidator",
-        "operatorHelpers",
-        "lpVaults",
         "firstLossReserves",
-        "daoDeficitOffsets",
-        "proxyCreationCodeHash",
-        "gasVault"
+        "daoDeficitOffsets"
       ],
       "additionalProperties": false
-    },
-    "markets": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/market"
-      }
-    },
-    "debtReserves": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/debtReserve"
-      }
     },
     "aave": {
       "type": "object",
@@ -794,7 +582,47 @@
         "hubs": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/hub"
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "codeHash": {
+                "type": "string",
+                "pattern": "^0x[0-9a-f]{64}$"
+              },
+              "implementation": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{40}$"
+              },
+              "implementationCodeHash": {
+                "type": "string",
+                "pattern": "^0x[0-9a-f]{64}$"
+              },
+              "startBlock": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "label": {
+                "type": "string"
+              },
+              "tier": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3
+              }
+            },
+            "required": [
+              "address",
+              "codeHash",
+              "implementation",
+              "implementationCodeHash",
+              "startBlock",
+              "label",
+              "tier"
+            ],
+            "additionalProperties": false
           }
         },
         "borrowSpokes": {
@@ -829,55 +657,9 @@
     "roles": {
       "type": "object",
       "properties": {
-        "timelock": {
-          "type": "object",
-          "properties": {
-            "proposers": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "pattern": "^0x[0-9a-fA-F]{40}$"
-              }
-            },
-            "executors": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "pattern": "^0x[0-9a-fA-F]{40}$"
-              }
-            },
-            "cancellers": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "pattern": "^0x[0-9a-fA-F]{40}$"
-              }
-            },
-            "daoCancellers": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "pattern": "^0x[0-9a-fA-F]{40}$"
-              }
-            },
-            "normalDelay": {
-              "type": "integer",
-              "minimum": 60,
-              "maximum": 432000
-            },
-            "publicExecution": {
-              "type": "boolean"
-            }
-          },
-          "required": [
-            "proposers",
-            "executors",
-            "cancellers",
-            "daoCancellers",
-            "normalDelay",
-            "publicExecution"
-          ],
-          "additionalProperties": false
+        "aaveGovernanceExecutor": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$"
         },
         "governanceSafe": {
           "type": "string",
@@ -891,34 +673,9 @@
           "type": "string",
           "pattern": "^0x[0-9a-fA-F]{40}$"
         },
-        "aaveGovernanceExecutor": {
-          "type": "string",
-          "pattern": "^0x[0-9a-fA-F]{40}$"
-        },
         "jointConfigSafe": {
           "type": "string",
           "pattern": "^0x[0-9a-fA-F]{40}$"
-        },
-        "marketRegistryGuardians": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^0x[0-9a-fA-F]{40}$"
-          }
-        },
-        "parameterStorePauseGuardians": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^0x[0-9a-fA-F]{40}$"
-          }
-        },
-        "riskStewards": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^0x[0-9a-fA-F]{40}$"
-          }
         },
         "keepers": {
           "type": "array",
@@ -926,19 +683,27 @@
             "type": "string",
             "pattern": "^0x[0-9a-fA-F]{40}$"
           }
+        },
+        "keeperTopUpWallet": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{40}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
-        "timelock",
+        "aaveGovernanceExecutor",
         "governanceSafe",
         "emergencyGuardian",
         "aaveProtocolGuardian",
-        "aaveGovernanceExecutor",
         "jointConfigSafe",
-        "marketRegistryGuardians",
-        "parameterStorePauseGuardians",
-        "riskStewards",
-        "keepers"
+        "keepers",
+        "keeperTopUpWallet"
       ],
       "additionalProperties": false
     },
@@ -1023,6 +788,7 @@
     "avana",
     "markets",
     "debtReserves",
+    "coverage",
     "aave",
     "roles",
     "external"

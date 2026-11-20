@@ -1,16 +1,24 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Reads one chain's Hubs, their assets and Spoke slices with their draw-cap coverage, the CDP debt reserves and the
-// collateral markets at one block, for every Hub and Spoke discovery.ts finds.
-// The indexer runs it at each hourly sample block (chart history) and Convex at the head (current values); both
-// get the same rows from the same calls. Lens market, exposure and speed-limit views plus the Aave V4 Hub and Spoke
-// views the Lens itself reads; appViews.ts holds the Lens views the app reads per account or Hub asset.
+// collateral markets (two per pool: Full range and Custom range) at one block, for every Hub and Spoke discovery.ts
+// finds. The indexer runs it at each hourly sample block (chart history), Convex at the head (current values) and the
+// monitor every round; all get the same rows from the same calls: the Aave V4 Hub and Spoke views, each market's
+// RiskModule record and LPOracle, each RiskModule's draw-cap coverage and each First-Loss Reserve's balance.
 
-import { aaveOracleAbi, hubViewsAbi, lensViewsAbi, rateStrategyAbi, registryViewsAbi, spokeViewsAbi } from "./abi.ts";
-import { type HubAssetView, lensAppViewsAbi } from "./appViews.ts";
+import {
+  aaveOracleAbi,
+  erc20ViewsAbi,
+  firstLossReserveViewsAbi,
+  hubViewsAbi,
+  lpOracleViewsAbi,
+  rateStrategyAbi,
+  riskModuleViewsAbi,
+  spokeViewsAbi,
+} from "./abi.ts";
 import { type ContractCall, type ViewClient, ZERO, all, lower, s, some, uniq } from "./client.ts";
 import { type HubAssetInfo, discover } from "./discovery.ts";
-import { deficitFromRay, supplyRateRay, utilizationBps } from "./math.ts";
+import { deficitFromRay, marketBorrowRateRay, supplyRateRay, utilizationBps } from "./math.ts";
 import type {
   Address,
   ChainDeployment,
@@ -19,10 +27,8 @@ import type {
   HubAssetSpokeRow,
   HubRow,
   LendReserve,
-  MarketBorrowRow,
   MarketRow,
   SpokeKind,
-  SpeedWindow,
   SpokeReserveRow,
 } from "./types.ts";
 
@@ -34,119 +40,32 @@ interface DecodedReserve {
   assetId: number;
   decimals: number;
   collateralRisk: number;
+  dynamicConfigKey: number;
 }
 interface DecodedReserveConfig {
-  paused: boolean;
-  frozen: boolean;
-}
-interface DecodedExposure {
-  firstLossReserve: Address;
-  fundedBalance: bigint;
-  drawCapSum: bigint;
-  coverageBoundHolds: boolean;
-  uncovered: bigint;
-  priceAdj: bigint;
-  spokes: readonly { spoke: Address; homeHub: Address }[];
-  deficitOffset: Address;
-  offsetFunded: bigint;
-}
-interface DecodedSpeed {
-  limit: bigint;
-  used: bigint;
-  available: bigint;
-  moreAt: bigint | number;
-  moreAmount: bigint;
-  unavailable: boolean;
-}
-interface DecodedBorrowSpeed {
-  market: DecodedSpeed;
-  debt: DecodedSpeed;
-  availableNow: bigint;
-  moreAt: bigint | number;
-}
-interface DecodedMarket {
-  marketId: bigint;
-  status: number;
-  pool: Address;
-  poolId: `0x${string}`;
-  tokens: readonly Address[];
-  tokenDecimals: readonly number[];
-  feeTier: number;
-  tickLower: number;
-  tickUpper: number;
-  integrationId: number;
-  ammProtocol: `0x${string}`;
-  vaultToken: Address;
-  name: string;
-  symbol: string;
-  lpOracle: Address;
-  hub: Address;
-  spoke: Address;
-  reserveId: bigint;
-  hubAssetId: bigint;
-  acceptedPrice: bigint;
-  priceState: number;
-  suppliedUnits: bigint;
-  suppliedUsd: bigint;
-  collateralFactorBps: bigint;
-  liquidationThresholdBps: bigint;
-  maxLiquidationBonusBps: bigint;
-  marketHeadroomUsd: bigint;
-  sliceHeadroomUsd: bigint;
-  addHeadroom: bigint;
-  pauseState: number;
-  breakerReasons: number;
-  collateralRiskBps: bigint;
-  liquidationFeeBps: bigint;
-  targetHealthFactor: bigint;
-  healthFactorForMaxBonus: bigint;
-  liquidationBonusFactorBps: bigint;
-  hardHealthFloor: bigint;
-  marketUsdCap: bigint;
-  topUpSliceUsd: bigint;
-  tokenUsdCaps: readonly bigint[];
-  addCap: bigint;
-  debtReserveIds: readonly bigint[];
-  borrowRatesRay: readonly bigint[];
-}
-interface DecodedDebtReserve {
-  spoke: Address;
-  reserveId: bigint;
-  asset: Address;
-  decimals: number;
-  price: bigint;
-  fixedPrice: boolean;
-  hub: Address;
-  hubAssetId: bigint;
+  collateralRisk: number;
   paused: boolean;
   frozen: boolean;
   borrowable: boolean;
-  breakerReasons: number;
-  pauseState: number;
+}
+interface DecodedRiskMarket {
+  pool: `0x${string}`;
+  spoke: Address;
+  vaultToken: Address;
+  lpOracle: Address;
+  reserveId: bigint;
+  bandLower: number;
+  bandUpper: number;
+  ltvBps: number;
+  unitDecimals: number;
+  kind: number;
+  active: boolean;
 }
 
-const reg = (registry: Address, functionName: string, args: readonly unknown[]): ContractCall => ({ address: registry, abi: registryViewsAbi, functionName, args });
 const hubCall = (hub: Address, functionName: string, args: readonly unknown[]): ContractCall => ({ address: hub, abi: hubViewsAbi, functionName, args });
 const spokeCall = (spoke: Address, functionName: string, args: readonly unknown[] = []): ContractCall => ({ address: spoke, abi: spokeViewsAbi, functionName, args });
-const speedRow = (v: DecodedSpeed): SpeedWindow => ({
-  limit: s(v.limit),
-  used: s(v.used),
-  available: s(v.available),
-  moreAt: Number(v.moreAt),
-  moreAmount: s(v.moreAmount),
-  unavailable: v.unavailable,
-});
-
-/** Every market, page by page, until a short page. */
-async function readMarkets(client: ViewClient, lens: Address): Promise<DecodedMarket[]> {
-  const [maxPage] = (await all(client, [{ address: lens, abi: lensViewsAbi, functionName: "LENS_MAX_PAGE" }])) as [bigint];
-  const out: DecodedMarket[] = [];
-  for (let offset = 0n; ; offset += maxPage) {
-    const [page] = (await all(client, [{ address: lens, abi: lensViewsAbi, functionName: "getMarkets", args: [offset, maxPage] }])) as [DecodedMarket[]];
-    out.push(...page);
-    if (BigInt(page.length) < maxPage) return out;
-  }
-}
+const toUsd8 = (p: bigint, d: number): bigint => (d >= 8 ? p / 10n ** BigInt(d - 8) : p * 10n ** BigInt(8 - d));
+const max0 = (x: bigint) => (x > 0n ? x : 0n);
 
 /**
  * Reads the snapshot. `at` is the block the client is pinned to; it is written on every row so a consumer can
@@ -154,102 +73,128 @@ async function readMarkets(client: ViewClient, lens: Address): Promise<DecodedMa
  */
 export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment, at: { blockNumber: bigint; timestamp: number }): Promise<ChainSnapshot> {
   const block = s(at.blockNumber);
-  const lens = lower(dep.lens);
-  const registry = lower(dep.marketRegistry);
   const topo = await discover(client, dep);
   const { cdpSpokes, lendSpokes } = topo;
   const L = lendSpokes.length;
-  const C = cdpSpokes.length;
+  const cdpSet = new Set(cdpSpokes);
 
-  // 1. Each Lend Spoke's reserve count and oracle, every CDP Spoke's debt reserves and liquidation config.
+  // 1. Each Lend Spoke's reserve count and oracle; each CDP Spoke's oracle and liquidation config.
   const first = await all(client, [
     ...lendSpokes.flatMap((sp) => [spokeCall(sp, "getReserveCount"), spokeCall(sp, "ORACLE")]),
-    ...cdpSpokes.map((sp): ContractCall => ({ address: lens, abi: lensViewsAbi, functionName: "getDebtReserves", args: [sp] })),
-    ...cdpSpokes.map((sp) => spokeCall(sp, "getLiquidationConfig")),
+    ...cdpSpokes.flatMap((sp) => [spokeCall(sp, "ORACLE"), spokeCall(sp, "getLiquidationConfig")]),
   ]);
   const lendMeta = lendSpokes.map((spoke, i) => ({ spoke, count: Number(first[2 * i] as bigint), oracle: lower(first[2 * i + 1] as string) }));
-  const debtReserves = (first.slice(2 * L, 2 * L + C) as DecodedDebtReserve[][]).flat();
+  const cdpOracle = new Map(cdpSpokes.map((sp, i) => [sp, lower(first[2 * L + 2 * i] as string)]));
   const liqConfigs = new Map(
-    cdpSpokes.map((sp, i) => [sp, first[2 * L + C + i] as { targetHealthFactor: bigint; healthFactorForMaxBonus: bigint; liquidationBonusFactor: number }]),
+    cdpSpokes.map((sp, i) => [sp, first[2 * L + 2 * i + 1] as { targetHealthFactor: bigint; healthFactorForMaxBonus: bigint; liquidationBonusFactor: number }]),
   );
-  const oracles = uniq(lendMeta.map((m) => m.oracle));
+  const debtKeys = dep.debtReserves.map((r) => ({ spoke: lower(r.spoke), reserveId: r.reserveId, fixedPrice: r.fixedPrice })).filter((r) => cdpSet.has(r.spoke));
+  const oracles = uniq([...lendMeta.map((m) => m.oracle), ...debtKeys.map((k) => cdpOracle.get(k.spoke)!)]);
 
-  // 2. Each oracle's decimals; each lend reserve's Hub asset, flags and price.
+  // 2. Each oracle's decimals; each lend reserve's and debt reserve's Hub asset, flags and price.
   const lendKeys = lendMeta.flatMap((m) => Array.from({ length: m.count }, (_, i) => ({ spoke: m.spoke, oracle: m.oracle, reserveId: BigInt(i) })));
-  const lendReads = await all(client, [
+  const reserveKeys = [...lendKeys, ...debtKeys.map((k) => ({ ...k, oracle: cdpOracle.get(k.spoke)! }))];
+  const reads = await all(client, [
     ...oracles.map((o): ContractCall => ({ address: o, abi: aaveOracleAbi, functionName: "decimals" })),
-    ...lendKeys.flatMap((k) => [
+    ...reserveKeys.flatMap((k) => [
       spokeCall(k.spoke, "getReserve", [k.reserveId]),
       spokeCall(k.spoke, "getReserveConfig", [k.reserveId]),
       { address: k.oracle, abi: aaveOracleAbi, functionName: "getReservePrice", args: [k.reserveId] },
     ]),
   ]);
   const O = oracles.length;
-  const oracleDecimals = new Map(oracles.map((o, i) => [o, Number(lendReads[i] as number)]));
-  const toUsd8 = (p: bigint, d: number): bigint => (d >= 8 ? p / 10n ** BigInt(d - 8) : p * 10n ** BigInt(8 - d));
+  const oracleDecimals = new Map(oracles.map((o, i) => [o, Number(reads[i] as number)]));
+  const reserveAt = (i: number) => ({
+    reserve: reads[O + i * 3] as DecodedReserve,
+    config: reads[O + i * 3 + 1] as DecodedReserveConfig,
+    priceUsd8: toUsd8(reads[O + i * 3 + 2] as bigint, oracleDecimals.get(reserveKeys[i]!.oracle)!),
+  });
   const infoOf = new Map(topo.assets.map((a) => [`${a.hub}:${a.assetId}`, a]));
   const grouped = new Map<string, { info: HubAssetInfo; reserves: LendReserve[]; priceUsd8: bigint }>();
   lendKeys.forEach((k, i) => {
-    const reserve = lendReads[O + i * 3] as DecodedReserve;
-    const config = lendReads[O + i * 3 + 1] as DecodedReserveConfig;
+    const { reserve, config, priceUsd8 } = reserveAt(i);
     const key = `${lower(reserve.hub)}:${BigInt(reserve.assetId)}`;
     const info = infoOf.get(key);
-    if (!info) throw new Error(`Lend Spoke ${k.spoke} reserve ${k.reserveId} is on Hub ${lower(reserve.hub)}, which is neither in the manifest nor recorded by the MarketRegistry`);
+    if (!info) throw new Error(`Lend Spoke ${k.spoke} reserve ${k.reserveId} is on Hub ${lower(reserve.hub)}, which the manifest does not list`);
     const entry = { spoke: k.spoke, reserveId: s(k.reserveId), paused: config.paused, frozen: config.frozen };
     const found = grouped.get(key);
     if (found) found.reserves.push(entry);
-    else grouped.set(key, { info, reserves: [entry], priceUsd8: toUsd8(lendReads[O + i * 3 + 2] as bigint, oracleDecimals.get(k.oracle)!) });
+    else grouped.set(key, { info, reserves: [entry], priceUsd8 });
   });
   const lendAssets = [...grouped.values()];
-
-  // 3. Hub totals of each lend asset in one Lens call (`getHubAsset`: added, owed split, liquidity, deficit rounded up,
-  // accrued fees, drawn rate, all at this block), and the Hub's drawn index, which the view does not carry.
-  const hubReads = await all(
-    client,
-    lendAssets.flatMap(({ info: a }) => [
-      { address: lens, abi: lensAppViewsAbi, functionName: "getHubAsset", args: [a.hub, a.assetId] },
-      hubCall(a.hub, "getAssetDrawnIndex", [a.assetId]),
-    ]),
-  );
-  const totals = lendAssets.map((la, i) => {
-    const v = hubReads[i * 2] as HubAssetView;
+  const spokeReserves: SpokeReserveRow[] = debtKeys.map((k, j) => {
+    const { reserve, config, priceUsd8 } = reserveAt(lendKeys.length + j);
     return {
-      ...la,
-      added: v.added,
-      addedShares: v.addedShares,
-      drawn: v.drawn,
-      premium: v.premium,
-      liquidity: v.liquidity,
-      deficit: v.deficit,
-      accruedFees: v.accruedFees,
-      drawnRate: v.drawnRateRay,
-      drawnIndex: hubReads[i * 2 + 1] as bigint,
+      chainId: dep.chainId,
+      spoke: k.spoke,
+      reserveId: s(k.reserveId),
+      hub: lower(reserve.hub),
+      assetId: s(BigInt(reserve.assetId)),
+      asset: lower(reserve.underlying),
+      decimals: Number(reserve.decimals),
+      debtPrice: s(priceUsd8),
+      fixedPrice: k.fixedPrice,
+      paused: config.paused,
+      frozen: config.frozen,
+      borrowable: config.borrowable,
+      blockNumber: block,
     };
   });
 
-  // 4. Rate curves, the Lens exposure and the registry's draw-cap coverage of each lend asset.
+  // 3. Hub totals of each lend asset.
+  const TOTALS = ["getAddedAssets", "getAddedShares", "getAssetOwed", "getAssetLiquidity", "getAssetDeficitRay", "getAssetAccruedFees", "getAssetDrawnRate", "getAssetDrawnIndex"];
+  const hubReads = await all(client, lendAssets.flatMap(({ info: a }) => TOTALS.map((fn) => hubCall(a.hub, fn, [a.assetId]))));
+  const totals = lendAssets.map((la, i) => {
+    const r = (k: number) => hubReads[i * TOTALS.length + k];
+    const [drawn, premium] = r(2) as [bigint, bigint];
+    return {
+      ...la,
+      added: r(0) as bigint,
+      addedShares: r(1) as bigint,
+      drawn,
+      premium,
+      liquidity: r(3) as bigint,
+      deficit: deficitFromRay(r(4) as bigint),
+      accruedFees: r(5) as bigint,
+      drawnRate: r(6) as bigint,
+      drawnIndex: r(7) as bigint,
+    };
+  });
+
+  // 4. Rate curves, each First-Loss Reserve's balance and each RiskModule's draw-cap coverage of each lend asset.
+  const covered = totals.map((t) => t.info.firstLossReserve !== ZERO);
   const curves = await some(client, totals.map(({ info: a }) => ({ address: a.irStrategy, abi: rateStrategyAbi, functionName: "getInterestRateData", args: [a.assetId] })));
-  const exposures = (await some(client, totals.map(({ info: a }) => ({ address: lens, abi: lensViewsAbi, functionName: "getHubAssetExposure", args: [a.hub, a.underlying] })))) as (DecodedExposure | null)[];
-  const coverages = (await some(client, totals.map(({ info: a }) => reg(registry, "drawCapCoverage", [a.hub, a.underlying])))) as (readonly [bigint, bigint, bigint] | null)[];
+  const R = dep.riskModules.length;
+  const coverReads = await some(
+    client,
+    totals.flatMap(({ info: a }, i) =>
+      covered[i]
+        ? [
+            { address: a.firstLossReserve, abi: firstLossReserveViewsAbi, functionName: "fundedBalance", args: [] } as ContractCall,
+            ...dep.riskModules.map((rm): ContractCall => ({ address: lower(rm), abi: riskModuleViewsAbi, functionName: "coverage", args: [a.hub, a.underlying] })),
+          ]
+        : [],
+    ),
+  );
 
   // 5. Each slice's added and owed amounts.
   const lendSet = new Set(lendSpokes);
-  const cdpSet = new Set(cdpSpokes);
-  const sliceKeys = totals.flatMap((t, ti) =>
+  const sliceKeys = totals.flatMap((t) =>
     t.info.spokes.map(({ spoke, data }) => {
-      const exposure = exposures[ti];
-      const homeHub = topo.homeHubOf.get(spoke) ?? lower(exposure?.spokes.find((x) => lower(x.spoke) === spoke)?.homeHub ?? ZERO);
+      const homeHub = cdpSet.has(spoke) ? (topo.homeHubOf.get(spoke) ?? ZERO) : ZERO;
       const kind: SpokeKind = lendSet.has(spoke)
         ? "lend"
-        : cdpSet.has(spoke) || homeHub !== ZERO
+        : cdpSet.has(spoke)
           ? "cdp"
-          : topo.coverage.has(spoke) || (exposure != null && lower(exposure.firstLossReserve) === spoke)
+          : spoke === t.info.firstLossReserve
             ? "coverage"
             : t.info.deficitOffsets.includes(spoke)
               ? "deficitOffset"
               : spoke === t.info.feeReceiver
                 ? "feeReceiver"
-                : "other";
+                : topo.coverage.has(spoke)
+                  ? "coverage"
+                  : "other";
       return { t, spoke, data, homeHub, kind };
     }),
   );
@@ -276,12 +221,34 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
     halted: data.halted,
     blockNumber: block,
   }));
+
+  let coverCursor = 0;
   const hubAssets: HubAssetRow[] = totals.map((t, i) => {
     const a = t.info;
     const owed = t.drawn + t.premium;
     const curve = curves[i] as { optimalUsageRatio: number; baseDrawnRate: number; rateGrowthBeforeOptimal: number; rateGrowthAfterOptimal: number } | null;
-    const exposure = exposures[i];
-    const coverage = coverages[i];
+    let exposure: HubAssetRow["exposure"] = null;
+    if (covered[i]) {
+      const funded = coverReads[coverCursor] as bigint | null;
+      const perModule = coverReads.slice(coverCursor + 1, coverCursor + 1 + R) as (readonly [bigint, bigint, bigint] | null)[];
+      coverCursor += 1 + R;
+      if (funded !== null) {
+        const drawCapSum = perModule.reduce((acc, c) => acc + (c?.[0] ?? 0n), 0n);
+        const required = perModule.reduce((acc, c) => acc + (c?.[1] ?? 0n), 0n);
+        const offset = a.deficitOffsets[0] ?? ZERO;
+        const offsetFunded = slices.filter((x) => x.hub === a.hub && x.assetId === s(a.assetId) && a.deficitOffsets.includes(x.spoke)).reduce((acc, x) => acc + BigInt(x.added), 0n);
+        exposure = {
+          firstLossReserve: a.firstLossReserve,
+          fundedBalance: s(funded),
+          drawCapSum: s(drawCapSum),
+          required: s(required),
+          coverageBoundHolds: required <= funded,
+          uncovered: s(max0(t.deficit - funded - offsetFunded)),
+          deficitOffset: offset,
+          offsetFunded: s(offsetFunded),
+        };
+      }
+    }
     return {
       chainId: dep.chainId,
       hub: a.hub,
@@ -313,20 +280,7 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
         : null,
       lend: t.reserves[0]!,
       lendReserves: t.reserves,
-      exposure:
-        exposure && coverage
-          ? {
-              firstLossReserve: lower(exposure.firstLossReserve),
-              fundedBalance: s(exposure.fundedBalance),
-              drawCapSum: s(exposure.drawCapSum),
-              required: s(coverage[1]),
-              coverageBoundHolds: exposure.coverageBoundHolds,
-              uncovered: s(exposure.uncovered),
-              priceAdj: s(exposure.priceAdj),
-              deficitOffset: lower(exposure.deficitOffset),
-              offsetFunded: s(exposure.offsetFunded),
-            }
-          : null,
+      exposure,
       blockNumber: block,
       timestamp: at.timestamp,
     };
@@ -339,8 +293,6 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
       hub: h.hub,
       label: h.label,
       tier: h.tier,
-      recorded: h.recorded,
-      applicationState: h.applicationState,
       assetCount: h.assetCount,
       lendAssetIds: mine.map((a) => a.assetId),
       lendSpokes: uniq(mine.flatMap((a) => a.lendReserves.map((r) => r.spoke))),
@@ -349,79 +301,76 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
     };
   });
 
-  const spokeReserves: SpokeReserveRow[] = debtReserves.map((d) => ({
-    chainId: dep.chainId,
-    spoke: lower(d.spoke),
-    reserveId: s(d.reserveId),
-    hub: lower(d.hub),
-    assetId: s(d.hubAssetId),
-    asset: lower(d.asset),
-    decimals: Number(d.decimals),
-    debtPrice: s(d.price),
-    fixedPrice: d.fixedPrice,
-    paused: d.paused,
-    frozen: d.frozen,
-    borrowable: d.borrowable,
-    breakerReasons: Number(d.breakerReasons),
-    pauseState: Number(d.pauseState),
-    blockNumber: block,
-  }));
-
-  // 6. Markets, the collateral risk of each vault-token reserve, and each market's borrow speed per debt reserve and
-  // pledge speed (the Lens refuses both while the Lock is held).
-  const decoded = await readMarkets(client, lens);
+  // 6. Markets of a live CDP Spoke: the RiskModule's record, the LPOracle's price, the vault-token reserve and the
+  // pool tokens' decimals; then the reserve's dynamic config and the Spoke's supplied units.
+  const markets = dep.markets.filter((m) => cdpSet.has(lower(m.spoke)));
   const marketReads = await all(
     client,
-    decoded.flatMap((m) => [spokeCall(lower(m.spoke), "getReserve", [m.reserveId]), hubCall(lower(m.hub), "getAssetUnderlyingAndDecimals", [m.hubAssetId])]),
+    markets.flatMap((m): ContractCall[] => [
+      { address: lower(m.riskModule), abi: riskModuleViewsAbi, functionName: "getMarket", args: [m.marketId] },
+      { address: lower(m.lpOracle), abi: lpOracleViewsAbi, functionName: "latestAnswer", args: [] },
+      { address: lower(m.lpOracle), abi: lpOracleViewsAbi, functionName: "decimals", args: [] },
+      spokeCall(lower(m.spoke), "getReserve", [m.reserveId]),
+      spokeCall(lower(m.spoke), "getReserveConfig", [m.reserveId]),
+      { address: lower(m.vaultToken), abi: erc20ViewsAbi, functionName: "symbol", args: [] },
+      ...m.tokens.map((t): ContractCall => ({ address: lower(t), abi: erc20ViewsAbi, functionName: "decimals", args: [] })),
+    ]),
   );
-  const borrowKeys = decoded.flatMap((m, mi) => m.debtReserveIds.map((reserveId, ri) => ({ mi, reserveId, rateRay: m.borrowRatesRay[ri] ?? 0n, marketId: m.marketId })));
-  const speeds = await some(client, [
-    ...borrowKeys.map((k): ContractCall => ({ address: lens, abi: lensViewsAbi, functionName: "getBorrowSpeed", args: [k.marketId, k.reserveId] })),
-    ...decoded.map((m): ContractCall => ({ address: lens, abi: lensViewsAbi, functionName: "getPledgeSpeed", args: [m.marketId] })),
-  ]);
-  const borrowOf = (mi: number): MarketBorrowRow[] =>
-    borrowKeys.flatMap((k, j) => {
-      if (k.mi !== mi) return [];
-      const v = speeds[j] as DecodedBorrowSpeed | null;
-      return [
-        {
-          reserveId: s(k.reserveId),
-          borrowRateRay: s(k.rateRay),
-          speed: v ? { availableNow: s(v.availableNow), moreAt: Number(v.moreAt), market: speedRow(v.market), debt: speedRow(v.debt) } : null,
-        },
-      ];
-    });
-  const markets: MarketRow[] = decoded.map((m, i) => {
+  let mc = 0;
+  const decoded = markets.map((m) => {
+    const rm = marketReads[mc++] as DecodedRiskMarket;
+    const price = marketReads[mc++] as bigint;
+    const priceDecimals = Number(marketReads[mc++] as number);
+    const reserve = marketReads[mc++] as DecodedReserve;
+    const config = marketReads[mc++] as DecodedReserveConfig;
+    const symbol = marketReads[mc++] as string;
+    const tokenDecimals = m.tokens.map(() => Number(marketReads[mc++] as number));
+    return { m, rm, price: toUsd8(price > 0n ? price : 0n, priceDecimals), reserve, config, symbol, tokenDecimals };
+  });
+  const second = await all(
+    client,
+    decoded.flatMap(({ m, reserve }) => [
+      spokeCall(lower(m.spoke), "getDynamicReserveConfig", [m.reserveId, reserve.dynamicConfigKey]),
+      hubCall(lower(reserve.hub), "getSpokeAddedAssets", [BigInt(reserve.assetId), lower(m.spoke)]),
+    ]),
+  );
+  const rateOf = (hub: Address, asset: Address) => hubAssets.find((a) => a.hub === hub && a.underlying === asset)?.drawnRateRay ?? "0";
+  const marketRows: MarketRow[] = decoded.map(({ m, rm, price, reserve, config, symbol, tokenDecimals }, i) => {
+    const dyn = second[i * 2] as { collateralFactor: number; maxLiquidationBonus: number; liquidationFee: number };
+    const supplied = second[i * 2 + 1] as bigint;
+    const vaultDecimals = Number(reserve.decimals);
     const liq = liqConfigs.get(lower(m.spoke));
     return {
       chainId: dep.chainId,
       marketId: s(m.marketId),
-      status: Number(m.status),
-      pool: lower(m.pool),
-      poolId: m.poolId,
+      kind: rm.kind === 0 ? "full-range" : "custom-range",
+      active: rm.active,
+      pool: rm.pool.toLowerCase() as `0x${string}`,
       tokens: m.tokens.map(lower),
-      tokenDecimals: m.tokenDecimals.map(Number),
-      feeTier: Number(m.feeTier),
-      tickLower: Number(m.tickLower),
-      tickUpper: Number(m.tickUpper),
-      integrationId: Number(m.integrationId),
-      ammProtocol: m.ammProtocol,
+      tokenDecimals,
+      bandLower: Number(rm.bandLower),
+      bandUpper: Number(rm.bandUpper),
+      integrationId: m.integrationId,
       vaultToken: lower(m.vaultToken),
-      vaultDecimals: Number((marketReads[i * 2 + 1] as [Address, number])[1]),
+      vaultDecimals,
+      unitDecimals: Number(rm.unitDecimals),
       name: m.name,
-      symbol: m.symbol,
+      symbol,
       lpOracle: lower(m.lpOracle),
-      hub: lower(m.hub),
+      hub: lower(reserve.hub),
       spoke: lower(m.spoke),
       reserveId: s(m.reserveId),
-      hubAssetId: s(m.hubAssetId),
-      acceptedPrice: s(m.acceptedPrice),
-      priceState: Number(m.priceState),
-      suppliedUnits: s(m.suppliedUnits),
-      suppliedUsd8: s(m.suppliedUsd),
-      collateralFactorBps: Number(m.collateralFactorBps),
-      maxLiquidationBonusBps: Number(m.maxLiquidationBonusBps),
-      collateralRiskBps: Number((marketReads[i * 2] as DecodedReserve).collateralRisk),
+      hubAssetId: s(BigInt(reserve.assetId)),
+      acceptedPrice: s(price),
+      suppliedUnits: s(supplied),
+      suppliedUsd8: s((supplied * price) / 10n ** BigInt(vaultDecimals)),
+      ltvBps: Number(rm.ltvBps),
+      collateralFactorBps: Number(dyn.collateralFactor),
+      maxLiquidationBonusBps: Number(dyn.maxLiquidationBonus),
+      liquidationFeeBps: Number(dyn.liquidationFee),
+      collateralRiskBps: Number(reserve.collateralRisk),
+      paused: config.paused,
+      frozen: config.frozen,
       liquidation: liq
         ? {
             targetHealthFactorWad: s(liq.targetHealthFactor),
@@ -429,26 +378,12 @@ export async function readChainSnapshot(client: ViewClient, dep: ChainDeployment
             liquidationBonusFactorBps: Number(liq.liquidationBonusFactor),
           }
         : null,
-      marketHeadroomUsd8: s(m.marketHeadroomUsd),
-      sliceHeadroomUsd8: s(m.sliceHeadroomUsd),
-      addHeadroom: s(m.addHeadroom),
-      pauseState: Number(m.pauseState),
-      breakerReasons: Number(m.breakerReasons),
-      caps: {
-        liquidationThresholdBps: Number(m.liquidationThresholdBps),
-        liquidationFeeBps: Number(m.liquidationFeeBps),
-        hardHealthFloorWad: s(m.hardHealthFloor),
-        marketUsdCap8: s(m.marketUsdCap),
-        topUpSliceUsd8: s(m.topUpSliceUsd),
-        tokenUsdCaps8: m.tokenUsdCaps.map(s),
-        addCap: s(m.addCap),
-      },
-      borrow: borrowOf(i),
-      pledgeSpeed: speeds[borrowKeys.length + i] ? speedRow(speeds[borrowKeys.length + i] as DecodedSpeed) : null,
+      borrow: spokeReserves
+        .filter((r) => r.spoke === lower(m.spoke))
+        .map((r) => ({ reserveId: r.reserveId, borrowRateRay: s(marketBorrowRateRay(rateOf(r.hub, r.asset), Number(reserve.collateralRisk))) })),
       blockNumber: block,
     };
   });
 
-  return { chainId: dep.chainId, blockNumber: block, timestamp: at.timestamp, hubs, hubAssets, slices, spokeReserves, markets };
+  return { chainId: dep.chainId, blockNumber: block, timestamp: at.timestamp, hubs, hubAssets, slices, spokeReserves, markets: marketRows };
 }
-

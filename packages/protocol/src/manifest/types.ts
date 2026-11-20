@@ -1,22 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Release manifest of one Avana deployment on one chain: every address, its code hash, each proxy's implementation,
-// the deployment blocks, the governance role table and the third-party contracts the deployment names. The services
-// read the subset in services/common/src/manifest.ts; this file is the full shape, checked by schema.ts.
+// Release manifest of one Avana deployment on one chain: every address with its code hash and deployment block, the
+// core stack of each AMM integration, the markets (two per pool: Full range and Custom range), the debt reserves and
+// their loss layers, the governance addresses and the third-party contracts the deployment names. It is produced from
+// what the step 9 deploy scripts write (deployments-local/<network>/avana.json, markets.json, coverage.json) plus the
+// chain. The services read the subset in services/common/src/manifest.ts; this file is the full shape, checked by
+// schema.ts.
 
 import type { Address, Hex } from "viem";
 
-export const MANIFEST_SCHEMA_VERSION = 1;
+export const MANIFEST_SCHEMA_VERSION = 2;
 
-/** An immutable contract (or a plain implementation): `codeHash = keccak256(runtime code)`. */
-/** The AvanaGasVault: refills Avana's own keeper signers; withdraws only to `treasury`, the `feeRecipient` Safe. */
-export interface GasVault extends Immutable {
-  readonly treasury: Address;
-  readonly timelock: Address;
-  readonly guardian: Address;
-  readonly maxSigners: number;
-}
-
+/** A contract: `codeHash = keccak256(runtime code)`. Avana's core contracts are not upgradeable. */
 export interface Immutable {
   readonly address: Address;
   readonly codeHash: Hex;
@@ -26,57 +21,64 @@ export interface Immutable {
   readonly artifact: string | null;
 }
 
-/** A logic contract an upgradeable router delegates to. */
-export interface Logic {
-  readonly name: string;
-  readonly address: Address;
-  readonly codeHash: Hex;
-  readonly artifact: string;
-}
-
-/** An ERC-1967 proxy with its current implementation (Q-219: the keeper compares the slot with `implementation`). */
+/** A third-party ERC-1967 proxy (Aave V4 Hubs and Spokes, the Aave V3 Pool) with its current implementation. */
 export interface Upgradeable {
   readonly address: Address;
-  /** keccak256 of the proxy's own runtime code (OpenZeppelin ERC1967Proxy). */
   readonly codeHash: Hex;
   readonly implementation: Address;
   readonly implementationCodeHash: Hex;
-  readonly implementationArtifact: string;
-  readonly logics: readonly Logic[];
   readonly startBlock: number;
 }
 
-export interface OperatorHelper extends Immutable {
-  readonly signer: Address;
-  readonly fundingSafe: Address;
-}
-
-export interface LpVault extends Immutable {
+/**
+ * One AMM integration's core stack (`03_DeployAvana`): its LPVault, and the RiskModule, LiquidationModule,
+ * AaveAdapter and FlashloanRepay bound to that LPVault (`RiskModule.LP_VAULT` is immutable).
+ */
+export interface Integration {
   readonly integrationId: number;
   /** "uniswap-v3", "slipstream" or "uniswap-v4". */
   readonly kind: string;
+  readonly lpVault: Immutable;
+  readonly riskModule: Immutable;
+  readonly liquidationModule: Immutable;
+  readonly aaveAdapter: Immutable;
+  readonly flashloanRepay: Immutable;
 }
 
-export interface AvanaFirstLossReserve extends Immutable {
-  readonly asset: Address;
-  readonly hub: Address;
+/** An operator flash liquidator (liquidator/): callable only by its `OPERATOR`, the liquidation bot's keystore. */
+export interface FlashLiquidator extends Immutable {
+  readonly integrationId: number;
+  readonly operator: Address;
 }
+
+/** `IRiskModule.MarketKind`. */
+export type MarketKind = "full-range" | "custom-range";
 
 export interface Market {
   readonly marketId: string;
+  /** The listing's name, `<pool> full` or `<pool> custom`. */
+  readonly name: string;
+  /** Selects the market's core stack in `avana.integrations`. */
   readonly integrationId: number;
+  readonly kind: MarketKind;
+  /** The pool key the LPVault binds the market to (bytes32: a v3/Slipstream pool address left-padded, or a v4 PoolId). */
+  readonly pool: Hex;
   readonly spoke: Address;
+  readonly hub: Address;
   readonly vaultToken: Immutable;
-  /** The market's stateless LPOracle, a plain contract deployed at listing. */
+  /** The market's LPOracle, the Spoke's price source for the vault token. */
   readonly lpOracle: Immutable;
+  /** The vault token's reserve on the Spoke. */
   readonly reserveId: string;
-  /** The pool contract; address(0) for a Uniswap v4 market, whose pool is a key in the PoolManager. */
-  readonly pool: Address;
-  /** Uniswap v4 only: the PoolId, `keccak256(abi.encode(PoolKey))`, of the key the LPVault bound the market to. */
-  readonly poolId?: Hex;
-  readonly tokens: readonly Address[];
+  readonly tokens: readonly [Address, Address];
+  /** The band, fixed for life: the full-range ticks for a Full range market, the Custom width around the listing tick otherwise. */
+  readonly bandLower: number;
+  readonly bandUpper: number;
+  /** Equal for both markets of a pool. */
+  readonly ltvBps: number;
+  readonly unitDecimals: number;
+  /** Every Chainlink leg of both tokens' price routes (`LPOracle.feedsOf`); the monitor reads their ages. */
   readonly feeds: readonly { readonly feed: Address; readonly heartbeatSeconds: number }[];
-  readonly routes: readonly Immutable[];
 }
 
 export interface DebtReserve {
@@ -85,7 +87,18 @@ export interface DebtReserve {
   readonly asset: Address;
   readonly decimals: number;
   readonly isGho: boolean;
+  /** The First-Loss Reserve the RiskModule registered for this reserve (`getDebtReserve`). */
+  readonly firstLossReserve: Address;
   readonly feeds: readonly { readonly feed: Address; readonly heartbeatSeconds: number }[];
+}
+
+/** A loss layer of one (Hub, debt asset) (`07_DeployFirstLossReserves`, coverage.json). */
+export interface LossLayer extends Immutable {
+  readonly hub: Address;
+  readonly hubLabel: string;
+  readonly asset: Address;
+  readonly symbol: string;
+  readonly minimum: string;
 }
 
 /** A third-party contract the deployment names: Aave V4, Uniswap v3 and v4, Aerodrome Slipstream, tokens, feeds. */
@@ -102,33 +115,22 @@ export interface External {
 }
 
 export interface RoleTable {
-  readonly timelock: {
-    readonly proposers: readonly Address[];
-    readonly executors: readonly Address[];
-    readonly cancellers: readonly Address[];
-    readonly daoCancellers: readonly Address[];
-    readonly normalDelay: number;
-    readonly publicExecution: boolean;
-  };
+  /** Admin of the Avana AccessManager (the deployer renounces at deployment). */
+  readonly aaveGovernanceExecutor: Address;
   readonly governanceSafe: Address;
   readonly emergencyGuardian: Address;
   readonly aaveProtocolGuardian: Address;
-  readonly aaveGovernanceExecutor: Address;
   readonly jointConfigSafe: Address;
-  /** MarketRegistry APPLICATION_PAUSE_GUARDIAN and APPLICATION_FREEZE_GUARDIAN holders. */
-  readonly marketRegistryGuardians: readonly Address[];
-  /** ParameterStore APPLICATION_PAUSE_GUARDIAN holders. */
-  readonly parameterStorePauseGuardians: readonly Address[];
-  /** ParameterStore APPLICATION_RISK_STEWARD holders. */
-  readonly riskStewards: readonly Address[];
-  /** LPVaultSwap committed operators (keepers). */
+  /** The liquidation bots registered in every RiskModule's keeper registry; borrowing stops while none is. */
   readonly keepers: readonly Address[];
+  /** Wallet that tops up the keepers' gas (deploy config `KEEPER_TOPUP_WALLET`); null when none is configured. */
+  readonly keeperTopUpWallet: Address | null;
 }
 
 export interface ReleaseManifest {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 2;
   readonly chainId: number;
-  /** anvil | sepolia | ethereum | base (a local stack names its chains ethereum and base; its chain ID tells it apart). */
+  /** anvil | sepolia | base-sepolia | ethereum | base. */
   readonly network: string;
   /** Release tag vX.Y.Z (a `-local` or `-test` suffix marks a learning deployment that is never published). */
   readonly release: string;
@@ -140,33 +142,19 @@ export interface ReleaseManifest {
   readonly feeRecipient: Address;
   readonly sequencerFeed: Address | null;
   readonly avana: {
-    readonly aaveAdapter: Upgradeable;
-    readonly lpVaultSwap: Upgradeable;
-    readonly marketRegistry: Upgradeable;
-    readonly parameterStore: Upgradeable;
-    readonly riskModule: Upgradeable;
-    readonly timelock: Immutable;
-    readonly proxyManager: Immutable;
-    readonly collateralization: Immutable;
-    readonly vaultTokenFactory: Immutable;
-    readonly payoutEscrow: Immutable;
-    readonly lock: Immutable;
-    readonly lens: Immutable;
-    readonly lensModules: readonly Immutable[];
-    readonly lensAaveSizing: Immutable;
-    readonly flashSource: Immutable;
-    readonly flashLiquidator: Immutable;
-    readonly operatorHelpers: readonly OperatorHelper[];
-    readonly lpVaults: readonly LpVault[];
-    readonly firstLossReserves: readonly AvanaFirstLossReserve[];
-    /** The Aave DAO's deficit offset behind each First-Loss Reserve (2.14), deployed on the Aave side. */
-    readonly daoDeficitOffsets: readonly AvanaFirstLossReserve[];
-    readonly proxyCreationCodeHash: Hex;
-    /** The chain's AvanaGasVault (2.24) and its immutables; null while it is not deployed (step 12-gas-vault). */
-    readonly gasVault: GasVault | null;
+    /** The chain's Avana AccessManager (OpenZeppelin), authority of every core contract. */
+    readonly accessManager: Immutable;
+    readonly integrations: readonly Integration[];
+    readonly flashLiquidators: readonly FlashLiquidator[];
   };
   readonly markets: readonly Market[];
   readonly debtReserves: readonly DebtReserve[];
+  readonly coverage: {
+    /** Avana's First-Loss Reserves, one per (Hub, debt asset). */
+    readonly firstLossReserves: readonly LossLayer[];
+    /** The Aave DAO's deficit offsets behind them. */
+    readonly daoDeficitOffsets: readonly LossLayer[];
+  };
   readonly aave: {
     readonly hubs: readonly (Upgradeable & { readonly label: string; readonly tier: number })[];
     readonly borrowSpokes: readonly (Upgradeable & { readonly label: string })[];

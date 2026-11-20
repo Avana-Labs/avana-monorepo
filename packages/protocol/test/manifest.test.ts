@@ -8,7 +8,6 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { contractTable, parseManifest, releaseManifestSchema, validate } from "../src/manifest/index.ts";
 import { integrationArtifacts } from "../src/manifest/produce.ts";
-import { profileOf } from "../src/manifest/verify.ts";
 import { A, H, sampleManifest } from "./fixtures/manifest.ts";
 
 describe("release manifest schema", () => {
@@ -19,25 +18,14 @@ describe("release manifest schema", () => {
   it("names every missing, malformed or unknown field", () => {
     const m = structuredClone(sampleManifest()) as Record<string, any>;
     delete m.feeRecipient;
-    m.avana.lock.address = "0x1234";
-    m.roles.timelock.normalDelay = 30;
+    m.avana.accessManager.address = "0x1234";
+    m.markets[0].kind = "narrow";
     m.extra = 1;
     const paths = validate(m).map((e) => e.path);
     expect(paths).toContain("$.feeRecipient");
-    expect(paths).toContain("$.avana.lock.address");
-    expect(paths).toContain("$.roles.timelock.normalDelay");
+    expect(paths).toContain("$.avana.accessManager.address");
+    expect(paths).toContain("$.markets[0].kind");
     expect(paths).toContain("$.extra");
-  });
-
-  it("takes a normal delay of minutes on a test network only (REQ-ACCESS-187)", () => {
-    const m = structuredClone(sampleManifest()) as Record<string, any>;
-    m.roles.timelock.normalDelay = 120;
-    expect(validate({ ...m, chainId: 11155111 })).toEqual([]);
-    expect(validate({ ...m, chainId: 84532 })).toEqual([]);
-    expect(validate({ ...m, chainId: 1, network: "ethereum" }).map((e) => e.path)).toEqual(["$.roles.timelock.normalDelay"]);
-    expect(validate({ ...m, chainId: 8453, network: "base" }).map((e) => e.path)).toEqual(["$.roles.timelock.normalDelay"]);
-    m.roles.timelock.normalDelay = 345600;
-    expect(validate({ ...m, chainId: 1, network: "ethereum" })).toEqual([]);
   });
 
   it("refuses a release that is not a semantic version tag and an unknown network", () => {
@@ -45,26 +33,42 @@ describe("release manifest schema", () => {
     expect(validate(m).map((e) => e.path)).toEqual(["$.network", "$.release"]);
   });
 
-  it("takes the gas vault with its immutables, or null before step 12-gas-vault", () => {
-    const m = structuredClone(sampleManifest()) as Record<string, any>;
-    expect(validate(m)).toEqual([]);
-    m.avana.gasVault = null;
-    expect(validate(m)).toEqual([]);
-    m.avana.gasVault = { ...sampleManifest().avana.gasVault, maxSigners: 9 };
-    expect(validate(m).map((e) => e.path)).toEqual(["$.avana.gasVault"]);
-    delete m.avana.gasVault;
-    expect(validate(m).map((e) => e.path)).toEqual(["$.avana.gasVault"]);
+  it("refuses the schema 1 manifest of the replaced contracts", () => {
+    expect(() => parseManifest(JSON.stringify({ ...sampleManifest(), schemaVersion: 1 }))).toThrow(/schemaVersion/);
   });
 
-  it("parseManifest throws with the list of failures", () => {
-    expect(() => parseManifest(JSON.stringify({ schemaVersion: 2 }))).toThrow(/schemaVersion/);
+  it("holds each pool to one Full range and one Custom range market with the same LTV", () => {
+    const m = structuredClone(sampleManifest()) as Record<string, any>;
+    m.markets[1].kind = "full-range";
+    m.markets[1].ltvBps = 8000;
+    const paths = validate(m).map((e) => e.path);
+    expect(paths).toContain("$.markets[1].kind");
+    expect(paths).toContain("$.markets[1].ltvBps");
+  });
+
+  it("refuses a market of an unlisted integration, an inverted band and a pair of tokens that is not two", () => {
+    const m = structuredClone(sampleManifest()) as Record<string, any>;
+    m.markets[0].integrationId = 9;
+    m.markets[1].bandLower = 200;
+    m.markets[1].tokens = [A(60)];
+    const paths = validate(m).map((e) => e.path);
+    expect(paths).toContain("$.markets[0].integrationId");
+    expect(paths).toContain("$.markets[1].bandUpper");
+    expect(paths).toContain("$.markets[1].tokens");
+  });
+
+  it("takes a keeper top-up wallet or null", () => {
+    const m = structuredClone(sampleManifest()) as Record<string, any>;
+    m.roles.keeperTopUpWallet = null;
+    expect(validate(m)).toEqual([]);
+    delete m.roles.keeperTopUpWallet;
+    expect(validate(m).map((e) => e.path)).toEqual(["$.roles.keeperTopUpWallet"]);
   });
 
   it("accepts a Uniswap v4 integration with its PoolManager, and the PoolManager is optional", () => {
     const m = structuredClone(sampleManifest()) as Record<string, any>;
-    m.avana.lpVaults.push({ ...m.avana.lock, integrationId: 3, kind: "uniswap-v4" });
+    m.avana.integrations.push({ ...m.avana.integrations[0], integrationId: 3, kind: "uniswap-v4" });
     m.uniswapV4 = { poolManager: { address: A(70), codeHash: H(70), startBlock: 5, artifact: null } };
-    m.external.push({ name: "PoolManager", group: "uniswap-v4", address: A(70), codeHash: H(70), implementation: null, standIn: false });
     expect(validate(m)).toEqual([]);
     delete m.uniswapV4;
     expect(validate(m)).toEqual([]);
@@ -72,10 +76,10 @@ describe("release manifest schema", () => {
 
   it("refuses an unknown integration kind and a malformed Uniswap v4 PoolManager", () => {
     const m = structuredClone(sampleManifest()) as Record<string, any>;
-    m.avana.lpVaults[0].kind = "curve";
+    m.avana.integrations[0].kind = "curve";
     m.uniswapV4 = { poolManager: { address: A(70) } };
     const paths = validate(m).map((e) => e.path);
-    expect(paths).toContain("$.avana.lpVaults[0].kind");
+    expect(paths).toContain("$.avana.integrations[0].kind");
     expect(paths).toContain("$.uniswapV4.poolManager.codeHash");
     expect(paths).toContain("$.uniswapV4.poolManager.startBlock");
   });
@@ -88,14 +92,15 @@ describe("release manifest schema", () => {
 });
 
 describe("contract table", () => {
-  it("lists every contract with its explorer link, proxy target and code hash, and marks stand-ins", () => {
+  it("lists every contract with its explorer link and code hash, grouped by integration, and marks stand-ins", () => {
     const md = contractTable(sampleManifest());
     expect(md).toContain("# Avana v1.0.0 on sepolia");
-    expect(md).toContain(`[${A(10)}](https://sepolia.etherscan.io/address/${A(10)})`);
-    expect(md).toContain(`ERC-1967 proxy → ${A(1010)}`);
-    expect(md).toContain("AaveAdapter · AaveAdapterUserLogic");
+    expect(md).toContain(`[${A(13)}](https://sepolia.etherscan.io/address/${A(13)})`);
+    expect(md).toContain("## Avana integration 1 (uniswap-v3)");
+    expect(md).toContain("Vault token, market 2 (USDC-USDT-100 custom)");
+    expect(md).toContain("First-Loss Reserve stable USDC");
     expect(md).toContain("USDC (test-network stand-in)");
-    expect(md).toContain(H(25));
+    expect(md).toContain(H(11));
   });
 
   it("labels the Uniswap v4 group", () => {
@@ -111,13 +116,5 @@ describe("integration artifacts", () => {
     expect(integrationArtifacts("slipstream").lpVault).toBe("SlipstreamIntegration.sol:SlipstreamIntegration");
     expect(integrationArtifacts("uniswap-v4")).toEqual({ lpVault: "UniswapV4Integration.sol:UniswapV4Integration" });
     expect(() => integrationArtifacts("curve")).toThrow(/unknown integration kind/);
-  });
-
-  it("maps each deployable file to its compiler profile as DeployBase._profileOf does", () => {
-    expect(profileOf("UniswapV3Integration.sol")).toBe("clvault");
-    expect(profileOf("SlipstreamIntegration.sol")).toBe("clvault");
-    expect(profileOf("UniswapV4Integration.sol")).toBe("collateralization");
-    expect(profileOf("LPOracle.sol")).toBe("lporacle");
-    expect(profileOf("Lock.sol")).toBe("");
   });
 });

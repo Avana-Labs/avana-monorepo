@@ -30,8 +30,9 @@ describe("address library", () => {
     const a = addressesFromManifest(m);
     expect(a.chainId).toBe(m.chainId);
     expect(a.release).toBe(m.release);
-    expect(a.contracts.aaveAdapter).toBe(m.avana.aaveAdapter.address);
-    expect(a.contracts.lens).toBe(m.avana.lens.address);
+    expect(a.integrations[0]!.aaveAdapter).toBe(m.avana.integrations[0]!.aaveAdapter.address);
+    expect(a.flashLiquidators[0]!.operator).toBe(m.avana.flashLiquidators[0]!.operator);
+    expect(a.markets.map((k) => k.kind)).toEqual(["full-range", "custom-range"]);
     expect(a.markets.map((k) => k.vaultToken)).toEqual(m.markets.map((k) => k.vaultToken.address));
     expect(a.debtReserves.map((r) => r.debtReserveId)).toEqual(m.debtReserves.map((r) => r.debtReserveId));
     expect(a.aave.hubs.map((h) => h.address)).toEqual(m.aave.hubs.map((h) => h.address));
@@ -54,7 +55,7 @@ describe("address library", () => {
     expect(Object.keys(book.deployments)).toEqual([String(m.chainId)]);
     expect(Object.keys(book.deployments[m.chainId]!)).toEqual(["v0.9.0", "v1.0.0", "v1.1.0-rc.1"]);
     expect(book.latest[m.chainId]).toBe("v1.1.0-rc.1");
-    expect(renderAddressBook(book)).toContain(`"aaveAdapter": "${m.avana.aaveAdapter.address}"`);
+    expect(renderAddressBook(book)).toContain(`"aaveAdapter": "${m.avana.integrations[0]!.aaveAdapter.address}"`);
   });
 
   it("refuses a manifest whose file name does not match it, or one that fails the schema", () => {

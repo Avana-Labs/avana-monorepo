@@ -2,27 +2,26 @@
 // Copyright (c) 2026 Avana Labs
 // Test data only: one Ethereum deployment with several Hubs, as an in-memory chain (fixtureChain.ts) at two moments.
 //
-// At start-up the manifest names Hub A ("Stable", tier 1) and Hub B ("Core", tier 2), three Lend Spokes (A and A2 on
-// Hub A, B on Hub B) and two CDP Spokes (CDP A at home on Hub A, CDP B on Hub B). CDP A also has a USDC slice and debt
-// reserve on Hub B, which the MarketRegistry no longer enables (a debt reserve's funding Hub is its Spoke's home Hub) but
-// the reader still reads as the Hub reports it. Later the MarketRegistry records Hub C (tier 3) with its own Lend Spoke,
-// Coverage Spoke, CDP Spoke and the DAO deficit offset behind that First-Loss Reserve, none of which the manifest names;
-// the reader must find all four and must not read the offset, supply-only like a Lend Spoke, as one.
+// The manifest names Hub A ("Stable", tier 1), Hub B ("Core", tier 2) and Hub C ("Edge", tier 3), Lend Spokes (A and
+// A2 on Hub A, B on Hub B, C on Hub C), CDP Spokes (CDP A at home on Hub A, CDP B on Hub B, CDP C on Hub C), the
+// First-Loss Reserves of Hub A and Hub C USDC with the DAO deficit offset behind Hub C's, and one pool's two markets on
+// CDP A (Full range and Custom range) and a market on CDP C. CDP A also has a USDC slice and debt reserve on Hub B,
+// which the reader reads as the Hub reports it. At the first block read, Hub C and its Spokes have no code yet (a later
+// release step deploys them): the reader leaves them out, then reads them once they exist.
 //
 // Amounts (whole tokens): Hub A USDC 10,000,000 added (Lend A 9,000,000, Lend A2 800,000, Coverage 200,000), 3,000,000
 // owed by CDP A; Hub A USDT 4,000,000 added, 1,000,000 owed; Hub B USDC 6,000,000 added, 2,000,000 owed (CDP B
 // 1,500,000, CDP A 500,000); Hub B GHO 1,000,000 added; Hub C USDC 2,050,000 added (50,000 by the deficit
 // offset), 500,000 owed.
 
-import type { FakeAsset, FakeChain, FakeHub } from "./fixtureChain.ts";
+import type { FakeAsset, FakeCdpSpoke, FakeChain, FakeHub, FakeMarket } from "./fixtureChain.ts";
 import type { Address, ChainDeployment } from "./types.ts";
 
 const a = (prefix: string, n: number): Address => `0x${prefix}${"0".repeat(38 - prefix.length)}${n.toString(16).padStart(2, "0")}` as Address;
 const six = (whole: number): bigint => BigInt(whole) * 10n ** 6n;
 const wad = (whole: number): bigint => BigInt(whole) * 10n ** 18n;
 
-export const HUBS_LENS = a("99", 1);
-export const HUBS_REGISTRY = a("80", 1);
+export const HUBS_RISK_MODULE = a("80", 1);
 const IRS = a("77", 1);
 export const HUB_A = a("aa", 1);
 export const HUB_B = a("aa", 2);
@@ -44,7 +43,9 @@ export const USDC: Address = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 export const USDT: Address = "0xdac17f958d2ee523a2206206994597c13d831ec7";
 export const GHO: Address = "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f";
 const VT_A = a("dd", 1);
+const VT_A2 = a("dd", 2);
 const VT_C = a("dd", 3);
+const ORACLE_CDP = (n: number) => a("bd", n);
 
 const RATE_6 = 6n * 10n ** 25n;
 const asset = (x: Partial<FakeAsset> & Pick<FakeAsset, "underlying" | "feeReceiver" | "slices">): FakeAsset => ({
@@ -86,8 +87,9 @@ const hubA: FakeHub = {
         { spoke: CDP_A, added: 0n, owed: six(1_000_000), addCap: 0, drawCap: 2_000_000 },
       ],
     }),
-    // The vault token of market 1, supplied as collateral through CDP A.
-    asset({ underlying: VT_A, decimals: 18, feeReceiver: FEE_A, slices: [{ spoke: CDP_A, added: wad(1_000_000), owed: 0n, addCap: 5_000_000, drawCap: 0 }] }),
+    // The vault tokens of markets 1 (Full range) and 2 (Custom range), supplied as collateral through CDP A.
+    asset({ underlying: VT_A, decimals: 18, feeReceiver: FEE_A, slices: [{ spoke: CDP_A, added: wad(1_000), owed: 0n, addCap: 5_000_000, drawCap: 0 }] }),
+    asset({ underlying: VT_A2, decimals: 18, feeReceiver: FEE_A, slices: [{ spoke: CDP_A, added: wad(500), owed: 0n, addCap: 5_000_000, drawCap: 0 }] }),
   ],
 };
 
@@ -124,8 +126,8 @@ const hubC: FakeHub = {
       slices: [
         { spoke: LEND_C, added: six(1_900_000), owed: 0n, addCap: 10_000_000, drawCap: 0 },
         { spoke: COV_C, added: six(100_000), owed: 0n, addCap: 1_000_000, drawCap: 0 },
-        // The Aave DAO's deficit offset behind COV_C: supply-only like a Lend Spoke, found by its FIRST_LOSS_LAYER().
-        { spoke: OFFSET_C, added: six(50_000), owed: 0n, addCap: 1_000_000, drawCap: 0, firstLossLayer: COV_C },
+        // The Aave DAO's deficit offset behind COV_C: supply-only like a Lend Spoke, named by the manifest.
+        { spoke: OFFSET_C, added: six(50_000), owed: 0n, addCap: 1_000_000, drawCap: 0 },
         { spoke: FEE_C, added: 0n, owed: 0n, addCap: 0, drawCap: 0 },
         { spoke: CDP_C, added: 0n, owed: six(500_000), addCap: 0, drawCap: 1_000_000 },
       ],
@@ -134,73 +136,113 @@ const hubC: FakeHub = {
   ],
 };
 
-const market = (marketId: bigint, hub: Address, spoke: Address, vaultToken: Address, hubAssetId: bigint, debtReserveIds: readonly bigint[]) => ({
-  marketId, status: 1, pool: a("ee", Number(marketId)), poolId: `0x${"00".repeat(32)}`, tokens: [USDC, USDT], tokenDecimals: [6, 6], feeTier: 100, tickLower: -10,
-  tickUpper: 10, integrationId: 1, ammProtocol: `0x${"00".repeat(31)}01`, vaultToken, name: `USDC/USDT ${marketId}`, symbol: `av-${marketId}`, lpOracle: a("ef", Number(marketId)),
-  hub, spoke, reserveId: 10n + marketId, hubAssetId, acceptedPrice: 2n * 10n ** 8n, priceState: 0, suppliedUnits: wad(1_000), suppliedUsd: 2_000n * 10n ** 8n,
-  collateralFactorBps: 8_000n, liquidationThresholdBps: 8_000n, maxLiquidationBonusBps: 10_500n, marketHeadroomUsd: 0n, sliceHeadroomUsd: 0n, addHeadroom: 0n, pauseState: 0, breakerReasons: 0,
-  collateralRiskBps: 500n, liquidationFeeBps: 1_000n, targetHealthFactor: 11n * 10n ** 17n, healthFactorForMaxBonus: 95n * 10n ** 16n, liquidationBonusFactorBps: 5_000n,
-  hardHealthFloor: 0n, marketUsdCap: 5_000_000n * 10n ** 8n, topUpSliceUsd: 500_000n * 10n ** 8n, tokenUsdCaps: [10n ** 15n, 10n ** 15n],
-  addCap: 5_000_000n, debtReserveIds,
-  // ⌈6 % × 1.05⌉ RAY on each debt reserve.
-  borrowRatesRay: debtReserveIds.map(() => 63n * 10n ** 24n),
+/** One pool's key; its two markets share it and the LTV. */
+const POOL_KEY = `0x${"00".repeat(12)}${a("ee", 1).slice(2)}` as `0x${string}`;
+const market = (marketId: bigint, kind: 0 | 1, hub: Address, spoke: Address, vaultToken: Address, hubAssetId: bigint): FakeMarket => ({
+  marketId,
+  kind,
+  pool: POOL_KEY,
+  spoke,
+  hub,
+  hubAssetId,
+  vaultToken,
+  lpOracle: a("ef", Number(marketId)),
+  reserveId: 10n + marketId,
+  bandLower: kind === 0 ? -887_270 : -100,
+  bandUpper: kind === 0 ? 887_270 : 100,
+  ltvBps: 9_000,
+  active: true,
+  price: 2n * 10n ** 8n,
+  collateralRiskBps: 500,
 });
 
+const LEND_SPOKES = [
+  { spoke: LEND_A, oracle: a("bc", 1), oracleDecimals: 8, reserves: [{ hub: HUB_A, assetId: 0, price: 100_000_000n }, { hub: HUB_A, assetId: 1, price: 99_990_000n }] },
+  { spoke: LEND_A2, oracle: a("bc", 2), oracleDecimals: 18, reserves: [{ hub: HUB_A, assetId: 0, price: 999_900_000_000_000_000n, frozen: true }] },
+  { spoke: LEND_B, oracle: a("bc", 3), oracleDecimals: 8, reserves: [{ hub: HUB_B, assetId: 0, price: 100_010_000n }, { hub: HUB_B, assetId: 1, price: 100_000_000n }] },
+];
+const CDP_SPOKES: FakeCdpSpoke[] = [
+  {
+    spoke: CDP_A,
+    homeHub: HUB_A,
+    oracle: ORACLE_CDP(1),
+    debtReserves: [
+      { reserveId: 1n, hub: HUB_A, hubAssetId: 0n, asset: USDC, decimals: 6 },
+      { reserveId: 2n, hub: HUB_A, hubAssetId: 1n, asset: USDT, decimals: 6 },
+      { reserveId: 3n, hub: HUB_B, hubAssetId: 0n, asset: USDC, decimals: 6 },
+    ],
+  },
+  {
+    spoke: CDP_B,
+    homeHub: HUB_B,
+    oracle: ORACLE_CDP(2),
+    debtReserves: [
+      { reserveId: 1n, hub: HUB_B, hubAssetId: 0n, asset: USDC, decimals: 6 },
+      { reserveId: 2n, hub: HUB_B, hubAssetId: 1n, asset: GHO, decimals: 18 },
+    ],
+  },
+];
+const MARKETS_A = [market(1n, 0, HUB_A, CDP_A, VT_A, 2n), market(2n, 1, HUB_A, CDP_A, VT_A2, 3n)];
+const MARKET_C = market(3n, 0, HUB_C, CDP_C, VT_C, 1n);
+
 const START: FakeChain = {
-  lens: HUBS_LENS,
-  registry: HUBS_REGISTRY,
+  riskModule: HUBS_RISK_MODULE,
   rateStrategy: IRS,
   hubs: [hubA, hubB],
-  recordedHubs: [HUB_A, HUB_B],
-  lendSpokes: [
-    { spoke: LEND_A, oracle: a("bc", 1), oracleDecimals: 8, reserves: [{ hub: HUB_A, assetId: 0, price: 100_000_000n }, { hub: HUB_A, assetId: 1, price: 99_990_000n }] },
-    { spoke: LEND_A2, oracle: a("bc", 2), oracleDecimals: 18, reserves: [{ hub: HUB_A, assetId: 0, price: 999_900_000_000_000_000n, frozen: true }] },
-    { spoke: LEND_B, oracle: a("bc", 3), oracleDecimals: 8, reserves: [{ hub: HUB_B, assetId: 0, price: 100_010_000n }, { hub: HUB_B, assetId: 1, price: 100_000_000n }] },
-  ],
-  cdpSpokes: [
-    {
-      spoke: CDP_A,
-      homeHub: HUB_A,
-      debtReserves: [
-        { reserveId: 1n, hub: HUB_A, hubAssetId: 0n, asset: USDC, decimals: 6 },
-        { reserveId: 2n, hub: HUB_A, hubAssetId: 1n, asset: USDT, decimals: 6 },
-        { reserveId: 3n, hub: HUB_B, hubAssetId: 0n, asset: USDC, decimals: 6 },
-      ],
-    },
-    {
-      spoke: CDP_B,
-      homeHub: HUB_B,
-      debtReserves: [
-        { reserveId: 1n, hub: HUB_B, hubAssetId: 0n, asset: USDC, decimals: 6 },
-        { reserveId: 2n, hub: HUB_B, hubAssetId: 1n, asset: GHO, decimals: 18 },
-      ],
-    },
-  ],
-  markets: [market(1n, HUB_A, CDP_A, VT_A, 2n, [1n, 2n, 3n])],
+  lendSpokes: LEND_SPOKES,
+  cdpSpokes: CDP_SPOKES,
+  markets: MARKETS_A,
 };
 
-/** The same chain after the registry recorded Hub C and approved CDP C, and Lend C and market 2 were listed. */
+/** The same chain after the later release step deployed Hub C, Lend C, CDP C and market 3. */
 const LATER: FakeChain = {
   ...START,
   hubs: [hubA, hubB, hubC],
-  recordedHubs: [HUB_A, HUB_B, HUB_C],
-  lendSpokes: [...START.lendSpokes, { spoke: LEND_C, oracle: a("bc", 4), oracleDecimals: 8, reserves: [{ hub: HUB_C, assetId: 0, price: 100_000_000n }] }],
-  cdpSpokes: [...START.cdpSpokes, { spoke: CDP_C, homeHub: HUB_C, debtReserves: [{ reserveId: 1n, hub: HUB_C, hubAssetId: 0n, asset: USDC, decimals: 6 }] }],
-  markets: [...START.markets, market(2n, HUB_C, CDP_C, VT_C, 1n, [1n])],
+  lendSpokes: [...LEND_SPOKES, { spoke: LEND_C, oracle: a("bc", 4), oracleDecimals: 8, reserves: [{ hub: HUB_C, assetId: 0, price: 100_000_000n }] }],
+  cdpSpokes: [...CDP_SPOKES, { spoke: CDP_C, homeHub: HUB_C, oracle: ORACLE_CDP(3), debtReserves: [{ reserveId: 1n, hub: HUB_C, hubAssetId: 0n, asset: USDC, decimals: 6 }] }],
+  markets: [...MARKETS_A, MARKET_C],
 };
 
 export const fixtureHubsChain = { start: START, later: LATER } as const;
 
-/** What the manifest gives the services at start-up; it never names Hub C, Lend C or CDP C. */
+const deploymentMarket = (m: FakeMarket, name: string) => ({
+  marketId: m.marketId,
+  integrationId: 1,
+  riskModule: HUBS_RISK_MODULE,
+  kind: m.kind === 0 ? ("full-range" as const) : ("custom-range" as const),
+  name,
+  pool: m.pool,
+  spoke: m.spoke,
+  hub: m.hub,
+  vaultToken: m.vaultToken,
+  lpOracle: m.lpOracle,
+  reserveId: m.reserveId,
+  tokens: [USDC, USDT],
+});
+
+/** What the manifest gives the services: every Hub, Spoke and market of the release, Hub C's included. */
 export const fixtureHubsDeployment: ChainDeployment = {
   chainId: 1,
-  lens: HUBS_LENS,
-  marketRegistry: HUBS_REGISTRY,
   hubs: [
-    { address: HUB_A, label: "Stable" },
-    { address: HUB_B, label: "Core" },
+    { address: HUB_A, label: "Stable", tier: 1 },
+    { address: HUB_B, label: "Core", tier: 2 },
+    { address: HUB_C, label: "Edge", tier: 3 },
   ],
-  lendSpokes: [LEND_A, LEND_A2, LEND_B],
-  cdpSpokes: [CDP_A, CDP_B],
-  firstLossReserves: [{ address: COV_A, asset: USDC, hub: HUB_A }],
+  lendSpokes: [LEND_A, LEND_A2, LEND_B, LEND_C],
+  cdpSpokes: [
+    { address: CDP_A, hub: HUB_A },
+    { address: CDP_B, hub: HUB_B },
+    { address: CDP_C, hub: HUB_C },
+  ],
+  firstLossReserves: [
+    { address: COV_A, asset: USDC, hub: HUB_A },
+    { address: COV_C, asset: USDC, hub: HUB_C },
+  ],
+  deficitOffsets: [{ address: OFFSET_C, asset: USDC, hub: HUB_C }],
+  riskModules: [HUBS_RISK_MODULE],
+  markets: [deploymentMarket(MARKETS_A[0]!, "USDC-USDT-100 full"), deploymentMarket(MARKETS_A[1]!, "USDC-USDT-100 custom"), deploymentMarket(MARKET_C, "USDC-USDT edge full")],
+  debtReserves: [
+    ...CDP_SPOKES.flatMap((sp) => sp.debtReserves.map((r) => ({ spoke: sp.spoke, reserveId: r.reserveId, fixedPrice: r.asset === GHO }))),
+    { spoke: CDP_C, reserveId: 1n, fixedPrice: false },
+  ],
 };

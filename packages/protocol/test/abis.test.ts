@@ -34,8 +34,12 @@ describe("generated ABIs", () => {
     }
   });
 
-  it("carries the First-Loss Reserve events its interface leaves out", () => {
+  it("carries the events the services index", () => {
     const events = (abi: Abi) => abi.filter((i) => i.type === "event").map((i) => i.name);
-    expect(events(abis.firstLossReserveAbi)).toEqual(expect.arrayContaining(["BorrowSpokeAllowlistUpdated", "FirstLossReserveMinimumUpdated"]));
+    expect(events(abis.aaveAdapterAbi)).toEqual(expect.arrayContaining(["AccountCreated", "Pledged", "Withdrawn", "Borrowed", "Repaid"]));
+    expect(events(abis.riskModuleAbi)).toEqual(expect.arrayContaining(["PoolListed", "MarketListed", "MarketActivated", "KeeperAdded"]));
+    expect(events(abis.liquidationModuleAbi)).toEqual(expect.arrayContaining(["Liquidated", "FeePaid"]));
+    expect(events(abis.flashloanRepayAbi)).toEqual(["RepaidWithCollateral"]);
+    expect(events(abis.firstLossReserveAbi)).toEqual(expect.arrayContaining(["Funded", "DeficitCovered", "Withdrawn"]));
   });
 });
