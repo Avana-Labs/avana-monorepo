@@ -31,6 +31,69 @@ contract AaveAdapterTransitionsUnitTest is AaveAdapterTestBase {
         assertEq(vtFull.balanceOf(address(hub)), 0);
     }
 
+    /// @dev A full Spoke supply cap rejects a top-up only after LPVault has pulled tokens and increased liquidity.
+    /// The revert must restore the payer balances and leave the pledged position, floor credit, and token supply intact.
+    function test_topUpSupplyFailureRollsBackLiquidityCreditAndPayerBalances() public {
+        bytes32 key = _mint(alice, FULL_LOWER, FULL_UPPER, 1e18);
+        _pledge(alice, key);
+        token0.mint(alice, 3e17);
+        token1.mint(alice, 3e17);
+        spoke.setSupplyCap(1e18);
+        address account = adapter.accountOf(alice, FULL);
+
+        vm.prank(alice);
+        vm.expectRevert(AdapterTestSpoke.SupplyCapExceeded.selector);
+        adapter.addLiquidity(key, 3e17, 3e17, 0, 0);
+
+        ILPVault.Position memory position = vault.getPosition(key);
+        (,,, uint128 liveLiquidity,,) = pm.pos(uint256(key));
+        assertEq(position.account, account);
+        assertEq(position.liquidity, 1e18);
+        assertEq(position.credit, 1e18);
+        assertEq(liveLiquidity, 1e18);
+        assertEq(vault.accountCredit(account, FULL), 1e18);
+        assertEq(vault.getMarket(FULL).totalCredit, 1e18);
+        assertEq(_supplied(alice, FULL), 1e18);
+        assertEq(vtFull.totalSupply(), 1e18);
+        assertEq(vtFull.balanceOf(address(hub)), 1e18);
+        assertEq(token0.balanceOf(alice), 3e17);
+        assertEq(token1.balanceOf(alice), 3e17);
+    }
+
+    /// @dev Accrued AMM fees must not be converted into collateral when the owner increases liquidity. The credited
+    /// amount must equal only the added liquidity, and the separately owed fees must remain payable exactly once.
+    function test_topUpLeavesAccruedFeesOutsideTheCollateralLedger() public {
+        bytes32 key = _mint(alice, FULL_LOWER, FULL_UPPER, 1e18);
+        _pledge(alice, key);
+        pm.accrue(uint256(key), 7, 11);
+        token0.mint(alice, 2e17);
+        token1.mint(alice, 2e17);
+
+        vm.prank(alice);
+        (uint128 liquidity, uint128 credit,,) = adapter.addLiquidity(key, 2e17, 2e17, 0, 0);
+
+        address account = adapter.accountOf(alice, FULL);
+        ILPVault.Position memory position = vault.getPosition(key);
+        assertEq(liquidity, 2e17);
+        assertEq(credit, 2e17);
+        assertEq(position.liquidity, 12e17);
+        assertEq(position.credit, 12e17);
+        assertEq(vault.accountCredit(account, FULL), 12e17);
+        assertEq(_supplied(alice, FULL), 12e17);
+        assertEq(vtFull.totalSupply(), 12e17);
+        assertEq(vtFull.balanceOf(address(hub)), 12e17);
+        (uint256 fees0, uint256 fees1) = vault.feesOf(key);
+        assertEq(fees0, 7);
+        assertEq(fees1, 11);
+
+        bytes32[] memory keys = new bytes32[](1);
+        keys[0] = key;
+        vm.prank(alice);
+        adapter.collectFees(FULL, keys);
+        assertEq(token0.balanceOf(alice), 7);
+        assertEq(token1.balanceOf(alice), 11);
+    }
+
     /// @dev A borrower attempts a whole-NFT release that would make the account unhealthy. A reverted health check
     /// must restore the NFT, LPVault credit, supplied vault tokens, debt, and the proposed recipient's balances.
     function test_failedWithdrawalLeavesCustodyCreditSupplyAndDebtUnchanged() public {
