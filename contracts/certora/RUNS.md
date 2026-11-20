@@ -17,7 +17,7 @@ Every run of this folder's checks, newest last.
 
 ## 2026-11-10 — methods check after the alignment with the final 5.2 text
 
-- **Scope**: the rules of `PROP-045`, `PROP-046`, `PROP-058`, `PROP-062`, `PROP-071` and `PROP-072` rewritten to the final 5.2 text (findings `CVL-F-01` … `CVL-F-07`), and the interface additions `IGhoFlashMinter` (`contracts/src/interfaces/external/gho/`), `ILPVaultSwap.TIMELOCK()`, `ISettlementRoute.AAVE_ADAPTER()` and `IDebtBuyRoute.AAVE_ADAPTER()`.
+- **Scope**: the rules of `PROP-045`, `PROP-046`, `PROP-058`, `PROP-062`, `PROP-071` and `PROP-072` rewritten to the final 5.2 text (findings `CVL-F-01` … `CVL-F-07`), and the interface additions `IGhoFlashMinter` (`contracts/src/dependencies/gho/`), `ILPVaultSwap.TIMELOCK()`, `ISettlementRoute.AAVE_ADAPTER()` and `IDebtBuyRoute.AAVE_ADAPTER()`.
 - **Rules changed**: `RiskModule.spec` `minimumPledgeUsesAcceptedPrice` (accepted price; `min(minPledgeUsd, RESCUE_MIN_PLEDGE_USD)` for a rescue top-up) and `borrowRefusesFrozenCollateral` (supplied shares > 0); `MarketRegistry.spec` `noCallFreezesAProtectedAddress` (protected at call time); `AvanaTimelock.spec` `expiredOperationOnlyCleanedUp` (or a permitted `cancel`); `LPVaultSwap.spec` `deleverageMakesNoDrawFeeOrBonusPayment` (the buy route of a non-GHO debt is a GHO recipient), the new invariant `adminRolesHeldOnlyByTimelock` and the `flashFee` summary; `SettlementRoute.spec` and `DebtBuyRoute.spec` lock rules (holder is LPVaultSwap or `AAVE_ADAPTER()`).
 - **Commands** (from `contracts/`): `forge build`; `python3 certora/check-methods.py`.
 - **Counts**: 739 methods entries checked, 0 errors.

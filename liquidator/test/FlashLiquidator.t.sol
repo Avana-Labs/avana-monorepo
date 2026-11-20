@@ -13,7 +13,7 @@ import {
     MockVaultMarkets,
     TestToken
 } from "./mocks/LiquidatorMocks.sol";
-import {ILiquidationModule} from "avana/liquidation/liquidation-module/ILiquidationModule.sol";
+import {ILiquidationModule} from "avana/liquidation/interfaces/ILiquidationModule.sol";
 import {Swap, SwapCalls} from "avana/periphery/libraries/SwapCalls.sol";
 import {Test} from "forge-std/Test.sol";
 

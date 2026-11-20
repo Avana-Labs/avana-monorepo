@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveV3FlashLoanReceiver} from "../../../src/interfaces/external/aave/IAaveV3FlashLoanReceiver.sol";
-import {IWithdrawReceiver} from "../../../src/policy/aave-adapter/IWithdrawReceiver.sol";
+import {IWithdrawReceiver} from "../../../src/adapter/interfaces/IWithdrawReceiver.sol";
+import {IAaveV3FlashLoanReceiver} from "../../../src/dependencies/aave/IAaveV3FlashLoanReceiver.sol";
 import {LPVaultTestToken} from "./LPVaultMocks.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 

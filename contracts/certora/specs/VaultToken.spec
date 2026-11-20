@@ -1,6 +1,6 @@
 /*
- * VaultToken (src/vault-token/VaultToken.sol, interface src/vault-token/IVaultToken.sol, lifecycle
- * src/vault-token/LIFECYCLE.md).
+ * VaultToken (src/token/VaultToken.sol, interface src/token/interfaces/IVaultToken.sol, lifecycle
+ * src/token/LIFECYCLE.md).
  *
  * One band market's collateral ERC-20: one base unit is one unit of credit. Mint, burn and proxy registration are
  * `restricted` by the AccessManager, which grants them to the AaveAdapter role (pledge and withdrawal) and the

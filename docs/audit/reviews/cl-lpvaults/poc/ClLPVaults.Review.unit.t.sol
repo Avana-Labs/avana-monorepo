@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClPriceMath} from "../../src/amm/concentrated-liquidity/ClPriceMath.sol";
-import {ClMarketConfig} from "../../src/amm/types/ClMarketConfig.sol";
+import {ClPriceMath} from "../../src/integrations/shared/ClPriceMath.sol";
+import {ClMarketConfig} from "../../src/integrations/types/ClMarketConfig.sol";
 import {PositionShape} from "../../src/types/PositionShape.sol";
 import {ShapeKind} from "../../src/types/ShapeKind.sol";
 import {SlipstreamIntegrationFixture} from "../utils/fixtures/SlipstreamIntegrationFixture.sol";

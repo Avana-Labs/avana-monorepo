@@ -19,7 +19,7 @@ Code from these projects is ported into files in this repository. Each such file
 - Version: tag `v4.0.0`, commit `e50237c43811bd9b526eff40f26772152a42daba` (`Uniswap/v4-core`); `src/libraries/TickMath.sol` last changed upstream in `0f17b65aa61edee384d5129b7ea080f22905faa0`.
 - Copyright: 2023 Universal Navigation Inc.
 - Licence: MIT (`licenses/MIT_LICENSE` of v4-core; v4-core is BUSL-1.1 and MIT file by file, and `TickMath.sol` carries `SPDX-License-Identifier: MIT`).
-- Used in: `contracts/src/amm/concentrated-liquidity/ClTickMath.sol` (`getSqrtPriceAtTick`, `getTickAtSqrtPrice` and their constants; compiled into the Uniswap v3 and Slipstream LPVaults and the concentrated-liquidity LPOracle through `ClPriceMath.sol`). Avana's changes, listed in the file header, are MIT as well: the inline assembly written as plain Solidity, `BitMath.mostSignificantBit` replaced by OpenZeppelin `Math.log2`, the logarithm steps as one loop, the errors renamed, the tick-spacing helpers left out. `src/libraries/SqrtPriceMath.sol` (MIT) and the MIT libraries it imports are compiled unchanged, from the pinned dependency, into `contracts/src/custody/lp-vault/libraries/FloorCreditMath.sol` (`getAmount0Delta`, `getAmount1Delta`).
+- Used in: `contracts/src/integrations/shared/ClTickMath.sol` (`getSqrtPriceAtTick`, `getTickAtSqrtPrice` and their constants; compiled into the Uniswap v3 and Slipstream LPVaults and the concentrated-liquidity LPOracle through `ClPriceMath.sol`). Avana's changes, listed in the file header, are MIT as well: the inline assembly written as plain Solidity, `BitMath.mostSignificantBit` replaced by OpenZeppelin `Math.log2`, the logarithm steps as one loop, the errors renamed, the tick-spacing helpers left out. `src/libraries/SqrtPriceMath.sol` (MIT) and the MIT libraries it imports are compiled unchanged, from the pinned dependency, into `contracts/src/vault/libraries/FloorCreditMath.sol` (`getAmount0Delta`, `getAmount1Delta`).
 - Licence text: [MIT](#mit-license).
 
 ### Aave V4
@@ -32,7 +32,7 @@ Code from these projects is ported into files in this repository. Each such file
 
 ## Third-party interfaces
 
-Subsets of deployed contracts' interfaces, copied from the origin source with identical selectors into `contracts/src/interfaces/external/`; each file names its source file and commit.
+Subsets of deployed contracts' interfaces, copied from the origin source with identical selectors into `contracts/src/dependencies/`; each file names its source file and commit.
 
 | Component | Version | Licence (SPDX of the Avana copy) | Files | Licence text |
 |---|---|---|---|---|

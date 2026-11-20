@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
-import {FloorCreditMath} from "../../src/custody/lp-vault/libraries/FloorCreditMath.sol";
+import {ILPVault} from "../../src/vault/interfaces/ILPVault.sol";
+import {FloorCreditMath} from "../../src/vault/libraries/FloorCreditMath.sol";
 import {LPVaultTestBase} from "../unit/LPVault.unit.t.sol";
 import {LPVaultTestToken, MockLPVault, MockPositionManager} from "../utils/mocks/LPVaultMocks.sol";
 import {Test} from "forge-std/Test.sol";

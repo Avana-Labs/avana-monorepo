@@ -1,6 +1,6 @@
 /*
- * FloorCreditMath (src/custody/lp-vault/libraries/FloorCreditMath.sol, proof in
- * contracts/src/custody/lp-vault/FLOOR-CREDIT-PROOF.md), through FloorCreditMathHarness
+ * FloorCreditMath (src/vault/libraries/FloorCreditMath.sol, proof in
+ * contracts/src/vault/FLOOR-CREDIT-PROOF.md), through FloorCreditMathHarness
  * (test/utils/harness/FloorCreditMathHarness.sol), which wraps the internal `credit` in an external function.
  *
  * Notation: `x, y` are the position's and `X, Y` the band's square-root prices (any integers with

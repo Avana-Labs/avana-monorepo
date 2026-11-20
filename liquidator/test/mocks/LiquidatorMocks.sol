@@ -5,11 +5,11 @@ pragma solidity 0.8.28;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ILPVault} from "avana/custody/lp-vault/ILPVault.sol";
-import {IAaveV3FlashLoanReceiver} from "avana/interfaces/external/aave/IAaveV3FlashLoanReceiver.sol";
-import {IAaveV4Spoke} from "avana/interfaces/external/aave/IAaveV4Spoke.sol";
-import {ILiquidationModule} from "avana/liquidation/liquidation-module/ILiquidationModule.sol";
-import {IRiskModule} from "avana/policy/risk-module/IRiskModule.sol";
+import {IAaveV3FlashLoanReceiver} from "avana/dependencies/aave/IAaveV3FlashLoanReceiver.sol";
+import {IAaveV4Spoke} from "avana/dependencies/aave/IAaveV4Spoke.sol";
+import {ILiquidationModule} from "avana/liquidation/interfaces/ILiquidationModule.sol";
+import {IRiskModule} from "avana/risk/interfaces/IRiskModule.sol";
+import {ILPVault} from "avana/vault/interfaces/ILPVault.sol";
 
 contract TestToken is ERC20 {
     constructor(

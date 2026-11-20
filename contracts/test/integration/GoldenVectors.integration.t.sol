@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
-import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
+import {IAaveV4Hub} from "../../src/dependencies/aave/IAaveV4Hub.sol";
+import {IAaveV4Spoke} from "../../src/dependencies/aave/IAaveV4Spoke.sol";
 import {Deployments} from "../utils/Deployments.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SharesMath} from "aave-v4/hub/libraries/SharesMath.sol";

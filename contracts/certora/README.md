@@ -17,7 +17,7 @@ CVL rules for the Avana core. Run locally in WSL; not run in CI. Run log: [RUNS.
 | `AaveAdapterAccounts` | AaveAdapter | Account proxies, pledge into the routed market | 5 |
 | `AaveAdapterRouting` | RiskModuleHarness | `routeOf` picks the one market the ticks fit | 3 |
 | `RiskModuleBands` | RiskModuleHarness | Band edges and spacing | 8 |
-| `FloorCreditMath` | FloorCreditMathHarness | Floor credit bounds ([proof](../src/custody/lp-vault/FLOOR-CREDIT-PROOF.md)) | 14 |
+| `FloorCreditMath` | FloorCreditMathHarness | Floor credit bounds ([proof](../src/vault/FLOOR-CREDIT-PROOF.md)) | 14 |
 | `VaultToken` | VaultToken | Mint, burn and the transfer path rule | 7 |
 | `LPOracle` | LPOracleHarness | Price steps of `LPPriceMath` | 17 |
 | `LPOracleSummaries` | LPOracleSummariesHarness | `mulDiv` and `sqrt` summaries, integer mode | 16 |

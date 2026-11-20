@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClTickMath} from "../../../src/amm/concentrated-liquidity/ClTickMath.sol";
-import {RiskModule} from "../../../src/policy/risk-module/RiskModule.sol";
+import {ClTickMath} from "../../../src/integrations/shared/ClTickMath.sol";
+import {RiskModule} from "../../../src/risk/RiskModule.sol";
 
 /// @title RiskModuleHarness
 /// @notice The RiskModule plus a view of the tick `listPool` checks its Custom range band against, so a rule can

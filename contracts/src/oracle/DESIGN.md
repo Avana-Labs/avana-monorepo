@@ -1,6 +1,6 @@
 # LPOracle design record
 
-This record covers how Avana prices a band market's vault token for Aave V4: the decisions, every option weighed, a debate between two agents, worked examples and the final reasons. The code is [`LPOracle.sol`](LPOracle.sol) with [`LPPriceMath.sol`](LPPriceMath.sol). The credit it multiplies is in [`FloorCreditMath.sol`](../custody/lp-vault/libraries/FloorCreditMath.sol); the vault token is [`VaultToken.sol`](../vault-token/VaultToken.sol).
+This record covers how Avana prices a band market's vault token for Aave V4: the decisions, every option weighed, a debate between two agents, worked examples and the final reasons. The code is [`LPOracle.sol`](LPOracle.sol) with [`LPPriceMath.sol`](LPPriceMath.sol). The credit it multiplies is in [`FloorCreditMath.sol`](../vault/libraries/FloorCreditMath.sol); the vault token is [`VaultToken.sol`](../token/VaultToken.sol).
 
 ## What is priced
 

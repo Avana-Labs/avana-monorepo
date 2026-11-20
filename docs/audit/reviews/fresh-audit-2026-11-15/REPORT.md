@@ -26,7 +26,7 @@ The core money paths held up under every attack class tried: custody, units-to-v
 
 ### M-01 (Medium): a slice-only rescue top-up is refused by a token or depositor counter above its cap
 
-- **Contract and function:** `contracts/src/policy/risk-module/RiskModulePledgeLogic.sol:229-256` (`_caps`), with `RiskModuleMath.fits` (`RiskModuleMath.sol:117-123`) and `CollateralizationBase._book` (`CollateralizationBase.sol:369,371`). On PR #71 head `2ca647d` it is the same code at `RiskModulePledgeLogic.sol:242-251`, `RiskModuleMath.sol:122` and `CollateralizationBase.sol:366`.
+- **Contract and function:** `contracts/src/risk/RiskModulePledgeLogic.sol:229-256` (`_caps`), with `RiskModuleMath.fits` (`RiskModuleMath.sol:117-123`) and `CollateralizationBase._book` (`CollateralizationBase.sol:369,371`). On PR #71 head `2ca647d` it is the same code at `RiskModulePledgeLogic.sol:242-251`, `RiskModuleMath.sol:122` and `CollateralizationBase.sol:366`.
 - **Defect:**
   - `_caps` tests every token counter with `fits(T_i, regular, tokenUsdCap)`, and the depositor counter with `fits(P, regular, depositorUsdCap)`, where `regular = usdCharge − sliceUsd`.
   - `fits` is `used <= cap && add <= cap − used`, so it fails whenever `used > cap`, even with `add == 0`.

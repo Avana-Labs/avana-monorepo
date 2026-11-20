@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILiquidationModule} from "../../src/liquidation/liquidation-module/ILiquidationModule.sol";
-import {LiquidationMath} from "../../src/liquidation/liquidation-module/libraries/LiquidationMath.sol";
+import {ILiquidationModule} from "../../src/liquidation/interfaces/ILiquidationModule.sol";
+import {LiquidationMath} from "../../src/liquidation/libraries/LiquidationMath.sol";
 import {LiquidationModuleTestBase} from "../utils/LiquidationModuleTestBase.sol";
 
 /// @notice Partial liquidation over random positions, debts, price falls, repayments and bonuses: health improves, the

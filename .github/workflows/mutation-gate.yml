@@ -284,7 +284,7 @@ jobs:
           script/install-security-tools.sh --solc
           # The dependency outputs arrive as an artifact, so no build here installs the pinned solc that
           # security-slow.sh looks up; compiling one small file into a throwaway folder makes Foundry install it.
-          forge build src/governance/roles/AvanaRoles.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
+          forge build src/access/AvanaRoles.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
           # The shard jobs run no Slither (the mutants job listed the mutants): a bare venv is enough.
           python3 -m venv .venv
 
@@ -366,7 +366,7 @@ jobs:
           script/install-security-tools.sh --solc
           # The dependency outputs arrive as an artifact, so no build here installs the pinned solc that
           # security-slow.sh looks up; compiling one small file into a throwaway folder makes Foundry install it.
-          forge build src/governance/roles/AvanaRoles.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
+          forge build src/access/AvanaRoles.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
           # The shard jobs run no Slither (the mutants job listed the mutants): a bare venv is enough.
           python3 -m venv .venv
 
@@ -448,7 +448,7 @@ jobs:
           script/install-security-tools.sh --solc
           # The dependency outputs arrive as an artifact, so no build here installs the pinned solc that
           # security-slow.sh looks up; compiling one small file into a throwaway folder makes Foundry install it.
-          forge build src/governance/roles/AvanaRoles.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
+          forge build src/access/AvanaRoles.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
           # The shard jobs run no Slither (the mutants job listed the mutants): a bare venv is enough.
           python3 -m venv .venv
 
@@ -531,7 +531,7 @@ jobs:
           script/install-security-tools.sh --solc
           # The dependency outputs arrive as an artifact, so no build here installs the pinned solc that
           # security-slow.sh looks up; compiling one small file into a throwaway folder makes Foundry install it.
-          forge build src/governance/roles/AvanaRoles.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
+          forge build src/access/AvanaRoles.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
           script/install-security-tools.sh --solc --python --gambit
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -610,7 +610,7 @@ jobs:
           script/install-security-tools.sh --solc
           # The dependency outputs arrive as an artifact, so no build here installs the pinned solc that
           # security-slow.sh looks up; compiling one small file into a throwaway folder makes Foundry install it.
-          forge build src/governance/roles/AvanaRoles.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
+          forge build src/access/AvanaRoles.sol --out "$RUNNER_TEMP/solc-out" --cache-path "$RUNNER_TEMP/solc-cache"
           script/install-security-tools.sh --solc --python --necessist
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0

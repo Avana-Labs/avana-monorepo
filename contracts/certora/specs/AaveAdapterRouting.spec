@@ -1,5 +1,5 @@
 /*
- * AaveAdapter routing (src/policy/aave-adapter/DESIGN.md decision 2): a pledge names only the NFT, and
+ * AaveAdapter routing (src/adapter/DESIGN.md decision 2): a pledge names only the NFT, and
  * `RiskModule.routeOf(pool, tickLower, tickUpper)` picks its market. AaveAdapterAccounts.spec proves the adapter pledges
  * into exactly that market and reverts on 0. Verified on RiskModuleHarness (test/utils/harness/RiskModuleHarness.sol),
  * which is the RiskModule unchanged plus a view.

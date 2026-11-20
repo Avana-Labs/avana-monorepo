@@ -3,11 +3,11 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClTickMath} from "../amm/concentrated-liquidity/ClTickMath.sol";
-import {ILPVault} from "../custody/lp-vault/ILPVault.sol";
-import {IAggregatorV3} from "../interfaces/external/chainlink/IAggregatorV3.sol";
-import {ILPOracle} from "./ILPOracle.sol";
-import {LPPriceMath} from "./LPPriceMath.sol";
+import {IAggregatorV3} from "../dependencies/chainlink/IAggregatorV3.sol";
+import {ClTickMath} from "../integrations/shared/ClTickMath.sol";
+import {ILPVault} from "../vault/interfaces/ILPVault.sol";
+import {ILPOracle} from "./interfaces/ILPOracle.sol";
+import {LPPriceMath} from "./libraries/LPPriceMath.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";

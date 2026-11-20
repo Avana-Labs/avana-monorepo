@@ -1,5 +1,5 @@
 /*
- * LiquidationModule (src/liquidation/liquidation-module/LiquidationModule.sol, arithmetic in
+ * LiquidationModule (src/liquidation/LiquidationModule.sol, arithmetic in
  * libraries/LiquidationMath.sol, design DESIGN.md), through LiquidationModuleHarness
  * (test/utils/harness/LiquidationModuleHarness.sol), which is the module plus external LiquidationMath wrappers.
  *

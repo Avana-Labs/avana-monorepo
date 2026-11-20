@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {FloorCreditMath} from "../../../src/custody/lp-vault/libraries/FloorCreditMath.sol";
+import {FloorCreditMath} from "../../../src/vault/libraries/FloorCreditMath.sol";
 
 /// @title FloorCreditMathHarness
 /// @notice External wrapper of the internal `FloorCreditMath.credit`, so suites can call it across a message call

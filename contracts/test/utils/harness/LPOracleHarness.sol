@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {LPOracle} from "../../../src/oracle/LPOracle.sol";
-import {LPPriceMath} from "../../../src/oracle/LPPriceMath.sol";
+import {LPPriceMath} from "../../../src/oracle/libraries/LPPriceMath.sol";
 
 /// @title LPOracleHarness
 /// @notice The LPOracle with external wrappers of the internal `LPPriceMath` steps it prices with, so one verified

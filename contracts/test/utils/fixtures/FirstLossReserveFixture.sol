@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {FirstLossReserve} from "../../../src/coverage/first-loss-reserve/FirstLossReserve.sol";
-import {IFirstLossReserve} from "../../../src/coverage/first-loss-reserve/IFirstLossReserve.sol";
-import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
+import {IAaveV4Hub} from "../../../src/dependencies/aave/IAaveV4Hub.sol";
+import {FirstLossReserve} from "../../../src/reserve/FirstLossReserve.sol";
+import {IFirstLossReserve} from "../../../src/reserve/interfaces/IFirstLossReserve.sol";
 import {MockDebtAsset} from "../mocks/MockDebtAsset.sol";
 import {CoverageHubFixture, CoverageHubSpokeConfig, ICoverageHubConfigurator} from "./CoverageHubFixture.sol";
 import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";

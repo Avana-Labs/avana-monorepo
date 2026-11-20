@@ -6,15 +6,15 @@ Foundry workspace for the Avana core on Aave V4. Flows: [LIFECYCLES.md](LIFECYCL
 
 | Contract | Folder | Form |
 |---|---|---|
-| AaveAdapter | `src/policy/aave-adapter/` | User entry point; one account proxy per wallet and market (`AccountProxy`) |
-| RiskModule | `src/policy/risk-module/` | Listing, routing, borrow checks, fee and keepers (`BandMath`, `AaveConfigLogic`) |
-| LPVault | `src/custody/lp-vault/` | NFT custody and floor credit (`FloorCreditMath`) |
-| VaultToken | `src/vault-token/` | ERC-20 collateral, one per band market |
+| AaveAdapter | `src/adapter/` | User entry point; one account proxy per wallet and market (`AccountProxy`) |
+| RiskModule | `src/risk/` | Listing, routing, borrow checks, fee and keepers (`BandMath`, `AaveConfigLogic`) |
+| LPVault | `src/vault/` | NFT custody and floor credit (`FloorCreditMath`) |
+| VaultToken | `src/token/` | ERC-20 collateral, one per band market |
 | LPOracle | `src/oracle/` | Stateless vault-token price, one per market (`LPPriceMath`) |
-| LiquidationModule | `src/liquidation/liquidation-module/` | In-kind partial liquidation (`LiquidationMath`) |
-| FirstLossReserve | `src/coverage/first-loss-reserve/` | Avana reserve and DAO Deficit Offset |
+| LiquidationModule | `src/liquidation/` | In-kind partial liquidation (`LiquidationMath`) |
+| FirstLossReserve | `src/reserve/` | Avana reserve and DAO Deficit Offset |
 
-Outside the core count: `src/amm/` (Uniswap v3, Uniswap v4, Aerodrome Slipstream), `src/periphery/` (FlashloanRepay, SwapCalls), `src/governance/roles/` (role ids), `src/interfaces/external/`.
+Outside the core count: `src/integrations/` (Uniswap v3, Uniswap v4, Aerodrome Slipstream), `src/periphery/` (FlashloanRepay, SwapCalls), `src/access/` (role ids), `src/dependencies/`.
 
 Each core folder holds the contract, its interface, storage, libraries and a `DESIGN.md`.
 

@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {UniswapV4PoolKey} from "../../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
+import {UniswapV4PoolKey} from "../../../src/dependencies/uniswap-v4/IUniswapV4PoolManager.sol";
 import {UniswapV4PoolActor} from "../local/UniswapV4PoolActor.sol";
 import {DeployBase} from "./DeployBase.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

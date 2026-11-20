@@ -4,14 +4,14 @@
     {
       "fingerprint": "ce884cd78fcd4320",
       "check": "basic-arithmetic-underflow",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "Signed tick differences of ticks in [MIN_TICK, MAX_TICK] (int256, no underflow possible), or the moved Uniswap v3 observe difference that is taken unchecked by design, as Uniswap does.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "262752b32bd28c53",
       "check": "basic-arithmetic-underflow",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "Signed tick differences of ticks in [MIN_TICK, MAX_TICK] (int256, no underflow possible), or the moved Uniswap v3 observe difference that is taken unchecked by design, as Uniswap does.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     }
