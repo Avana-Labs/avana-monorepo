@@ -26,7 +26,14 @@
  * adapter function with any arguments, and that call may revert (an operator that catches it) or succeed. The
  * nested `allowWithdraw` is left out because it always reverts `AllowanceOpen` (the allowance is open during the
  * callback), and `multicall` because each batched call is one of the listed functions with the same caller.
+ *
+ * Transient storage: each rule stands for one transaction, so it starts with empty transient storage
+ * (setup/TransientModel.spec). Without that the withdrawal allowance (`ALLOWED_OPERATOR` and the rest) could hold any
+ * value at the start of a rule, and `withdraw` would take the operator path for a caller no wallet ever allowed. In a
+ * real transaction the allowance is set only inside `allowWithdraw`, after `_ownedPosition` checked the wallet.
  */
+
+import "setup/TransientModel.spec";
 
 methods {
     function accountOf(address, uint256) external returns (address) envfree;
@@ -193,6 +200,7 @@ definition isMulticall(method f) returns bool = f.selector == sig:multicall(byte
 
 rule pledgeRoutesOrReverts(bytes32 key) {
     env e;
+    transientStorageEmpty();
     uint256 marketId;
     uint128 credit;
     marketId, credit = pledge(e, key);
@@ -209,6 +217,7 @@ rule onlyPositionOwnerChangesPosition(method f, bytes32 key) filtered {
         || f.selector == sig:withdraw(bytes32, uint128, uint256, uint256, address).selector
 } {
     env e;
+    transientStorageEmpty();
     uint256 a0;
     uint256 a1;
     uint256 m0;
@@ -226,6 +235,7 @@ rule onlyPositionOwnerChangesPosition(method f, bytes32 key) filtered {
 
 rule borrowOnlyFromOwnAccount(uint256 marketId, uint256 reserveId, uint256 amount, address recipient) {
     env e;
+    transientStorageEmpty();
     require !borrowCalled;
     borrow(e, marketId, reserveId, amount, recipient);
     address own = accountOf(e.msg.sender, marketId);
@@ -239,6 +249,7 @@ rule borrowOnlyFromOwnAccount(uint256 marketId, uint256 reserveId, uint256 amoun
 rule accountCreatedOncePerWalletMarket(method f, address wallet, uint256 marketId)
     filtered { f -> !f.isView && !isMulticall(f) } {
     env e;
+    transientStorageEmpty();
     calldataarg args;
     address before = accountOf(wallet, marketId);
     require before != 0;
@@ -251,6 +262,7 @@ rule accountCreatedOncePerWalletMarket(method f, address wallet, uint256 marketI
 rule accountOnlyCreatedForCaller(method f, address wallet, uint256 marketId)
     filtered { f -> !f.isView && !isMulticall(f) } {
     env e;
+    transientStorageEmpty();
     calldataarg args;
     require accountOf(wallet, marketId) == 0;
     require !operatorPledged;
