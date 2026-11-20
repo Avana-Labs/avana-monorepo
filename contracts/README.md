@@ -41,6 +41,30 @@ script/install-security-tools.sh   # optional: Slither, Halmos, Echidna, Medusa,
 
 Pinned: Foundry 1.9.0 (`.foundry-version`), Solidity 0.8.28 / `cancun`, dependencies in `soldeer.lock`, Python tools in `requirements*.txt`, binaries by sha256 in `script/install-security-tools.sh`.
 
+### Reproducible Linux build
+
+Run a clean dependency install and build from a Linux-native checkout (for example
+`~/avana-monorepo` in WSL), not from `/mnt/c`. The pinned Aave V4 tree contains
+`certora/basic/specs/aux/AaveMath.spec`; `aux` is a reserved Windows path, so a
+fresh Windows Soldeer install is unsupported.
+
+```bash
+cd ~/avana-monorepo/contracts
+forge --version                    # 1.9.0
+forge soldeer install
+FOUNDRY_PROFILE=permit2 forge build -j 2
+FOUNDRY_PROFILE=univ4 forge build -j 2
+forge build -j 2
+```
+
+`soldeer.lock` is the source of truth for every dependency. In particular, the
+compatible Uniswap V4 pair is core `e50237c43811bd9b526eff40f26772152a42daba` and
+periphery `ea2bf2e1ba6863bb809fc2ff791744f308c4a26d`; Aave V4 is
+`a3ef63ea6415d25237a9775bf66e76e9993561c2`. Confirm the installed Git sources
+with `git -C dependencies/<name-version> rev-parse HEAD`. A clean Linux install
+builds the V4 profile with these pins; a missing `PoolOperation.sol` indicates
+stale or different V4 dependency sources rather than this lockfile pair.
+
 ## Commands
 
 ```bash
