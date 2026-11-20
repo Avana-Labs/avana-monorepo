@@ -1,6 +1,6 @@
 # protocol
 
-`@avana/protocol` holds the ABIs the indexer and the keeper decode and call with, and the ABI hash they compare with each release manifest at startup (`TEST-149`); the contract addresses of every verified deployment, generated from `deployments/verified/`; and the calldata builders of the AaveAdapter user actions the web app sends. It is an npm workspace package; the services link it with `file:` and never fetch it from a registry.
+`@avana/protocol` holds the ABIs the indexer and the keeper decode and call with, and the ABI hash they compare with each release manifest at startup; the contract addresses of every verified deployment, generated from `deployments/verified/`; and the calldata builders of the AaveAdapter user actions the web app sends. It is an npm workspace package; the services link it with `file:` and never fetch it from a registry.
 
 | Path | Contents |
 |---|---|

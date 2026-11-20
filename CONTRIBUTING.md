@@ -1,6 +1,6 @@
 # Contributing
 
-Avana's contracts are written from the specification in [`docs/spec/`](docs/spec/). When code and specification disagree, the specification changes first, through the change control in [`docs/spec/README.md`](docs/spec/README.md#traceability-and-change-control), and the code follows in the same pull request. Every pull request completes the checklist in [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md), and [`.github/CODEOWNERS`](.github/CODEOWNERS) names the reviewers of each path.
+Each core contract records its decisions in a `DESIGN.md` next to its code. A change to a decision updates that record in the same pull request.
 
 ## Security reports
 
@@ -33,7 +33,7 @@ From `contracts/`:
 forge build -D warnings                     # Avana sources, warnings denied
 forge build --sizes                         # with the EIP-170 runtime limit
 forge test                                  # unit, fuzz, integration, hostile and invariant suites
-forge test --match-test 'test_TEST_027_'    # one TEST-NNN
+forge test --match-contract LiquidationModule   # one contract
 FOUNDRY_PROFILE=ci forge test               # CI depth (10,000 fuzz runs)
 FOUNDRY_PROFILE=invariant forge test        # deep invariant campaign
 FOUNDRY_PROFILE=differential forge test     # against the Python reference
@@ -46,7 +46,7 @@ script/check-licence.sh                     # licence headers
 make gas                                    # rewrite snapshots/ after a gas change
 ```
 
-Test naming, fixtures and the `TEST-…` map are in [`contracts/test/README.md`](contracts/test/README.md); Certora runs are in [`contracts/certora/README.md`](contracts/certora/README.md).
+Test naming and fixtures are in [`contracts/test/README.md`](contracts/test/README.md); Certora runs are in [`contracts/certora/README.md`](contracts/certora/README.md).
 
 ## Security tiers
 
@@ -64,18 +64,9 @@ MUTATE_LAYERS=2.2 MUTATE_CONTRACTS=ClPriceMath script/security-gambit.sh   # Gam
 
 A real finding is fixed. A false positive, or a surviving Gambit mutant whose change cannot be observed, is accepted in the tool's file in `contracts/security/` (`slither-triage.json`, `aderyn-triage.json`, `semgrep-triage.json`, `4naly3er-triage.json`, `mythril-triage.json`, `slither-upgradeability-triage.json`, `gambit-triage.json`) with its fingerprint and a one-line reason; `script/security-gate.py` fails the run on anything neither fixed nor accepted. The full gate list is in [`contracts/README.md`](contracts/README.md#security-tooling).
 
-## Specification checks
+## Formal verification
 
-From the repository root:
-
-```bash
-docs/spec/05-verification/run_all.sh             # Z3, SymPy, Hypothesis, Quint, simulations, trace.py
-docs/audit/formal-verification/control/run.sh
-docs/audit/formal-verification/custody/run.sh
-docs/audit/formal-verification/liquidation/run.sh
-```
-
-A changed formula is written on its spec page and checked by a Z3 model in `docs/spec/05-verification/z3/` in the same pull request; after re-running the checks of a changed requirement, `cd docs/spec/05-verification && .venv/bin/python trace.py --accept <ID>` records it.
+Certora runs locally in WSL, not in CI; rules follow the proof rule in [`contracts/certora/README.md`](contracts/certora/README.md#proof-rule).
 
 ## Licence of contributions
 

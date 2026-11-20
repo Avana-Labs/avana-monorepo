@@ -1,6 +1,6 @@
 # Convex
 
-The backend the web app reads. This folder is one Convex project (`@avana/convex` in the services workspace): the schema, the public queries of every Lend and Borrow screen, the import of the indexer's [private export](../indexer/EXPORT.md) (`convex/ingest/`), the current-value sampler, the listing metadata load (`convex/listing/`) and the frontend fee quote. Convex never holds a transaction target, receiver, amount or calldata for a protocol action (REQ-ARCH-140); the app builds every call itself and reads wallet values live over RPC.
+The backend the web app reads. This folder is one Convex project (`@avana/convex` in the services workspace): the schema, the public queries of every Lend and Borrow screen, the import of the indexer's [private export](../indexer/EXPORT.md) (`convex/ingest/`), the current-value sampler, the listing metadata load (`convex/listing/`) and the frontend fee quote. Convex never holds a transaction target, receiver, amount or calldata for a protocol action; the app builds every call itself and reads wallet values live over RPC.
 
 | Path | Contents |
 |---|---|
@@ -82,7 +82,7 @@ A version 1 entry carrying `links` or `risk` is refused.
 The app charges 10 bps on every app action: supply, withdraw, pledge, withdraw collateral, borrow, repay, repay with collateral, deleverage, and swap if it ships (Q-409). A keeper's liquidation is not an app action and pays none. No contract charges, computes or enforces the fee (Q-231), so a direct contract caller pays none.
 
 - **Collection.** The app adds one ERC-20 transfer to the action's batch (`wallet_sendCalls`, EIP-5792, or a smart account's multicall), so fee and action succeed or revert together.
-- **Recipient.** The ParameterStore's `feeRecipient`, the same address that receives the 20 % liquidation fee share; it changes only through the timelock. The app reads it on chain before it builds the batch; Convex holds no recipient. Frontend fees are transfers from user accounts, and liquidation fees come from LPVaultSwap or PayoutEscrow with their own events, so the two are told apart by source.
+- **Recipient.** The RiskModule's `feeRecipient`, the same address that receives the 20 % liquidation fee share; it changes only through governance. The app reads it on chain before it builds the batch; Convex holds no recipient. Frontend fees are transfers from user accounts, and liquidation fees come from the LiquidationModule's `FeePaid` event, so the two are told apart by source.
 - **A fee leg that would revert.** The app simulates the batch; if the fee transfer would revert (a token that blocklists `feeRecipient`, for example), it drops the fee leg and sends the action alone.
 - **Rules.** `feeConfig` holds on or off, a default rate, a rate per action, exempt actions and a USD cap per action. Until a row is written the default applies: on, 10 bps, no exempt action, no cap. Every rate must be an integer from 0 to `MAX_FEE_BPS` = 25, the ceiling the listing ARFC commits to; `setConfig` rejects a higher rate, and a stored rule above it makes `quote` throw rather than charge it. `frontendFee.setConfig` is internal (dashboard or CLI only); Avana operations set the rate within the ceiling.
 
@@ -173,7 +173,7 @@ After the user's wallet submits, the app calls `intents.submit` (signed-in walle
 | `included` | `confirmed` (final) | Its block is finalized and the export still has no log of it 10 minutes later (an approval, a swap outside the protocol) |
 | `failed` | final | Its block is finalized |
 
-`intents.listForWallet` returns the wallet's latest intents with explorer links (`TEST-143`).
+`intents.listForWallet` returns the wallet's latest intents with explorer links.
 
 ## SIWE sessions
 
@@ -207,7 +207,7 @@ npx convex dev      # against a Convex deployment; regenerates convex/_generated
 | `ingest.test.ts` | Export page checks (gap, overlap, finality, order, block hash, tampered content); request signature equals the indexer's HMAC; metadata accepted only when its bytes hash to the salt, refused on chain, slug or key errors |
 | `activity.test.ts` | Each event lands in the right pages' feeds and in no page twice; changelog rows with previous values; listing operations from the timelock |
 
-The import's fork tests (`TEST-143`): duplicate, overlapping, out-of-order and tampered pages leave the state of a clean run; an Anvil reorg below the checkpoint with an indexer pointed at a different branch rebuilds to the state of a clean run; an end-to-end fork run goes from pledge, borrow, price drop and keeper liquidation through the indexer, export and Convex to the UI.
+The import's fork tests: duplicate, overlapping, out-of-order and tampered pages leave the state of a clean run; an Anvil reorg below the checkpoint with an indexer pointed at a different branch rebuilds to the state of a clean run; an end-to-end fork run goes from pledge, borrow, price drop and keeper liquidation through the indexer, export and Convex to the UI.
 
 ## Detail-page jobs
 

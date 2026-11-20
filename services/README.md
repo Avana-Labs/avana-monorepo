@@ -1,6 +1,6 @@
 # services
 
-Off-chain services that read the chain and act on it. No service is trusted by the contracts: every on-chain check uses only on-chain data read in the same transaction (`REQ-ARCH-140`), and every service re-checks what it indexes against RPC before acting.
+Off-chain services that read the chain and act on it. No service is trusted by the contracts: every on-chain check uses only on-chain data read in the same transaction, and every service re-checks what it indexes against RPC before acting.
 
 Data path: contracts and their events → Ponder indexer with PostgreSQL → private versioned export → Convex → frontend. The indexer keeps the full history and the hourly chart series; Convex reads current values from the chain every 30 s and serves the app; live contract reads verify wallet state and every action. The frontend never queries the indexer.
 
@@ -9,10 +9,10 @@ Data path: contracts and their events → Ponder indexer with PostgreSQL → pri
 | `indexer/` | Ponder indexer with a Postgres database: Avana and Aave events for the app, the keeper, monitoring and DAO refresh payloads, an hourly sampler of every Hub asset, Spoke slice, market and account, and the series of every listed market's pool. [EVENTS.md](indexer/EVENTS.md) lists every event, sample and live read; [EXPORT.md](indexer/EXPORT.md) specifies the private export |
 | `monitor/` | The monitoring service: the signals `M-01` to `M-37` below, routed to their responders, pages confirmed on a second provider, keeper alerts and heartbeats ingested. [README](monitor/README.md) lists the signals wired so far |
 | `keeper/` | The bot runner: hosts the LiquidationBot (`liquidator/`) for every integration of a chain's release manifest. [DESIGN.md](keeper/DESIGN.md) |
-| `convex/` | The Convex backend the app reads ([README](convex/README.md)): rows by scope (Hub asset, Spoke slice, CDP debt reserve, market), chart series, listing content, the frontend fee quote, and the import of the export. The frontend fee is 10 bps of every app action (never above the 25 bps ceiling of the ARFC; for pledge and withdraw collateral, of the position's oracle USD value, paid in the debt stablecoin), rounded down and added as one transfer to the action's batch; it goes to the ParameterStore's `feeRecipient`, which the app reads on chain, and the app drops the fee leg if its simulation shows that transfer would revert. No contract charges it, and keeper liquidations pay none |
+| `convex/` | The Convex backend the app reads ([README](convex/README.md)): rows by scope (Hub asset, Spoke slice, CDP debt reserve, market), chart series, listing content, the frontend fee quote, and the import of the export. The frontend fee is 10 bps of every app action (never above the 25 bps ceiling of the ARFC; for pledge and withdraw collateral, of the position's oracle USD value, paid in the debt stablecoin), rounded down and added as one transfer to the action's batch; it goes to the RiskModule's `feeRecipient`, which the app reads on chain, and the app drops the fee leg if its simulation shows that transfer would revert. No contract charges it, and keeper liquidations pay none |
 | `common/` | `@avana/services-common`: chains, environment names, the manifest view the services read, provenance keys, the export and series wire types, and the chain snapshot (`/views`): its rows by scope, the reader that fills them at one block, and their integer math |
 
-The indexer, the keeper and the monitoring service read addresses and start blocks from the verified release manifest named in their configuration and ABIs from [`packages/protocol`](../packages/protocol/), check the manifest's ABI hash against the hash of those ABIs at startup and refuse to run on a mismatch (`TEST-149`).
+The indexer, the keeper and the monitoring service read addresses and start blocks from the verified release manifest named in their configuration and ABIs from [`packages/protocol`](../packages/protocol/), check the manifest's ABI hash against the hash of those ABIs at startup and refuse to run on a mismatch.
 
 ## Build and test
 
@@ -39,7 +39,7 @@ The [`services`](../.github/workflows/services.yml) workflow runs the same steps
 
 ## Scopes
 
-A chain has several Aave V4 Hubs (on the local deployment three: GHO, USDC and USDT on each). Each Hub has one or more supply-only Lend Spokes and its CDP Spokes (one per AMM protocol), each (Hub, debt asset) its First-Loss Reserve and, behind it, possibly the Aave DAO's deficit offset (a Spoke whose `FIRST_LOSS_LAYER()` is that First-Loss Reserve, the second loss layer), and a CDP Spoke may draw on another Hub's asset through a Hub-to-Hub credit line. The services start from the Hubs and Spokes of the release manifest and add, at every read, each Hub the MarketRegistry has recorded and each CDP Spoke it has approved since; on a Hub that no manifest Lend Spoke supplies, a Spoke shaped like a Lend Spoke (not CDP, not Coverage, not a deficit offset, not the fee receiver, with an add cap and no draw cap) is read as its Lend Spoke. A Hub, Spoke or market listed on chain therefore shows up, with its data and series, without a code or configuration change. The services keep every number at the scope that owns it:
+A chain has several Aave V4 Hubs (on the local deployment three: GHO, USDC and USDT on each). Each Hub has one or more supply-only Lend Spokes and its CDP Spokes (one per AMM protocol), each (Hub, debt asset) its First-Loss Reserve and, behind it, possibly the Aave DAO's deficit offset (a Spoke whose `FIRST_LOSS_LAYER()` is that First-Loss Reserve, the second loss layer), and a CDP Spoke may draw on another Hub's asset through a Hub-to-Hub credit line. The services start from the Hubs and Spokes of the release manifest and add, at every read, each Hub the RiskModule has registered and each CDP Spoke it has approved since; on a Hub that no manifest Lend Spoke supplies, a Spoke shaped like a Lend Spoke (not CDP, not Coverage, not a deficit offset, not the fee receiver, with an add cap and no draw cap) is read as its Lend Spoke. A Hub, Spoke or market listed on chain therefore shows up, with its data and series, without a code or configuration change. The services keep every number at the scope that owns it:
 
 | Scope | Key | Owns |
 |---|---|---|
@@ -48,7 +48,7 @@ A chain has several Aave V4 Hubs (on the local deployment three: GHO, USDC and U
 | Spoke slice | chain, Hub, assetId, Spoke | One Spoke's added, owed, deficit and caps on that asset |
 | Hub-to-Hub credit line | chain, funding Hub, assetId, Spoke | The registry's cap for a CDP Spoke whose home Hub is another one, and the funding Hub's total of such caps; the draw is the Spoke slice |
 | CDP debt reserve | chain, Spoke, reserveId | The reserve's flags, debt price and breaker; its Hub asset is joined, never copied |
-| Collateral market | chain, marketId | Pool, range, vault token, accepted price, collateral value, collateral factor, collateral risk, cap headroom; per debt reserve the market's borrow rate and what it can borrow now under the speed limits and when more frees up (`Lens.getBorrowSpeed`); the pledge-speed window (`Lens.getPledgeSpeed`) |
+| Collateral market | chain, marketId | Pool, range, vault token, accepted price, collateral value, collateral factor, collateral risk, cap headroom; per debt reserve the market's borrow rate |
 | Market debt | chain, marketId, Spoke, reserveId | Debt the market's accounts owe in that reserve |
 | Account | chain, Spoke, proxy | One wallet's position in one market |
 
@@ -94,33 +94,21 @@ Ports are published on 127.0.0.1 only: the indexer on 42069 (export, `/health`, 
 
 ### Events
 
-Every borrower or keeper action is one atomic transaction in which each contract emits its own events (`Q-076`). The indexer stores them under four keys (`TEST-061`):
-
-| Entity | Key |
-|---|---|
-| Account | `chainId + Spoke + proxy` |
-| Collateral record | `chainId + Collateralization + recordId` |
-| Debt reserve | `chainId + Spoke + debtReserveId` |
-| Log | `txHash + logIndex` |
-
-Every event the indexer handles, with its indexed fields, the table it updates and the consumers that read it at each depth, is in [EVENTS.md](indexer/EVENTS.md), generated from the interfaces under `contracts/src/` and, for the Aave V4 Spoke and Hub, from the Aave ABIs at the pinned commit.
+Every borrower or keeper action is one atomic transaction in which each contract emits its own events. Every event the indexer handles, with its key, table and consumers, is in [EVENTS.md](indexer/EVENTS.md), generated from the interfaces under `contracts/src/` and the pinned Aave V4 ABIs.
 
 Rules:
 
-- Spoke events are attributed only to proxies created by the verified ProxyManager and reported by the AaveAdapter (`ProxyDeployed`, `UserProxyCreated`, both naming the same wallet, Spoke and market); the ProxyManager's `PROXY_CREATION_CODE_HASH` is in the manifest.
-- `LiquidationSettled` is valid whoever the caller is: `liquidate` is the one entry point and is open to every address, so the indexer never requires the `caller` field to be a registered committed operator (`Q-404`). A `Repaid` whose payer is not the proxy's borrower is a valid third-party repay (`Q-212`).
-- The Borrow Spoke admits only LPVaultSwap to `liquidationCall` (`Q-222`), so every `LiquidationCall` event has `liquidator == LPVaultSwap`; the indexer still attributes Spoke events by proxy, not by the liquidator field (`LIQ-056`).
-- Expiry of a timelock operation emits no event; the indexer derives it from `getTimestamp(id) + GRACE_PERIOD` (`REQ-ACCESS-108`).
-- Stored debt shares and index snapshots are historical. Displayed health factors and keeper decisions always re-read RPC at a known block.
-- After an upgrade, events are decoded with the ABI that was live for each block range.
-- Start blocks come from the deployment receipts recorded in the manifest. A full reindex completes in under one hour, and the schema is not changed while the application is Frozen or Paused.
-- The indexer supplies the list of every PositionProxy that the Aave DAO's refresh payloads pass to `updateUserRiskPremium` after a `collateralRisk` change (`Q-145`): `/export/v1/premium-refresh` names, per CDP Spoke, the attributed proxies with drawn debt whose last `UpdateUserRiskPremium` predates the last change ([indexer/EXPORT.md](indexer/EXPORT.md#risk-premium-refresh)).
+- Spoke events are attributed only to account proxies the AaveAdapter reported (`AccountCreated`: wallet, market, account).
+- Only the LiquidationModule can receive seized vault tokens, so every Avana liquidation emits `Liquidated` and `FeePaid`; `liquidate` is open to every address.
+- A `Repaid` whose payer is not the account's wallet is a valid third-party repay.
+- Stored debt shares and index snapshots are historical. Displayed health factors and bot decisions always re-read RPC at a known block.
+- Start blocks come from the deployment receipts in the manifest. A full reindex completes in under one hour.
 
 ### Finality and reorgs
 
 Each consumer has a named finality setting in its service configuration: the indexer and the keeper follow the chain head; Convex ingests exports at `finalized`. When a reorg removes a block, the indexer rolls back to the common ancestor and replays, and an intent that Convex had marked `included` returns to `pending`.
 
-The reorg replay of `TEST-143` and `TEST-144` replays a fork run and compares the indexer's state with RPC reads at the same block, including injected Anvil reorgs and duplicate or out-of-order export pages; every case must leave the same state. It runs against the shared fork environment and needs a deployment manifest from it, so no workflow runs it yet: CI checks the services with the typecheck and unit tests above.
+The reorg replay replays a fork run and compares the indexer's state with RPC reads at the same block, including injected Anvil reorgs and duplicate or out-of-order export pages; every case must leave the same state. It runs against the shared fork environment and needs a deployment manifest from it, so no workflow runs it yet: CI checks the services with the typecheck and unit tests above.
 
 ## Bot runner (`keeper/`)
 
@@ -149,7 +137,7 @@ Each keeper wallet (the RiskModules' keepers and the FlashLiquidators' operators
 
 ## Monitoring and alerting
 
-The monitoring service, run by Avana Labs on the indexer's data and direct RPC reads, raises two alert levels per market and debt asset: **warn** (drift that needs attention) and **page** (a failure that needs action now). Every alert names its responder and the [3.6 Emergency Operations](../docs/spec/03-operations/06-emergency-operations.md) playbook to follow, so no time is spent deciding who acts. Circuit breakers stop new activity by themselves; only people can switch feeds, cover deficits, fund reserves, cancel operations or ask Aave to act, and each alert fires early enough to act inside the 48-hour window caps are sized for (`Q-244`). Every alert is confirmed on-chain within 15 minutes and logged in the incident log (`EMG-075`).
+The monitoring service, run by Avana Labs on the indexer's data and direct RPC reads, raises two alert levels per market and debt asset: **warn** (drift that needs attention) and **page** (a failure that needs action now). Every alert names its responder and the playbook to follow, so no time is spent deciding who acts. Circuit breakers stop new activity by themselves; only people can switch feeds, cover deficits, fund reserves, cancel operations or ask Aave to act, and each alert fires early enough to act inside the 48-hour window caps are sized for. Every alert is confirmed on-chain within 15 minutes and logged in the incident log.
 
 | # | Signal | Warn | Page | Responder | Playbook |
 |---|---|---|---|---|---|
@@ -197,7 +185,7 @@ Rules:
 - Every signal is read from on-chain state at a known block, re-checked against a second RPC source before paging, and stored with the block number in the incident log.
 - The live tail-coverage variant of `M-14` replaces each token's cap by the debt currently backed by markets holding that token; `M-11` and `M-12` run against a fork of the latest block once a day and before every listing.
 - The app sends each borrower health alerts at the levels that borrower chooses, and shows the state of each of their markets in plain language: price state, breaker, pause reason and what still works.
-- The app's Lend page shows each lender, per (Hub, asset), the supply rate, the borrow rate the asset's utilization curve sets, the utilization and idle liquidity it can withdraw now (`M-19` uses the same reads), and any deficit left by both loss layers (the Avana Umbrella, then the DAO deficit offset) with the backed value per share from the Lens; while `UncoveredDeficit(hub, asset, amount)` is raised (`M-15`, P-18) it alerts every lender of that (Hub, asset), builds no new supply into it, keeps withdrawals open, and before each withdrawal shows the backed value per share beside the price Aave will pay, with the plain statement that Aave pays withdrawals in full first-come while liquidity lasts and the last lenders hold the unbacked claims until a loss layer is refilled (`Q-410`).
+- The app's Lend page shows each lender, per (Hub, asset), the supply rate, the borrow rate the asset's utilization curve sets, the utilization and idle liquidity it can withdraw now (`M-19` uses the same reads), and any deficit left by both loss layers (the Avana Umbrella, then the DAO deficit offset) with the backed value per share; while `UncoveredDeficit(hub, asset, amount)` is raised (`M-15`, P-18) it alerts every lender of that (Hub, asset), builds no new supply into it, keeps withdrawals open, and before each withdrawal shows the backed value per share beside the price Aave will pay, with the plain statement that Aave pays withdrawals in full first-come while liquidity lasts and the last lenders hold the unbacked claims until a loss layer is refilled.
 
 
 ## Licence
