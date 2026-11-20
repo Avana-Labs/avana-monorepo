@@ -10,8 +10,7 @@
 # of a full run on main: script/update-test-timings.py <log>...
 #
 # With TEST_RESULTS_DIR set, each forge invocation also writes its results (`forge test --json-file`) to
-# $TEST_RESULTS_DIR/<shard or unit>-<n>.json; docs/spec/05-verification/trace.py and contract_checklist.py read them
-# (--results) to tell a test that ran and passed from one that only carries a tag.
+# $TEST_RESULTS_DIR/<shard or unit>-<n>.json.
 #
 # Run it at -vv when TEST_RESULTS_DIR is set: from -vvv, forge writes the traces of every test, passing ones too, into
 # the results file (gigabytes per shard). After a failed invocation the script runs its failed tests again with

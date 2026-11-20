@@ -1,6 +1,6 @@
 # LP-vault credit: design record
 
-**Status: locked (2026-11-19).** An argument, in order: the thesis, the reasoning behind it, every alternative argued on its merits with its own worked example, the conclusion, and how the math is checked. Lifecycle: [LIFECYCLE.md](LIFECYCLE.md). Proof: [4.5 Floor Credit Proof](../../../../docs/spec/04-security/05-floor-credit-proof.md).
+**Status: locked (2026-11-19).** An argument, in order: the thesis, the reasoning behind it, every alternative argued on its merits with its own worked example, the conclusion, and how the math is checked. Lifecycle: [LIFECYCLE.md](LIFECYCLE.md). Proof: [FLOOR-CREDIT-PROOF.md](FLOOR-CREDIT-PROOF.md).
 
 **How to read the numbers.** Every example is a $10,000 position at 75% LTV. A table cell is the borrowing power and, in brackets, its share of the position's value; 75% is the most any position can get. Columns are where the price is, relative to the listing price, when the position is minted; positions are Uniswap's five strategies minted around that price: Full range, Wide (−50% / +100%), Stable (±0.3%), One-sided lower (−50% to the price), One-sided upper (the price to +100%). Volatile pool unless stated. Every number comes from the floor-credit formula in a short script; the library's integer credit is at most these, and below them by at most 2 base units of the token.
 
@@ -271,7 +271,7 @@ Two markets per pool, Full range and Custom range, with tight Spoke widths, is t
 
 | Tool | What it shows | Where |
 |---|---|---|
-| Paper proof | The floor at every price (concavity inside the position), the minimum at a band edge, partial liquidation stays safe | [05-floor-credit-proof.md](../../../../docs/spec/04-security/05-floor-credit-proof.md) |
+| Paper proof | The floor at every price (concavity inside the position), the minimum at a band edge, partial liquidation stays safe | [FLOOR-CREDIT-PROOF.md](FLOOR-CREDIT-PROOF.md) |
 | Certora | The formula's math as pure numbers, over unbounded integers (rules below) | [`certora/specs/FloorCreditMath.spec`](../../../certora/specs/FloorCreditMath.spec) |
 | Halmos | The code computes the formula (`check_creditMatchesReference`, bounded) | [`test/halmos/FloorCreditMath.halmos.t.sol`](../../../test/halmos/FloorCreditMath.halmos.t.sol) |
 | Fuzz | Rounding and overflow over the whole tick and liquidity domain; the code against the ratio formula: never above it, below it by at most 2 base units of the token's value | [`test/fuzz/FloorCreditMath.fuzz.t.sol`](../../../test/fuzz/FloorCreditMath.fuzz.t.sol) |

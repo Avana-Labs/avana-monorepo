@@ -12,8 +12,7 @@
 #
 # Exempt from that header: src/interfaces/external/ (third-party interfaces keep their origin's SPDX identifier, which
 # must be present) and the files in security/licence-allowlist.txt, each of which must carry exactly the identifier
-# listed there. No Solidity file, script or package.json in those folders, in packages/ or in
-# docs/spec/05-verification/ may carry UNLICENSED.
+# listed there. No Solidity file, script or package.json in those folders or in packages/ may carry UNLICENSED.
 #
 # Prints one line per violation and exits 1 if there is any.
 #
@@ -78,7 +77,7 @@ find "${roots[@]}" -name '*.sol' -type f | LC_ALL=C sort | xargs awk -v allow="$
 unlicensed=$(grep -rIlE --exclude-dir=node_modules --exclude-dir=.venv --exclude-dir=__pycache__ \
   --exclude-dir=.hypothesis --exclude-dir=.pytest_cache --exclude-dir=tools \
   'SPDX-License-Identifier: *UNLICENSED|"license": *"UNLICENSED"' \
-  "${roots[@]}" package.json ../packages ../docs/spec/05-verification 2>/dev/null || true)
+  "${roots[@]}" package.json ../packages 2>/dev/null || true)
 if [ -n "$unlicensed" ]; then
   while IFS= read -r f; do echo "$f: carries UNLICENSED"; done <<<"$unlicensed"
   status=1

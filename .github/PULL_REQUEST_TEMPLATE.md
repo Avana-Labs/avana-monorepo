@@ -1,11 +1,11 @@
 ## What and why
 
-<!-- One paragraph: what changes and the reason. Name the spec IDs (REQ-…, INV-…, Q-…) the change implements or touches. -->
+<!-- One paragraph: what changes and the reason. -->
 
 ## Checklist
 
-- [ ] Spec first: where code and spec disagreed, the spec page and its Z3/SymPy/Hypothesis model changed in this PR, and `trace.py` reports 0 errors with `traceability.md` regenerated.
-- [ ] Every new or changed function has its rule IDs in `docs/spec/05-verification/solidity-links.json`; every new test carries a `TEST-NNN verifies:` tag.
+- [ ] Design changes are recorded in the contract's `DESIGN.md`.
+- [ ] `script/check-core-size.sh` passes (each core contract ≤ 800 lines, core ≤ 4,000).
 - [ ] `forge fmt --check`, `forge build -D warnings`, `forge test` and `script/security-fast.sh` pass locally.
 - [ ] Gas: `make gas` was run and the changed `contracts/snapshots/*.json` are committed, or no gas suite changed.
 - [ ] Contract sizes: `script/check-sizes.sh` passes; any margin change in `security/size-margins.json` gives its reason.

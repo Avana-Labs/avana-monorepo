@@ -15,9 +15,6 @@ pre-commit:
     licence:
       glob: "*.{sol,py,js,mjs,sh,json}"
       run: contracts/script/check-licence.sh
-    traceability:
-      glob: "{docs/spec/**,contracts/src/**,contracts/test/**,contracts/certora/**}"
-      run: cd docs/spec/05-verification && .venv/bin/python trace.py
 
 # No AI credit in a commit message; the commit-messages workflow checks the same on a pull request's commits.
 commit-msg:
