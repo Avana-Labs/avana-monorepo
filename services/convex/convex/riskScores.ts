@@ -19,14 +19,14 @@ export const score = internalMutation({
         .query("dailyRollups")
         .withIndex("by_scope", (q) => q.eq("scopeKind", "market").eq("scopeKey", `${m.chainId}:${m.marketId}`).gte("day", since))
         .collect();
-      const cap = m.caps ? BigInt(m.caps.marketUsdCap8) : 0n;
-      const used = cap > 0n ? cap - BigInt(m.marketHeadroomUsd8) : 0n;
       const result = scoreMarket({
         collateralRiskBps: m.collateralRiskBps,
-        capUsage: cap > 0n ? Number(((used > 0n ? used : 0n) * 10_000n) / cap) / 10_000 : null,
-        priceState: m.priceState,
-        breakerReasons: m.breakerReasons,
-        pauseState: m.pauseState,
+        // No USD cap or breaker in the new core; an unpriced market scores as an expired price, a frozen or paused
+        // reserve as the old Hub pause did.
+        capUsage: null,
+        priceState: m.priceAvailable ? 0 : 3,
+        breakerReasons: 0,
+        pauseState: m.paused ? 2 : m.frozen ? 1 : 0,
         atRiskDebtShare: atRiskDebtShare(positions, m.collateralFactorBps),
         badDebtUsd7d: rollups.reduce((acc, r) => acc + (r.values.badDebtUsd ?? 0), 0),
       });

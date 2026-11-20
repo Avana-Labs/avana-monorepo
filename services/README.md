@@ -7,8 +7,8 @@ Data path: contracts and their events → Ponder indexer with PostgreSQL → pri
 | Path | Contents |
 |---|---|
 | `indexer/` | Ponder indexer with a Postgres database: Avana and Aave events for the app, the keeper, monitoring and DAO refresh payloads, an hourly sampler of every Hub asset, Spoke slice, market and account, and the series of every listed market's pool. [EVENTS.md](indexer/EVENTS.md) lists every event, sample and live read; [EXPORT.md](indexer/EXPORT.md) specifies the private export |
-| `monitor/` | The monitoring service: the signals `M-01` to `M-34` below, routed to their responders, pages confirmed on a second provider, keeper alerts and heartbeats ingested. [README](monitor/README.md) lists the signals wired so far |
-| `keeper/` | Avana's liquidation keeper, run as primary and standby instances on each chain, including observe-only mode. [DESIGN.md](keeper/DESIGN.md) maps the rules below onto its code |
+| `monitor/` | The monitoring service: the signals `M-01` to `M-37` below, routed to their responders, pages confirmed on a second provider, keeper alerts and heartbeats ingested. [README](monitor/README.md) lists the signals wired so far |
+| `keeper/` | The bot runner: hosts the LiquidationBot (`liquidator/`) for every integration of a chain's release manifest. [DESIGN.md](keeper/DESIGN.md) |
 | `convex/` | The Convex backend the app reads ([README](convex/README.md)): rows by scope (Hub asset, Spoke slice, CDP debt reserve, market), chart series, listing content, the frontend fee quote, and the import of the export. The frontend fee is 10 bps of every app action (never above the 25 bps ceiling of the ARFC; for pledge and withdraw collateral, of the position's oracle USD value, paid in the debt stablecoin), rounded down and added as one transfer to the action's batch; it goes to the ParameterStore's `feeRecipient`, which the app reads on chain, and the app drops the fee leg if its simulation shows that transfer would revert. No contract charges it, and keeper liquidations pay none |
 | `common/` | `@avana/services-common`: chains, environment names, the manifest view the services read, provenance keys, the export and series wire types, and the chain snapshot (`/views`): its rows by scope, the reader that fills them at one block, and their integer math |
 
@@ -32,7 +32,7 @@ npm run test -w services/keeper                # one package
 | `services/indexer` | Factory events match the generated ABIs and decode the child address; every log-only event exists in its contract's ABI; export authentication (signature, key rotation, clock skew); the snapshot reader's ABI fragments against the generated ABIs; pool series aggregation |
 | `services/convex` | Spoke slices reconcile to the Hub totals the Lend page shows; the frontend fee (10 bps on each action, the 25 bps ceiling, the LP-value basis, rounding down) and fee + gas totals; chart buckets and quick stats; export page checks, request signing and listing metadata hashes; activity feeds by page |
 | `services/monitor` | Signal catalog against this README; snapshot rules at their boundaries; alert lifecycle, routing and its refusals; PagerDuty and webhook payloads and retries; second-provider confirmation of pages; keeper ingest and heartbeats; one round end to end; configuration refusals |
-| `services/keeper` | Liquidation decision and sizing rules at their boundaries; the pipeline sends only after a successful simulation with every guard passing, pages `M-26` on a code mismatch and logs observe-only calls |
+| `services/keeper` | The bot runner's pass (stream or RPC accounts, one LiquidationBot per integration, nothing sent while halted, `M-09`, `M-10`, `M-16`), the bot stream client (signing, paging, reorg, failure), configuration (secrets from files, all-or-none sets) and the monitor sink |
 | `packages/protocol` | `ABI_HASH` matches the committed ABIs; no selector collision inside an ABI |
 
 The [`services`](../.github/workflows/services.yml) workflow runs the same steps for each package on every pull request and push to `main` that touches these packages, the workspace manifests or `.nvmrc`. Before installing it fails if any `@avana/` dependency is not a `file:` or `workspace:` link or the lock file resolves one from a registry; the `gate` job passes only when every package passed.
@@ -65,17 +65,17 @@ Every row of one read carries its block, so the indexer's hourly sampler and Con
 
 ## Running against a manifest
 
-Both services take every address from the release manifests listed in `AVANA_MANIFEST` (comma-separated, one per chain) and the network set from `INDEXER_NETWORK_SET` / `KEEPER_NETWORK_SET`: `production` (Ethereum, Base) and `testnet` (Sepolia, Base Sepolia) load manifests from `deployments/verified/`; `local` (anvil, chain 31337) loads a rehearsal manifest from `contracts/deployments-local/<network>/manifest.json` and is never used for a published deployment. A manifest for a chain outside the set is ignored, and a set with no manifest stops startup.
+Both services take every address from the release manifests listed in `AVANA_MANIFEST` (the indexer: comma-separated, one per chain, with the network set from `INDEXER_NETWORK_SET`; the bot runner: one chain's manifest): `production` (Ethereum, Base) and `testnet` (Sepolia, Base Sepolia) load manifests from `deployments/verified/`; `local` (anvil, chain 31337) loads a rehearsal manifest from `contracts/deployments-local/<network>/manifest.json` and is never used for a published deployment. A manifest for a chain outside the set is ignored, and a set with no manifest stops startup.
 
 ```bash
 # Rehearsal on a local anvil node, after contracts/script/e2e/e2e-local.sh (or its deploy and manifest steps):
 export AVANA_MANIFEST=$PWD/contracts/deployments-local/anvil/manifest.json
 export RPC_ANVIL=http://127.0.0.1:8545 RPC_ANVIL_FALLBACK=http://127.0.0.1:8545 RPC_ANVIL_WS=ws://127.0.0.1:8545
 (cd services/indexer && INDEXER_NETWORK_SET=local npx ponder start)       # PGlite store; production uses DATABASE_URL
-(cd services/keeper && KEEPER_NETWORK_SET=local KEEPER_MODE=observe ... npx tsx src/main.ts)
+(cd services/keeper && LIQUIDATION_BOT_RPC_URL=http://127.0.0.1:8545 LIQUIDATION_BOT_CHAIN_ID=31337 LIQUIDATION_BOT_KEYSTORE=... KEEPER_HALT_STATE_PATH=/tmp/halt.json npx tsx src/main.ts)
 ```
 
-`contracts/script/e2e/services-smoke.sh <manifest>` runs both on a manifest with throwaway kill-switch certificates and checks that the indexer reaches `/ready` and the keeper serves its metrics in observe mode. It then starts a fresh local Convex deployment of `services/convex` (`CONVEX_AGENT_MODE=anonymous npx convex dev`, no account), points it at the indexer's export and at the rehearsal's listing metadata files (`contracts/deployments-local/<network>/listing-content/`, served as `LISTING_CONTENT_URL`), writes the deployment row from the manifest, imports the export and samples the chain; every listed market's pool page and every debt reserve's asset page must then show its on-chain numbers and the text of the listing metadata file its listing operation committed to. The manifest is produced and verified with `npm run manifest` in `packages/protocol` ([`deployments/README.md`](../deployments/README.md)); the services refuse a manifest that does not match the release manifest schema (`@avana/protocol/manifest/schema`, every error listed) or whose ABI hash differs from `@avana/protocol`'s.
+`contracts/script/e2e/services-smoke.sh <manifest>` runs both on a manifest with throwaway kill-switch certificates and checks that the indexer reaches `/ready` and the bot runner serves its metrics while halted. It then starts a fresh local Convex deployment of `services/convex` (`CONVEX_AGENT_MODE=anonymous npx convex dev`, no account), points it at the indexer's export and at the rehearsal's listing metadata files (`contracts/deployments-local/<network>/listing-content/`, served as `LISTING_CONTENT_URL`), writes the deployment row from the manifest, imports the export and samples the chain; every listed market's pool page and every debt reserve's asset page must then show its on-chain numbers and the text of the listing metadata file its listing operation committed to. The manifest is produced and verified with `npm run manifest` in `packages/protocol` ([`deployments/README.md`](../deployments/README.md)); the services refuse a manifest that does not match the release manifest schema (`@avana/protocol/manifest/schema`, every error listed) or whose ABI hash differs from `@avana/protocol`'s.
 
 ## Containers
 
@@ -122,168 +122,30 @@ Each consumer has a named finality setting in its service configuration: the ind
 
 The reorg replay of `TEST-143` and `TEST-144` replays a fork run and compares the indexer's state with RPC reads at the same block, including injected Anvil reorgs and duplicate or out-of-order export pages; every case must leave the same state. It runs against the shared fork environment and needs a deployment manifest from it, so no workflow runs it yet: CI checks the services with the typecheck and unit tests above.
 
-## Keeper (`keeper/`)
+## Bot runner (`keeper/`)
 
-Avana's keeper liquidates every Avana account whose health factor falls below 1, on every chain, whatever the account's size. Avana pays its gas, there is no minimum debt or minimum repayment, and no liquidation waits for a keeper profit (`Q-381`, `Q-395`). Avana's keeper is the committed operator of each chain: its primary instances and a standby instance on independent infrastructure. Each chain's LPVaultSwap keeps a registry of committed operators (the keeper list), at least `keeperFloor` = 1 and at most `MAX_KEEPERS` = 32 (`Q-400`); the registry gates no call, so any address can liquidate, and it feeds the borrowing halt at zero active committed operators and monitoring (`Q-404`).
+The bot runner hosts Avana's own bots against one chain's release manifest; today the **LiquidationBot** of `liquidator/` (step 8), one instance per AMM integration. [keeper/DESIGN.md](keeper/DESIGN.md) maps the process onto the code and explains the naming: **LiquidationBot** is the liquidation logic (`LIQUIDATION_BOT_*` settings), **keeper** is the generic bot-running infrastructure (`KEEPER_*` settings, the image, the monitor feed) and the contracts' own word for the bots the RiskModules register (`addKeeper`; with no keeper registered, borrowing stops).
 
-### Funding and the flash liquidation helper
+- **Duties.** Liquidate every account below health factor 1 in every market of every integration, whether or not the bonus pays (a committed operator), in kind through `LiquidationModule.liquidate`, with the bot's own funds or through the `FlashLiquidator`'s Aave V3 flash loan (premium-free once the Aave DAO grants `FLASH_BORROWER`).
+- **Discovery.** `AaveAdapter.AccountCreated` from the indexer's bot stream ([indexer/EXPORT.md](indexer/EXPORT.md#keeper-stream)), or the bot's own RPC scan while the stream fails. Every decision re-reads the chain.
+- **Keys.** An encrypted Foundry keystore and its password file; nothing secret in the environment (`LIQUIDATION_BOT_*` refuses a variable named like a key or password). The keystore's address is the `FlashLiquidator`'s `OPERATOR` and the keeper the RiskModules register.
+- **Safety.** The mutual-TLS kill switch halts sending at once and persists across restarts; every transaction is simulated first; the flash path's `minProfit` is the simulated profit less `LIQUIDATION_BOT_PROFIT_SLIPPAGE_BPS`, and a sale that falls short is topped up only up to `LIQUIDATION_BOT_MAX_TOP_UP`.
+- **Monitoring.** The runner posts `M-09`, `M-10` and `M-16` and a heartbeat per pass to the monitor; the monitor reads the keeper wallets' gas itself (`M-35`).
+- **Gas.** Each keeper wallet is refilled from the keeper top-up wallet (`keeperTopUp` in the deploy config, or `KEEPER_TOPUP_WALLET`) by deploy step `11-fund-keepers` when it falls below `minBalanceWei`; `M-35` warns when the step is due.
 
-`LPVaultSwap.liquidate`, the one liquidation entry point, is caller-funded: it pulls `debtToCover` of the debt asset from `msg.sender`, measured by balance delta, and takes no flash loan. Flash funding sits in a periphery contract, the flash liquidation helper ([2.11](../docs/spec/02-contracts/11-lpvaultswap.md#flash-liquidation-helper)):
-
-- It is immutable and holds no funds or allowances between transactions.
-- It flash-borrows every debt asset, GHO included, from the chain's Aave V3 Pool, its only lender (`flashLoan`, one asset, mode 0). Its callback accepts only that Pool as caller and itself as initiator, and only the asset, amount and calldata hash recorded in a single-use context before the loan, with a premium no higher than the caller's maximum and `maxFlashFeeBps`.
-- It calls LPVaultSwap, receives `keeperOut`, repays the flash principal and premium from it (pulling at most the top-up bound from its payer when `keeperOut` falls short), reverts unless the net payout meets the request's `minPayout`, and only after `flashLoan` returns sends the rest to its recipient.
-- It has no swap step. The unwind and the swap routes stay in LPVaultSwap, so the keeper never builds swap calldata.
-
-One public helper instance serves any address. Each keeper instance has its own operator helper, bound at deployment to that instance's signer and funding Safe, which refuses every caller except its signer and bounds each top-up. LPVaultSwap sees the helper as its caller, so the per-instance helper addresses are what the registry lists as Avana's committed operator; registration changes no call. The Pool premium is 5 bps, and 0 if Aave grants the helper `FLASH_BORROWER`. LPVaultSwap's own flash source serves only a borrower's `deleverage`.
-
-### Duties
-
-1. **Liquidate.** Liquidate every account with HF < 1 through the instance's helper and `LPVaultSwap.liquidate`, with either route mode, one debt reserve per call, with successive calls until the account is at HF ≥ 1, has no debt, or has its deficit recorded. Accounts with zero collateral are skipped: the Spoke has already reported their deficit.
-2. **Registry and freeze.** A helper that is not, or not yet, registered (after a removal or during a rotation) keeps liquidating: the registry gates no call (`Q-404`). A frozen helper is a guardian decision: the keeper stops submitting from it and pages, and does not route around the freeze through the public helper, although LPVaultSwap would accept that (`REQ-SWAP-105`).
-3. **Pending settlement.** When Collateralization reports pending units for a market (`SeizureReconciled`, `getPending`), call `LPVaultSwap.settlePending(marketId, settlementReserve(marketId))` once the market's price passes the liquidation gates. It pays the caller nothing; the proceeds fund the market's First-Loss Reserve.
-4. **Breaker pokes.** The oracles are stateless (each market's LPOracle reads its Chainlink routes on every call; a non-GHO debt reserve's price is its asset's Chainlink feed), so there is nothing to poke on them. Every block, simulate `RiskModule.pokeBreakers(marketId)` for every market, and every `KEEPER_SLOW_JOB_SECONDS` (60 s) `RiskModule.pokeConfig(spoke)` for every CDP Spoke, and send a transaction only when the simulated call changes state: `pokeConfig` finds a drift (so `ConfigDriftDetected` is emitted on-chain and `M-20` pages), or `pokeBreakers` finds a reason holding (so `recordBreach` stores the breach time or latches a security freeze). A block with nothing to record sends nothing (`Q-382`).
-5. **Deleverage is not a keeper duty.** A borrower starts a repay with collateral through the AaveAdapter's `repayWithCollateral`, which calls `LPVaultSwap.deleverage` with the core flash source. The keeper never calls it.
-6. **Public failure log.** Reverted transactions emit no events, so the keeper publishes every failed, replaced and cancelled attempt with its block, parameters and revert reason.
-
-### Discovery and caching
-
-The unit is one PositionProxy: one wallet in one market on one CDP Spoke, keyed `chainId + Spoke + proxy` as in the indexer. Per account the keeper caches the wallet, Spoke, market, vault token, the debt reserves with non-zero debt, the last health factor with its block, and an in-flight flag.
-
-- **Live updates** come from the indexer's stream (`GET /keeper/v1/events`, [EXPORT.md](indexer/EXPORT.md#keeper-stream)) of the events listed under [Events](#events): `UserProxyCreated` and `ProxyDeployed` add accounts; `CollateralAdded`, `Borrowed`, `Repaid`, `CollateralWithdrawn`, `LiquidationSettled` and the Spoke's `Supply`, `Borrow`, `Repay`, `Withdraw`, `LiquidationCall` and `ReportDeficit` refresh an account; `SeizureReconciled` and `PendingSettled` drive `settlePending`; `KeeperAdded`, `KeeperRemoved`, `AddressFrozen` and `AddressUnfrozen` drive the keeper's own status.
-- **Startup backfill.** The keeper loads the account set from the indexer at a known block and, independently, reads every `ProxyDeployed` and `UserProxyCreated` log from the manifest's start blocks over a second RPC provider, in 10,000-block chunks halved whenever a provider refuses the range. It keeps the union of both sets and alerts when they differ (`REQ-LENS-004`).
-- **Reconnect backfill.** After any reconnect of the indexer stream or an RPC subscription, the keeper re-reads logs from the chain's last finalized block to the head before it processes new blocks, so no event missed during the outage is lost.
-- **Sweep.** Every 10 minutes the keeper enumerates proxies from logs over both providers, from each provider's finalized block at the previous sweep (logs at or below a finalized block never change), or from the head that sweep read to when a lagging node answered one below it, and re-reads each account's debt reserves. Once a day the sweep starts again from the manifest's start blocks, which repairs any cache entry a missed or misdecoded event left wrong.
-
-Cached values only choose what to read. Every decision re-reads the chain at a pinned block.
-
-### The liquidatable decision
-
-For each new block `B`:
-
-1. One multicall pinned to `B` reads `Spoke.getUserAccountData(proxy)` for every cached account, `Lens.getPriceState(marketId)` for every market, `Lens.getDebtPriceState(spoke, debtReserveId)` for every debt reserve, the instance's `isApprovedKeeper(helper)`, `isFrozenAddress(helper)` and `activeKeeperCount()`, and the Aave V3 Pool's idle liquidity of each debt asset. Batches hold at most 300 accounts, so each `eth_call` stays under a node's 50,000,000-gas call limit.
-2. An account is a candidate when `healthFactor < 1e18` and its collateral value is above 0.
-3. **Market gate.** The seized market's price is Live: every Chainlink leg of the LPOracle is within its `liquidationPriceMaxAge` (the feed's heartbeat plus its 1,800 s margin, `ParameterStore.getFeed(feed)`). A market with an older leg (the Lens reports it Cached) is skipped (`REQ-SWAP-008`). The stateless oracles record no disagreement and no grace window, and the contracts no longer read the sequencer feed.
-4. **Debt reserve choice.** Among the account's debt reserves whose price passes (GHO always; another asset when its Chainlink feed's `latestRoundData().updatedAt` is within that feed's `liquidationPriceMaxAge`), the keeper repays the largest debt value first. A failing price on another reserve never blocks the call, because Aave already values that reserve at its stress price (`Q-247`).
-5. **Sizing.** `Lens.previewLiquidation(proxy, debtReserveId, deadline)` at `B` re-evaluates every gate as LPVaultSwap does and returns ready parameters: `debtToCover` from Aave V4's own sizing (target health factor, bonus, dust rule, with a 500 bps margin on a whole-debt close), the expected seizure, the recovery floor, the expected `keeperOut` and the expected rounding gap. A false gate skips the account and records the reason.
-6. The account goes to submission if it is in the instance's shard (or past the takeover window) and its in-flight flag is clear.
-
-Examples:
-
-1. An Ethereum market's USDT feed has an 86,400 s heartbeat, so `liquidationPriceMaxAge = 88,200` s. At 88,300 s since the last round the market fails step 3, the keeper sends nothing for it, and monitoring raises `M-03`. The next stored round makes it liquidatable again.
-2. An account owes USDC and GHO and the USDC/USD feed is older than its `liquidationPriceMaxAge`. The keeper repays GHO at once; the USDC reserve waits for a fresh USDC price.
-
-### Building the call
-
-The keeper calls its helper with LPVaultSwap's `LiquidationParams` and the helper's request fields (flash amount, maximum premium, top-up bound, net `minPayout`):
-
-| Field | Value |
-|---|---|
-| `proxy`, `marketId`, `debtReserveId`, `debtToCover` | From the preview, unchanged |
-| `routeMode` | `PrimaryThenBackup`, or `BackupOnly` when the preview reports the primary route unusable |
-| `minAmounts` | Empty |
-| `deadline` | Block `B`'s timestamp plus three blocks: 36 s on Ethereum, 6 s on Base (`REQ-SWAP-074`) |
-| `maxShortfall` | 0; raised on a retry after `RecoveryBelowFloor` to the measured floor gap, funded from inventory |
-| `params.minPayout` | 0: the helper's net check binds |
-| Flash amount | `debtToCover` when the Pool's idle liquidity covers it with 1 % headroom; otherwise the idle liquidity less 1 %, with the rest from inventory, and on Base larger liquidations spread over successive blocks |
-| Inventory amount | `debtToCover` minus the flash amount |
-| Maximum premium | The helper's `flashPremium` quote for the flash amount |
-| Top-up bound | The most inventory the helper may pull to finish the flash repayment: 0 for a profitable call, otherwise at least `premium + expectedCallerLoss − expectedNetPayout` from the preview (`REQ-LENS-029`), within the operator helper's `MAX_TOP_UP_BPS` |
-| Request `minPayout` | On the net payout (`Q-345`): the inventory amount plus `⌊0.99 × net⌋`, where `net = keeperOut − debtToCover − premium` from the keeper's simulation of the call at `B`; for a call the simulation shows losing, the inventory amount less 101 % of the simulated loss |
-
-No swap calldata is built: LPVaultSwap holds the routes and sets every leg's minimum from the oracle. Before using the flash path the keeper checks that no swap route of the market draws on the same Aave V3 Pool reserve it is borrowing (for example an ERC-4626 wrapper of that reserve's aToken). If one does, the call is inventory-funded, so the loan cannot take the liquidity the route's leg needs.
-
-Example (Ethereum, USDC/USDT market, USDC debt):
-
-1. At block `B` an account at HF 0.98 owes 10,000 USDC. The market and the USDC reserve are Live.
-2. `previewLiquidation(proxy, usdcReserve, t + 36)` returns `debtToCover = 1,950` USDC, the seizure worth `V = 2,047.5` USDC at the oracle, Avana's fee `A = ⌊0.2 × (2,047.5 − 1,950)⌋ = 19.5` USDC, `expectedPayout = 1,950 + 2,047.5 − 1,950 − 19.5 = 2,028` USDC (the 1,950 pulled is returned inside it), `expectedNetPayout = 78` USDC and `expectedCallerLoss = 0`. The remaining 8,050 USDC of debt is above the dust threshold, so no margin applies.
-3. The Pool holds far more idle USDC than 1,950, so the flash amount is 1,950 USDC with a premium of `⌈1,950 × 5 / 10⁴⌉ = 0.975` USDC, the inventory amount is 0 and the top-up bound is 0.
-4. The simulation at `B` returns `keeperOut = 2,020.8` USDC after route costs, so `net = 2,020.8 − 1,950 − 0.975 = 69.825` USDC and the request's `minPayout = ⌊0.99 × 69.825⌋ = 69.12675` USDC; `deadline = t + 36`; `routeMode = PrimaryThenBackup`.
-5. Included at `B + 1`: Aave pulls 1,950 USDC and seizes the units, the routes return `R = 2,040.3` USDC, `A = 19.5` USDC goes to `feeRecipient` and `keeperOut = 2,020.8` USDC goes to the helper. The helper repays 1,950.975 USDC and sends 69.825 USDC to the instance's funding Safe. Routes returning only 2,035 USDC would give `keeperOut = 2,015.5` and a net payout of 64.525 USDC, and the helper would revert with `PayoutTooLow`.
-
-Example (dust account): an account owes 0.78 USDC and its seizure recovers about 0.77 USDC. The preview returns the margined whole debt, `debtToCover = ⌈0.78 × 1.05⌉ = 0.819` USDC. The keeper calls `liquidate` from its funding Safe's inventory with no flash loan (a helper needs a loan of at least one unit); `keeperOut = 0.819 + 0.77 − 0.78 = 0.809` USDC and `minPayout = 0.819 − ⌈1.01 × 0.01⌉ = 0.8089` USDC. Avana's keeper takes the 0.01 USDC loss and the account is closed.
-
-### Submission
-
-- **Simulation.** Every transaction, replacement and cancellation is simulated with `eth_call` against the latest block on the primary RPC provider, and the candidate's health factor is confirmed on the second provider, before it is signed. A failing simulation is never sent. The gas limit is `⌈1.3 × estimateGas⌉ + 25,000` (`@avana/services-common/gas`, the one rule for every service and the app): the estimate runs at the latest block's timestamp, so a call touching a Hub asset already accrued in that second skips the accrual it pays when mined a second later (a Lend Spoke withdraw: 31,185 gas in the same second, 35,837 one second later). LPVaultSwap's payout headroom check reverts an under-gassed call, so the limit is never cut below the estimate. One liquidation of the largest account (16 records) is modelled at 5,150,000 gas (`REQ-SWAP-032`).
-- **Private order flow.** On Ethereum every liquidation, replacement and cancellation goes only to private builder endpoints, never to the public mempool (`Q-345`). Base has no public mempool; transactions go to the sequencer endpoint through two independent RPC providers.
-- **Nonces.** Each instance has one signer, and one mutex guards nonce allocation, so two concurrent liquidations never take the same nonce. The local nonce is set from the provider's pending count at startup, after every reorg and after any `nonce too low` error.
-- **Retries.** While a transaction is pending and before its deadline, the keeper re-simulates it in every block. If it still succeeds and was not included, it is replaced at the same nonce, through the same private channel, with both fee fields raised by 15 %. Once the deadline has passed the transaction can no longer execute. If the account is still liquidatable, the keeper builds a fresh preview and sends it at the same nonce; otherwise, if the nonce was not consumed within 2 blocks, it sends a zero-value transfer to itself at that nonce.
-- **One transaction per subject.** While a subject (an account, a market's breaker, a CDP Spoke's configuration) has a transaction pending, the keeper sends nothing new for it; the retry rule replaces or cancels the pending one at its nonce. A breaker poke simulates as due until it is mined, so without this rule each block would add one more poke at a new nonce.
-- **Pre-emption.** All of an instance's transactions share its one signer, and a node mines them in nonce order, so a liquidation sent at a fresh nonce waits behind every pending poke. When a liquidation is due and the signer has pending non-liquidation transactions not yet mined, the keeper sends the liquidation at the lowest nonce they hold, as a replacement of that transaction under the retry rule: both fee fields at least 15 % above it, and the gas ceiling as for any send. The dropped poke goes back to its job, which sends it again in a later pass. A pending liquidation is never pre-empted by another liquidation. When the node refuses the replacement (the poke was mined meanwhile), the liquidation takes a fresh nonce in the same pass.
-- **Failure reasons.** `NotLiquidatable` clears the account. `StalePrice` and `DebtPriceStale` wait for a fresh price. `PayoutTooLow`, `MinOutNotMet` and `LockHeld` retry with a new preview in the next block. `RecoveryBelowFloor` retries with `maxShortfall` covering the measured floor gap from inventory and raises `M-10`; `TopUpExceeded` retries with a top-up bound covering the measured loss; `InsufficientProceeds` never fires while the caller funds the debt, so it pages as a fault. `NoRouteAvailable` retries every block and pages (P-04). `AddressIsFrozen` stops submissions from that helper and pages.
-- **Races.** The in-flight flag stops a second liquidation of the same account in the same instance until the first is mined, replaced or expired. When another caller (any other address or another shard) liquidates first, the keeper's simulation fails or its transaction is not included; the keeper reads the new health factor, clears the flag, releases the reservation and, if the account is still below 1, starts the next call.
-- **Gas.** Avana pays gas as an operating cost. Each transaction carries the fee class its job declares ([keeper/DESIGN.md](keeper/DESIGN.md#fees)). `urgent` (a liquidation, a breaker or configuration poke whose simulation returned non-zero): the priority fee is the 90th percentile of the last 5 blocks' priority fees, at least `KEEPER_MIN_TIP_URGENT_<CHAIN>` (1 gwei by default). `scheduled` (no job declares it now that the oracles are never poked; a lazy transaction past its wait is sent at these fees): the tip is `KEEPER_MIN_TIP_SCHEDULED_<CHAIN>`. `lazy` (`settlePending`): the tip is `KEEPER_MIN_TIP_LAZY_<CHAIN>`, sent only while the base fee is at most `KEEPER_LAZY_BASEFEE_MAX_<CHAIN>`, otherwise after `KEEPER_LAZY_MAX_WAIT_<CHAIN>` seconds from when it first fell due, at scheduled fees. The scheduled and lazy defaults are lower on Base. The max fee is twice the base fee plus the tip in every class. On Base the cost estimate adds the L1 data fee from the chain's gas price oracle. A per-chain fee ceiling applies to every class and exists only to stop a fault from draining the gas wallet; reaching it pages the on-call engineer. The scheduled and lazy classes each have a rolling 24-hour budget (`KEEPER_DAILY_BUDGET_WEI_{SCHEDULED,LAZY}_<CHAIN>`); a class at its budget stops sending and pages (`M-32`). Urgent is never budget-limited.
-- **Send on change.** The keeper checks liquidations and breaker pokes every block, and its other conditions every `KEEPER_SLOW_JOB_SECONDS` (60 s), and sends only when a simulation shows the call would change state: breaker and configuration pokes on a non-zero result.
-
-### Safety controls
-
-These run in the same cycle as the scan, before every liquidation, `settlePending` and breaker or configuration poke (`Q-219`):
-
-- **Kill switch.** An authenticated halt and resume endpoint (mutual TLS, on a port separate from metrics) stops new submissions at once. The halt survives a restart. A halted keeper keeps scanning and logging as in observe-only mode, and its pending transactions expire at their 3-block deadline.
-- **Code check.** At block `B` the keeper reads the ERC-1967 implementation slot of every upgradeable target the call reaches (LPVaultSwap, the AaveAdapter, the MarketRegistry, the ParameterStore, the RiskModule and the market's CDP Spoke) and the runtime code hash of every immutable target (the market's stateless LPOracle, the instance's helper, the ProxyManager, the market's LPVault, Collateralization, the vault token, PayoutEscrow, the market's swap routes into the debt asset, the Lock and the Lens), and compares them with the verified deployment manifest. On any mismatch it stops submitting, pages (`M-26`) and stays in observe-only mode until a verified manifest lists the new code. A proxy's bytecode never changes on upgrade, so only the implementation slot shows one. Avana upgrades wait the 5-day normal delay, which leaves time to publish the manifest, so an announced upgrade does not interrupt liquidation. The keeper also reads the Aave V3 Pool's implementation slot; a change there stops flash funding and sends every call through inventory until the manifest records the new Pool code.
-- **Observe-only mode.** A keeper with no signer configured, or one that has stopped on a code-check mismatch, runs the same scan and sizing and logs every call it would send with its parameters; a fork replay shows each logged call would have succeeded (`TEST-140`). Signing is enabled only after this mode has run against the shared fork environment, and each new market is watched in observe-only mode before its activation executes (`MKT-025`).
-- **Registry and freeze.** Every block the keeper reads `isApprovedKeeper(helper)`, `isFrozenAddress(helper)` and `activeKeeperCount()`. Registration gates no call: an unregistered helper keeps liquidating and only raises a warning, because it does not count toward `keeperFloor`. A frozen helper stops and pages. An active committed-operator count at the floor raises a warning, because a freeze of the last active one halts new borrowing on the chain while liquidation stays open to every address (`REQ-SWAP-107`).
-- **Inventory reservation.** Each pending transaction reserves the inventory amount and top-up bound it may pull, per chain and debt asset. A new call is sized against the balance minus every open reservation, and a reservation is released when its transaction is mined, replaced or expired, so concurrent liquidations never count on the same funds (`Q-336`).
-
-### Keys
-
-- Each instance's signer key lives in a cloud KMS or HSM as a non-exportable secp256k1 key (`Q-245`). The keeper requests signatures over an authenticated channel under its own service identity, and every request is logged. No raw key is ever placed in an environment variable, file or image.
-- The signer holds only gas, topped up to 7 days of its median spend. Inventory sits in the instance's funding Safe, which approves the helper for that chain's inventory target; the helper pulls from it only the amounts the call names, and its payout recipient is that Safe. A stolen signer key can only send liquidations whose payouts return to the Safe.
-- Rotation: deploy a helper bound to the new signer and switch over at once (the registry gates no call), schedule `addKeeper(newHelper)` (normal delay, 5 days) so the new helper counts toward `keeperFloor`, then `removeKeeper(oldHelper)` (short delay, 12 hours). A suspected compromise is answered by a guardian freeze of the helper address, which no keeper floor blocks, and by revoking the funding Safe's allowance; the other instances keep liquidating.
-
-### Configuration
-
-The keeper and the indexer use the contracts' variable names, `RPC_<CHAIN>`, with a suffix for each extra endpoint of the same chain, so one name means the same endpoint in every part of the repository. Every name is listed, without values, in [`keeper/.env.example`](keeper/.env.example).
-
-| Variable | Meaning |
-|---|---|
-| `RPC_MAINNET`, `RPC_BASE` | Primary HTTP endpoint of the chain (the same names as `contracts/.env.example`) |
-| `RPC_MAINNET_FALLBACK`, `RPC_BASE_FALLBACK` | Second, independent provider; confirms each candidate's health factor and takes over when the primary disagrees on the head |
-| `RPC_MAINNET_WS`, `RPC_BASE_WS` | WebSocket endpoint for new heads and logs |
-| `RPC_MAINNET_PRIVATE`, `RPC_BASE_PRIVATE` | Private submission endpoints: builder RPCs on Ethereum, the sequencer endpoint on Base; comma-separated when there are several |
-| `KEEPER_KMS_KEY_ID_MAINNET`, `KEEPER_KMS_KEY_ID_BASE` | KMS or HSM key ID of the instance's signer; the key itself never enters the environment |
-| `KEEPER_SHARD`, `KEEPER_SHARD_COUNT` | This instance's shard index and the number of primaries; unset on the standby |
-| `KEEPER_MODE` | `observe` (default: scan, size and log, never sign) or `active` |
-| `KEEPER_KILL_SWITCH_PORT`, `KEEPER_METRICS_PORT` | Ports of the authenticated halt endpoint and of the metrics endpoint, which are always different |
-| `KEEPER_GAS_CEILING_WEI_MAINNET`, `KEEPER_GAS_CEILING_WEI_BASE` | Worst-case cost in wei one transaction may have (gas limit × max fee, plus the L1 data fee on Base); required on a chain with a signer |
-| `KEEPER_MIN_TIP_URGENT_<CHAIN>`, `KEEPER_MIN_TIP_SCHEDULED_<CHAIN>`, `KEEPER_MIN_TIP_LAZY_<CHAIN>` | Tip floor of the urgent class (default 1 gwei) and the tips of the scheduled and lazy classes, in wei; the tips may not rise from urgent to lazy |
-| `KEEPER_LAZY_BASEFEE_MAX_<CHAIN>`, `KEEPER_LAZY_MAX_WAIT_<CHAIN>` | Highest base fee (wei) at which a lazy transaction goes at the lazy tip, and the seconds it may wait for one before it goes at scheduled fees |
-| `KEEPER_DAILY_BUDGET_WEI_SCHEDULED_<CHAIN>`, `KEEPER_DAILY_BUDGET_WEI_LAZY_<CHAIN>` | Rolling 24-hour budget of each class in wei (default 3 and 1 times `KEEPER_GAS_DAILY_SPEND_WEI_<CHAIN>`) |
-| `KEEPER_STANDBY_SIGNER_<CHAIN>`, `KEEPER_STANDBY_MIN_BALANCE_WEI_<CHAIN>` | The standby instance's signer, watched by `M-33`, and its minimum gas balance (default 3 days of the expected daily spend) |
-| `KEEPER_NATIVE_USD_FEED_<CHAIN>` | A Chainlink feed of the gas token in USD, used only to value liquidation rewards for the small-account spend metric |
-| `KEEPER_INDEXER_URL`, `KEEPER_INDEXER_KEY` | The indexer's private address and the keeper's key for its stream (`id:base64secret`, listed in the indexer's `INDEXER_EXPORT_KEYS`) |
-| `AVANA_MANIFEST` | Path of the verified manifest of each chain; every address the keeper calls comes from it, never from code or another service |
-
-### Operations
-
-- **Sharding.** Each chain runs several primary instances, each with its own signer and helper, so their nonce streams are independent. An account belongs to shard `keccak256(proxy) mod N`. Any primary takes over an account that its shard has not liquidated within 2 blocks on Ethereum (24 s) or 6 blocks on Base (12 s) after it became liquidatable.
-- **Standby keeper.** The standby is registered as a committed operator like the primaries, on a different cloud provider and region, with its own RPC providers, KMS, monitoring and on-call rota. It scans every block and sends for any account still liquidatable after 60 s (5 Ethereum blocks, 30 Base blocks), the `M-09` warning level. This trigger is an operating rule backed by monitoring, not an on-chain rule (`Q-082`, `Q-147`). The standby holds each chain's debt assets before a market's `activateMarket` executes.
-- **RPC.** Each instance uses at least two independent providers per chain. Reads for one decision are pinned to one block; when the providers disagree on the head for more than 2 blocks the keeper pages and acts only on the provider that agrees with the indexer.
-- **Reorgs.** The keeper follows the chain head and tracks each of its transactions until finalized. When a reorg removes a block, accounts it touched are re-read, removed transactions return to pending with their in-flight flags and reservations, the nonce is re-read from the provider, and the cache rolls back with the indexer to the common ancestor. A removed transaction past its deadline cannot execute again, so the keeper builds a fresh one. A head at or below the last processed height whose hash the keeper already holds (a missed block delivered after the newer one) is late, not a reorg, and is skipped.
-- **Startup.** The keeper checks the manifest's ABI hash and refuses to run on a mismatch (`TEST-149`).
-
-### Monitoring and alerting
-
-Each instance exposes metrics on a port separate from the kill switch: blocks behind head, scan time per block, accounts below HF 1 with their age, in-flight transactions, simulation failures by revert reason, inclusion delay in blocks, replacements and cancellations, gas wallet balance, free and reserved inventory per debt asset, Pool idle liquidity per debt asset, the code-check result and the mode (active, observe-only, halted). Logs are structured and shipped off the host; the failure log of duty 6 is published from them. Each instance judges `M-09` (accounts below HF 1 not liquidated), `M-10` (liquidation reverts per market), `M-16` (keeper debt-asset float against the largest single `debtToCover` the caps allow, `KEEPER_LARGEST_DEBT_TO_COVER_<CHAIN>`), `M-17` (keeper gas and Pool liquidity), `M-26` (code-check mismatch), `M-31` (gas spend anomaly), `M-32` (class budget reached) and `M-33` (standby signer below its minimum balance) at each block (`M-16`, `M-17` and `M-33` are read every `KEEPER_SLOW_JOB_SECONDS` and posted again at each block in between) and posts them, with a heartbeat per processed head, to the monitoring service (`KEEPER_MONITOR_URL`; [keeper/DESIGN.md](keeper/DESIGN.md#monitoring-service)), which routes them; route failures and the share seized are counted by the monitor from chain events. An instance that stops reporting for 3 blocks pages its on-call engineer. After each included transaction the keeper logs its gas used, effective gas price, L1 data fee (Base), fee class, market and Hub (market → CDP Spoke from the manifest, Spoke → Hub from `MarketRegistry.hubOf`), and reports the spend per class and per Hub, and the gas spent per Hub on liquidations whose reward `Kr` did not cover their gas (small-account spend; reported, no alert).
+Configuration: [keeper/.env.example](keeper/.env.example). Run: `npm start -w @avana/keeper`; the bot alone, without the runner: `npm start -w @avana/liquidator`.
 
 ### Gas funding runbook
 
-Each chain has two funded keeper signers, the primary's and the standby's, on different providers. Before a market's `activateMarket` each signer is funded to its target balance. The keeper top-up wallet (`KEEPER_TOPUP_WALLET`) refills each signer: `contracts/script/deploy/step.sh 11-fund-keepers` tops every signer below its minimum up to its target ([contracts/script/README.md](../contracts/script/README.md#keeper-gas)).
+Each keeper wallet (the RiskModules' keepers and the FlashLiquidators' operators) is funded from the keeper top-up wallet (`keeperTopUp.wallet` in the deploy config, or `KEEPER_TOPUP_WALLET`) by `contracts/script/deploy` step `11-fund-keepers`: a wallet below `keeperTopUp.minBalanceWei` is refilled to `targetBalanceWei`, and the step is safe to rerun.
 
-- **Signer runway warn (`M-17` gas, below 3 days of median spend).** Look at the spend anomaly first. If spend is normal, refill the signer with `11-fund-keepers` from the top-up wallet. If it pages (below 1 day), refill now and find out why the warn was not acted on.
-- **Spend anomaly (`M-31`, 24-hour spend above 3× the 7-day median warns, above 5× pages).** Read the spend per class (`keeper_gas_spend_24h_wei`) and per Hub. A breaker-poke loop points to a griefing case: raise nothing until the cause is known. A liquidation burst is expected in a crash: refill and keep watching the runway.
-- **Class budget reached (`M-32`).** The scheduled or lazy class has stopped; urgent transactions continue. Find the cause in the spend log before raising `KEEPER_DAILY_BUDGET_WEI_<CLASS>_<CHAIN>`; the class resumes by itself once older spend leaves the 24-hour window.
-- **Standby unfunded (`M-33`, the standby signer below its minimum balance).** Refill the standby from the top-up wallet (`11-fund-keepers`). It must be able to take over at any time.
-- **Keeper profits.** Liquidation payouts go to the instance's `FUNDING_SAFE` in the debt asset. Converting them into gas is a manual treasury decision; no path refills a signer from them automatically.
+- **Keeper wallet low (`M-35` warn, below `minBalanceWei`).** Run `11-fund-keepers`. If it pages (below a third of the minimum), run it now and find out why the warn was not acted on.
+- **Top-up wallet low (`M-35` warn, below one full refill of every keeper).** Treasury refills the top-up wallet.
+- **Liquidation proceeds.** The LiquidationBot keeps the pool tokens of a direct liquidation and the profit of a flash liquidation in its own wallet; converting them is a manual treasury decision.
 
-### Tests before deployment
+### Tests
 
-- `TEST-140` observe-only mode with fork replay; `TEST-141` sizing and submission from `previewLiquidation`; `TEST-142` the liquidate-every-account duty on a fork depeg, dust accounts included; `TEST-143` reorg replay; `TEST-149` the ABI-hash check ([5.1](../docs/spec/05-verification/01-test-requirements.md)).
-- Fork tests of the helper against the deployed Aave V3 Pool: flash-funded, inventory-funded and split calls; a payout below the flash repayment beyond the top-up bound reverts; a net payout below the request's `minPayout` reverts; a call from anyone but the bound signer reverts; the callback refuses a foreign caller, initiator, asset, amount, calldata, a premium above the bound and a second callback in the same transaction.
-- Unit tests of the decision rules (price gates, grace, debt reserve choice, zero-collateral skip), the nonce manager (mutex, replacement, cancellation after the deadline), inventory reservation and the failure-reason table.
-- Fault tests: a code-check mismatch set on the fork with `anvil_setStorageAt` moves the keeper to observe-only; the kill switch refuses unauthenticated requests and survives a restart; a 1-wei repay and a repay to just under the dust threshold before inclusion still settle (`Q-345`); another address wins the race; a removed or unregistered helper keeps liquidating and a frozen one stops; a Base sequencer outage and grace window; a dropped indexer stream recovers by reconnect backfill.
-- A failover drill: stopping every primary on a fork lets the standby liquidate each account within the `M-09` warning window.
+`npm test -w @avana/keeper` (the runner's pass, stream client, configuration and monitor sink) and `npm test -w @avana/liquidator` (the LiquidationBot's decision, pass, settings and signer); the FlashLiquidator's Solidity tests run in `liquidator/` with `forge test -j 2`.
 
 ## Monitoring and alerting
 
@@ -291,40 +153,43 @@ The monitoring service, run by Avana Labs on the indexer's data and direct RPC r
 
 | # | Signal | Warn | Page | Responder | Playbook |
 |---|---|---|---|---|---|
-| M-01 | LPOracle and debt price freshness per market and debt reserve (Lens: Cached once an input is past its `liquidationPriceMaxAge`) | Cached on entry | Expired | operators, then the Emergency Guardian (standby switch) | P-02 (`EMG-076`) |
+| M-01 | A market's LPOracle refusing to price (`latestAnswer` reverts on a stale or invalid feed leg): the Spoke cannot price the collateral | — | every | operators, then the Emergency Guardian | P-02 (`EMG-076`) |
 | M-02 | Feed disagreement start. Retired: the stateless LPOracle records no disagreement, so nothing raises it | — | — | operators, then the Emergency Guardian | P-02 (`EMG-076`) |
-| M-03 | Feed leg age, collateral and debt feeds | above 50 % of `feedMaxAge` | above 90 % | operators | P-02 (`EMG-076`) |
-| M-04 | Debt feed age, against the feed's ParameterStore ages | above `borrowPriceMaxAge` | above 90 % of `liquidationPriceMaxAge` | operators, Aave | P-02 (`EMG-076`) |
-| M-05 | USD band distance √(q0·q1) | below 0.95 | below 0.90 | guardians | P-03 (`EMG-077`) |
+| M-03 | Feed leg age of every market's LPOracle (`LPOracle.feedsOf`, recorded in the manifest with its heartbeat) | past the heartbeat | past 1.5 heartbeats | operators | P-02 (`EMG-076`) |
+| M-04 | Debt feed age, against the feed's heartbeat in the manifest | past the heartbeat | past 1.5 heartbeats | operators, Aave | P-02 (`EMG-076`) |
+| M-05 | USD band distance. Retired: M-36 watches the Custom band edge | — | — | guardians | P-03 (`EMG-077`) |
 | M-06 | Collateral value per market at oracle prices | −10 % in 1 hour | −25 % in 1 hour | guardians | P-03 (`EMG-077`) |
-| M-07 | Live pool share | above 15 % | above 20 % (POOL_SHARE breaker trips) | risk service providers | P-04 (`EMG-078`) |
-| M-08 | Any breaker latched or condition true (Lens `getBreakerStatus`, `getDebtBreakerStatus`) | every | any latched security freeze (`reopensAt = type(uint64).max`) | guardians | per reason |
-| M-09 | Accounts below HF 1 not liquidated | 60 s (5 Ethereum blocks, 30 Base blocks) | 300 s (25 Ethereum blocks, 150 Base blocks); 3,600 s escalates to an Emergency Guardian decision on a breaker trip | standby keeper, keeper on-call, guardians | P-08 (`EMG-082`) |
-| M-10 | Liquidation reverts by reason (`RecoveryBelowFloor`, `InsufficientProceeds`, `NoRouteAvailable`, `StalePrice`, `DebtPriceStale`) in keeper simulation or on-chain; `RouteFailed` events; share of a market's collateral seized | 1 revert or `RouteFailed` per market per hour; 10 % seized in 1 hour | 3 per market per hour; 20 % seized in 1 hour | governance (routes), guardians | P-04 (`EMG-078`) |
-| M-11 | Route depth at stress size against `routeDepthThreshold(marketId, token, debtAsset, kind)`, in base units of the debt asset (daily fork simulation) | below 120 % | below 100 % | governance | P-04 (`EMG-078`) |
-| M-12 | GSM exposure headroom per token | below 2× the market's stress size | below 1× | risk service providers | P-04 (`EMG-078`) |
-| M-13 | First-Loss Reserve balance; DAO deficit offset balance | below 150 % of `firstLossReserveMinimum`; the offset below 100 % of `daoDeficitOffset` | below 100 % (monitoring alert only; no breaker reads it, `Q-399`) | Avana Labs top-up; Aave DAO top-up of the offset (`Q-410`) | P-09 (`EMG-083`) |
-| M-14 | Tail coverage ratio (`getTailCoverage`, and the live variant from current debt) | below 150 % | below 100 % | risk service providers, Aave DAO | P-09 (`EMG-083`) |
+| M-07 | Live pool share. Retired: the new core has no pool-share breaker | — | — | risk service providers | P-04 (`EMG-078`) |
+| M-08 | Breakers. Retired: the new core has none; a frozen market or debt reserve is M-24 | — | — | guardians | per reason |
+| M-09 | Accounts below HF 1 not liquidated (LiquidationBot reports); a bot runner instance whose heartbeat falls 3 blocks behind | 60 s | 300 s, or a silent bot runner | standby keeper, keeper on-call, guardians | P-08 (`EMG-082`) |
+| M-10 | Liquidation failures the LiquidationBot reports per market; the share of a market's collateral seized (`LiquidationModule.Liquidated`) | 1 failure per market per hour; 10 % seized in 1 hour | 3 per market per hour; 20 % seized in 1 hour | governance, guardians | P-04 (`EMG-078`) |
+| M-11 | Route depth at stress size. Retired: liquidation is in kind, there are no swap routes | — | — | governance | P-04 (`EMG-078`) |
+| M-12 | GSM exposure headroom. Retired with the swap routes | — | — | risk service providers | P-04 (`EMG-078`) |
+| M-13 | First-Loss Reserve balance against its `minimum()`; DAO deficit offset balance against its minimum | a reserve below 150 %; the offset below 100 % | a reserve below 100 % | Avana Labs top-up; Aave DAO top-up of the offset | P-09 (`EMG-083`) |
+| M-14 | Draw-cap coverage: the First-Loss Reserve's balance against Σ `RiskModule.coverage(hub, asset).required` | below 150 % | below 100 % (borrowing stops: `CoverageBelowRatio`) | risk service providers, Aave DAO | P-09 (`EMG-083`) |
 | M-15 | Hub deficit per asset | any | uncovered after 24 hours (coverage window 72 hours) | `COVERAGE_ROLE` holder | P-09 (`EMG-083`) |
-| M-16 | Keeper debt-asset float per chain and asset (free inventory after reservations), which funds inventory calls, helper top-ups and shortfall top-ups | below 150 % of the largest single `debtToCover` the caps allow | below 100 % | Avana Labs | P-09 (`EMG-083`) |
-| M-17 | Keeper gas balance per signer; Aave V3 Pool idle liquidity per debt asset | gas below 3 days of median spend; idle liquidity below 2× the largest single `debtToCover` | gas below 1 day; idle liquidity below 1× | Avana Labs | P-08 (`EMG-082`) |
+| M-16 | A liquidatable account the LiquidationBot cannot fund (no balance of the debt asset and no flash path) | — | every | Avana Labs, keeper on-call | P-09 (`EMG-083`) |
+| M-17 | Keeper gas balance. Retired: M-35, read by the monitor | — | — | Avana Labs | P-08 (`EMG-082`) |
 | M-18 | `drawn / drawCap` per asset | 80 % | 90 % | risk service providers | P-10 (`EMG-084`) |
 | M-19 | Hub utilization and Lend Spoke withdrawals | utilization 90 % | utilization 98 %, or a withdrawal above 10 % of supply within 1 hour | Aave DAO, guardians | P-10 (`EMG-084`) |
-| M-20 | Aave configuration against recorded values (collateral factor, bonus, target HF, caps, Spoke implementation) | any change | `ConfigDrift` live | Emergency Guardian | P-12 (`EMG-086`) |
-| M-21 | Backing-check failure (`Lens.checkBacking`), `CounterSaturated` | — | every | engineering | P-05 (`EMG-079`) |
-| M-22 | Timelock `CallScheduled` | every | role change, upgrade, `setShortDelaySelector`, `setNormalDelay`, `unfreezeAddress`, `restorePriceRoute` | every canceller | P-06 (`EMG-080`) |
+| M-20 | Aave configuration events of every CDP Spoke (reserve and dynamic config, liquidation config, price source, position manager, authority, upgrade) | any change | — | Emergency Guardian | P-12 (`EMG-086`) |
+| M-21 | Backing check. Retired: no Collateralization or Lens in the new core | — | — | engineering | P-05 (`EMG-079`) |
+| M-22 | Avana AccessManager: `OperationScheduled`; `RoleGranted`, `RoleRevoked`, `TargetFunctionRoleUpdated`, `TargetClosed` | an operation scheduled | a role or function role changed, a target closed | every canceller | P-06 (`EMG-080`) |
 | M-23 | Safe owner, threshold, guard or module change; signer liveness | every | every; liveness answers below threshold + 1 | every signer | P-07 (`EMG-081`) |
-| M-24 | Pause state and reason, address freeze, standby switch, manual breaker | every | — | every signer | per reason |
-| M-25 | Token issuer: `paused()`, `basisPointsRate()`, blocklist events naming Avana contracts | probe change | blocklist of LPVaultSwap, the LPVault, Collateralization or the AaveAdapter | guardians | P-11 (`EMG-085`) |
-| M-26 | Keeper code-check mismatch (implementation slot or code hash) | — | every | keeper on-call | P-08 (`EMG-082`) |
+| M-24 | A market's vault-token reserve or a debt reserve frozen, paused or reopened on its Spoke (a depeg's response is a freeze) | every | — | every signer | per reason |
+| M-25 | Token issuer: `paused()`, `basisPointsRate()`, blocklist events naming Avana contracts | probe change; a blocklist naming another Avana contract | a blocklist naming an LPVault, AaveAdapter, LiquidationModule or FlashloanRepay | guardians | P-11 (`EMG-085`) |
+| M-26 | Keeper code-check mismatch. Retired: the bot runner calls immutable contracts | — | — | keeper on-call | P-08 (`EMG-082`) |
 | M-27 | Frontend bundle hash, DNS and hosting change | any | hash mismatch | engineering | P-13 (`EMG-087`) |
 | M-28 | Liquidity leaving a listed pool: the pool's total liquidity (and its liquidity around the current price) per listed market, independent of Avana's share | −20 % in 1 hour | −40 % in 1 hour | risk service providers, guardians | P-04 (`EMG-078`) |
 | M-29 | Rate curve per lend asset: the Hub's interest-rate data and drawn rate; for GHO, `baseDrawnRate` against the Core Hub GHO base rate (`SPEC-HUB-007`) | any change of a curve's values | GHO `baseDrawnRate` below the Core Hub GHO base rate | Aave DAO, risk service providers | P-10 (`EMG-084`) |
-| M-30 | Keeper discovery mismatch: accounts (`UserProxyCreated`) that only one of the keeper's discovery sources holds, the indexer stream or the RPC log backfill over both providers, up to the block both have read | any one-sided account | an account one-sided for `KEEPER_DISCOVERY_MISMATCH_PAGE_SECONDS` (1 hour by default) | keeper on-call | P-08 (`EMG-082`) |
-| M-31 | Keeper gas spend anomaly: the rolling 24-hour spend of every class from the keeper's spend log, against the median daily spend of the last 7 days (never below `KEEPER_GAS_DAILY_SPEND_WEI_<CHAIN>`) | above 3× the median | above 5× | Avana Labs, keeper on-call | P-08 (`EMG-082`) |
-| M-32 | Keeper class budget reached: the rolling 24-hour spend of the scheduled or lazy class against `KEEPER_DAILY_BUDGET_WEI_{SCHEDULED,LAZY}_<CHAIN>` | — | the class reaches its budget and stops sending | keeper on-call, Avana Labs | P-08 (`EMG-082`) |
-| M-33 | Standby keeper signer gas balance against `KEEPER_STANDBY_MIN_BALANCE_WEI_<CHAIN>` | below its minimum | — | Avana Labs | P-08 (`EMG-082`) |
+| M-30 | Keeper discovery mismatch. Retired with the old keeper | — | — | keeper on-call | P-08 (`EMG-082`) |
+| M-31 | Keeper gas spend anomaly. Retired with the old keeper | — | — | Avana Labs, keeper on-call | P-08 (`EMG-082`) |
+| M-32 | Keeper class budget reached. Retired with the old keeper | — | — | keeper on-call, Avana Labs | P-08 (`EMG-082`) |
+| M-33 | Standby keeper signer balance. Retired: M-35 | — | — | Avana Labs | P-08 (`EMG-082`) |
 | M-34 | Oracle poke overdue. Retired: the stateless oracles are never poked, so nothing raises it | — | — | keeper on-call, operators | P-08 (`EMG-082`) |
+| M-35 | Keeper wallet gas balance (the RiskModules' keepers and the flash liquidators' operators) and the keeper top-up wallet (`keeperTopUp`, `KEEPER_TOPUP_WALLET`), against the refill rule of `11-fund-keepers` | a keeper wallet below `minBalanceWei`; the top-up wallet below one full refill | a keeper wallet below a third of `minBalanceWei` | Avana Labs, keeper on-call | P-08 (`EMG-082`) |
+| M-36 | Band edge: a Custom range market's pool tick against its band (fixed for life) | within 10 % of the band's width from an edge | outside the band | risk service providers, guardians | P-03 (`EMG-077`) |
+| M-37 | Depeg above 1 % on a Stable or Correlated pair: the pool price against the LPOracle's fair price, or a Stable token's Chainlink price below $0.99. Response: freeze the market's vault-token reserve | depegged and already frozen | depegged while the reserve is open | Emergency Guardian, guardians, risk service providers | P-03 (`EMG-077`) |
 
 Rules:
 

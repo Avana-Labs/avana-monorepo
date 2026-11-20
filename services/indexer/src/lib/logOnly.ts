@@ -25,6 +25,3 @@ export function enumName<T extends readonly string[]>(names: T, value: number | 
   if (name === undefined) throw new Error(`enum value ${value} outside ${names.join("|")}`);
   return name;
 }
-
-export const PAUSE_STATE = ["None", "Frozen", "Paused"] as const;
-export const PAUSE_REASON = ["None", "General", "MintPathSuspect"] as const;

@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "license": "BUSL-1.1",
-  "description": "Avana's liquidation keeper: discovery, live check, simulation and private submission for liquidation, pending settlement, oracle and breaker pokes, and monitoring signals.",
+  "description": "Avana's bot runner (keeper infrastructure): hosts the LiquidationBot of liquidator/ for every integration of a release manifest, feeds it accounts from the indexer's bot stream, posts its alerts and heartbeat to the monitor, and stops on the authenticated kill switch.",
   "type": "module",
   "engines": {
     "node": ">=22.12"
@@ -11,13 +11,12 @@
   "scripts": {
     "start": "tsx src/main.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:fork": "vitest run test/fork"
+    "test": "vitest run"
   },
   "dependencies": {
+    "@avana/liquidator": "file:../../liquidator",
     "@avana/protocol": "file:../../packages/protocol",
     "@avana/services-common": "file:../common",
-    "@aws-sdk/client-kms": "3.1156.0",
     "viem": "2.57.11"
   },
   "devDependencies": {

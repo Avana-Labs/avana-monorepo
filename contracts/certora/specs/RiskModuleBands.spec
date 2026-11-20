@@ -34,6 +34,7 @@ import "setup/AuthorityModel.spec";
 
 methods {
     function spokeWidth(IRiskModule.SpokeKind) external returns (IRiskModule.Width) envfree;
+    function getMarket(uint256) external returns (IRiskModule.Market) envfree;
     function listPool(IRiskModule.ListPoolParams) external returns (uint256, uint256);
     function setSpokeWidth(IRiskModule.SpokeKind, IRiskModule.Width) external;
 
@@ -68,8 +69,18 @@ ghost sqrtPriceOf(uint256, uint256, uint8, uint8) returns uint160;
 definition MAX_TICK() returns mathint = 887272;
 definition MIN_SPACINGS() returns mathint = 4;
 
-definition bandLowerOf(uint256 id) returns int24 = currentContract._markets[id].bandLower;
-definition bandUpperOf(uint256 id) returns int24 = currentContract._markets[id].bandUpper;
+// The band ticks are read through getMarket, not by direct storage access: the Prover's type bounding fails on the
+// packed int24 band fields ("Type Bounding failed for store ... of type int24"), and a direct read of a negative tick
+// (every Full range lower edge) then contradicts the stored value, which made the rules on the Full range band vacuous.
+function bandLowerOf(uint256 id) returns int24 {
+    IRiskModule.Market m = getMarket(id);
+    return m.bandLower;
+}
+
+function bandUpperOf(uint256 id) returns int24 {
+    IRiskModule.Market m = getMarket(id);
+    return m.bandUpper;
+}
 definition poolOf(uint256 id) returns bytes32 = currentContract._markets[id].pool;
 
 // ---------------------------------------------------------------------------------------------------------------------

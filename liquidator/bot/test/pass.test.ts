@@ -7,7 +7,7 @@ import type { Chain, ReadCall, WriteCall } from "../src/chain.ts";
 import { type Config, loadConfig } from "../src/config.ts";
 import { ONE } from "../src/decide.ts";
 import { AccountSet } from "../src/discovery.ts";
-import { Liquidator } from "../src/pass.ts";
+import { LiquidationBot } from "../src/pass.ts";
 
 const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as Address;
 const ADAPTER = addr(0xa0);
@@ -77,13 +77,13 @@ class FakeChain implements Chain {
 
 function config(flash: boolean): Config {
   return loadConfig({
-    LIQUIDATOR_RPC_URL: "http://127.0.0.1:8545",
-    LIQUIDATOR_CHAIN_ID: "31337",
-    LIQUIDATOR_ADAPTER: ADAPTER,
-    LIQUIDATOR_LIQUIDATION_MODULE: MODULE,
-    LIQUIDATOR_DEBT_RESERVES: "1,2",
-    LIQUIDATOR_KEYSTORE: "/unused",
-    ...(flash ? { LIQUIDATOR_FLASH_LIQUIDATOR: FLASH, LIQUIDATOR_SWAP_ROUTER: ROUTER, LIQUIDATOR_SWAP_LEGS: `${WETH}:500` } : {}),
+    LIQUIDATION_BOT_RPC_URL: "http://127.0.0.1:8545",
+    LIQUIDATION_BOT_CHAIN_ID: "31337",
+    LIQUIDATION_BOT_ADAPTER: ADAPTER,
+    LIQUIDATION_BOT_LIQUIDATION_MODULE: MODULE,
+    LIQUIDATION_BOT_DEBT_RESERVES: "1,2",
+    LIQUIDATION_BOT_KEYSTORE: "/unused",
+    ...(flash ? { LIQUIDATION_BOT_FLASH_LIQUIDATOR: FLASH, LIQUIDATION_BOT_SWAP_ROUTER: ROUTER, LIQUIDATION_BOT_SWAP_LEGS: `${WETH}:500` } : {}),
   });
 }
 
@@ -106,7 +106,7 @@ describe("liquidation pass", () => {
   it("liquidates only the unhealthy account, with its own funds, approving the module first", async () => {
     const chain = new FakeChain();
     chain.balance = 10_000n * 10n ** 6n;
-    const outcomes = await new Liquidator(chain, config(false), BOT).pass(accounts);
+    const outcomes = await new LiquidationBot(chain, config(false), BOT).pass(accounts);
     expect(outcomes).toHaveLength(1);
     expect(outcomes[0]!.decision).toEqual({ kind: "direct", debtToCover: 6500n * 10n ** 6n });
     expect(chain.sent.map((c) => c.functionName)).toEqual(["approve", "liquidate"]);
@@ -119,7 +119,7 @@ describe("liquidation pass", () => {
     const chain = new FakeChain();
     chain.flashBorrower = true;
     chain.balance = 10_000n * 10n ** 6n;
-    const outcomes = await new Liquidator(chain, config(true), BOT).pass(accounts);
+    const outcomes = await new LiquidationBot(chain, config(true), BOT).pass(accounts);
     expect(outcomes[0]!.decision.kind).toBe("flash");
     expect(chain.sent).toHaveLength(1);
     const [req] = chain.sent[0]!.args as [{ flashAmount: bigint; minProfit: bigint; swaps: { tokenIn: Address }[] }];
@@ -131,7 +131,7 @@ describe("liquidation pass", () => {
   it("alerts when it has no funds and no flash path", async () => {
     const chain = new FakeChain();
     const lines: string[] = [];
-    const outcomes = await new Liquidator(chain, config(false), BOT, (m) => lines.push(m)).pass(accounts);
+    const outcomes = await new LiquidationBot(chain, config(false), BOT, (m) => lines.push(m)).pass(accounts);
     expect(outcomes[0]!.decision.kind).toBe("unfunded");
     expect(chain.sent).toHaveLength(0);
     expect(lines.some((l) => l.startsWith("ALERT"))).toBe(true);
@@ -144,7 +144,7 @@ describe("liquidation pass", () => {
     chain.simulate = async () => {
       throw new Error("HealthyAccount");
     };
-    const outcomes = await new Liquidator(chain, config(false), BOT).pass(accounts);
+    const outcomes = await new LiquidationBot(chain, config(false), BOT).pass(accounts);
     expect(outcomes[0]!.decision).toEqual({ kind: "error", message: "HealthyAccount" });
     expect(chain.sent).toHaveLength(0);
   });

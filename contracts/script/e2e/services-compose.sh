@@ -24,7 +24,7 @@ if [ "${1:-}" = "--build" ]; then
   docker info >/dev/null 2>&1 || { echo "not run: the docker daemon is not running (start Docker Desktop)"; exit 3; }
   # The build reads no environment file, but compose.yaml and compose.anvil.yaml need these set to load.
   touch "$WORK/indexer.env" "$WORK/keeper.env" "$WORK/monitor.env"
-  export AVANA_COMPOSE_ENV="$WORK" KEEPER_TLS_DIR="$WORK" POSTGRES_PASSWORD=unused
+  export AVANA_COMPOSE_ENV="$WORK" KEEPER_TLS_DIR="$WORK" KEEPER_SECRETS_DIR="$WORK" POSTGRES_PASSWORD=unused
   "${COMPOSE[@]}" build > "$WORK/build.log" 2>&1 || { echo "docker compose build failed"; tail -30 "$WORK/build.log"; exit 1; }
   echo "images built"
   exit 0
@@ -110,7 +110,7 @@ MONITOR_KEEPER_INSTANCES=anvil-primary:mainnet
 MONITOR_KEEPER_TOKEN_ANVIL_PRIMARY=$KEEPER_TOKEN
 EOF
 
-export AVANA_COMPOSE_ENV="$WORK" AVANA_NETWORK="$NETWORK" KEEPER_TLS_DIR="$WORK/tls" POSTGRES_PASSWORD="$(secret)"
+export AVANA_COMPOSE_ENV="$WORK" AVANA_NETWORK="$NETWORK" KEEPER_TLS_DIR="$WORK/tls" KEEPER_SECRETS_DIR="$WORK/secrets" POSTGRES_PASSWORD="$(secret)"
 echo "building the images and starting the stack"
 "${COMPOSE[@]}" up -d --build > "$WORK/up.log" 2>&1 || { echo "docker compose up failed"; tail -30 "$WORK/up.log"; exit 1; }
 

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Avana Labs
 // JSON Schema (draft 2020-12) of the release manifest, the same shape as types.ts, and a validator for the subset of
 // the schema language it uses (type, const, enum, pattern, minimum, properties, required, additionalProperties false,
-// items, $ref to $defs, anyOf). `deployments/release-manifest.schema.json` is written from this object by the CLI
+// items, minItems, maxItems, $ref to $defs, anyOf). `deployments/release-manifest.schema.json` is written from this object by the CLI
 // (`npm run manifest -- schema`), so the file and the validator never disagree.
 
 import type { ReleaseManifest } from "./types.ts";
@@ -26,19 +26,13 @@ const nullable = (s: Schema): Schema => ({ anyOf: [s, { type: "null" }] });
 const feedList = arr(obj({ feed: address, heartbeatSeconds: { type: "integer", minimum: 1 } }));
 
 const immutableProps = { address, codeHash: hash, startBlock: block, artifact: nullable({ type: "string" }) };
-const upgradeableProps = {
-  address,
-  codeHash: hash,
-  implementation: address,
-  implementationCodeHash: hash,
-  implementationArtifact: { type: "string" },
-  logics: arr(obj({ name: { type: "string" }, address, codeHash: hash, artifact: { type: "string" } })),
-  startBlock: block,
-};
+const upgradeableProps = { address, codeHash: hash, implementation: address, implementationCodeHash: hash, startBlock: block };
+const tick: Schema = { type: "integer", minimum: -887272, maximum: 887272 };
+const lossLayer = obj({ ...immutableProps, hub: address, hubLabel: { type: "string" }, asset: address, symbol: { type: "string" }, minimum: decimal });
 
 /** The manifest's top-level properties; `uniswapV4` is the only optional one (a chain without a v4 integration). */
 const manifestProps: Record<string, Schema> = {
-  schemaVersion: { const: 1 },
+  schemaVersion: { const: 2 },
   chainId: { type: "integer", minimum: 1 },
   network: { type: "string", pattern: "^(anvil|sepolia|base-sepolia|ethereum|base)$" },
   release: { type: "string", pattern: "^v[0-9]+\\.[0-9]+\\.[0-9]+(-[a-z0-9.]+)?$" },
@@ -49,60 +43,38 @@ const manifestProps: Record<string, Schema> = {
   feeRecipient: address,
   sequencerFeed: nullable(address),
   avana: obj({
-    aaveAdapter: ref("upgradeable"),
-    lpVaultSwap: ref("upgradeable"),
-    marketRegistry: ref("upgradeable"),
-    parameterStore: ref("upgradeable"),
-    riskModule: ref("upgradeable"),
-    timelock: ref("immutable"),
-    proxyManager: ref("immutable"),
-    collateralization: ref("immutable"),
-    vaultTokenFactory: ref("immutable"),
-    payoutEscrow: ref("immutable"),
-    lock: ref("immutable"),
-    lens: ref("immutable"),
-    lensModules: arr(ref("immutable")),
-    lensAaveSizing: ref("immutable"),
-    flashSource: ref("immutable"),
-    flashLiquidator: ref("immutable"),
-    operatorHelpers: arr(obj({ ...immutableProps, signer: address, fundingSafe: address })),
-    lpVaults: arr(obj({ ...immutableProps, integrationId: { type: "integer", minimum: 1 }, kind: { enum: ["uniswap-v3", "slipstream", "uniswap-v4"] } })),
-    firstLossReserves: arr(obj({ ...immutableProps, asset: address, hub: address })),
-    daoDeficitOffsets: arr(obj({ ...immutableProps, asset: address, hub: address })),
-    proxyCreationCodeHash: hash,
-    gasVault: nullable(
-      obj({ ...immutableProps, treasury: address, timelock: address, guardian: address, maxSigners: { type: "integer", minimum: 1, maximum: 8 } }),
+    accessManager: ref("immutable"),
+    integrations: arr(
+      obj({
+        integrationId: { type: "integer", minimum: 1 },
+        kind: { enum: ["uniswap-v3", "slipstream", "uniswap-v4"] },
+        lpVault: ref("immutable"),
+        riskModule: ref("immutable"),
+        liquidationModule: ref("immutable"),
+        aaveAdapter: ref("immutable"),
+        flashloanRepay: ref("immutable"),
+      }),
     ),
+    flashLiquidators: arr(obj({ ...immutableProps, integrationId: { type: "integer", minimum: 1 }, operator: address })),
   }),
   markets: arr(ref("market")),
   debtReserves: arr(ref("debtReserve")),
+  coverage: obj({ firstLossReserves: arr(lossLayer), daoDeficitOffsets: arr(lossLayer) }),
   aave: obj({
-    hubs: arr(ref("hub")),
+    hubs: arr(obj({ ...upgradeableProps, label: { type: "string" }, tier: { type: "integer", minimum: 1, maximum: 3 } })),
     borrowSpokes: arr(ref("labelledUpgradeable")),
     lendSpokes: arr(ref("labelledUpgradeable")),
     v3Pool: ref("upgradeable"),
     accessManager: address,
   }),
   roles: obj({
-    timelock: obj({
-      proposers: arr(address),
-      executors: arr(address),
-      cancellers: arr(address),
-      daoCancellers: arr(address),
-      // 345,600 on every chain but a test network or development node, where the floor is 60 (REQ-ACCESS-187,
-      // checked against chainId by validate).
-      normalDelay: { type: "integer", minimum: 60, maximum: 432000 },
-      publicExecution: { type: "boolean" },
-    }),
+    aaveGovernanceExecutor: address,
     governanceSafe: address,
     emergencyGuardian: address,
     aaveProtocolGuardian: address,
-    aaveGovernanceExecutor: address,
     jointConfigSafe: address,
-    marketRegistryGuardians: arr(address),
-    parameterStorePauseGuardians: arr(address),
-    riskStewards: arr(address),
     keepers: arr(address),
+    keeperTopUp: nullable(obj({ wallet: address, minBalanceWei: decimal, targetBalanceWei: decimal })),
   }),
   external: arr(
     obj({
@@ -125,30 +97,31 @@ export const releaseManifestSchema: Schema = {
     immutable: obj(immutableProps),
     upgradeable: obj(upgradeableProps),
     labelledUpgradeable: obj({ ...upgradeableProps, label: { type: "string" } }),
-    hub: obj({ ...upgradeableProps, label: { type: "string" }, tier: { type: "integer", minimum: 1, maximum: 3 } }),
-    // `poolId` is optional: only a Uniswap v4 market has one (its `pool` is address(0)).
-    market: (() => {
-      const props: Record<string, Schema> = {
-        marketId: decimal,
-        integrationId: { type: "integer", minimum: 1 },
-        spoke: address,
-        vaultToken: ref("immutable"),
-        lpOracle: ref("immutable"),
-        reserveId: decimal,
-        pool: address,
-        poolId: hash,
-        tokens: arr(address),
-        feeds: feedList,
-        routes: arr(ref("immutable")),
-      };
-      return obj(props, { required: Object.keys(props).filter((k) => k !== "poolId") });
-    })(),
+    market: obj({
+      marketId: decimal,
+      name: { type: "string" },
+      integrationId: { type: "integer", minimum: 1 },
+      kind: { enum: ["full-range", "custom-range"] },
+      pool: hash,
+      spoke: address,
+      hub: address,
+      vaultToken: ref("immutable"),
+      lpOracle: ref("immutable"),
+      reserveId: decimal,
+      tokens: { ...arr(address), minItems: 2, maxItems: 2 },
+      bandLower: tick,
+      bandUpper: tick,
+      ltvBps: { type: "integer", minimum: 1, maximum: 10000 },
+      unitDecimals: { type: "integer", minimum: 0, maximum: 36 },
+      feeds: feedList,
+    }),
     debtReserve: obj({
       spoke: address,
       debtReserveId: decimal,
       asset: address,
       decimals: { type: "integer", minimum: 0, maximum: 36 },
       isGho: { type: "boolean" },
+      firstLossReserve: address,
       feeds: feedList,
     }),
   },
@@ -162,23 +135,32 @@ export interface SchemaError {
 }
 
 /** Validates `value` against `schema` (the subset above); returns every failure, empty when valid. */
-/** The chains whose AvanaTimelock floors are 60 s (spec 2.15 REQ-ACCESS-187): Sepolia, Base Sepolia, the local nodes. */
-export const TEST_NETWORK_CHAIN_IDS: ReadonlySet<number> = new Set([11_155_111, 84_532, 31_337, 31_338]);
-/** The timelock's MIN_NORMAL_DELAY on `chainId`. */
-export const minNormalDelay = (chainId: number) => (TEST_NETWORK_CHAIN_IDS.has(chainId) ? 60 : 345_600);
-
 export function validate(value: unknown, schema: Schema = releaseManifestSchema, root: Schema = schema, path = "$"): SchemaError[] {
-  if (schema === releaseManifestSchema && path === "$") {
-    const errors = validateShape(value, schema, root, path);
-    // The normal delay's floor depends on the chain (REQ-ACCESS-187).
-    const m = value as { chainId?: unknown; roles?: { timelock?: { normalDelay?: unknown } } };
-    const d = m?.roles?.timelock?.normalDelay;
-    if (typeof m?.chainId === "number" && typeof d === "number" && d >= 60 && d < minNormalDelay(m.chainId)) {
-      errors.push({ path: "$.roles.timelock.normalDelay", message: `must be ≥ ${minNormalDelay(m.chainId)} on chain ${m.chainId}` });
+  const errors = validateShape(value, schema, root, path);
+  if (schema === releaseManifestSchema && path === "$") errors.push(...crossChecks(value as ReleaseManifest));
+  return errors;
+}
+
+/** What the shape cannot say: each market names a listed integration, a pool has at most one market of each kind,
+ * both markets of a pool share the LTV, and a Custom band lies inside the full range. */
+function crossChecks(m: ReleaseManifest): SchemaError[] {
+  const errors: SchemaError[] = [];
+  if (!Array.isArray(m?.markets) || !Array.isArray(m?.avana?.integrations)) return errors;
+  const ids = new Set(m.avana.integrations.map((i) => i.integrationId));
+  const byPool = new Map<string, { kind: string; ltvBps: number; i: number }[]>();
+  m.markets.forEach((mk, i) => {
+    if (!ids.has(mk.integrationId)) errors.push({ path: `$.markets[${i}].integrationId`, message: `names no integration in avana.integrations` });
+    if (mk.bandLower >= mk.bandUpper) errors.push({ path: `$.markets[${i}].bandUpper`, message: "must be above bandLower" });
+    const key = `${mk.integrationId}:${String(mk.pool).toLowerCase()}`;
+    const list = byPool.get(key) ?? [];
+    for (const o of list) {
+      if (o.kind === mk.kind) errors.push({ path: `$.markets[${i}].kind`, message: `pool ${mk.pool} already has a ${mk.kind} market (markets[${o.i}])` });
+      if (o.ltvBps !== mk.ltvBps) errors.push({ path: `$.markets[${i}].ltvBps`, message: `differs from markets[${o.i}] of the same pool` });
     }
-    return errors;
-  }
-  return validateShape(value, schema, root, path);
+    list.push({ kind: mk.kind, ltvBps: mk.ltvBps, i });
+    byPool.set(key, list);
+  });
+  return errors;
 }
 
 function validateShape(value: unknown, schema: Schema, root: Schema, path: string): SchemaError[] {
@@ -217,6 +199,8 @@ function validateShape(value: unknown, schema: Schema, root: Schema, path: strin
       break;
     case "array":
       if (!Array.isArray(value)) return [{ path, message: "must be an array" }];
+      if (typeof schema.minItems === "number" && value.length < schema.minItems) fail(`must have at least ${schema.minItems} items`);
+      if (typeof schema.maxItems === "number" && value.length > schema.maxItems) fail(`must have at most ${schema.maxItems} items`);
       value.forEach((v, i) => errors.push(...validateShape(v, schema.items as Schema, root, `${path}[${i}]`)));
       break;
     case "object": {

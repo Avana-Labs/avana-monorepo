@@ -13,7 +13,6 @@ import { registered } from "./harness/run.ts";
 
 /** Events deliberately not handled, by `<Source>.<Event>`. */
 const NOT_INDEXED: Readonly<Record<string, string>> = {
-  "VaultToken.Approval": "vault-token allowances are internal to the AaveAdapter and its proxies; no consumer reads them",
   "UniswapV4PoolManager.Initialize": "a pool is initialized before any market can list it; the market row carries its tokens",
 };
 
@@ -21,8 +20,9 @@ const SOURCES: Readonly<Record<string, Abi>> = {
   ...Object.fromEntries(Object.entries(abis).filter(([name]) => name !== "AaveSpoke" && name !== "AaveHub")),
   ...Object.fromEntries(AAVE_SPOKE_SOURCES.map((s) => [s, abis.AaveSpoke])),
   ...Object.fromEntries(AAVE_HUB_SOURCES.map((s) => [s, abis.AaveHub])),
-  AvanaFirstLossReserveListed: abis.AvanaFirstLossReserve,
-  DaoDeficitOffset: abis.AvanaFirstLossReserve,
+  FirstLossReserveListed: abis.FirstLossReserve,
+  DaoDeficitOffset: abis.FirstLossReserve,
+  VaultTokenListed: abis.VaultToken,
   AmmPool: clPoolAbi,
   UniswapV4PoolManager: uniswapV4PoolManagerAbi,
 } as Record<string, Abi>;

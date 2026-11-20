@@ -6,7 +6,10 @@
 
 import { index, onchainTable, primaryKey } from "ponder";
 
-/** Key `chainId + Spoke + proxy` (TEST-061). Attributed only when both creation events agree (TEST-144). */
+/**
+ * One account proxy per (wallet, market), from `AaveAdapter.AccountCreated`; key `chainId + Spoke + proxy`, the Spoke
+ * being the market's. Spoke events are attributed only to an account the AaveAdapter announced.
+ */
 export const account = onchainTable(
   "account",
   (t) => ({
@@ -15,10 +18,8 @@ export const account = onchainTable(
     proxy: t.hex().notNull(),
     wallet: t.hex().notNull(),
     marketId: t.bigint().notNull(),
-    /** Set by `AaveAdapter.UserProxyCreated`. */
-    adapterSeen: t.boolean().notNull(),
-    /** Set by `ProxyManager.ProxyDeployed`; an account with only one of the two is reported, never attributed. */
-    managerSeen: t.boolean().notNull(),
+    /** The AaveAdapter that deployed it (one per integration). */
+    adapter: t.hex().notNull(),
     /** Last `SetUsingAsCollateral` value on the Spoke for the market's vault-token reserve. */
     usingAsCollateral: t.boolean().notNull(),
     createdBlock: t.bigint().notNull(),

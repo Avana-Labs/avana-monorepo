@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The snapshot reader on a chain with several Hubs: every row is keyed by its Hub, two Lend Spokes on one Hub and a
-// third on another are read, each covered Hub asset carries its draw-cap coverage, the Hub identities hold per Hub
-// asset, and a Hub the MarketRegistry records after start-up appears with its Lend Spoke, First-Loss Reserve and CDP
-// Spoke at the next read with the same deployment.
+// third on another are read, each covered Hub asset carries its draw-cap coverage from the RiskModule and its First-Loss
+// Reserve's balance, the Hub identities hold per Hub asset, a pool's two markets (Full range and Custom range) are read
+// from the RiskModule and the LPOracle, and a Hub a later release step deploys appears once it has code.
 
 import { describe, expect, it } from "vitest";
 import {
@@ -19,7 +19,6 @@ import {
   LEND_B,
   LEND_C,
   OFFSET_C,
-  SPEED_MORE_AT,
   USDC,
   type FakeChain,
   fakeChainClient,
@@ -37,9 +36,9 @@ const six = (whole: number) => (BigInt(whole) * 10n ** 6n).toString();
 describe("a chain with two Hubs and three Lend Spokes", () => {
   it("lists each Hub with its label, tier, Lend Spokes, CDP Spokes and lend assets", async () => {
     const snap = await read();
-    expect(snap.hubs.map((h) => [h.hub, h.label, h.tier, h.recorded, h.assetCount, h.lendAssetIds, h.lendSpokes, h.cdpSpokes])).toEqual([
-      [HUB_A, "Stable", 1, true, 3, ["0", "1"], [LEND_A, LEND_A2], [CDP_A]],
-      [HUB_B, "Core", 2, true, 2, ["0", "1"], [LEND_B], [CDP_B]],
+    expect(snap.hubs.map((h) => [h.hub, h.label, h.tier, h.assetCount, h.lendAssetIds, h.lendSpokes, h.cdpSpokes])).toEqual([
+      [HUB_A, "Stable", 1, 4, ["0", "1"], [LEND_A, LEND_A2], [CDP_A]],
+      [HUB_B, "Core", 2, 2, ["0", "1"], [LEND_B], [CDP_B]],
     ]);
   });
 
@@ -82,24 +81,25 @@ describe("a chain with two Hubs and three Lend Spokes", () => {
     }
   });
 
-  it("reads the draw-cap coverage of each covered Hub asset: the CDP Spokes' draw caps and the balance they require", async () => {
+  it("reads the draw-cap coverage of each covered Hub asset from the RiskModules and the First-Loss Reserve's balance", async () => {
     const snap = await read();
     const exposure = (hub: string) => snap.hubAssets.find((a) => a.hub === hub && a.underlying === USDC)!.exposure;
-    // Hub A USDC: CDP A's draw cap of 4,000,000 at the fake registry's 5 % needs 200,000, the Coverage Spoke's balance.
-    expect(exposure(HUB_A)).toMatchObject({ drawCapSum: "4000000", required: six(200_000), fundedBalance: six(200_000), coverageBoundHolds: true });
-    // Hub B USDC has no First-Loss Reserve: the Lens refuses the exposure.
+    // Hub A USDC: CDP A's draw cap of 4,000,000 at the fake RiskModule's 5 % needs 200,000, the First-Loss Reserve's balance.
+    expect(exposure(HUB_A)).toMatchObject({ drawCapSum: "4000000", required: six(200_000), fundedBalance: six(200_000), coverageBoundHolds: true, uncovered: "0" });
+    // Hub B USDC has no First-Loss Reserve.
     expect(exposure(HUB_B)).toBeNull();
   });
 
-  it("reads each CDP Spoke's debt reserves with the Hub that funds them", async () => {
+  it("reads each CDP debt reserve with the Hub that funds it, its flags and its price, GHO at its fixed source", async () => {
     const snap = await read();
-    expect(snap.spokeReserves.map((r) => [r.spoke, r.reserveId, r.hub, r.assetId])).toEqual([
-      [CDP_A, "1", HUB_A, "0"],
-      [CDP_A, "2", HUB_A, "1"],
-      [CDP_A, "3", HUB_B, "0"],
-      [CDP_B, "1", HUB_B, "0"],
-      [CDP_B, "2", HUB_B, "1"],
+    expect(snap.spokeReserves.map((r) => [r.spoke, r.reserveId, r.hub, r.assetId, r.borrowable, r.fixedPrice])).toEqual([
+      [CDP_A, "1", HUB_A, "0", true, false],
+      [CDP_A, "2", HUB_A, "1", true, false],
+      [CDP_A, "3", HUB_B, "0", true, false],
+      [CDP_B, "1", HUB_B, "0", true, false],
+      [CDP_B, "2", HUB_B, "1", true, true],
     ]);
+    expect(snap.spokeReserves[0]!.debtPrice).toBe("100000000");
   });
 
   it("does not take a supply-shaped Spoke on a manifest Hub for a Lend Spoke", async () => {
@@ -115,92 +115,89 @@ describe("a chain with two Hubs and three Lend Spokes", () => {
     expect(snap.hubs[0]!.lendSpokes).toEqual([LEND_A, LEND_A2]);
   });
 
-  it("refuses a Lend Spoke reserve on a Hub that is neither in the manifest nor recorded", async () => {
-    const chain: FakeChain = { ...fixtureHubsChain.start, recordedHubs: [HUB_A], hubs: [fixtureHubsChain.start.hubs[0]!, fixtureHubsChain.start.hubs[1]!] };
+  it("refuses a Lend Spoke reserve on a Hub the manifest does not list", async () => {
     const dep = { ...fixtureHubsDeployment, hubs: [fixtureHubsDeployment.hubs[0]!] };
-    await expect(readChainSnapshot(fakeChainClient(chain), dep, at)).rejects.toThrow(/neither in the manifest nor recorded/);
+    await expect(readChainSnapshot(fakeChainClient(fixtureHubsChain.start), dep, at)).rejects.toThrow(/which the manifest does not list/);
+  });
+
+  it("fails the whole snapshot when a required view reverts", async () => {
+    const chain = fakeChainClient(fixtureHubsChain.start);
+    const broken = {
+      multicall: async (calls: Parameters<typeof chain.multicall>[0]) =>
+        (await chain.multicall(calls)).map((r, i) => (calls[i]!.functionName === "getAssetOwed" ? { status: "failure" as const, error: new Error("revert") } : r)),
+    };
+    await expect(readChainSnapshot(broken, fixtureHubsDeployment, at)).rejects.toThrow(/reverted/);
   });
 });
 
-const kindOf = (snap: Awaited<ReturnType<typeof read>>, spoke: Address) => snap.slices.find((s) => s.spoke === spoke)!.kind;
+describe("a pool's two markets", () => {
+  it("reads the Full range and Custom range market of one pool with the same LTV and each its own band", async () => {
+    const snap = await read();
+    expect(snap.markets.map((m) => [m.marketId, m.kind, m.active, m.bandLower, m.bandUpper, m.ltvBps, m.hub, m.spoke, m.hubAssetId])).toEqual([
+      ["1", "full-range", true, -887_270, 887_270, 9_000, HUB_A, CDP_A, "2"],
+      ["2", "custom-range", true, -100, 100, 9_000, HUB_A, CDP_A, "3"],
+    ]);
+    expect(snap.markets[0]!.pool).toBe(snap.markets[1]!.pool);
+  });
 
-describe("market caps (REQ-LENS-057)", () => {
-  it("keeps Avana's caps, the liquidation threshold and fee and the hard floor from the market view", async () => {
+  it("prices the vault token at the LPOracle and values what the Spoke holds", async () => {
     const m = (await read()).markets[0]!;
-    expect(m.caps).toEqual({
-      liquidationThresholdBps: 8_000,
+    expect(m).toMatchObject({
+      acceptedPrice: "200000000",
+      suppliedUnits: (1_000n * 10n ** 18n).toString(),
+      suppliedUsd8: (2_000n * 10n ** 8n).toString(),
+      vaultDecimals: 18,
+      symbol: "av-1",
+      tokenDecimals: [6, 6],
+      collateralFactorBps: 9_000,
+      maxLiquidationBonusBps: 10_500,
       liquidationFeeBps: 1_000,
-      hardHealthFloorWad: "0",
-      marketUsdCap8: (5_000_000n * 10n ** 8n).toString(),
-      topUpSliceUsd8: (500_000n * 10n ** 8n).toString(),
-      tokenUsdCaps8: [(10n ** 15n).toString(), (10n ** 15n).toString()],
-      addCap: "5000000",
+      collateralRiskBps: 500,
+      liquidation: { targetHealthFactorWad: "1100000000000000000", healthFactorForMaxBonusWad: "950000000000000000", liquidationBonusFactorBps: 5_000 },
     });
   });
-});
 
-describe("speed limits of each market (BOR-024)", () => {
-  it("reads what each debt reserve of the market can borrow now and when more frees up", async () => {
+  it("charges each debt reserve of the market's Spoke drawnRate × (1 + collateralRisk)", async () => {
     const m = (await read()).markets[0]!;
-    expect(m.borrow.map((b) => [b.reserveId, b.borrowRateRay, b.speed?.availableNow, b.speed?.moreAt])).toEqual([
-      ["1", (63n * 10n ** 24n).toString(), six(500_000), SPEED_MORE_AT],
-      ["2", (63n * 10n ** 24n).toString(), six(500_000), SPEED_MORE_AT],
-      ["3", (63n * 10n ** 24n).toString(), six(500_000), SPEED_MORE_AT],
+    // ⌈6 % × 1.05⌉ RAY on Hub A's USDC and USDT, ⌈8 % × 1.05⌉ on Hub B's USDC.
+    expect(m.borrow).toEqual([
+      { reserveId: "1", borrowRateRay: (63n * 10n ** 24n).toString() },
+      { reserveId: "2", borrowRateRay: (63n * 10n ** 24n).toString() },
+      { reserveId: "3", borrowRateRay: (84n * 10n ** 24n).toString() },
     ]);
-    expect(m.borrow[0]!.speed!.market).toEqual({
-      limit: (1_000_000n * 10n ** 8n).toString(),
-      used: (250_000n * 10n ** 8n).toString(),
-      available: (750_000n * 10n ** 8n).toString(),
-      moreAt: SPEED_MORE_AT,
-      moreAmount: (250_000n * 10n ** 8n).toString(),
-      unavailable: false,
-    });
-    expect(m.borrow[0]!.speed!.debt).toMatchObject({ available: six(500_000), moreAt: 0 });
-    expect(m.pledgeSpeed).toMatchObject({ available: (2_500_000n * 10n ** 8n).toString(), moreAt: 0, unavailable: false });
   });
 
-  it("keeps the market and its rates when the Lens refuses the speed views while the Lock is held", async () => {
-    const m = (await read({ ...fixtureHubsChain.start, locked: true })).markets[0]!;
-    expect(m.borrow.map((b) => [b.reserveId, b.speed])).toEqual([
-      ["1", null],
-      ["2", null],
-      ["3", null],
+  it("shows a depegged market frozen on its Spoke (depeg = freeze)", async () => {
+    const chain: FakeChain = { ...fixtureHubsChain.start, markets: fixtureHubsChain.start.markets.map((m) => (m.marketId === 2n ? { ...m, frozen: true } : m)) };
+    const snap = await read(chain);
+    expect(snap.markets.map((m) => [m.marketId, m.frozen])).toEqual([
+      ["1", false],
+      ["2", true],
     ]);
-    expect(m.pledgeSpeed).toBeNull();
-    expect(m.marketId).toBe("1");
   });
 });
 
-describe("a Hub recorded after start-up", () => {
-  it("appears at the next read with the same deployment, with its Lend, Coverage, CDP and deficit-offset Spokes found on chain", async () => {
+describe("a Hub a later release step deploys", () => {
+  it("is left out while it has no code, and read with its Lend, Coverage, CDP and deficit-offset Spokes and market once it has", async () => {
     const before = await read(fixtureHubsChain.start);
     const after = await read(fixtureHubsChain.later);
     expect(before.hubs.map((h) => h.hub)).toEqual([HUB_A, HUB_B]);
+    expect(before.markets.map((m) => m.marketId)).toEqual(["1", "2"]);
     expect(after.hubs.map((h) => h.hub)).toEqual([HUB_A, HUB_B, HUB_C]);
-    expect(after.hubs[2]).toMatchObject({ hub: HUB_C, label: null, tier: 3, recorded: true, lendAssetIds: ["0"], lendSpokes: [LEND_C], cdpSpokes: [CDP_C] });
+    expect(after.hubs[2]).toMatchObject({ hub: HUB_C, label: "Edge", tier: 3, lendAssetIds: ["0"], lendSpokes: [LEND_C], cdpSpokes: [CDP_C] });
 
     const c0 = after.hubAssets.find((a) => a.hub === HUB_C)!;
     expect([c0.assetId, c0.underlying, c0.added, c0.owed, c0.priceUsd8, c0.lend.spoke]).toEqual(["0", USDC, six(2_050_000), six(500_000), "100000000", LEND_C]);
     expect(after.slices.filter((s) => s.hub === HUB_C).map((s) => s.kind)).toEqual(["lend", "coverage", "deficitOffset", "feeReceiver", "cdp"]);
     expect(c0.exposure).toMatchObject({ firstLossReserve: COV_C, fundedBalance: six(100_000), deficitOffset: OFFSET_C, offsetFunded: six(50_000) });
-    expect(after.slices.find((s) => s.spoke === COV_C)!.kind).toBe("coverage");
     expect(reconcileHubAsset(c0, after.slices).balanceHolds).toBe(true);
     expect(after.spokeReserves.filter((r) => r.spoke === CDP_C).map((r) => [r.hub, r.assetId])).toEqual([[HUB_C, "0"]]);
     expect(after.markets.map((m) => [m.marketId, m.hub, m.spoke])).toEqual([
       ["1", HUB_A, CDP_A],
-      ["2", HUB_C, CDP_C],
+      ["2", HUB_A, CDP_A],
+      ["3", HUB_C, CDP_C],
     ]);
     // Rows of the Hubs that were there before do not change.
     expect(after.hubAssets.filter((a) => a.hub !== HUB_C)).toEqual(before.hubAssets);
-  });
-
-  it("does not take the new Hub's First-Loss Reserve for a Lend Spoke when the registry has not named it", async () => {
-    const later = fixtureHubsChain.later;
-    const chain: FakeChain = { ...later, hubs: later.hubs.map((h) => (h.hub !== HUB_C ? h : { ...h, assets: h.assets.map(({ firstLossReserve: _, ...a }) => a) })) };
-    const snap = await read(chain);
-    expect(snap.hubs[2]!.lendSpokes).toEqual([LEND_C]);
-    expect(kindOf(snap, COV_C)).toBe("other");
-    // Without a First-Loss Reserve there is no layer for the offset to stand behind: it is not a Lend Spoke either.
-    expect(kindOf(snap, OFFSET_C)).toBe("other");
   });
 });

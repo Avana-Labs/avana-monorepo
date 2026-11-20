@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// Calldata of the AaveAdapter user actions the web app sends, encoded with the generated `aaveAdapterAbi`. Every amount,
-// ID, deadline and health factor is a bigint (uint256 or uint128 on chain); an integration ID is a number (uint32).
-// The builders only encode: amounts, minimums and deadlines come from the caller's preview (Lens) and slippage settings.
+// Calldata of the AaveAdapter user actions, encoded with the generated `aaveAdapterAbi`. Amounts, market and reserve
+// IDs are bigints (uint256 or uint128 on chain); a position key is the bytes32 the LPVault keys the NFT by.
+//
+// The Adapter routes a pledge itself (RiskModule.routeOf: exact full-range ticks go to the pool's Full range market,
+// positions inside the Custom band to its Custom range market; anything else reverts NoMarketFits), so a pledge names
+// no market. Borrow, repay and fee collection name the market, since a wallet has one account per (wallet, market).
 
-import { decodeFunctionData, encodeFunctionData, type Address, type Hex } from "viem";
+import { decodeFunctionData, encodeAbiParameters, encodeFunctionData, maxUint256, type Address, type Hex } from "viem";
 import { aaveAdapterAbi } from "../abis/index.ts";
 
-/** A position in an LPVault: the integration that holds it and its key there (`PositionRef`). */
-export interface PositionRef {
-  readonly integrationId: number;
-  readonly positionKey: Hex;
-}
-
-/** A call to the AaveAdapter proxy, ready for `sendTransaction`. Every action is non-payable. */
+/** A call to the AaveAdapter, ready for `sendTransaction`. Every action is non-payable. */
 export interface AaveAdapterCall {
   readonly to: Address;
   readonly data: Hex;
@@ -22,169 +19,161 @@ export interface AaveAdapterCall {
 
 export interface BorrowArgs {
   readonly marketId: bigint;
-  readonly debtReserveId: bigint;
+  readonly reserveId: bigint;
   /** Debt-asset base units to draw. */
   readonly amount: bigint;
-  readonly receiver: Address;
-  /** Last valid `block.timestamp`. */
-  readonly deadline: bigint;
-  /** Least health factor after the borrow, WAD; 0 for none. */
-  readonly minHealthFactor: bigint;
-  /** Must equal the account's `borrowNonce(proxy)`. */
-  readonly expectedNonce: bigint;
+  readonly recipient: Address;
 }
 
 export interface RepayArgs {
-  readonly borrower: Address;
   readonly marketId: bigint;
-  readonly debtReserveId: bigint;
-  /** Most the payer allows to be pulled, base units; Aave takes at most the debt and the rest is returned. */
-  readonly maxRepaySpend: bigint;
-  readonly deadline: bigint;
+  readonly reserveId: bigint;
+  /** Most debt asset pulled from the caller; the Adapter pulls only what is owed. */
+  readonly amount: bigint;
+  /** The wallet whose debt is repaid (anyone may repay for anyone). */
+  readonly wallet: Address;
+}
+
+export interface PledgeArgs {
+  readonly positionKey: Hex;
+}
+
+export interface AddLiquidityArgs {
+  readonly positionKey: Hex;
+  readonly amount0Desired: bigint;
+  readonly amount1Desired: bigint;
+  readonly amount0Min: bigint;
+  readonly amount1Min: bigint;
+}
+
+export interface WithdrawArgs {
+  readonly positionKey: Hex;
+  /** Liquidity to remove; 0 withdraws the whole NFT. */
+  readonly liquidity: bigint;
+  readonly amount0Min: bigint;
+  readonly amount1Min: bigint;
+  readonly recipient: Address;
+}
+
+export interface CollectFeesArgs {
+  readonly marketId: bigint;
+  readonly positionKeys: readonly Hex[];
+}
+
+/** One swap the FlashloanRepay runs after the withdrawal (`SwapCalls.Swap`). */
+export interface Swap {
+  readonly tokenIn: Address;
+  readonly target: Address;
+  readonly data: Hex;
+  /** Byte offset in `data` where the amount in is written; type(uint256).max to leave `data` as it is. */
+  readonly amountInOffset: bigint;
 }
 
 export interface RepayWithCollateralArgs {
-  readonly marketId: bigint;
-  readonly position: PositionRef;
-  /** Credited units released and sold for the debt asset. */
-  readonly units: bigint;
-  readonly debtReserveId: bigint;
-  /** Least raw amount of each pool token from the release, one per market token, or empty. */
-  readonly minAmounts: readonly bigint[];
-  readonly minDebtRepaid: bigint;
-  /** Least debt asset returned to the wallet after the repayment. */
-  readonly minAssetOut: bigint;
-  readonly deadline: bigint;
-  readonly minHealthFactor: bigint;
+  /** The FlashloanRepay periphery, the operator the allowance is given to. */
+  readonly flashloanRepay: Address;
+  readonly positionKey: Hex;
+  /** Liquidity the FlashloanRepay may remove (the allowance's bound) and removes. */
+  readonly liquidity: bigint;
+  readonly reserveId: bigint;
+  /** Most debt repaid; `maxUint256` repays all of it (full repay). */
+  readonly amount: bigint;
+  readonly amount0Min: bigint;
+  readonly amount1Min: bigint;
+  readonly swaps: readonly Swap[];
 }
 
-export interface PositionArgs {
-  readonly marketId: bigint;
-  readonly position: PositionRef;
-  readonly deadline: bigint;
-}
-
-export interface RecreditArgs extends PositionArgs {
-  /** Integration-encoded LP amount for a fungible-share position; `0x` for an NFT position. */
-  readonly topUp: Hex;
-}
-
-export interface WithdrawArgs extends PositionArgs {
-  /** The record's credited units after reconcile: a withdrawal releases the whole position. */
-  readonly units: bigint;
-  /** Least health factor after the withdrawal while debt remains, WAD; 0 for none. */
-  readonly minHealthFactor: bigint;
-}
-
-export interface RemoveLiquidityArgs extends PositionArgs {
-  /** Credited units removed, below the record's credited units. */
-  readonly units: bigint;
-  /** Least raw amount of each pool token, one per market token. */
-  readonly minAmounts: readonly bigint[];
-  /** Least health factor after the removal while debt remains, WAD; 0 for none. */
-  readonly minHealthFactor: bigint;
-}
-
-export interface RepayAllAndWithdrawArgs extends PositionArgs {
-  /** The record's credited units after reconcile. */
-  readonly units: bigint;
-  /** Each debt reserve to repay in full, with its spend cap (base units of its asset) at the same index. */
-  readonly debtReserveIds: readonly bigint[];
-  readonly maxRepaySpends: readonly bigint[];
-}
-
-const position = (p: PositionRef) => ({ integrationId: p.integrationId, positionKey: p.positionKey });
-
-export function encodeBorrow(a: BorrowArgs): Hex {
-  return encodeFunctionData({
-    abi: aaveAdapterAbi,
-    functionName: "borrow",
-    args: [a.marketId, a.debtReserveId, a.amount, a.receiver, a.deadline, a.minHealthFactor, a.expectedNonce],
-  });
-}
-
-/** Repays up to `maxRepaySpend` of the borrower's debt in the reserve. */
-export function encodeRepay(a: RepayArgs): Hex {
-  return encodeFunctionData({
-    abi: aaveAdapterAbi,
-    functionName: "repay",
-    args: [a.borrower, a.marketId, a.debtReserveId, a.maxRepaySpend, false, a.deadline],
-  });
-}
-
-/** Repays the borrower's whole debt in the reserve, interest to the block included, spending at most `maxRepaySpend`. */
-export function encodeRepayAll(a: RepayArgs): Hex {
-  return encodeFunctionData({
-    abi: aaveAdapterAbi,
-    functionName: "repay",
-    args: [a.borrower, a.marketId, a.debtReserveId, a.maxRepaySpend, true, a.deadline],
-  });
-}
-
-export function encodeRepayWithCollateral(a: RepayWithCollateralArgs): Hex {
-  return encodeFunctionData({
-    abi: aaveAdapterAbi,
-    functionName: "repayWithCollateral",
-    args: [
+/** `IFlashloanRepay.RepayParams` (a struct the interface takes only as encoded bytes, so its ABI does not carry it). */
+const repayParams = [
+  {
+    type: "tuple",
+    components: [
+      { name: "reserveId", type: "uint256" },
+      { name: "amount", type: "uint256" },
+      { name: "liquidity", type: "uint128" },
+      { name: "amount0Min", type: "uint256" },
+      { name: "amount1Min", type: "uint256" },
       {
-        marketId: a.marketId,
-        position: position(a.position),
-        units: a.units,
-        debtReserveId: a.debtReserveId,
-        minAmounts: a.minAmounts,
-        minDebtRepaid: a.minDebtRepaid,
-        minAssetOut: a.minAssetOut,
-        deadline: a.deadline,
-        minHealthFactor: a.minHealthFactor,
+        name: "swaps",
+        type: "tuple[]",
+        components: [
+          { name: "tokenIn", type: "address" },
+          { name: "target", type: "address" },
+          { name: "data", type: "bytes" },
+          { name: "amountInOffset", type: "uint256" },
+        ],
       },
     ],
+  },
+] as const;
+
+export function encodePledge(a: PledgeArgs): Hex {
+  return encodeFunctionData({ abi: aaveAdapterAbi, functionName: "pledge", args: [a.positionKey] });
+}
+
+export function encodeAddLiquidity(a: AddLiquidityArgs): Hex {
+  return encodeFunctionData({
+    abi: aaveAdapterAbi,
+    functionName: "addLiquidity",
+    args: [a.positionKey, a.amount0Desired, a.amount1Desired, a.amount0Min, a.amount1Min],
   });
 }
 
-export function encodePledge(a: PositionArgs): Hex {
-  return encodeFunctionData({ abi: aaveAdapterAbi, functionName: "pledge", args: [a.marketId, position(a.position), a.deadline] });
-}
-
-export function encodeRecredit(a: RecreditArgs): Hex {
-  return encodeFunctionData({ abi: aaveAdapterAbi, functionName: "recredit", args: [a.marketId, position(a.position), a.topUp, a.deadline] });
-}
-
-/** Releases the whole position to the depositor of record. */
+/** Withdraws part of the position (`liquidity` > 0) or the whole NFT (`liquidity` = 0). */
 export function encodeWithdraw(a: WithdrawArgs): Hex {
   return encodeFunctionData({
     abi: aaveAdapterAbi,
     functionName: "withdraw",
-    args: [a.marketId, position(a.position), a.units, a.deadline, a.minHealthFactor],
+    args: [a.positionKey, a.liquidity, a.amount0Min, a.amount1Min, a.recipient],
   });
 }
 
-/** Removes part of the position's liquidity; the pool tokens go to the depositor of record. */
-export function encodeRemoveLiquidity(a: RemoveLiquidityArgs): Hex {
+export function encodeBorrow(a: BorrowArgs): Hex {
+  return encodeFunctionData({ abi: aaveAdapterAbi, functionName: "borrow", args: [a.marketId, a.reserveId, a.amount, a.recipient] });
+}
+
+/** Repays up to `amount` of the wallet's debt in the reserve. */
+export function encodeRepay(a: RepayArgs): Hex {
+  return encodeFunctionData({ abi: aaveAdapterAbi, functionName: "repay", args: [a.marketId, a.reserveId, a.amount, a.wallet] });
+}
+
+/** Repays the wallet's whole debt in the reserve (amount = type(uint256).max). */
+export function encodeRepayAll(a: Omit<RepayArgs, "amount">): Hex {
+  return encodeRepay({ ...a, amount: maxUint256 });
+}
+
+export function encodeCollectFees(a: CollectFeesArgs): Hex {
+  return encodeFunctionData({ abi: aaveAdapterAbi, functionName: "collectFees", args: [a.marketId, a.positionKeys] });
+}
+
+/** The `data` the FlashloanRepay decodes in `onWithdrawAllowed` (`abi.encode(RepayParams)`). */
+export function encodeRepayParams(a: Omit<RepayWithCollateralArgs, "flashloanRepay" | "positionKey">): Hex {
+  return encodeAbiParameters(repayParams, [
+    {
+      reserveId: a.reserveId,
+      amount: a.amount,
+      liquidity: a.liquidity,
+      amount0Min: a.amount0Min,
+      amount1Min: a.amount1Min,
+      swaps: a.swaps.map((s) => ({ tokenIn: s.tokenIn, target: s.target, data: s.data, amountInOffset: s.amountInOffset })),
+    },
+  ]);
+}
+
+/**
+ * Repay with collateral, partial or full: `allowWithdraw(flashloanRepay, positionKey, liquidity, RepayParams)`. The
+ * FlashloanRepay flash-borrows the debt asset, repays, withdraws `liquidity`, swaps and returns the rest to the wallet;
+ * the Adapter reverts HealthFactorDecreased if the account ends with a lower health factor.
+ */
+export function encodeRepayWithCollateral(a: RepayWithCollateralArgs): Hex {
   return encodeFunctionData({
     abi: aaveAdapterAbi,
-    functionName: "removeLiquidity",
-    args: [a.marketId, position(a.position), a.units, a.minAmounts, a.deadline, a.minHealthFactor],
+    functionName: "allowWithdraw",
+    args: [a.flashloanRepay, a.positionKey, a.liquidity, encodeRepayParams(a)],
   });
 }
 
-/** Repays the named debt reserves in full, then releases the whole position. */
-export function encodeRepayAllAndWithdraw(a: RepayAllAndWithdrawArgs): Hex {
-  if (a.debtReserveIds.length !== a.maxRepaySpends.length) {
-    throw new Error(`repayAllAndWithdraw: ${a.debtReserveIds.length} debt reserves but ${a.maxRepaySpends.length} spend limits`);
-  }
-  return encodeFunctionData({
-    abi: aaveAdapterAbi,
-    functionName: "repayAllAndWithdraw",
-    args: [a.marketId, position(a.position), a.units, a.debtReserveIds, a.maxRepaySpends, a.deadline],
-  });
-}
-
-/** Collects the fees of a custodied position, for an AMM protocol that keeps fees apart from the liquidity. */
-export function encodeCollectFees(a: PositionArgs): Hex {
-  return encodeFunctionData({ abi: aaveAdapterAbi, functionName: "collectFees", args: [a.marketId, position(a.position), a.deadline] });
-}
-
-/** The call to send: `data` from one of the encoders above, `to` the chain's AaveAdapter proxy. */
+/** The call to send: `data` from one of the encoders above, `to` the chain's AaveAdapter. */
 export function aaveAdapterCall(to: Address, data: Hex): AaveAdapterCall {
   return { to, data, value: 0n };
 }

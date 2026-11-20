@@ -18,12 +18,15 @@ Import paths: `@avana/protocol/abis`, `@avana/protocol/addresses`, `@avana/proto
 
 | Export | Artifact | Build |
 |---|---|---|
-| `aaveAdapterAbi`, `collateralizationAbi`, `flashLiquidatorAbi`, `lensAbi`, `lpOracleAbi`, `lpVaultAbi`, `lpVaultSwapAbi`, `marketRegistryAbi`, `parameterStoreAbi`, `payoutEscrowAbi`, `proxyManagerAbi`, `riskModuleAbi`, `vaultTokenAbi`, `vaultTokenFactoryAbi` | The contract's interface (`IAaveAdapter`, `ICollateralization`, ...), which carries its functions, events and errors | `contracts/out` |
-| `avanaTimelockAbi` | `AvanaTimelock`: `IAvanaTimelock` declares only what the timelock adds to OpenZeppelin's `TimelockController`, so the contract's own ABI supplies `CallScheduled`, `CallExecuted`, `Cancelled` and the role events | `contracts/out` |
-| `firstLossReserveAbi` | `AvanaFirstLossReserve`: `IAvanaFirstLossReserve` does not inherit `IAvanaFirstLossReserve`, so the contract's own ABI supplies `BorrowSpokeAllowlistUpdated` and `FirstLossReserveMinimumUpdated` | `contracts/out` |
-| `aaveV4SpokeAbi`, `aaveV4HubAbi` | Aave's `ISpoke` and `IHub` at the pinned Aave V4 commit, not Avana's minimal interfaces, so every Spoke and Hub event decodes | `contracts/out-aave` |
+| `aaveAdapterAbi`, `riskModuleAbi`, `lpVaultAbi`, `vaultTokenAbi`, `lpOracleAbi`, `liquidationModuleAbi`, `firstLossReserveAbi` | The seven core contracts' interfaces (`IAaveAdapter`, `IRiskModule`, ...), with their functions, events and errors | `contracts/out` |
+| `flashloanRepayAbi` | `IFlashloanRepay`, the repay-with-collateral periphery | `contracts/out` |
+| `accessManagerAbi` | OpenZeppelin's `IAccessManager`, Avana's one AccessManager per chain | `contracts/out` |
+| `flashLiquidatorAbi` | `IFlashLiquidator` of `liquidator/` | `liquidator/out` |
+| `aaveV4SpokeAbi`, `aaveV4HubAbi` | Aave's `ISpoke` and `IHub` at the pinned Aave V4 commit, so every Spoke and Hub event decodes | `contracts/out-aave` |
 
-The ERC-1967 `Upgraded` and AccessControl role events of upgradeable contracts are added by the indexer (`services/indexer/src/config/abis.ts`), since the interfaces do not declare them.
+A file left in `src/abis/` from a contract no longer listed is stale: `--check` fails on it and a write removes it.
+
+The ERC-1967 `Upgraded` event of the Aave Hubs and Spokes is added by the indexer (`services/indexer/src/config/abis.ts`); Avana's core contracts are not upgradeable.
 
 ## ABI hash
 
@@ -31,23 +34,23 @@ The ERC-1967 `Upgraded` and AccessControl role events of upgradeable contracts a
 ABI_HASH = keccak256(utf8(JSON.stringify({ <artifact>: <abi>, ... })))
 ```
 
-with the artifacts in ascending order of name, each ABI exactly as Foundry wrote it, and no whitespace. Example: if the build changes one event of `IMarketRegistry`, the regenerated `marketRegistry.ts` and `ABI_HASH` both change; a service built from it then refuses every manifest recorded with the old hash until the release manifest carries the new one.
+with the artifacts in ascending order of name, each ABI exactly as Foundry wrote it, and no whitespace. Example: if the build changes one event of `IRiskModule`, the regenerated `riskModule.ts` and `ABI_HASH` both change; a service built from it then refuses every manifest recorded with the old hash until the release manifest carries the new one.
 
 ## Regenerating
 
 From the repository root, after building the contracts with both Foundry profiles:
 
 ```bash
-(cd contracts && forge build && FOUNDRY_PROFILE=aave forge build)
+(cd contracts && forge build -j 2 && FOUNDRY_PROFILE=aave forge build -j 2) && (cd liquidator && forge build -j 2)
 node packages/protocol/scripts/generate-abis.mjs           # write src/abis/
 node packages/protocol/scripts/generate-abis.mjs --check   # exit 1 if a committed file differs from the build
 ```
 
-`--out <dir>` and `--out-aave <dir>` read the artifacts from other build folders. The script needs `viem` from the workspace install (`npm ci` at the repository root). A change to an interface under `contracts/src/` that the services use is committed together with its regenerated ABIs.
+`--out <dir>`, `--out-aave <dir>` and `--out-liquidator <dir>` read the artifacts from other build folders. The script needs `viem` from the workspace install (`npm ci` at the repository root). A change to an interface under `contracts/src/` that the services use is committed together with its regenerated ABIs.
 
 ## Addresses
 
-`src/addresses/generated.ts` lists every verified deployment by chain ID and release tag: the Avana contracts (AaveAdapter, LPVaultSwap, MarketRegistry, ParameterStore, RiskModule, timelock, ProxyManager, Collateralization, VaultTokenFactory, PayoutEscrow, Lock, Lens, flash source and liquidator), the LPVaults, markets (vault token, LPOracle, pool, Spoke and reserve), debt reserves, Aave V4 Hubs and Spokes and the Aave V3 Pool, with the release, commit, ABI hash and start block. It is written from `deployments/verified/<network>-<release>.json`, each file checked against the manifest schema and its name; nothing is entered by hand. No deployment is verified yet, so the library is empty.
+`src/addresses/generated.ts` lists every verified deployment by chain ID and release tag: the AccessManager, each integration's core stack (LPVault, RiskModule, LiquidationModule, AaveAdapter, FlashloanRepay), the flash liquidators with their operators, the markets (two per pool, Full range and Custom range, with band and LTV), the debt reserves with their First-Loss Reserves, and the Aave V4 Hubs and Spokes and the Aave V3 Pool, with the release, commit, ABI hash and start block. It is written from `deployments/verified/<network>-<release>.json`, each file checked against the manifest schema (schema 2) and its name; nothing is entered by hand. No deployment is verified yet, so the library is empty.
 
 ```ts
 import { getAddresses } from "@avana/protocol/addresses";
@@ -66,11 +69,11 @@ The services keep reading their manifest at runtime (`AVANA_MANIFEST`, through `
 
 ## Calldata
 
-`@avana/protocol/calldata` encodes the AaveAdapter user actions with `aaveAdapterAbi`: `encodeBorrow`, `encodeRepay`, `encodeRepayAll` (`repay` with `repayAll` true), `encodeRepayWithCollateral`, `encodePledge`, `encodeRecredit`, `encodeWithdraw` (the whole position), `encodeRemoveLiquidity` (part of it, as pool tokens), `encodeRepayAllAndWithdraw` and `encodeCollectFees`. Arguments are named; amounts, IDs, deadlines and health factors are `bigint`, integration IDs `number`. `aaveAdapterCall(to, data)` gives `{ to, data, value: 0n }` and `decodeAaveAdapterCall` decodes any Adapter calldata.
+`@avana/protocol/calldata` encodes the AaveAdapter user actions with `aaveAdapterAbi`: `encodePledge` (the position key only: the Adapter routes it to the pool's Full range or Custom range market), `encodeAddLiquidity`, `encodeWithdraw` (part of a position, or the whole NFT with liquidity 0), `encodeBorrow`, `encodeRepay`, `encodeRepayAll` (`type(uint256).max`), `encodeCollectFees`, and `encodeRepayWithCollateral` (`allowWithdraw` to the FlashloanRepay with its `RepayParams`; `encodeRepayParams` gives that data alone). `aaveAdapterCall(to, data)` gives `{ to, data, value: 0n }` and `decodeAaveAdapterCall` decodes any Adapter calldata.
 
 ```ts
 import { aaveAdapterCall, encodeBorrow } from "@avana/protocol/calldata";
-const call = aaveAdapterCall(a.contracts.aaveAdapter, encodeBorrow({ marketId, debtReserveId, amount, receiver, deadline, minHealthFactor, expectedNonce }));
+const call = aaveAdapterCall(a.integrations[0].aaveAdapter, encodeBorrow({ marketId, reserveId, amount, recipient }));
 ```
 
 ## Build and test

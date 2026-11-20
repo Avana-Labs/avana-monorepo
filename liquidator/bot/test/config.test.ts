@@ -7,12 +7,12 @@ import { loadConfig, parseSwapLegs, refuseSecrets } from "../src/config.ts";
 const A = "0x00000000000000000000000000000000000000a1";
 const B = "0x00000000000000000000000000000000000000b2";
 const base = {
-  LIQUIDATOR_RPC_URL: "http://127.0.0.1:8545",
-  LIQUIDATOR_CHAIN_ID: "31337",
-  LIQUIDATOR_ADAPTER: A,
-  LIQUIDATOR_LIQUIDATION_MODULE: B,
-  LIQUIDATOR_DEBT_RESERVES: "1, 2",
-  LIQUIDATOR_KEYSTORE: "/keys/liquidator",
+  LIQUIDATION_BOT_RPC_URL: "http://127.0.0.1:8545",
+  LIQUIDATION_BOT_CHAIN_ID: "31337",
+  LIQUIDATION_BOT_ADAPTER: A,
+  LIQUIDATION_BOT_LIQUIDATION_MODULE: B,
+  LIQUIDATION_BOT_DEBT_RESERVES: "1, 2",
+  LIQUIDATION_BOT_KEYSTORE: "/keys/liquidator",
 };
 
 describe("config", () => {
@@ -26,23 +26,23 @@ describe("config", () => {
   });
 
   it("needs a router with the flash path", () => {
-    expect(() => loadConfig({ ...base, LIQUIDATOR_FLASH_LIQUIDATOR: A })).toThrow(/SWAP_ROUTER/);
-    const c = loadConfig({ ...base, LIQUIDATOR_FLASH_LIQUIDATOR: A, LIQUIDATOR_SWAP_ROUTER: B, LIQUIDATOR_SWAP_LEGS: `${A}:500` });
+    expect(() => loadConfig({ ...base, LIQUIDATION_BOT_FLASH_LIQUIDATOR: A })).toThrow(/SWAP_ROUTER/);
+    const c = loadConfig({ ...base, LIQUIDATION_BOT_FLASH_LIQUIDATOR: A, LIQUIDATION_BOT_SWAP_ROUTER: B, LIQUIDATION_BOT_SWAP_LEGS: `${A}:500` });
     expect(c.swapLegs).toEqual([{ token: "0x00000000000000000000000000000000000000A1", fee: 500 }]);
   });
 
   it("refuses a key, a mnemonic or a password value in the environment", () => {
-    for (const name of ["PRIVATE_KEY", "LIQUIDATOR_PRIVATE_KEY", "ETH_PRIVATEKEY", "MNEMONIC", "LIQUIDATOR_PASSWORD", "SEED_PHRASE"]) {
+    for (const name of ["PRIVATE_KEY", "LIQUIDATION_BOT_PRIVATE_KEY", "ETH_PRIVATEKEY", "MNEMONIC", "LIQUIDATION_BOT_PASSWORD", "SEED_PHRASE"]) {
       expect(() => refuseSecrets({ [name]: "x" })).toThrow(/refusing/);
       expect(() => loadConfig({ ...base, [name]: "x" })).toThrow(/refusing/);
     }
-    expect(() => refuseSecrets({ LIQUIDATOR_PASSWORD_FILE: "/run/secrets/p", PRIVATE_KEY: "" })).not.toThrow();
+    expect(() => refuseSecrets({ LIQUIDATION_BOT_PASSWORD_FILE: "/run/secrets/p", PRIVATE_KEY: "" })).not.toThrow();
   });
 
   it("rejects bad values", () => {
-    expect(() => loadConfig({ ...base, LIQUIDATOR_ADAPTER: "0x12" })).toThrow(/address/);
-    expect(() => loadConfig({ ...base, LIQUIDATOR_KEYSTORE: "" })).toThrow(/KEYSTORE/);
-    expect(() => loadConfig({ ...base, LIQUIDATOR_PROFIT_SLIPPAGE_BPS: "10001" })).toThrow(/10,000/);
+    expect(() => loadConfig({ ...base, LIQUIDATION_BOT_ADAPTER: "0x12" })).toThrow(/address/);
+    expect(() => loadConfig({ ...base, LIQUIDATION_BOT_KEYSTORE: "" })).toThrow(/KEYSTORE/);
+    expect(() => loadConfig({ ...base, LIQUIDATION_BOT_PROFIT_SLIPPAGE_BPS: "10001" })).toThrow(/10,000/);
     expect(() => parseSwapLegs("0x12:500")).toThrow(/swap leg/);
   });
 });
