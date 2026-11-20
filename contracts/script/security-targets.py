@@ -80,7 +80,17 @@ def external_sigs(build: Path, contract: str) -> None:
         for item in data["abi"]:
             if item.get("type") != "function":
                 continue
-            print(f"{item['name']}({','.join(canonical(p) for p in item['inputs'])})")
+            # hevm 0.58 compiles --sig by embedding the supplied parameter types in a
+            # `public` Solidity stub. Solidity requires memory data locations on dynamic
+            # types in public functions; canonical ABI signatures omit that location.
+            inputs = []
+            for param in item["inputs"]:
+                kind = param["type"]
+                typ = canonical(param)
+                if kind in ("bytes", "string") or "[" in kind or kind.startswith("tuple"):
+                    typ += " memory"
+                inputs.append(typ)
+            print(f"{item['name']}({','.join(inputs)})")
         return
 
 
