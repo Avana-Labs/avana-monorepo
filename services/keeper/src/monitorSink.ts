@@ -2,17 +2,17 @@
 // Copyright (c) 2026 Avana Labs
 // Alerts and heartbeats posted to the monitoring service (services/monitor, `/v1/keeper/alerts` and
 // `/v1/keeper/heartbeat`), one monitor instance per chain, with that instance's bearer token. The monitor holds an alert
-// open while it keeps arriving and pages the keeper's on-call engineer when the heartbeat falls 3 blocks behind.
+// open while it keeps arriving and pages the bot runner's on-call engineer when the heartbeat falls 3 blocks behind.
 //
 // Posting never blocks the chain loop: lines are queued and flushed in the background, one request at a time. A failed
 // post keeps its lines and is retried on the next alert or heartbeat (every block), so a monitor outage loses nothing
 // but the oldest lines beyond `maxQueue`. Lines the monitor refuses (422) are logged and dropped, never retried.
 
-import type { Alert, AlertSink } from "../monitoring/alerts.ts";
+import type { Alert, AlertSink } from "./alerts.ts";
 
 export interface MonitorTarget {
   readonly url: string;
-  /** The instance name the monitor knows this keeper by on this chain (MONITOR_KEEPER_INSTANCES). */
+  /** The instance name the monitor knows this bot runner by on this chain (MONITOR_KEEPER_INSTANCES). */
   readonly instance: string;
   readonly token: string;
 }

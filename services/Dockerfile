@@ -24,6 +24,7 @@ COPY packages/export/package.json packages/export/
 COPY services/common/package.json services/common/
 COPY services/indexer/package.json services/indexer/
 COPY services/keeper/package.json services/keeper/
+COPY liquidator/package.json liquidator/
 COPY services/monitor/package.json services/monitor/
 COPY services/convex/package.json services/convex/
 RUN npm ci --ignore-scripts --no-audit --no-fund
@@ -48,6 +49,9 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=120s \
 CMD ["npx", "--no-install", "ponder", "start", "--port", "42069"]
 
 FROM base AS keeper
+# The bot runner hosts the LiquidationBot (liquidator/bot); the bot's Solidity is deployed, not run here.
+COPY liquidator/package.json liquidator/
+COPY liquidator/bot liquidator/bot
 COPY services/keeper services/keeper
 USER node
 WORKDIR /app/services/keeper

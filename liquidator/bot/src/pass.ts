@@ -26,7 +26,7 @@ interface Market {
   readonly token1: Address;
 }
 
-export class Liquidator {
+export class LiquidationBot {
   private riskModule?: Address;
   private lpVault?: Address;
   private readonly markets = new Map<bigint, Market>();
@@ -58,9 +58,11 @@ export class Liquidator {
     const data = await this.chain.read<{ healthFactor: bigint }>({ address: m.spoke, abi: spokeAbi, functionName: "getUserAccountData", args: [a.account] });
     if (data.healthFactor >= ONE) return undefined;
 
-    let reserveId = this.config.debtReserves[0]!;
+    const reserves = this.config.spokeDebtReserves?.get(m.spoke.toLowerCase()) ?? this.config.debtReserves;
+    if (reserves.length === 0) return undefined;
+    let reserveId = reserves[0]!;
     let debt = 0n;
-    for (const r of this.config.debtReserves) {
+    for (const r of reserves) {
       const d = await this.chain.read<bigint>({ address: m.spoke, abi: spokeAbi, functionName: "getUserTotalDebt", args: [r, a.account] });
       if (d > debt) [reserveId, debt] = [r, d];
     }

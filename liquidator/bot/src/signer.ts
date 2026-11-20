@@ -11,7 +11,7 @@ import { privateKeyToAccount } from "viem/accounts";
 
 /** Reads the password without echoing it. */
 export function promptPassword(question = "keystore password: "): Promise<string> {
-  if (!process.stdin.isTTY) return Promise.reject(new Error("no terminal to prompt on: set LIQUIDATOR_PASSWORD_FILE"));
+  if (!process.stdin.isTTY) return Promise.reject(new Error("no terminal to prompt on: set LIQUIDATION_BOT_PASSWORD_FILE"));
   return new Promise((ok) => {
     const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
     const mute = rl as unknown as { _writeToOutput: (s: string) => void };

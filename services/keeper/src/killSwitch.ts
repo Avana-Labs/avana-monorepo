@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // Authenticated halt and resume endpoint (mutual TLS, on its own port). A halt stops new submissions at once and
-// is written to disk before it is acknowledged, so it survives a restart. A halted keeper keeps scanning and
-// logging; its pending transactions expire at their 3-block deadline.
+// is written to disk before it is acknowledged, so it survives a restart. A halted bot runner keeps discovering accounts,
+// posting its heartbeat and logging, and sends nothing.
 
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { createServer } from "node:https";
 import type { TLSSocket } from "node:tls";
-import type { SafetyState } from "./guards.ts";
 
 interface HaltRecord {
   readonly halted: boolean;
@@ -40,7 +39,7 @@ export interface KillSwitchOptions {
 }
 
 /** Starts the endpoint. `POST /halt`, `POST /resume`, `GET /state`; every request needs a client certificate from the CA. */
-export function startKillSwitch(opts: KillSwitchOptions, state: SafetyState, onChange: (halted: boolean, by: string) => void) {
+export function startKillSwitch(opts: KillSwitchOptions, state: { halted: boolean }, onChange: (halted: boolean, by: string) => void) {
   state.halted = readHalt(opts.statePath);
   const server = createServer(
     {
