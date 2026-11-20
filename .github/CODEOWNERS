@@ -15,7 +15,6 @@
 /contracts/test/utils/fixtures/ForkConstants.sol @Avana-Labs/contracts @Avana-Labs/security
 
 # Specification and its verification models.
-/docs/spec/                                      @Avana-Labs/contracts
 # Review records, findings and verification evidence.
 /docs/audit/                                     @Avana-Labs/security
 

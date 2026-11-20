@@ -69,8 +69,6 @@ generated/
 __pycache__/
 
 # Spec verification tooling
-docs/spec/05-verification/node_modules/
-docs/spec/05-verification/tools/
 .hypothesis/
 
 # EVM decompiler binary (downloaded, not committed)

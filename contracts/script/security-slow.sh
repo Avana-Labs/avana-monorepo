@@ -453,28 +453,8 @@ step_halmos() {
 #                   explored by the harness targets, where that contract is deployed.
 HEVM_PORT=${HEVM_PORT:-18545}
 # --max-iterations per entry point, as "<log name>=<bound>" words (hevm's default bound is 5 revisits of a branch).
-# ParameterStoreListingProperties.setFeed9 to setFeed13 stopped at that bound in run 43387180884 ("Max iterations
-# reached ... at pc: 15964", explored only partially). pc 15964 (0x3e5c) is the address check of
-# ParameterStoreListingLogic's ABI decoder, not a loop over data: a successful setFeed on the deployed harness passes
-# it 22 times in one call frame (counted with debug_traceCall on anvil, the same for 9 to 18 decimals), and hevm's
-# loop heuristic counts those visits as iterations. A bound of 32 covers the 22 visits with room; the entry points of
-# 14 to 18 decimals already finish at the default. With 32, setFeed9 to setFeed13 were fully explored in run
-# 43492412351, and the generic setFeed(uint8,int192,int192) stopped instead ("Max iterations reached ... at pc: 16294",
-# 4x): pc 16294 is the same decoder check in the main build (ParameterStoreListingLogic changed), passed 22 times by
-# a successful setFeed(3, ...) as by setFeed9 and setFeed14 (debug_traceCall on anvil; the next busiest branches of the
-# frame pass 18 and 16 times), so it takes the same bound.
-# With the bound of 32 these six entry points end with counterexamples that hevm_replay does not reproduce (runs
-# 43595414156 and 43653574421: 0 of 11 and 0 of 13; locally, setFeed9 gives such counterexamples also with
-# --merge-max-budget 0, --no-simplify, --no-decompose or the Naive loop heuristic). They are spurious: hevm reports the delegatecall into the listing logic
-# as succeeding for inputs that every check of `_pin` rejects (decimals 0 or above 18, a negative or zero minimum, a
-# maximum below the minimum, a minimum below 10^(decimals − 8)) and as failing for valid inputs, while the deployed
-# harness returns normally for every one of them; setFeed14 gives the same kind of counterexample at 32 and is QED at
-# the default bound. The replay classifies them "unconfirmed", which does not fail the step; at the default bound the
-# six entry points explore partially, which does (docs/audit/hevm/README.md, "Iteration bound").
-HEVM_MAX_ITERATIONS_FOR=${HEVM_MAX_ITERATIONS_FOR:-"ParameterStoreListingProperties.setFeed=32
-  ParameterStoreListingProperties.setFeed9=32
-  ParameterStoreListingProperties.setFeed10=32 ParameterStoreListingProperties.setFeed11=32
-  ParameterStoreListingProperties.setFeed12=32 ParameterStoreListingProperties.setFeed13=32"}
+# Empty by default: no current harness entry point needs a higher bound.
+HEVM_MAX_ITERATIONS_FOR=${HEVM_MAX_ITERATIONS_FOR:-}
 HEVM_RPC="http://127.0.0.1:$HEVM_PORT"
 HEVM_SRC_ADDRESS=0x000000000000000000000000000000000000a7a5
 HEVM_DEPLOYER=0x0000000000000000000000000000000000030000

@@ -15,7 +15,7 @@ The services' own variable names are in `services/indexer/.env.example`, `servic
 
 ## Topology
 
-Ethereum and Base are served the same way, and nothing in the layout depends on how many Hubs or markets a chain has: the indexer, the keepers and the monitor read every Hub, Spoke and market from the chain's verified release manifest and the Lens.
+Ethereum and Base are served the same way, and nothing in the layout depends on how many Hubs or markets a chain has: the indexer, the keepers and the monitor read every Hub, Spoke and market from the chain's verified release manifest.
 
 | Service | Where | Per chain | Why there |
 |---|---|---|---|

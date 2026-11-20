@@ -11,7 +11,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title FloorCreditMathFuzzTest
-/// @notice The floor credit of a position inside a band market (docs/spec/04-security/05-floor-credit-proof.md) over
+/// @notice The floor credit of a position inside a band market (contracts/src/custody/lp-vault/FLOOR-CREDIT-PROOF.md) over
 /// random bands, positions, liquidities and prices: the position is worth at least its credit in band liquidity at
 /// every price below, inside and above the band; the credit rounds down and stays within a few units of the exact
 /// formula; it is non-decreasing in liquidity; a near-full-range band credits almost nothing; positions outside the

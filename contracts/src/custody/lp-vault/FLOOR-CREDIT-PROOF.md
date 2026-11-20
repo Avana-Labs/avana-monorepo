@@ -1,8 +1,8 @@
-# 4.5 Floor Credit Proof
+# Floor credit proof
 
-> **Status:** Draft · **Owner:** Avana Labs · **Last reviewed:** 2026-11-18
+Paper proof behind `FloorCreditMath`. Machine-checked by `certora/conf/FloorCreditMath.conf`, the Halmos check and the fuzz suite.
 
-A band market accepts any concentrated-liquidity position that sits fully inside its band of ticks `[A, B]`, and credits it a fixed number of **band units**, where one band unit is one unit of liquidity spread over the whole band. The credit is computed once, at pledge, by [`FloorCreditMath`](../../../contracts/src/custody/lp-vault/libraries/FloorCreditMath.sol), and reads no pool price. It is what the position holds at each band edge divided by what one band unit holds there, the lesser of the two, which is
+A band market accepts any concentrated-liquidity position that sits fully inside its band of ticks `[A, B]`, and credits it a fixed number of **band units**, where one band unit is one unit of liquidity spread over the whole band. The credit is computed once, at pledge, by [`FloorCreditMath`](libraries/FloorCreditMath.sol), and reads no pool price. It is what the position holds at each band edge divided by what one band unit holds there, the lesser of the two, which is
 
 ```
 credit = L · min(r0, r1)

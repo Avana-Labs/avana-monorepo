@@ -193,11 +193,18 @@ contract LiquidationModuleUnitTest is LiquidationModuleTestBase {
         vm.stopPrank();
     }
 
+    function test_plan_emptyForAnAccountWithoutPositions() public view {
+        (ILiquidationModule.UnwindStep[] memory steps, uint256 shortfall) =
+            module.previewUnwind(address(0xBEEF), CUSTOM, 10e18);
+        assertEq(steps.length, 0);
+        assertEq(shortfall, 10e18);
+    }
+
     function test_revertsBelowMinimum() public {
         bytes32 key = _mint(alice, FULL_LOWER, FULL_UPPER, 1000e18);
         (, address account) = _openUnhealthy(alice, key, 9000, 7000);
         vm.prank(liquidator);
-        vm.expectRevert();
+        vm.expectPartialRevert(ILiquidationModule.BelowMinimum.selector);
         module.liquidate(_p(FULL, account, 100e18, 1000e18, liquidator));
     }
 

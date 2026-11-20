@@ -18,7 +18,7 @@ import {SqrtPriceMath} from "@uniswap/v4-core/src/libraries/SqrtPriceMath.sol";
 /// with the amounts of Uniswap v4-core `SqrtPriceMath` at the Q64.96 square-root prices `getSqrtPriceAtTick`. This is
 /// `L · min((1/√a − 1/√b)/(1/√A − 1/√B), (√b − √a)/(√B − √A))` up to rounding. The credit is fixed at pledge and reads
 /// no pool price. At every pool price the position is worth at least `credit` units of band liquidity, and the least
-/// ratio of the two values is reached at a band edge (docs/spec/04-security/05-floor-credit-proof.md).
+/// ratio of the two values is reached at a band edge (contracts/src/custody/lp-vault/FLOOR-CREDIT-PROOF.md).
 /// @dev Pure and pool-neutral: ticks and liquidity in, credit out. Rounds down: the position's amounts round down, the
 /// band unit's round up, and so does the division, so the credit never exceeds the exact formula. The formula
 /// over-credits a position that leaves the band, so `credit` reverts unless `A ≤ a < b ≤ B`.

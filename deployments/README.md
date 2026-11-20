@@ -18,7 +18,7 @@ Local rehearsals (anvil) write their outputs and manifests to `contracts/deploym
 ## Stages
 
 1. **Local (anvil).** `contracts/script/e2e/e2e-local.sh` deploys the whole world on a fresh anvil node: Avana's own Aave V4 (three Hubs, CDP Spokes per AMM protocol and risk tier, Lend Spokes), Uniswap v3, Aerodrome Slipstream, test tokens and movable feeds, Uniswap v4 with Permit2, dozens of pools, then Avana, its first two timelock operations, the later releases (day 2, and rehearsal 08's exotic pools and borrowable assets: `contracts/script/e2e/day2-additions.ts`, `exotic-additions.ts`), every step again with nothing new, the hostile tokens refused, the manifest and its verification, the keeper and the indexer, and the scenarios. Each step is recorded as pass, fail or not-run in `contracts/deployments-local/anvil/e2e-status.json`.
-2. **Sepolia and Base Sepolia.** The local stack's deployment, the same configs, world and Hub files, by one command per chain ([`contracts/script/testnet/`](../contracts/script/testnet/README.md)): every signer is an encrypted keystore, keystores stand in for the governance Safe and the Aave PayloadsController, and the timelock's floors are 60 s on these chains (spec 2.15 `REQ-ACCESS-187`).
+2. **Sepolia and Base Sepolia.** The local stack's deployment, the same configs, world and Hub files, by one command per chain ([`contracts/script/testnet/`](../contracts/script/testnet/README.md)): every signer is an encrypted keystore, keystores stand in for the governance Safe and the Aave PayloadsController, and the timelock's floors are 60 s on these chains.
 3. **Ethereum and Base.** Aave V4 is the Aave DAO's: steps 01, 02 and the execution of 06 do not run; `03_DeployAvana` reads the DAO's addresses from `contracts/script/deploy/config/<network>.json`, and `06_AaveDeploymentPayload` writes the AIP draft only.
 
 Every stage uses the same scripts and differs only in `contracts/script/deploy/config/<network>.json` and the environment (`contracts/.env.example`): RPC URLs and keys are never written in a file.
@@ -31,7 +31,7 @@ From `packages/protocol`:
 # After the deploy scripts have run on <network>:
 npm run manifest -- produce --network sepolia --rpc-env RPC_SEPOLIA --release v1.0.0
 # Deployment checks against the chain: code hashes, runtime code against the release build with immutables masked
-# (TEST-134), the immutable wiring of each core stack, every market against its RiskModule record (two per pool, one
+#, the immutable wiring of each core stack, every market against its RiskModule record (two per pool, one
 # LTV), the keeper registry, and the AccessManager's admin and the deployer's renunciation replayed from its role
 # events. Exit 1 on any failed check; pending checks are listed.
 npm run manifest -- verify --manifest ../../deployments/sepolia/v1.0.0.json --rpc-env RPC_SEPOLIA
@@ -39,7 +39,7 @@ npm run manifest -- verify --manifest ../../deployments/sepolia/v1.0.0.json --rp
 npm run manifest -- publish --manifest ../../deployments/sepolia/v1.0.0.json --rpc-env RPC_SEPOLIA
 ```
 
-A check is pending, not passed, while the operation that completes it has not executed (for example the guardian roles before the `guardian-roles` operation) or while a contract is not deployed (the concentrated-liquidity LPOracle implementation). `publish` refuses a manifest with any failed or pending check. A newly verified manifest is committed together with the regenerated address library of `@avana/protocol` (`npm run addresses -w packages/protocol`, which writes `packages/protocol/src/addresses/generated.ts` from `verified/`); the `services` workflow fails while that file is stale. The live-configuration checks of `TEST-135` (reserve flags, caps, First-Loss Reserve funding against the summed draw caps) extend `verify` as markets are listed.
+A check is pending, not passed, while the operation that completes it has not executed (for example the guardian roles before the `guardian-roles` operation) or while a contract is not deployed (the concentrated-liquidity LPOracle implementation). `publish` refuses a manifest with any failed or pending check. A newly verified manifest is committed together with the regenerated address library of `@avana/protocol` (`npm run addresses -w packages/protocol`, which writes `packages/protocol/src/addresses/generated.ts` from `verified/`); the `services` workflow fails while that file is stale. The live-configuration checks (reserve flags, caps, First-Loss Reserve funding against the summed draw caps) extend `verify` as markets are listed.
 
 ## Test-network stand-ins
 
