@@ -153,13 +153,15 @@ contract LPVaultUniswapV4IntegrationTest is UniswapV4WorldFixture {
         assertEq(t0.balanceOf(address(vault)), 0);
     }
 
-    /// @notice A position opened after the pool earned fees, then left above and below by the price: at each stop the
-    /// view equals what the PositionManager pays, so the fees reported for an out-of-range position (above: growth
-    /// `upper - lower`, below: `lower - upper`, back inside after both ticks were crossed) are the real ones.
+    /// @notice A position earns both token fees while the price crosses its range, then is checked above, below and
+    /// inside the range: the view equals the PositionManager payout at each stop, including outside-growth ordering.
     function test_feesOf_matchesCollectAboveBelowAndBackInRange() public {
-        _washV4(key, 1e20);
         (bytes32 pk,) = _position(key, -600, 600, 1e20);
         _pledge(pk, MARKET);
+        _washV4(key, 1e20);
+        (uint256 f0, uint256 f1) = vault.feesOf(pk);
+        assertGt(f0, 0, "fees accrued in token0 while price crossed the range");
+        assertGt(f1, 0, "fees accrued in token1 while price crossed the range");
         _checkFeesPaid(pk, 1500);
         _checkFeesPaid(pk, -1500);
         _checkFeesPaid(pk, 0);

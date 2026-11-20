@@ -153,6 +153,30 @@ contract LPVaultSlipstreamUnitTest is Test {
         assertEq(t1.balanceOf(recipient), f1);
     }
 
+    /// @notice Fees earned before a price crosses above the position remain collectible: above the upper tick, the
+    /// inside growth is upper outside minus lower outside, matching the position manager's payout.
+    function test_feesOf_aboveTheUpperTickMatchesCollect() public {
+        npms[1].setTrackFees(true);
+        bytes32 key = _mint(-1000, 1000, 1e18);
+        vm.prank(adapter);
+        vault.pledge(user, account, MARKET, key);
+        uint256 q128 = uint256(1) << 128;
+        pool.setPrice(1500);
+        pool.setFeeGrowthGlobal(3 * q128, 4 * q128);
+        pool.setFeeGrowthOutside(-1000, q128, q128);
+        pool.setFeeGrowthOutside(1000, q128 + q128 / 2, 3 * q128);
+
+        (uint256 f0, uint256 f1) = vault.feesOf(key);
+        assertEq(f0, 0.5e18, "token0: upper outside minus lower outside");
+        assertEq(f1, 2e18, "token1: upper outside minus lower outside");
+        bytes32[] memory keys = new bytes32[](1);
+        keys[0] = key;
+        vm.prank(adapter);
+        vault.collectFees(account, keys, recipient);
+        assertEq(t0.balanceOf(recipient), f0, "the collect pays what the view reported");
+        assertEq(t1.balanceOf(recipient), f1);
+    }
+
     function test_pledge_refusesAStakedNftAndAnUnknownGeneration() public {
         bytes32 key = _mint(-1000, 1000, 1e18);
         MockCLGauge gauge = new MockCLGauge(address(pool), npms[1], new MintableToken("AERO", 18));
