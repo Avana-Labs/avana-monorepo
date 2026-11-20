@@ -49,7 +49,7 @@ jobs:
           gitleaks version
 
       # A pull request scans its own commits, so a finding on one branch never fails another branch's pull request; the
-      # weekly and manual runs scan every branch and tag. The pre-commit hook (.githooks/pre-commit) runs the
+      # weekly and manual runs scan every branch and tag. The pre-commit hook (gitleaks in lefthook.yml) runs the
       # same rules on staged changes, so a finding is fixed before it enters history.
       - name: Scan the pull request's commits, or the full history
         env:

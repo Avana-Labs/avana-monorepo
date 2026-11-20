@@ -15,8 +15,8 @@
     "test:contracts": "forge test -j 2"
   },
   "dependencies": {
-    "@avana/protocol": "file:../packages/protocol",
-    "@avana/services-common": "file:../services/common",
+    "@avana/protocol": "file:../protocol",
+    "@avana/services-common": "file:../../services/common",
     "viem": "2.57.11"
   },
   "devDependencies": {

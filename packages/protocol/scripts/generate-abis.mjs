@@ -4,7 +4,7 @@
 // Writes src/abis/*.ts from the Foundry build: one typed `as const` ABI per contract the services call or index, and
 // src/abis/index.ts with every export and ABI_HASH. Avana ABIs come from contracts/out (the default profile), the Aave V4
 // Spoke and Hub ABIs from contracts/out-aave (the `aave` profile, built from the pinned Aave V4 commit) and the
-// FlashLiquidator's from liquidator/out (the liquidation bot's contracts, which compile against contracts/src).
+// FlashLiquidator's from packages/liquidator/out (the liquidation bot's contracts, which compile against contracts/src).
 //
 //   node packages/protocol/scripts/generate-abis.mjs                 # write the files
 //   node packages/protocol/scripts/generate-abis.mjs --check         # exit 1 if a committed file differs
@@ -43,7 +43,7 @@ const CONTRACTS = [
   ["vaultTokenAbi", "avana", "IVaultToken"],
 ];
 
-const SOURCE = { avana: "contracts/out", aave: "contracts/out-aave (Aave V4, pinned commit)", liquidator: "liquidator/out" };
+const SOURCE = { avana: "contracts/out", aave: "contracts/out-aave (Aave V4, pinned commit)", liquidator: "packages/liquidator/out" };
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(name);
@@ -52,7 +52,7 @@ function arg(name, fallback) {
 const outDirs = {
   avana: arg("--out", join(REPO, "contracts/out")),
   aave: arg("--out-aave", join(REPO, "contracts/out-aave")),
-  liquidator: arg("--out-liquidator", join(REPO, "liquidator/out")),
+  liquidator: arg("--out-liquidator", join(REPO, "packages/liquidator/out")),
 };
 const check = process.argv.includes("--check");
 

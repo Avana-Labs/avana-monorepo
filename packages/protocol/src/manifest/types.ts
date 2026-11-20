@@ -45,7 +45,7 @@ export interface Integration {
   readonly flashloanRepay: Immutable;
 }
 
-/** An operator flash liquidator (liquidator/): callable only by its `OPERATOR`, the liquidation bot's keystore. */
+/** An operator flash liquidator (packages/liquidator/): callable only by its `OPERATOR`, the liquidation bot's keystore. */
 export interface FlashLiquidator extends Immutable {
   readonly integrationId: number;
   readonly operator: Address;

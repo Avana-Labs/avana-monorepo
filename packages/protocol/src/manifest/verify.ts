@@ -44,12 +44,12 @@ async function managerRoles(client: PublicClient, manager: Address, fromBlock: n
 /**
  * Runtime code of the release artifact with every immutable position masked (Foundry `immutableReferences`).
  * `artifact` is `<File>.sol:<Contract>` in contracts/out, or `<build>:<File>.sol:<Contract>` with build `out-aave` or
- * `liquidator` (liquidator/out).
+ * `liquidator` (packages/liquidator/out).
  */
 function artifactRuntime(contractsDir: string, artifact: string): { code: string; masks: { start: number; length: number }[] } | null {
   const parts = artifact.split(":");
   const [build, file, name] = parts.length === 3 ? parts : ["out", ...parts];
-  const outDir = build === "liquidator" ? join(contractsDir, "..", "liquidator", "out") : join(contractsDir, build!);
+  const outDir = build === "liquidator" ? join(contractsDir, "..", "packages", "liquidator", "out") : join(contractsDir, build!);
   const dir = join(outDir, file!);
   // A contract another compiler profile also builds has one artifact per profile; the default one is `.default.json`.
   const path = [join(dir, `${name}.json`), join(dir, `${name}.default.json`)].find(existsSync);

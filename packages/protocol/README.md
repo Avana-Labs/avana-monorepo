@@ -21,7 +21,7 @@ Import paths: `@avana/protocol/abis`, `@avana/protocol/addresses`, `@avana/proto
 | `aaveAdapterAbi`, `riskModuleAbi`, `lpVaultAbi`, `vaultTokenAbi`, `lpOracleAbi`, `liquidationModuleAbi`, `firstLossReserveAbi` | The seven core contracts' interfaces (`IAaveAdapter`, `IRiskModule`, ...), with their functions, events and errors | `contracts/out` |
 | `flashloanRepayAbi` | `IFlashloanRepay`, the repay-with-collateral periphery | `contracts/out` |
 | `accessManagerAbi` | OpenZeppelin's `IAccessManager`, Avana's one AccessManager per chain | `contracts/out` |
-| `flashLiquidatorAbi` | `IFlashLiquidator` of `liquidator/` | `liquidator/out` |
+| `flashLiquidatorAbi` | `IFlashLiquidator` of `packages/liquidator/` | `packages/liquidator/out` |
 | `aaveV4SpokeAbi`, `aaveV4HubAbi` | Aave's `ISpoke` and `IHub` at the pinned Aave V4 commit, so every Spoke and Hub event decodes | `contracts/out-aave` |
 
 A file left in `src/abis/` from a contract no longer listed is stale: `--check` fails on it and a write removes it.

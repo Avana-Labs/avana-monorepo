@@ -19,7 +19,7 @@ on:
   pull_request:
     paths:
       - "services/**"
-      - "liquidator/**"
+      - "packages/liquidator/**"
       - "packages/protocol/**"
       - "packages/export/**"
       - "packages/rpc/**"

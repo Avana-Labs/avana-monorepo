@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// One network's section of each address book page, in the pages' format (address-book/README.md): a `## ` group that
+// One network's section of each address book page, in the pages' format (packages/address-book/README.md): a `## ` group that
 // opens with `- network:`, `### ` sections, GFM tables and `> ` notes. Sections, tables and columns follow the site's
 // pages one to one; the rows come from the model, so a network shows only what its deployment has.
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
-// The bot runner's pass: for each integration of the release manifest, the LiquidationBot (liquidator/) with that
+// The bot runner's pass: for each integration of the release manifest, the LiquidationBot (packages/liquidator/) with that
 // integration's AaveAdapter, LiquidationModule and, when its operator is this runner's signer, FlashLiquidator. Each
 // pass gathers the accounts (the indexer stream, else the bot's own RPC scan of `AccountCreated`), runs every bot
 // unless the kill switch has halted the runner, turns the outcomes into alerts for the monitor and reports the head.

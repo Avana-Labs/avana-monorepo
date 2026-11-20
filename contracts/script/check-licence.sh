@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: BUSL-1.1
 # Copyright (c) 2026 Avana Labs
-# Licence headers (LICENSE, LICENSING.md, THIRD_PARTY_LICENSES.md).
+# Licence headers (LICENSE, LICENSES/LICENSING.md, LICENSES/THIRD_PARTY_LICENSES.md).
 #
 # Every Solidity file Avana owns, under contracts/{src,test,script,certora,aave-deploy} and docs/audit/, starts with exactly
 #

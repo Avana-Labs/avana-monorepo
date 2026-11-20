@@ -11,6 +11,7 @@ Do not open a public issue, pull request or discussion for a vulnerability. Emai
 Prerequisites: [Foundry](https://getfoundry.sh) through `foundryup`, [uv](https://docs.astral.sh/uv/), Node.js 22.18.0 (`.nvmrc`) with npm, Python 3, and [lefthook](https://github.com/evilmartians/lefthook) for the pre-commit checks. From the repository root:
 
 ```bash
+git config --unset core.hooksPath   # only in a clone set up with the old .githooks/ folder
 lefthook install
 foundryup --install 1.9.0
 cd contracts
@@ -21,7 +22,7 @@ FOUNDRY_PROFILE=aave forge build
 
 `forge soldeer install` installs the dependencies pinned in `contracts/soldeer.lock`; `script/install-security-tools.sh` installs the pinned analysis tools (Slither, Halmos, Semgrep, certora-cli and Gambit, Mythril, solhint, Echidna, Medusa, Aderyn, hevm, Bitwuzla, the Semgrep rules and 4naly3er); `--necessist` adds Necessist, which needs cargo. The `aave` build produces the Aave V4 artifacts the test fixtures deploy.
 
-The pre-commit hook ([`lefthook.yml`](lefthook.yml)) runs `forge fmt --check` and the file-size check on staged Solidity, the licence-header check on staged Solidity, Python, JavaScript, shell and JSON files, and `trace.py` on changes to the specification, sources, tests or Certora specs. CI repeats every check.
+The pre-commit hook ([`lefthook.yml`](lefthook.yml)) runs a gitleaks scan of the staged changes (with [`.gitleaks.toml`](.gitleaks.toml)), `forge fmt --check` and the file-size check on staged Solidity, the licence-header check on staged Solidity, Python, JavaScript, shell and JSON files, and `trace.py` on changes to the specification, sources, tests or Certora specs. CI repeats every check.
 
 Commit messages and pull request text carry no AI credit (no AI co-author trailer, no "Generated with" line). The `commit-msg` hook, installed by the same `lefthook install`, runs [`contracts/script/check-ai-credit.sh`](contracts/script/check-ai-credit.sh) on each message, and the `commit-messages` workflow checks a pull request's own commits, title and body.
 
@@ -70,7 +71,7 @@ Certora runs locally in WSL, not in CI; rules follow the proof rule in [`contrac
 
 ## Licence of contributions
 
-A contribution is licensed under the licence of the file it changes: the Business Source License 1.1 in [`LICENSE`](LICENSE) for Avana's code, and the file's own SPDX licence for the third-party files listed in [`LICENSING.md`](LICENSING.md). By opening a pull request you confirm that you have the right to submit the change under that licence. A new file Avana owns starts with the BUSL-1.1 header that `contracts/script/check-licence.sh` checks:
+A contribution is licensed under the licence of the file it changes: the Business Source License 1.1 in [`LICENSE`](LICENSE) for Avana's code, and the file's own SPDX licence for the third-party files listed in [`LICENSES/LICENSING.md`](LICENSES/LICENSING.md). By opening a pull request you confirm that you have the right to submit the change under that licence. A new file Avana owns starts with the BUSL-1.1 header that `contracts/script/check-licence.sh` checks:
 
 ```solidity
 // SPDX-License-Identifier: BUSL-1.1
@@ -79,4 +80,4 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 ```
 
-Code ported from another project keeps that project's licence: its file carries the origin's SPDX identifier and names the origin and commit in its header, a Solidity file is added to `contracts/security/licence-allowlist.txt`, and the component gets an entry in [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) and, where its licence requires one, in [`NOTICE`](NOTICE).
+Code ported from another project keeps that project's licence: its file carries the origin's SPDX identifier and names the origin and commit in its header, a Solidity file is added to `contracts/security/licence-allowlist.txt`, and the component gets an entry in [`LICENSES/THIRD_PARTY_LICENSES.md`](LICENSES/THIRD_PARTY_LICENSES.md) and, where its licence requires one, in [`NOTICE`](LICENSES/NOTICE).

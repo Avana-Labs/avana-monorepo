@@ -87,7 +87,7 @@ AaveAdapter [`collectFees`](src/policy/aave-adapter/IAaveAdapter.sol) → LPVaul
 2. The module calls the Spoke's `liquidationCall`; Aave sizes the repay and the bonus. Only the module may receive seized vault tokens.
 3. Seized units are burned. LPVault [`unwind`](src/custody/lp-vault/ILPVault.sol) removes only liquidity worth those units, lowest excess per credit first; the borrower keeps the rest and all fees.
 4. Both pool tokens go to the liquidator; Avana's share of the bonus goes to the fee recipient in kind. Events `Liquidated`, `FeePaid`.
-5. [`previewUnwind`](src/liquidation/liquidation-module/ILiquidationModule.sol) gives the plan off-chain. The [`liquidator/`](../liquidator/) bot runs this flow with an Aave V3 flash loan.
+5. [`previewUnwind`](src/liquidation/liquidation-module/ILiquidationModule.sol) gives the plan off-chain. The [`packages/liquidator/`](../packages/liquidator/) bot runs this flow with an Aave V3 flash loan.
 
 ## 10. Deficit coverage
 

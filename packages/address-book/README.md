@@ -27,7 +27,7 @@ node contracts/script/address-book/address-book.ts --network <id> --deployment <
 | `ethereum`, `base` | 1, 8453 | Ethereum, Base |
 | `local-ethereum`, `local-base` | 31337, 31338 | the local stack's development chains (`contracts/deployments-local/<ethereum\|base>`) |
 
-Options: `--out <dir>` (default `address-book`), `--date YYYY-MM-DD` (the pages' `updated`, default today), `--config <file>` (another config than the last release's), `--allow-rehearsal`.
+Options: `--out <dir>` (default `packages/address-book`), `--date YYYY-MM-DD` (the pages' `updated`, default today), `--config <file>` (another config than the last release's), `--allow-rehearsal`.
 
 The script writes nothing and lists every problem when the folder holds a rehearsal's outputs (`.rehearsal`), when the manifest's chain ID or network is not the one named, when the manifest fails its schema, when a value the pages show is missing or still a placeholder, or when the manifest's role holders differ from the pages' wording. A row a network legitimately lacks is written as such: the AvanaGasVault shows "Not deployed on this network", a chain without a sequencer feed has no feed row, and the local chains, which list swap routes without a depth threshold, show `routeDepthThreshold` as not set. A role holder counts as a Safe only when the manifest records its address in `external` with the group `safe`.
 

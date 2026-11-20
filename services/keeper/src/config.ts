@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // Copyright (c) 2026 Avana Labs
 // The bot runner's configuration (.env.example lists every name). The LiquidationBot's own settings are its
-// LIQUIDATION_BOT_* names (liquidator/README.md); the runner adds the release manifest the bots' contracts come from,
+// LIQUIDATION_BOT_* names (packages/liquidator/README.md); the runner adds the release manifest the bots' contracts come from,
 // the indexer's bot stream, the monitoring service, the kill switch and the metrics port, under KEEPER_* names. Secrets
 // are read from files, never from the environment: the signer is an encrypted Foundry keystore with its password file,
 // the stream key and the monitor token are files too.
