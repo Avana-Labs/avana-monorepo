@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "license": "BUSL-1.1",
-  "description": "Avana's bot runner (keeper infrastructure): hosts the LiquidationBot of liquidator/ for every integration of a release manifest, feeds it accounts from the indexer's bot stream, posts its alerts and heartbeat to the monitor, and stops on the authenticated kill switch.",
+  "description": "Avana's bot runner (keeper infrastructure): hosts the LiquidationBot of packages/liquidator/ for every integration of a release manifest, feeds it accounts from the indexer's bot stream, posts its alerts and heartbeat to the monitor, and stops on the authenticated kill switch.",
   "type": "module",
   "engines": {
     "node": ">=22.12"
@@ -14,7 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@avana/liquidator": "file:../../liquidator",
+    "@avana/liquidator": "file:../../packages/liquidator",
     "@avana/protocol": "file:../../packages/protocol",
     "@avana/services-common": "file:../common",
     "viem": "2.57.11"

@@ -48,7 +48,7 @@ npm start --workspace liquidator
 
 ## Layout and tests
 
-- `src/`, `test/`: Foundry contracts. They compile against `../contracts/src` (remapped as `avana/`) and its dependencies, so run `forge soldeer install` in `contracts/` first. The swap step reuses the periphery's `SwapCalls`. Run `forge test -j 2` here (CI: the `liquidator` job in `contracts.yml`).
+- `src/`, `test/`: Foundry contracts. They compile against `../../contracts/src` (remapped as `avana/`) and its dependencies, so run `forge soldeer install` in `contracts/` first. The swap step reuses the periphery's `SwapCalls`. Run `forge test -j 2` here (CI: the `liquidator` job in `contracts.yml`).
 - `bot/`: the TypeScript runner and its vitest suite. Run `npm test --workspace liquidator` (CI: `services.yml`).
 
 The bot runner (`services/keeper`) hosts the LiquidationBot in production: one instance per integration of a release manifest, accounts from the indexer's bot stream, alerts and a heartbeat to the monitor, the kill switch. Deploy step `09_ListMarkets` registers the bot's address as a keeper in each RiskModule (`addKeeper`), and `11-fund-keepers` refills its gas from the keeper top-up wallet.

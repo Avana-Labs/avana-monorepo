@@ -19,7 +19,7 @@ on:
   pull_request:
     paths:
       - "services/**"
-      - "liquidator/**"
+      - "packages/liquidator/**"
       - "packages/protocol/**"
       - "packages/export/**"
       - "packages/rpc/**"
@@ -65,7 +65,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          all=(services/common services/indexer services/keeper services/monitor services/faucet services/convex packages/protocol packages/export packages/rpc liquidator)
+          all=(services/common services/indexer services/keeper services/monitor services/faucet services/convex packages/protocol packages/export packages/rpc packages/liquidator)
           declare -A hit=()
           if [ "$EVENT" != pull_request ]; then
             for p in "${all[@]}"; do hit[$p]=1; done

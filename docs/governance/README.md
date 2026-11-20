@@ -204,4 +204,4 @@ The full steps are in [3.6 Emergency Operations](../spec/03-operations/06-emerge
 
 ## Licence
 
-The payloads, operation files and documents in this folder are Avana's under the Business Source License 1.1 in the root [`LICENSE`](../../LICENSE). A payload that imports Aave or other third-party code compiles that code under its own licence ([`LICENSING.md`](../../LICENSING.md)).
+The payloads, operation files and documents in this folder are Avana's under the Business Source License 1.1 in the root [`LICENSE`](../../LICENSE). A payload that imports Aave or other third-party code compiles that code under its own licence ([`LICENSES/LICENSING.md`](../../LICENSES/LICENSING.md)).

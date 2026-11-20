@@ -7,8 +7,8 @@
 !services/
 services/convex/
 !services/convex/package.json
-!liquidator/package.json
-!liquidator/bot/
+!packages/liquidator/package.json
+!packages/liquidator/bot/
 **/node_modules
 **/test
 **/.env

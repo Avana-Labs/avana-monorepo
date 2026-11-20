@@ -1,6 +1,6 @@
 # Bot runner design
 
-`services/keeper` is Avana's **bot runner**: the long-running process that hosts Avana's own bots against one chain's release manifest. Today it runs one kind of bot, the **LiquidationBot** (`liquidator/bot`, the TypeScript half of the `liquidator/` package from step 8), once per AMM integration.
+`services/keeper` is Avana's **bot runner**: the long-running process that hosts Avana's own bots against one chain's release manifest. Today it runs one kind of bot, the **LiquidationBot** (`packages/liquidator/bot`, the TypeScript half of the `packages/liquidator/` package from step 8), once per AMM integration.
 
 ## Naming
 

@@ -8,7 +8,7 @@ Data path: contracts and their events → Ponder indexer with PostgreSQL → pri
 |---|---|
 | `indexer/` | Ponder indexer with a Postgres database: Avana and Aave events for the app, the keeper, monitoring and DAO refresh payloads, an hourly sampler of every Hub asset, Spoke slice, market and account, and the series of every listed market's pool. [EVENTS.md](indexer/EVENTS.md) lists every event, sample and live read; [EXPORT.md](indexer/EXPORT.md) specifies the private export |
 | `monitor/` | The monitoring service: the signals `M-01` to `M-37` below, routed to their responders, pages confirmed on a second provider, keeper alerts and heartbeats ingested. [README](monitor/README.md) lists the signals wired so far |
-| `keeper/` | The bot runner: hosts the LiquidationBot (`liquidator/`) for every integration of a chain's release manifest. [DESIGN.md](keeper/DESIGN.md) |
+| `keeper/` | The bot runner: hosts the LiquidationBot (`packages/liquidator/`) for every integration of a chain's release manifest. [DESIGN.md](keeper/DESIGN.md) |
 | `convex/` | The Convex backend the app reads ([README](convex/README.md)): rows by scope (Hub asset, Spoke slice, CDP debt reserve, market), chart series, listing content, the frontend fee quote, and the import of the export. The frontend fee is 10 bps of every app action (never above the 25 bps ceiling of the ARFC; for pledge and withdraw collateral, of the position's oracle USD value, paid in the debt stablecoin), rounded down and added as one transfer to the action's batch; it goes to the RiskModule's `feeRecipient`, which the app reads on chain, and the app drops the fee leg if its simulation shows that transfer would revert. No contract charges it, and keeper liquidations pay none |
 | `common/` | `@avana/services-common`: chains, environment names, the manifest view the services read, provenance keys, the export and series wire types, and the chain snapshot (`/views`): its rows by scope, the reader that fills them at one block, and their integer math |
 
@@ -112,7 +112,7 @@ The reorg replay replays a fork run and compares the indexer's state with RPC re
 
 ## Bot runner (`keeper/`)
 
-The bot runner hosts Avana's own bots against one chain's release manifest; today the **LiquidationBot** of `liquidator/` (step 8), one instance per AMM integration. [keeper/DESIGN.md](keeper/DESIGN.md) maps the process onto the code and explains the naming: **LiquidationBot** is the liquidation logic (`LIQUIDATION_BOT_*` settings), **keeper** is the generic bot-running infrastructure (`KEEPER_*` settings, the image, the monitor feed) and the contracts' own word for the bots the RiskModules register (`addKeeper`; with no keeper registered, borrowing stops).
+The bot runner hosts Avana's own bots against one chain's release manifest; today the **LiquidationBot** of `packages/liquidator/` (step 8), one instance per AMM integration. [keeper/DESIGN.md](keeper/DESIGN.md) maps the process onto the code and explains the naming: **LiquidationBot** is the liquidation logic (`LIQUIDATION_BOT_*` settings), **keeper** is the generic bot-running infrastructure (`KEEPER_*` settings, the image, the monitor feed) and the contracts' own word for the bots the RiskModules register (`addKeeper`; with no keeper registered, borrowing stops).
 
 - **Duties.** Liquidate every account below health factor 1 in every market of every integration, whether or not the bonus pays (a committed operator), in kind through `LiquidationModule.liquidate`, with the bot's own funds or through the `FlashLiquidator`'s Aave V3 flash loan (premium-free once the Aave DAO grants `FLASH_BORROWER`).
 - **Discovery.** `AaveAdapter.AccountCreated` from the indexer's bot stream ([indexer/EXPORT.md](indexer/EXPORT.md#keeper-stream)), or the bot's own RPC scan while the stream fails. Every decision re-reads the chain.
@@ -133,7 +133,7 @@ Each keeper wallet (the RiskModules' keepers and the FlashLiquidators' operators
 
 ### Tests
 
-`npm test -w @avana/keeper` (the runner's pass, stream client, configuration and monitor sink) and `npm test -w @avana/liquidator` (the LiquidationBot's decision, pass, settings and signer); the FlashLiquidator's Solidity tests run in `liquidator/` with `forge test -j 2`.
+`npm test -w @avana/keeper` (the runner's pass, stream client, configuration and monitor sink) and `npm test -w @avana/liquidator` (the LiquidationBot's decision, pass, settings and signer); the FlashLiquidator's Solidity tests run in `packages/liquidator/` with `forge test -j 2`.
 
 ## Monitoring and alerting
 
@@ -190,4 +190,4 @@ Rules:
 
 ## Licence
 
-The indexer, keeper and shared code are Avana code under the Business Source License 1.1 in the root [`LICENSE`](../LICENSE) (`"license": "BUSL-1.1"` in each `package.json`). Their npm dependencies (viem, ponder, hono and the build and test tools) keep their own licences, listed in [`THIRD_PARTY_LICENSES.md`](../THIRD_PARTY_LICENSES.md#packages).
+The indexer, keeper and shared code are Avana code under the Business Source License 1.1 in the root [`LICENSE`](../LICENSE) (`"license": "BUSL-1.1"` in each `package.json`). Their npm dependencies (viem, ponder, hono and the build and test tools) keep their own licences, listed in [`LICENSES/THIRD_PARTY_LICENSES.md`](../LICENSES/THIRD_PARTY_LICENSES.md#packages).

@@ -38,7 +38,8 @@ interface IAccessManagerAdmin {
 /// A rerun keeps every contract already at its address and skips the roles once the deployer is no longer admin.
 /// Run: `script/deploy/step.sh 03-avana`.
 contract DeployAvana is DeployBase, DeploymentOutput {
-    string internal constant FLASH_LIQUIDATOR_ARTIFACT = "../liquidator/out/FlashLiquidator.sol/FlashLiquidator.json";
+    string internal constant FLASH_LIQUIDATOR_ARTIFACT =
+        "../packages/liquidator/out/FlashLiquidator.sol/FlashLiquidator.json";
 
     function run() external {
         ChainInputs memory c = _loadInputs(_network());
@@ -108,7 +109,10 @@ contract DeployAvana is DeployBase, DeploymentOutput {
         );
         if (c.operatorHelpers.length == 0) return s;
         string memory path = string.concat(vm.projectRoot(), "/", FLASH_LIQUIDATOR_ARTIFACT);
-        require(vm.exists(path), "no FlashLiquidator artifact: build liquidator/ first (forge build in liquidator/)");
+        require(
+            vm.exists(path),
+            "no FlashLiquidator artifact: build packages/liquidator/ first (forge build in packages/liquidator/)"
+        );
         for (uint256 h = 0; h < c.operatorHelpers.length; ++h) {
             s.flashLiquidators[h] = _deployOnce(
                 string.concat(p, "FlashLiquidator.", vm.toString(h)),

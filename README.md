@@ -28,7 +28,7 @@ Outside the core:
 |---|---|---|
 | FlashloanRepay | [`contracts/src/periphery`](contracts/src/periphery/) | Repay with collateral through an Aave V3 flash loan and a one-call withdraw allowance. |
 | AMM integrations | [`contracts/src/integrations`](contracts/src/integrations/) | Uniswap v3, Uniswap v4 and Aerodrome Slipstream position math. |
-| Liquidator | [`liquidator/`](liquidator/) | `FlashLiquidator` contract and the TypeScript liquidation bot. |
+| Liquidator | [`packages/liquidator/`](packages/liquidator/) | `FlashLiquidator` contract and the TypeScript liquidation bot. |
 
 Flows end to end: [`contracts/LIFECYCLES.md`](contracts/LIFECYCLES.md).
 
@@ -37,11 +37,11 @@ Flows end to end: [`contracts/LIFECYCLES.md`](contracts/LIFECYCLES.md).
 | Folder | Contents |
 |---|---|
 | [`contracts/`](contracts/) | Foundry workspace: sources, tests, deploy scripts, Certora specs, security tooling |
-| [`liquidator/`](liquidator/) | Flash liquidator contract and bot (npm workspace `@avana/liquidator`) |
+| [`packages/liquidator/`](packages/liquidator/) | Flash liquidator contract and bot (npm workspace `@avana/liquidator`) |
 | [`services/`](services/) | Indexer, keeper host, monitor, Convex backend, faucet, dashboards |
 | [`packages/`](packages/) | `@avana/protocol` ABIs and calldata, export reader, shared RPC manager |
 | [`deployments/`](deployments/) | Release manifests and their schema |
-| [`address-book/`](address-book/) | Generated address, parameter and access-control pages |
+| [`packages/address-book/`](packages/address-book/) | Generated address, parameter and access-control pages |
 | [`docs/`](docs/) | Governance payloads and operations, audit evidence, release process |
 | [`infra/`](infra/) | Service configuration templates |
 | [`webapp/`](webapp/) | Next.js app |
@@ -93,4 +93,4 @@ Security tools (Slither, Halmos, Echidna, Medusa, hevm, Mythril, Aderyn, Semgrep
 
 - [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) · [Release process](docs/release.md)
 - [Governance](docs/governance/README.md) · [Audit evidence](docs/audit/README.md)
-- Licence: Business Source License 1.1 ([`LICENSE`](LICENSE)); third-party code keeps its licence ([`NOTICE`](NOTICE), [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md)).
+- Licence: Business Source License 1.1 ([`LICENSE`](LICENSE)); third-party code keeps its licence ([`NOTICE`](LICENSES/NOTICE), [`LICENSES/THIRD_PARTY_LICENSES.md`](LICENSES/THIRD_PARTY_LICENSES.md)).

@@ -2,7 +2,7 @@
   "name": "avana-monorepo",
   "private": true,
   "license": "BUSL-1.1",
-  "description": "npm workspace root for the off-chain TypeScript packages: services/common, services/indexer, services/keeper, services/monitor, services/faucet, services/convex, packages/protocol, packages/export, packages/rpc, the liquidation bot in liquidator/ and the web app in webapp/.",
+  "description": "npm workspace root for the off-chain TypeScript packages: services/common, services/indexer, services/keeper, services/monitor, services/faucet, services/convex, packages/protocol, packages/export, packages/rpc, the liquidation bot in packages/liquidator/ and the web app in webapp/.",
   "engines": {
     "node": ">=22.12"
   },
@@ -10,7 +10,7 @@
     "packages/protocol",
     "packages/export",
     "packages/rpc",
-    "liquidator",
+    "packages/liquidator",
     "services/common",
     "services/indexer",
     "services/keeper",

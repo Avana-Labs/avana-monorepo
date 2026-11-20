@@ -1,6 +1,6 @@
 # Event and read catalogue
 
-Every event the indexer handles, read from the interfaces under `contracts/src/**/I*.sol`, `liquidator/src/IFlashLiquidator.sol` and, for Aave V4, from the Aave ABIs built at the pinned commit (`contracts/out-aave/ISpoke.sol`, `IHub.sol`). Every handled log first writes an `event_log` row keyed `chainId + txHash + logIndex` with its block number, block hash and timestamp ([`src/lib/record.ts`](src/lib/record.ts)); the **Updates** column names the entity table it also changes. Values that change without an event are listed under [Live reads](#live-reads).
+Every event the indexer handles, read from the interfaces under `contracts/src/**/I*.sol`, `packages/liquidator/src/IFlashLiquidator.sol` and, for Aave V4, from the Aave ABIs built at the pinned commit (`contracts/out-aave/ISpoke.sol`, `IHub.sol`). Every handled log first writes an `event_log` row keyed `chainId + txHash + logIndex` with its block number, block hash and timestamp ([`src/lib/record.ts`](src/lib/record.ts)); the **Updates** column names the entity table it also changes. Values that change without an event are listed under [Live reads](#live-reads).
 
 **Finality.** Each consumer reads at its own depth (services/README.md, Finality and reorgs):
 

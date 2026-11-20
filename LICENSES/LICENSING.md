@@ -58,4 +58,4 @@ Avana is an independent protocol integrating with Aave infrastructure and is not
 
 ---
 
-The BUSL-1.1 text and its parameters are in [`LICENSE`](LICENSE). Files under another licence, and every third-party component with its licence and required notices, are listed in [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md), [`NOTICE`](NOTICE) and [`LICENSES/`](LICENSES/). Contribution terms are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+The BUSL-1.1 text and its parameters are in [`LICENSE`](../LICENSE). Files under another licence, and every third-party component with its licence and required notices, are listed in [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md), [`NOTICE`](NOTICE) and [`LICENSES/`](). Contribution terms are in [`CONTRIBUTING.md`](../CONTRIBUTING.md).

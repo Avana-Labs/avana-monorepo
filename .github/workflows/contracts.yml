@@ -35,9 +35,9 @@ on:
     types: [opened, synchronize, reopened, labeled, unlabeled]
     paths:
       - "contracts/**"
-      - "liquidator/src/**"
-      - "liquidator/test/**"
-      - "liquidator/foundry.toml"
+      - "packages/liquidator/src/**"
+      - "packages/liquidator/test/**"
+      - "packages/liquidator/foundry.toml"
       - "docs/audit/**/*.sol"
       - "packages/protocol/src/abis/**"
       - "packages/protocol/scripts/generate-abis.mjs"
@@ -127,8 +127,8 @@ jobs:
               contracts/requirements.txt|contracts/requirements-mythril.txt|contracts/package.json|contracts/package-lock.json) kind=none ;;
               contracts/Makefile) kind=none ;;
               # The bot's TypeScript runs in services.yml; its Solidity here, against contracts/src.
-              liquidator/src/*|liquidator/test/*|liquidator/foundry.toml) kind=liquidator ;;
-              liquidator/*) kind=none ;;
+              packages/liquidator/src/*|packages/liquidator/test/*|packages/liquidator/foundry.toml) kind=liquidator ;;
+              packages/liquidator/*) kind=none ;;
               *) kind=tests ;;
             esac
             echo "$kind $f"
@@ -166,8 +166,8 @@ jobs:
           { echo '### Core size'; echo '```'; cat core-size.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
   liquidator:
-    # The liquidation bot's contracts (liquidator/), which compile against contracts/src: format, lint and their own
-    # unit and fuzz tests. Due whenever contracts/src or liquidator/ Solidity changes.
+    # The liquidation bot's contracts (packages/liquidator/), which compile against contracts/src: format, lint and their own
+    # unit and fuzz tests. Due whenever contracts/src or packages/liquidator/ Solidity changes.
     name: liquidator contracts (fmt, lint, tests)
     needs: changes
     if: needs.changes.outputs.liquidator == 'true'
@@ -195,7 +195,7 @@ jobs:
         run: forge soldeer install
 
       - name: Format, lint and test
-        working-directory: liquidator
+        working-directory: packages/liquidator
         run: |
           forge fmt --check
           forge lint
@@ -240,7 +240,7 @@ jobs:
 
       - name: Licence headers
         # BUSL-1.1 SPDX and Avana Labs copyright on every Avana-owned .sol file; ported files carry the identifier in
-        # security/licence-allowlist.txt; no file carries UNLICENSED (LICENSING.md, THIRD_PARTY_LICENSES.md).
+        # security/licence-allowlist.txt; no file carries UNLICENSED (LICENSES/LICENSING.md, LICENSES/THIRD_PARTY_LICENSES.md).
         run: script/check-licence.sh
 
       - name: Lint src
@@ -559,8 +559,8 @@ jobs:
           FOUNDRY_PROFILE=aave forge build
           FOUNDRY_PROFILE=univ3 forge build
 
-      - name: Build the liquidator's contracts (the FlashLiquidator ABI comes from liquidator/out/)
-        working-directory: liquidator
+      - name: Build the liquidator's contracts (the FlashLiquidator ABI comes from packages/liquidator/out/)
+        working-directory: packages/liquidator
         run: forge build
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0

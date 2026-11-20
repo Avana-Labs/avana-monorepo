@@ -4,6 +4,12 @@
 pre-commit:
   parallel: false
   commands:
+    # Secret scan of the staged changes with the same rules as CI (.gitleaks.toml), so a finding is fixed before it
+    # enters history instead of being allowlisted after. Gitleaks comes from PATH or $GITLEAKS; the version CI pins is
+    # in .github/workflows/gitleaks.yml. A missing binary fails the hook, so no unscanned change is committed. An
+    # allowlist entry in .gitleaksignore needs the owner's approval.
+    gitleaks:
+      run: '"${GITLEAKS:-gitleaks}" git . --pre-commit --staged --config .gitleaks.toml --redact=100 --no-banner --exit-code=1'
     forge-fmt:
       root: contracts/
       glob: "*.sol"

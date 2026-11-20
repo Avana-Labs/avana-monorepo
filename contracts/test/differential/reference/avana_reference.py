@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Avana Labs
 # Contains a port of the Uniswap v3-core TickMath algorithm and constants (commit 5ea68a7) and the v3-periphery
 # LiquidityAmounts formula (commit 24ccf01), (c) 2021 Uniswap Labs, under GPL-2.0-or-later; see
-# THIRD_PARTY_LICENSES.md.
+# LICENSES/THIRD_PARTY_LICENSES.md.
 """Exact reference for Avana's differential tests (TEST-037 and the math libraries).
 
 Called by Foundry through FFI from contracts/test/differential/, as

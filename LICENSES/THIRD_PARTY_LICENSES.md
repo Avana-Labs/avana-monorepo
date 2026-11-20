@@ -1,6 +1,6 @@
 # Third-party licences
 
-One entry per third-party component in this repository or in its builds: what it is, the pinned version, its licence, where Avana uses it, and the licence text or where to find it. Which Avana files carry which licence is in [`LICENSING.md`](LICENSING.md); the attribution notices are collected in [`NOTICE`](NOTICE). Full texts of the copyleft and source-available licences that apply to files in this repository are in [`LICENSES/`](LICENSES/).
+One entry per third-party component in this repository or in its builds: what it is, the pinned version, its licence, where Avana uses it, and the licence text or where to find it. Which Avana files carry which licence is in [`LICENSING.md`](LICENSING.md); the attribution notices are collected in [`NOTICE`](NOTICE). Full texts of the copyleft and source-available licences that apply to files in this repository are in [`LICENSES/`]().
 
 ## Ported third-party code
 
@@ -12,7 +12,7 @@ Code from these projects is ported into files in this repository. Each such file
 - Copyright: (c) 2021 Uniswap Labs.
 - Licence: GPL-2.0-or-later. `TickMath.sol`, `LiquidityAmounts.sol` and `OracleLibrary.sol` are GPL-2.0-or-later at these commits; `Tick.sol` and `SqrtPriceMath.sol` were BUSL-1.1 until the v3-core change date of 2023-04-01 and are GPL-2.0-or-later since.
 - Used in: the Python ports in `contracts/test/differential/reference/avana_reference.py`, `docs/spec/05-verification/z3/units-oracle/_common.py` and `docs/spec/05-verification/hypothesis/model/uniswap.py`, which check Avana's code and specification and are not deployed. No Solidity file ports v3 code: `ClPriceMath.sol` was GPL-2.0-or-later until 2026-11-13 and is now BUSL-1.1, its tick math taken from v4-core (below) and the rest written from Avana's specification.
-- Licence text: [`LICENSES/GPL-2.0.txt`](LICENSES/GPL-2.0.txt).
+- Licence text: [`LICENSES/GPL-2.0.txt`](GPL-2.0.txt).
 
 ### Uniswap v4-core
 
@@ -28,7 +28,7 @@ Code from these projects is ported into files in this repository. Each such file
 - Copyright: (c) Aave Labs.
 - Licence: the Aave V4 licence (SPDX `LicenseRef-BUSL`): use in a test environment only, no production use of the work or a derivative, a representation that the user has not contributed to a competing lending product in the prior four years, the licence to be reproduced in each copy or derivative; Change License MIT.
 - Used in: the Python reference models `docs/spec/05-verification/hypothesis/model/aave.py`, `docs/spec/05-verification/hypothesis/model/mathlib.py`, `docs/spec/05-verification/z3/aave-risk/_v4ref.py` and `docs/audit/formal-verification/liquidation/aave_ref.py`, which reproduce the Hub, Spoke, liquidation and math-library arithmetic to check Avana's specification and tests. None of them is deployed.
-- Licence text: [`LICENSES/LicenseRef-BUSL-AaveV4.md`](LICENSES/LicenseRef-BUSL-AaveV4.md) (a copy of `LICENSE` at the pinned commit).
+- Licence text: [`LICENSES/LicenseRef-BUSL-AaveV4.md`](LicenseRef-BUSL-AaveV4.md) (a copy of `LICENSE` at the pinned commit).
 
 ## Third-party interfaces
 
@@ -36,13 +36,13 @@ Subsets of deployed contracts' interfaces, copied from the origin source with id
 
 | Component | Version | Licence (SPDX of the Avana copy) | Files | Licence text |
 |---|---|---|---|---|
-| Uniswap v3-core | `5ea68a7` | GPL-2.0-or-later | `uniswap/IUniswapV3Factory.sol`, `uniswap/IUniswapV3Pool.sol`, `uniswap/IUniswapV3SwapCallback.sol` | [`LICENSES/GPL-2.0.txt`](LICENSES/GPL-2.0.txt) |
-| Uniswap v3-periphery | `24ccf01` | GPL-2.0-or-later | `uniswap/INonfungiblePositionManager.sol` | [`LICENSES/GPL-2.0.txt`](LICENSES/GPL-2.0.txt) |
-| Aerodrome Slipstream, (c) 2023 Perpetual Cyclist Services LLC | `main`, read 2026-11-10 | GPL-2.0-or-later | `aerodrome/ICLFactory.sol`, `aerodrome/ICLPool.sol`, `aerodrome/INonfungiblePositionManager.sol` (GPL-2.0-or-later); `aerodrome/ICLGauge.sol` (MIT, the upstream gauge interface's licence) | [`LICENSES/GPL-2.0.txt`](LICENSES/GPL-2.0.txt) |
-| Aave V3 core | `a00f28e3ad7c0e4a369d8e06e0ac9fd0acabcab7` | AGPL-3.0 | `aave/IAaveV3ACLManager.sol` | [`LICENSES/AGPL-3.0.txt`](LICENSES/AGPL-3.0.txt) |
+| Uniswap v3-core | `5ea68a7` | GPL-2.0-or-later | `uniswap/IUniswapV3Factory.sol`, `uniswap/IUniswapV3Pool.sol`, `uniswap/IUniswapV3SwapCallback.sol` | [`LICENSES/GPL-2.0.txt`](GPL-2.0.txt) |
+| Uniswap v3-periphery | `24ccf01` | GPL-2.0-or-later | `uniswap/INonfungiblePositionManager.sol` | [`LICENSES/GPL-2.0.txt`](GPL-2.0.txt) |
+| Aerodrome Slipstream, (c) 2023 Perpetual Cyclist Services LLC | `main`, read 2026-11-10 | GPL-2.0-or-later | `aerodrome/ICLFactory.sol`, `aerodrome/ICLPool.sol`, `aerodrome/INonfungiblePositionManager.sol` (GPL-2.0-or-later); `aerodrome/ICLGauge.sol` (MIT, the upstream gauge interface's licence) | [`LICENSES/GPL-2.0.txt`](GPL-2.0.txt) |
+| Aave V3 core | `a00f28e3ad7c0e4a369d8e06e0ac9fd0acabcab7` | AGPL-3.0 | `aave/IAaveV3ACLManager.sol` | [`LICENSES/AGPL-3.0.txt`](AGPL-3.0.txt) |
 | Aave V3 origin | v3.4 | MIT | `aave/IAaveV3Pool.sol`, `aave/IAaveV3PoolAddressesProvider.sol`, `aave/IAaveV3FlashLoanReceiver.sol` | [MIT](#mit-license) |
-| Sky `usds`, (C) 2023 Dai Foundation | `d65551dbc11cfe1afcc4718ab790663b99d766af` | AGPL-3.0-or-later | `sky/IDaiUsds.sol` | [`LICENSES/AGPL-3.0.txt`](LICENSES/AGPL-3.0.txt) |
-| Sky `dss-lite-psm`, (C) 2023 Dai Foundation | `dbf0022225f645f5697e5517d0cf00810471bccf` | AGPL-3.0-or-later | `sky/ILitePsm.sol` | [`LICENSES/AGPL-3.0.txt`](LICENSES/AGPL-3.0.txt) |
+| Sky `usds`, (C) 2023 Dai Foundation | `d65551dbc11cfe1afcc4718ab790663b99d766af` | AGPL-3.0-or-later | `sky/IDaiUsds.sol` | [`LICENSES/AGPL-3.0.txt`](AGPL-3.0.txt) |
+| Sky `dss-lite-psm`, (C) 2023 Dai Foundation | `dbf0022225f645f5697e5517d0cf00810471bccf` | AGPL-3.0-or-later | `sky/ILitePsm.sol` | [`LICENSES/AGPL-3.0.txt`](AGPL-3.0.txt) |
 | Chainlink `chainlink-evm`, (c) 2018 SmartContract ChainLink Limited SEZC | `4d83db28afc6d54761ce324e633d89244a97907e` | MIT | `chainlink/IAggregatorV3.sol`, `chainlink/IAggregatorProxy.sol`, `chainlink/ISequencerUptimeFeed.sol` | [MIT](#mit-license) |
 | Chainlink `libocr` | `199a6f17c59863999480e990c7c0b6ba7796ec92` | MIT | `chainlink/IOffchainAggregator.sol` | [MIT](#mit-license) |
 | GHO `gho-core`, (c) 2023 Aave | `c6335a0bb9cba099960c5378b1ff0db190b8da8f` | MIT | `gho/IGsm.sol` | [MIT](#mit-license) |
@@ -57,11 +57,11 @@ Installed by Soldeer into `contracts/dependencies/` (not committed), declared in
 | OpenZeppelin Contracts Upgradeable, (c) 2016-2024 Zeppelin Group Ltd | 5.1.0 | MIT | compiled into the upgradeable contracts (`Initializable`, `UUPSUpgradeable`, `AccessControlUpgradeable`) | [MIT](#mit-license) |
 | Solady, (c) 2022-2025 Solady. | 0.1.26 | MIT | `CREATE3`, compiled into the VaultTokenFactory | [MIT](#mit-license) |
 | Forge Standard Library, (c) Contributors to Forge Standard Library | 1.17.0 | MIT OR Apache-2.0 | tests and scripts | [MIT](#mit-license); Apache-2.0 at [apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0) |
-| Aave V4, (c) Aave Labs | `a3ef63ea6415d25237a9775bf66e76e9993561c2` | Aave V4 licence (`LicenseRef-BUSL`, test environments only) | compiled with Aave's own settings into `out-aave/` for the local, Sepolia and fork test deployments; imported by `contracts/aave-deploy/AvanaAaveV4Roles.sol`; reference for the ABI of Avana's Aave V4 interfaces | [`LICENSES/LicenseRef-BUSL-AaveV4.md`](LICENSES/LicenseRef-BUSL-AaveV4.md) |
-| Uniswap v3-core, (c) 2021 Uniswap Labs | `5ea68a77cb541c6b3812df783be71ba8c081e25f` | BUSL-1.1 repository licence with a 2023-04-01 change date to GPL-2.0-or-later; files GPL-2.0-or-later or BUSL-1.1 | reference source of the ported math and the interfaces; not compiled | [`LICENSES/GPL-2.0.txt`](LICENSES/GPL-2.0.txt) |
-| Uniswap v3-periphery, (c) 2021 Uniswap Labs | `24ccf014fe7f81d74a14c1689d6fdf123f280e45` | GPL-2.0-or-later | reference source; not compiled | [`LICENSES/GPL-2.0.txt`](LICENSES/GPL-2.0.txt) |
+| Aave V4, (c) Aave Labs | `a3ef63ea6415d25237a9775bf66e76e9993561c2` | Aave V4 licence (`LicenseRef-BUSL`, test environments only) | compiled with Aave's own settings into `out-aave/` for the local, Sepolia and fork test deployments; imported by `contracts/aave-deploy/AvanaAaveV4Roles.sol`; reference for the ABI of Avana's Aave V4 interfaces | [`LICENSES/LicenseRef-BUSL-AaveV4.md`](LicenseRef-BUSL-AaveV4.md) |
+| Uniswap v3-core, (c) 2021 Uniswap Labs | `5ea68a77cb541c6b3812df783be71ba8c081e25f` | BUSL-1.1 repository licence with a 2023-04-01 change date to GPL-2.0-or-later; files GPL-2.0-or-later or BUSL-1.1 | reference source of the ported math and the interfaces; not compiled | [`LICENSES/GPL-2.0.txt`](GPL-2.0.txt) |
+| Uniswap v3-periphery, (c) 2021 Uniswap Labs | `24ccf014fe7f81d74a14c1689d6fdf123f280e45` | GPL-2.0-or-later | reference source; not compiled | [`LICENSES/GPL-2.0.txt`](GPL-2.0.txt) |
 | GHO `gho-core`, (c) 2023 Aave | `c6335a0bb9cba099960c5378b1ff0db190b8da8f` | MIT | reference source of the GHO interfaces; not compiled | [MIT](#mit-license) |
-| halmos-cheatcodes (a16z) | `6da4e692c357ba6d641a2e677a28298cac9f76ab` | AGPL-3.0 | remapped for symbolic tests and Certora confs; not imported | [`LICENSES/AGPL-3.0.txt`](LICENSES/AGPL-3.0.txt) |
+| halmos-cheatcodes (a16z) | `6da4e692c357ba6d641a2e677a28298cac9f76ab` | AGPL-3.0 | remapped for symbolic tests and Certora confs; not imported | [`LICENSES/AGPL-3.0.txt`](AGPL-3.0.txt) |
 
 ## Packages
 
@@ -147,7 +147,7 @@ Installed from the lock files, not committed. TypeScript packages are bundled in
 
 ## Tools installed at run time
 
-Downloaded by [`contracts/script/install-security-tools.sh`](contracts/script/install-security-tools.sh) (or, for heimdall, by the command in [`contracts/tools/heimdall/README.md`](contracts/tools/heimdall/README.md)) into ignored folders. None is copied into the repository or into a build output; each runs under its own licence.
+Downloaded by [`contracts/script/install-security-tools.sh`](../contracts/script/install-security-tools.sh) (or, for heimdall, by the command in [`contracts/tools/heimdall/README.md`](../contracts/tools/heimdall/README.md)) into ignored folders. None is copied into the repository or into a build output; each runs under its own licence.
 
 | Tool | Version | Licence | Where |
 |---|---|---|---|
