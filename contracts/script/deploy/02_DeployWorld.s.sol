@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
+import {UniswapV4PoolKey} from "../../src/dependencies/uniswap-v4/IUniswapV4PoolManager.sol";
 import {CardinalityGrowth} from "./lib/CardinalityGrowth.sol";
 import {WorldAaveV3} from "./lib/WorldAaveV3.sol";
 import {WorldAerodrome} from "./lib/WorldAerodrome.sol";

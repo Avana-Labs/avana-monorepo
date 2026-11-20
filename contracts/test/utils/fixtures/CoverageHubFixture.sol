@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveV4Hub} from "../../../src/interfaces/external/aave/IAaveV4Hub.sol";
+import {IAaveV4Hub} from "../../../src/dependencies/aave/IAaveV4Hub.sol";
 import {MockDebtAsset} from "../mocks/MockDebtAsset.sol";
 import {AaveV4Fixture} from "./AaveV4Fixture.sol";
 

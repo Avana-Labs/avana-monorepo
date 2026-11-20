@@ -1,5 +1,5 @@
 {
-  "filter_paths": "dependencies/|test/|script/|src/interfaces/external/",
+  "filter_paths": "dependencies/|test/|script/|src/dependencies/",
   "exclude_dependencies": true,
   "detectors_to_exclude": "naming-convention,unindexed-event-address",
   "fail_on": "none",

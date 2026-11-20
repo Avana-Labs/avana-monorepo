@@ -178,7 +178,7 @@ step_semgrep() {
   # --no-git-ignore scans every file under src/, tracked or not; the timeout is per rule and file, generous because
   # a rule that times out is an error, never a silent pass.
   semgrep scan --metrics=off --disable-version-check --no-git-ignore --quiet --timeout 300 --timeout-threshold 0 \
-    --config "$SEMGREP_RULES" --exclude src/interfaces/external \
+    --config "$SEMGREP_RULES" --exclude src/dependencies \
     --json-output="$OUT/semgrep.json" --sarif-output="$OUT/semgrep.sarif" src >"$OUT/semgrep.log" 2>&1
   local rc=$?
   if [ ! -s "$OUT/semgrep.json" ]; then
@@ -198,9 +198,9 @@ step_4naly3er() {
   mkdir -p "$dir"
   # One run per src/ area (src/<area>/): 4naly3er compiles its whole scope in one solc-js call, and the WebAssembly
   # compiler runs out of memory on all of src/ at once. Each run writes report.md into its working directory.
-  for area in $(find src -name '*.sol' -not -path 'src/interfaces/external/*' | cut -d/ -f2 | sort -u); do
+  for area in $(find src -name '*.sol' -not -path 'src/dependencies/*' | cut -d/ -f2 | sort -u); do
     mkdir -p "$dir/$area"
-    find "src/$area" -name '*.sol' -not -path 'src/interfaces/external/*' | sort >"$dir/$area/scope.txt"
+    find "src/$area" -name '*.sol' -not -path 'src/dependencies/*' | sort >"$dir/$area/scope.txt"
     if ! (cd "$dir/$area" && node "$ROOT/script/4naly3er-run.js" \
       "$ROOT/" scope.txt) >"$dir/$area/run.log" 2>&1 || [ ! -s "$dir/$area/report.md" ] ||
       grep -q 'Cannot compile AST\|import not found' "$dir/$area/run.log"; then

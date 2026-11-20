@@ -509,7 +509,7 @@
     {
       "fingerprint": "cbd537417a3e9389",
       "check": "reentrancy-state-change",
-      "file": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
+      "file": "src/token/vault-token-factory/VaultTokenFactory.sol",
       "function": "VaultTokenFactory.registerIntegration",
       "reason": "The _lpVaultOf write follows only view calls to the LPVault (INTEGRATION_ID, COLLATERALIZATION, LOCK, AMM_PROTOCOL) and to Collateralization (LOCK), declared view in ILPVault/ICollateralizationViews and therefore compiled to STATICCALL, which cannot change state or re-enter a state-changing function. The function is callable only by the AvanaTimelock after the normal delay (REQ-VTOKEN-044), and every storage check precedes the calls. Covered by TEST-024 (registration rejections) and PROP-055 (Halmos check_PROP_055_registrationIsWriteOnce).",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -517,7 +517,7 @@
     {
       "fingerprint": "1fffe90232d9deb1",
       "check": "reentrancy-state-change",
-      "file": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
+      "file": "src/token/vault-token-factory/VaultTokenFactory.sol",
       "function": "VaultTokenFactory.registerIntegration",
       "reason": "The _isLpVault write follows only view calls to the LPVault (INTEGRATION_ID, COLLATERALIZATION, LOCK, AMM_PROTOCOL) and to Collateralization (LOCK), declared view in ILPVault/ICollateralizationViews and therefore compiled to STATICCALL, which cannot change state or re-enter a state-changing function. The function is callable only by the AvanaTimelock after the normal delay (REQ-VTOKEN-044), and every storage check precedes the calls. Covered by TEST-024 (registration rejections) and PROP-055 (Halmos check_PROP_055_registrationIsWriteOnce).",
       "approval": "approved (Josue, 2026-11-10, by pattern)"

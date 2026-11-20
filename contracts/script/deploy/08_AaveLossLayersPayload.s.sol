@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IFirstLossReserve} from "../../src/coverage/first-loss-reserve/IFirstLossReserve.sol";
-import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
+import {IFirstLossReserve} from "../../src/reserve/interfaces/IFirstLossReserve.sol";
+import {IAaveV4Hub} from "../../src/dependencies/aave/IAaveV4Hub.sol";
 import {AaveCalls} from "./lib/AaveCalls.sol";
 import {IAccessManagerOps} from "./lib/AccessOperations.sol";
 import {AvanaAccess} from "./lib/AvanaAccess.sol";

@@ -607,7 +607,7 @@
     {
       "fingerprint": "419a0c7223e7edf5",
       "check": "divide-before-multiply",
-      "file": "src/amm/concentrated-liquidity/ClTickMath.sol",
+      "file": "src/integrations/shared/ClTickMath.sol",
       "function": "ClTickMath.getSqrtPriceAtTick(int24)",
       "reason": "Intended inversion, not lost precision: for a positive tick `type(uint256).max / price` inverts the Q128.128 ratio exactly as Uniswap v4-core TickMath.getSqrtPriceAtTick does (Slither pairs it with the table products above it on the same variable); the result is rounded up to Q64.96 afterwards. Covered by TEST-279 (tickBoundsMatchUniswap, tickAtSqrtRatioInvertsSqrtRatioAtTick) and the TEST-037 differential suite (tickMapMatchesReference).",
       "approval": "pending review (approved pattern)",
@@ -616,7 +616,7 @@
     {
       "fingerprint": "abc13743c8929d37",
       "check": "unused-return",
-      "file": "src/amm/uniswap-v3/UniswapV3Integration.sol",
+      "file": "src/integrations/uniswap-v3/UniswapV3Integration.sol",
       "function": "UniswapV3Integration._readPosition(bytes32)",
       "reason": "Fixed external layouts read for some fields only: NFPM.positions (12 fields, REQ-AMM-V3-003) for the pair, fee, ticks and liquidity; slot0 (7 fields) for the tick, the observation cardinality and the lock flag; and the principal-capped collect of SPEC-BACK-008, capped at exactly the amounts decreaseLiquidity returned, which the position owes after the removal, so the collected amounts equal them and the reported amounts are the removal's (recipients measure what they received by balance delta, Q-271). Each call reverts on failure. Covered by TEST-058, TEST-264, TEST-011.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -624,7 +624,7 @@
     {
       "fingerprint": "f59e16a0123c6fba",
       "check": "unused-return",
-      "file": "src/amm/uniswap-v3/UniswapV3Integration.sol",
+      "file": "src/integrations/uniswap-v3/UniswapV3Integration.sol",
       "function": "UniswapV3Integration._slot0(address)",
       "reason": "Fixed external layouts read for some fields only: NFPM.positions (12 fields, REQ-AMM-V3-003) for the pair, fee, ticks and liquidity; slot0 (7 fields) for the tick, the observation cardinality and the lock flag; and the principal-capped collect of SPEC-BACK-008, capped at exactly the amounts decreaseLiquidity returned, which the position owes after the removal, so the collected amounts equal them and the reported amounts are the removal's (recipients measure what they received by balance delta, Q-271). Each call reverts on failure. Covered by TEST-058, TEST-264, TEST-011.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -632,7 +632,7 @@
     {
       "fingerprint": "0b8562377edf1d1e",
       "check": "cyclomatic-complexity",
-      "file": "src/amm/concentrated-liquidity/ClTickMath.sol",
+      "file": "src/integrations/shared/ClTickMath.sol",
       "function": "ClTickMath.getSqrtPriceAtTick(int24)",
       "reason": "getSqrtPriceAtTick is Uniswap v4-core TickMath.getSqrtPriceAtTick: one branch per bit of |tick| over the magic-constant table, kept line for line so it can be compared with the audited original; splitting it would only hide the table. forge-lint suppression on the function with the same reason. Covered by TEST-279 (tickBoundsMatchUniswap) and the TEST-037 differential suite (tickMapMatchesReference).",
       "approval": "pending review (approved pattern)",
@@ -641,7 +641,7 @@
     {
       "fingerprint": "ad1f4ccc881dce75",
       "check": "unused-return",
-      "file": "src/amm/slipstream/SlipstreamIntegration.sol",
+      "file": "src/integrations/slipstream/SlipstreamIntegration.sol",
       "function": "SlipstreamIntegration._readPosition(bytes32)",
       "reason": "Fixed external layouts read for some fields only: the Slipstream NPM.positions (12 fields, REQ-AMM-SLIP-003) for the pair, the signed tick spacing, the ticks and the liquidity; the Slipstream slot0 (6 fields, REQ-AMM-SLIP-004) for the tick, the observation cardinality and the lock flag. Each call reverts on failure. Same pattern as the Uniswap v3 LPVault entries abc13743c8929d37 and f59e16a0123c6fba. Covered by TEST-011, TEST-265, PROP-083 (Halmos).",
       "approval": "approved (Josue, 2026-11-11)",
@@ -650,7 +650,7 @@
     {
       "fingerprint": "4e01867896cbaeb5",
       "check": "unused-return",
-      "file": "src/amm/slipstream/SlipstreamIntegration.sol",
+      "file": "src/integrations/slipstream/SlipstreamIntegration.sol",
       "function": "SlipstreamIntegration._slot0(address)",
       "reason": "Fixed external layouts read for some fields only: the Slipstream NPM.positions (12 fields, REQ-AMM-SLIP-003) for the pair, the signed tick spacing, the ticks and the liquidity; the Slipstream slot0 (6 fields, REQ-AMM-SLIP-004) for the tick, the observation cardinality and the lock flag. Each call reverts on failure. Same pattern as the Uniswap v3 LPVault entries abc13743c8929d37 and f59e16a0123c6fba. Covered by TEST-011, TEST-265, PROP-083 (Halmos).",
       "approval": "approved (Josue, 2026-11-11)",
@@ -659,7 +659,7 @@
     {
       "fingerprint": "bbcd54c0165b76e3",
       "check": "calls-loop",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "RiskModule.pokeConfig(address)",
       "reason": "MarketRegistry.recordBreach(marketId, CONFIG_DRIFT) once per Active or Offboarding market of the Spoke, the permissionless breach record of REQ-RISK-090; the loop length is the Spoke's markets, which only timelock listings grow, and recordBreach (callable only by the RiskModule) makes no external call. A revert makes the poke revert and records nothing, never opens a gate (the gates read live state). Covered by TEST-268 (pokeConfigEmitsAndLatches, pokeConfigSkipsMarketsNotLive).",
       "approval": "pending review (approved pattern)",
@@ -668,7 +668,7 @@
     {
       "fingerprint": "c5440bef94a24aed",
       "check": "calls-loop",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "RiskModule.pokeBreakers(uint256)",
       "reason": "debtConditions view and MarketRegistry.recordBreach once per enabled debt reserve of the market's Spoke (the timelock's listings), REQ-RISK-091: gas bounded by the market's token count and the Spoke's debt-reserve count. recordBreach (callable only by the RiskModule) makes no external call. Covered by TEST-228 (deficitFreezesDebtReserve, issuerOfDebtAsset, recordBreachOnlyRiskModule).",
       "approval": "pending review (approved pattern)",
@@ -677,7 +677,7 @@
     {
       "fingerprint": "433d8f7aba778533",
       "check": "unused-return",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "RiskModule.pokeConfig(address)",
       "reason": "spokeDrift returns (marketId, reason); pokeConfig records the breach on every market of the Spoke (REQ-RISK-090), so the market the reason was found on is not needed. Covered by TEST-268 (pokeConfigEmitsAndLatches, pokeConfigSpokeWideDrift).",
       "approval": "approved (Josue, 2026-11-11)",
@@ -735,7 +735,7 @@
     {
       "fingerprint": "27e984fb7b3eb622",
       "check": "reentrancy-events",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "RiskModule.pokeBreakers(uint256)",
       "reason": "BreakersPoked(marketId, reasons) reports the reasons the poke evaluated, known only after the breaker-logic views and the recordBreach calls, as REQ-RISK-091 orders. The calls go to the RiskModule's immutable breaker logic (views) and to the MarketRegistry, whose recordBreach accepts only the RiskModule and makes no external call, so no call can re-enter and reorder the event. Covered by TEST-228.",
       "approval": "approved (Josue, 2026-11-11)",
@@ -744,7 +744,7 @@
     {
       "fingerprint": "2410047b606b219b",
       "check": "reentrancy-benign",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "RiskModule.preBorrowCheck(address,uint256,uint256)",
       "reason": "The speed windows are written after the borrow logic's poke and the speed logic's view reads; every callee is an Avana immutable (logic contracts, MarketRegistry, ParameterStore) or the listed Aave V4 Hub/oracle, and the caller (AaveAdapter) holds the Lock for the whole action, so no re-entry reaches the window write. Only the Adapter's call writes (REQ-RISK-092, REQ-RISK-095). Covered by TEST-320, TEST-326.",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
@@ -753,7 +753,7 @@
     {
       "fingerprint": "e84bceb23f5f69da",
       "check": "assembly",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "RiskModule._speed()",
       "reason": "ERC-7201 namespaced storage: assigns a compile-time constant slot (keccak256('avana.storage.RiskModule.speed') formula in the comment) to the storage pointer; no other assembly. Same as the other ERC-7201 assembly entries. The storage-layout check covers the slot.",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
@@ -762,70 +762,70 @@
     {
       "fingerprint": "d0dcc92709d0d647",
       "check": "unused-return",
-      "file": "src/amm/slipstream/SlipstreamIntegration.sol",
+      "file": "src/integrations/slipstream/SlipstreamIntegration.sol",
       "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "3dcb252e6348cff3",
       "check": "unused-return",
-      "file": "src/amm/uniswap-v3/UniswapV3Integration.sol",
+      "file": "src/integrations/uniswap-v3/UniswapV3Integration.sol",
       "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "95fcc0d7a8645c99",
       "check": "dead-code",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "Required implementation of the abstract hook ClLPVaultBase._blockTime(). Its only caller is ClNfpmLPVault.consistencyDeviation, which the v4 LPVault does not inherit; the v4 consistencyDeviation reads _BLOCK_TIME directly, the value this function returns. Unused in this contract and harmless.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "39e0adeaa999d696",
       "check": "uninitialized-local",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "Never read unset: fee is assigned from the reference pool's fee() in the try branch, and the catch reverts InvalidPool, so getPool(a, b, fee) always receives the pool's own fee. Slither does not follow the assignment inside try/catch.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "4a71d6b1bc34b009",
       "check": "unused-return",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "abfbee4249e7a80e",
       "check": "unused-return",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "5fb3d99170a8937e",
       "check": "unused-return",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "40cf8b807b9ac12b",
       "check": "unused-return",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "c24258dc43278bd0",
       "check": "unused-return",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "Fixed external layouts read for some fields only: NFPM.positions, pool and PoolManager slot0, PositionManager.getPoolAndPositionInfo (the key or the info), and the principal-capped collect, whose amounts are the removal's (SPEC-BACK-008). Same as the entries of the Uniswap v3 LPVault before the base split moved them.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "26f274a534d89536",
       "check": "assembly",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "One memory-safe mstore in _payload sets the length of the batch's own parameter array, allocated at capacity 10 or 5, to the number of actions pushed, so modifyLiquidities gets one parameter per action. It only shortens the array and never grows it. Measured 2026-11-15: copying into an exact-size array gave 23,644 bytes and sizing each batch from the PoolKey gave 23,607, both inside the 1,024-byte EIP-170 margin; with the mstore the LPVault is 23,509 bytes. Covered by the UniswapV4Integration unit tests of unwind, release, collectFees, the native ETH leg and the V4-01 fallback, and by the v4 removal and whole-account seizure gas tests.",
       "approval": "approved (Josue, 2026-11-15)"
     }

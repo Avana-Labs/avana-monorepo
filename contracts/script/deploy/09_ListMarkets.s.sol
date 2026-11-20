@@ -3,18 +3,18 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClTickMath} from "../../src/amm/concentrated-liquidity/ClTickMath.sol";
-import {IUniswapV4Integration} from "../../src/amm/uniswap-v4/IUniswapV4Integration.sol";
-import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
-import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IAggregatorV3} from "../../src/interfaces/external/chainlink/IAggregatorV3.sol";
-import {UniswapV4PoolKey} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
-import {IUniswapV4PositionManager} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PositionManager.sol";
-import {IUniswapV3Pool} from "../../src/interfaces/external/uniswap/IUniswapV3Pool.sol";
-import {ILPOracle} from "../../src/oracle/ILPOracle.sol";
-import {LPPriceMath} from "../../src/oracle/LPPriceMath.sol";
-import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
-import {IVaultToken} from "../../src/vault-token/IVaultToken.sol";
+import {ClTickMath} from "../../src/integrations/shared/ClTickMath.sol";
+import {IUniswapV4Integration} from "../../src/integrations/uniswap-v4/interfaces/IUniswapV4Integration.sol";
+import {IAaveV4Hub} from "../../src/dependencies/aave/IAaveV4Hub.sol";
+import {IAaveV4Spoke} from "../../src/dependencies/aave/IAaveV4Spoke.sol";
+import {IAggregatorV3} from "../../src/dependencies/chainlink/IAggregatorV3.sol";
+import {UniswapV4PoolKey} from "../../src/dependencies/uniswap-v4/IUniswapV4PoolManager.sol";
+import {IUniswapV4PositionManager} from "../../src/dependencies/uniswap-v4/IUniswapV4PositionManager.sol";
+import {IUniswapV3Pool} from "../../src/dependencies/uniswap/IUniswapV3Pool.sol";
+import {ILPOracle} from "../../src/oracle/interfaces/ILPOracle.sol";
+import {LPPriceMath} from "../../src/oracle/libraries/LPPriceMath.sol";
+import {IRiskModule} from "../../src/risk/interfaces/IRiskModule.sol";
+import {IVaultToken} from "../../src/token/interfaces/IVaultToken.sol";
 import {IAaveExecutor} from "./lib/AavePayloads.sol";
 import {AccessOperations, IAccessManagerOps} from "./lib/AccessOperations.sol";
 import {AvanaAccess} from "./lib/AvanaAccess.sol";

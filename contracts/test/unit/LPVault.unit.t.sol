@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClTickMath} from "../../src/amm/concentrated-liquidity/ClTickMath.sol";
-import {ILPVault} from "../../src/custody/lp-vault/ILPVault.sol";
-import {FloorCreditMath} from "../../src/custody/lp-vault/libraries/FloorCreditMath.sol";
+import {ClTickMath} from "../../src/integrations/shared/ClTickMath.sol";
+import {ILPVault} from "../../src/vault/interfaces/ILPVault.sol";
+import {FloorCreditMath} from "../../src/vault/libraries/FloorCreditMath.sol";
 import {LPVaultTestToken, MockLPVault, MockPositionManager} from "../utils/mocks/LPVaultMocks.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";

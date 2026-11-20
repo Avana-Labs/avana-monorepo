@@ -3,7 +3,7 @@
 | Item | Value |
 |---|---|
 | Date | 2026-11-10 |
-| Contract | `src/vault-token/vault-token/VaultToken.sol` |
+| Contract | `src/token/vault-token/VaultToken.sol` |
 | Spec | [2.4 Vault Tokens](../../../spec/02-contracts/04-vault-tokens.md) |
 | Method | Independent adversarial review: the reviewer receives only the spec page and the code, writes a PoC test for every finding it can demonstrate, and reports findings by severity |
 | Result | Code correct; specification findings and hardening points |

@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IAaveV4Hub} from "../../src/interfaces/external/aave/IAaveV4Hub.sol";
-import {IAaveV4Spoke} from "../../src/interfaces/external/aave/IAaveV4Spoke.sol";
-import {IVaultToken} from "../../src/vault-token/IVaultToken.sol";
-import {VaultToken} from "../../src/vault-token/VaultToken.sol";
+import {IAaveV4Hub} from "../../src/dependencies/aave/IAaveV4Hub.sol";
+import {IAaveV4Spoke} from "../../src/dependencies/aave/IAaveV4Spoke.sol";
+import {IVaultToken} from "../../src/token/interfaces/IVaultToken.sol";
+import {VaultToken} from "../../src/token/VaultToken.sol";
 import {AaveV4Fixture} from "../utils/fixtures/AaveV4Fixture.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";

@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 // Copyright (c) 2026 Avana Labs
 
 import {AvanaAccess} from "../../script/deploy/lib/AvanaAccess.sol";
-import {AvanaRoles} from "../../src/governance/roles/AvanaRoles.sol";
+import {AvanaRoles} from "../../src/access/AvanaRoles.sol";
 import {AvanaTest} from "../utils/AvanaTest.sol";
 
 /// @title AvanaRolesUnitTest

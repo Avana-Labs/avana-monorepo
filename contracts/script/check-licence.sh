@@ -10,7 +10,7 @@
 #
 #   // Copyright (c) 2026 Avana Labs
 #
-# Exempt from that header: src/interfaces/external/ (third-party interfaces keep their origin's SPDX identifier, which
+# Exempt from that header: src/dependencies/ (third-party interfaces keep their origin's SPDX identifier, which
 # must be present) and the files in security/licence-allowlist.txt, each of which must carry exactly the identifier
 # listed there. No Solidity file, script or package.json in those folders or in packages/ may carry UNLICENSED.
 #

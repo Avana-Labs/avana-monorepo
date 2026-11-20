@@ -165,7 +165,7 @@
     {
       "fingerprint": "b76c4f5503823111",
       "check": "too-many-digits",
-      "file": "src/vault-token/vault-token-factory/VaultTokenFactory.sol",
+      "file": "src/token/vault-token-factory/VaultTokenFactory.sol",
       "reason": "The 'literal' is the compiled VaultToken creation code from type(VaultToken).creationCode, which Slither prints as a hex constant; there is no hand-written numeric literal on the line. The creation code is the audited VaultToken (2.4) and the CREATE3 init code is bytes.concat(creationCode, abi.encode(bindings)) per REQ-VTOKEN-022. Covered by TEST-024 (bindings and predicted address of every deployed token).",
       "approval": "approved (Josue, 2026-11-10, by pattern)",
       "function": "VaultTokenFactory._deployToken(VaultTokenBindings)"

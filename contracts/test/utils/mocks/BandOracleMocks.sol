@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVault} from "../../../src/custody/lp-vault/ILPVault.sol";
+import {ILPVault} from "../../../src/vault/interfaces/ILPVault.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @notice A Chainlink feed with a settable answer and round time.

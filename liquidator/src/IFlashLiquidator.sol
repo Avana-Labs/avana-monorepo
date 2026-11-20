@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILiquidationModule} from "avana/liquidation/liquidation-module/ILiquidationModule.sol";
+import {ILiquidationModule} from "avana/liquidation/interfaces/ILiquidationModule.sol";
 import {Swap} from "avana/periphery/libraries/SwapCalls.sol";
 
 /// @title IFlashLiquidator

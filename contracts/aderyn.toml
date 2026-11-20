@@ -6,7 +6,7 @@ root = "."
 src = "src/"
 # Minimal mirrors of third-party ABIs (Aave V4, Chainlink, Curve, GHO, Sky, Uniswap v3): names and layout follow the
 # deployed contracts, so findings there are not actionable in Avana code.
-exclude = ["src/interfaces/external/"]
+exclude = ["src/dependencies/"]
 
 [detectors]
 # Every other detector runs. security-fast.sh fails on any High or Low finding that is not accepted in

@@ -18,8 +18,8 @@ set -euo pipefail
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-FOLDERS="policy/aave-adapter policy/risk-module custody/lp-vault vault-token oracle liquidation/liquidation-module
-coverage/first-loss-reserve"
+FOLDERS="adapter risk vault token oracle liquidation
+reserve"
 
 sol() { # <file> <code lines>: a contract with that many code lines, plus comments and blanks that do not count
   mkdir -p "$(dirname "$1")"
@@ -36,7 +36,7 @@ sol() { # <file> <code lines>: a contract with that many code lines, plus commen
 tree() { # <dir> <lines per core contract>
   rm -rf "$1"
   for f in $FOLDERS; do sol "$1/$f/C.sol" "$2"; done
-  sol "$1/amm/uniswap-v3/A.sol" 5000
+  sol "$1/integrations/uniswap-v3/A.sol" 5000
 }
 
 fail=0
@@ -65,8 +65,8 @@ tree "$TMP/total" 600
 expect "core total over 4,000 fails" fail "$TMP/total"
 
 tree "$TMP/policy" 100
-sol "$TMP/policy/policy/aave-adapter/C.sol" 760
-sol "$TMP/policy/policy/risk-module/C.sol" 760
+sol "$TMP/policy/adapter/C.sol" 760
+sol "$TMP/policy/risk/C.sol" 760
 expect "policy part over 1,500 fails" fail "$TMP/policy"
 
 tree "$TMP/stray" 100
@@ -74,7 +74,7 @@ sol "$TMP/stray/misc/P.sol" 1
 expect "a file outside every listed folder fails" fail "$TMP/stray"
 
 tree "$TMP/periphery" 100
-sol "$TMP/periphery/periphery/flashloan-repay/P.sol" 900
+sol "$TMP/periphery/periphery/P.sol" 900
 expect "a periphery helper is outside the count" pass "$TMP/periphery"
 
 exit "$fail"

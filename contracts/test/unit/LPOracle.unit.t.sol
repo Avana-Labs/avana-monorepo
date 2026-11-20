@@ -3,10 +3,10 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClTickMath} from "../../src/amm/concentrated-liquidity/ClTickMath.sol";
-import {ILPOracle} from "../../src/oracle/ILPOracle.sol";
+import {ClTickMath} from "../../src/integrations/shared/ClTickMath.sol";
+import {ILPOracle} from "../../src/oracle/interfaces/ILPOracle.sol";
 import {LPOracle} from "../../src/oracle/LPOracle.sol";
-import {LPPriceMath} from "../../src/oracle/LPPriceMath.sol";
+import {LPPriceMath} from "../../src/oracle/libraries/LPPriceMath.sol";
 import {BandTestFeed, BandTestToken, BandTestVault} from "../utils/mocks/BandOracleMocks.sol";
 import {Test} from "forge-std/Test.sol";
 

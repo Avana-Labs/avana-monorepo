@@ -380,7 +380,7 @@ Every model file carries `# FV-CUS-NN verifies: …` lines, citing 130 distinct 
 
 ## 9. Re-verification against the final spec (2026-11-10)
 
-This section reports run `FV-CUS-R3` ([RUNS.md](RUNS.md)). The models were brought up to the final text of pages 2.2 LPVault, 2.3 Collateralization, 2.4 vault tokens, 2.6 AaveAdapter mint and burn paths, 2.16 Lock, 3.1 Deposit, 3.4 Withdraw and 3.7 Collect fees, with decisions `Q-001`…`Q-278` and the interfaces under `contracts/src/custody` and `contracts/src/policy/aave-adapter`.
+This section reports run `FV-CUS-R3` ([RUNS.md](RUNS.md)). The models were brought up to the final text of pages 2.2 LPVault, 2.3 Collateralization, 2.4 vault tokens, 2.6 AaveAdapter mint and burn paths, 2.16 Lock, 3.1 Deposit, 3.4 Withdraw and 3.7 Collect fees, with decisions `Q-001`…`Q-278` and the interfaces under `contracts/src/custody` and `contracts/src/adapter`.
 
 ### 9.1 What the models now cover
 

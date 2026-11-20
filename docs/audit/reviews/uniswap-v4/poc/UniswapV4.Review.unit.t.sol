@@ -3,12 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {RiskStatus} from "../../src/amm/types/RiskStatus.sol";
-import {UniswapV4State} from "../../src/amm/uniswap-v4/UniswapV4State.sol";
+import {RiskStatus} from "../../src/integrations/types/RiskStatus.sol";
+import {UniswapV4State} from "../../src/integrations/uniswap-v4/UniswapV4State.sol";
 import {
     IUniswapV4PoolManager,
     UniswapV4PoolKey
-} from "../../src/interfaces/external/uniswap-v4/IUniswapV4PoolManager.sol";
+} from "../../src/dependencies/uniswap-v4/IUniswapV4PoolManager.sol";
 import {ILPOracle} from "../../src/oracle/lp-oracle/ILPOracle.sol";
 import {LPOracleV4} from "../../src/oracle/lp-oracle/LPOracleV4.sol";
 import {ClPriceStateView} from "../../src/oracle/lp-oracle/types/ClPriceStateView.sol";

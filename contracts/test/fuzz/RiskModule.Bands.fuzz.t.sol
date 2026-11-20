@@ -3,12 +3,12 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClTickMath} from "../../src/amm/concentrated-liquidity/ClTickMath.sol";
-import {ILPOracle} from "../../src/oracle/ILPOracle.sol";
-import {LPPriceMath} from "../../src/oracle/LPPriceMath.sol";
-import {IRiskModule} from "../../src/policy/risk-module/IRiskModule.sol";
-import {RiskModule} from "../../src/policy/risk-module/RiskModule.sol";
-import {BandMath} from "../../src/policy/risk-module/libraries/BandMath.sol";
+import {ClTickMath} from "../../src/integrations/shared/ClTickMath.sol";
+import {ILPOracle} from "../../src/oracle/interfaces/ILPOracle.sol";
+import {LPPriceMath} from "../../src/oracle/libraries/LPPriceMath.sol";
+import {IRiskModule} from "../../src/risk/interfaces/IRiskModule.sol";
+import {RiskModule} from "../../src/risk/RiskModule.sol";
+import {BandMath} from "../../src/risk/libraries/BandMath.sol";
 import {BandTestFeed, BandTestToken} from "../utils/mocks/BandOracleMocks.sol";
 import {
     RiskTestFirstLossReserve,

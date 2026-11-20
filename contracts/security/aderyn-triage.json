@@ -253,7 +253,7 @@
     {
       "fingerprint": "90362596a142cef4",
       "check": "reentrancy-state-change",
-      "file": "src/amm/uniswap-v3/UniswapV3Integration.sol",
+      "file": "src/integrations/uniswap-v3/UniswapV3Integration.sol",
       "function": "constructor (UniswapV3Integration)",
       "reason": "Constructor only: the call before the immutables are written is `INonfungiblePositionManager(nfpm).factory()`, a view compiled to STATICCALL that cannot change state, made to check REQ-AMM-V3-001 (NFPM.factory() == FACTORY) and fail closed with InvalidDeployment; the written values are immutables, which do not exist until the constructor returns. Covered by TEST-108 (constructorFailsClosed).",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -261,7 +261,7 @@
     {
       "fingerprint": "0a73ed84ae4263c2",
       "check": "unused-import",
-      "file": "src/amm/uniswap-v3/UniswapV3Integration.sol",
+      "file": "src/integrations/uniswap-v3/UniswapV3Integration.sol",
       "function": "import IAmmIntegration",
       "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function (IAmmIntegration, IAmmIntegrationHooks, IClIntegration, ILPVault); solc refuses @inheritdoc of an aggregate. Aderyn does not count NatSpec references.",
       "approval": "approved (Josue, 2026-11-10, by pattern)"
@@ -269,7 +269,7 @@
     {
       "fingerprint": "b783ea9e1201d901",
       "check": "require-revert-in-loop",
-      "file": "src/amm/slipstream/SlipstreamIntegration.sol",
+      "file": "src/integrations/slipstream/SlipstreamIntegration.sol",
       "function": "SlipstreamIntegration._positionKeyOf generation loop",
       "reason": "The loop runs over the four allowlisted indices (GENERATION_COUNT = 4) and calls _generation(g), whose only revert (UnsupportedNft for an index at or above GENERATION_COUNT) is unreachable from it; that revert serves keys whose generation byte is outside the allowlist (REQ-AMM-SLIP-001). Bounded loop, nothing to move after it. forge-lint suppression on the revert line with the same reason. Covered by TEST-015 (onlyAnAllowlistedManagerMayPush, pushedNftIsOnlyAStrayOnEveryGeneration).",
       "approval": "approved by pattern (independent review 2026-11-11)",
@@ -278,7 +278,7 @@
     {
       "fingerprint": "573d24d47f457dca",
       "check": "unused-import",
-      "file": "src/amm/slipstream/SlipstreamIntegration.sol",
+      "file": "src/integrations/slipstream/SlipstreamIntegration.sol",
       "function": "import IAmmIntegration",
       "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function (IAmmIntegration for AMM_PROTOCOL); solc refuses @inheritdoc of an aggregate. Aderyn does not count NatSpec references.",
       "approval": "approved by pattern (independent review 2026-11-11)",
@@ -287,7 +287,7 @@
     {
       "fingerprint": "14539534e56f1eb6",
       "check": "empty-block",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "RiskModule._authorizeUpgrade",
       "reason": "The UUPS authorization hook: the onlyRole(APPLICATION_ADMIN) modifier is the whole check (REQ-RISK-002), as OpenZeppelin documents. Covered by TEST-242 (upgradeNeedsApplicationAdmin).",
       "approval": "approved by pattern (independent review 2026-11-11)",
@@ -296,7 +296,7 @@
     {
       "fingerprint": "e2e0eb20ced28780",
       "check": "unchecked-return",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "RiskModule.initialize",
       "reason": "_grantRole returns false only when the account already holds the role; initialize runs once on a fresh proxy, so the grant to TIMELOCK always takes effect (REQ-RISK-072). Covered by TEST-242 (adminRolesOnlyTimelock, initializeOnce).",
       "approval": "approved by pattern (independent review 2026-11-11)",
@@ -305,7 +305,7 @@
     {
       "fingerprint": "f2a29e23327669a4",
       "check": "unchecked-return",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "RiskModule.initialize",
       "reason": "Same as the DEFAULT_ADMIN_ROLE grant: a first grant of APPLICATION_ADMIN to TIMELOCK on a fresh proxy always returns true (REQ-RISK-072). Covered by TEST-242.",
       "approval": "approved by pattern (independent review 2026-11-11)",
@@ -314,7 +314,7 @@
     {
       "fingerprint": "8fdd000312bf388a",
       "check": "unused-import",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "IRiskModuleAdmin",
       "reason": "Used by @inheritdoc IRiskModuleAdmin NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
       "approval": "approved by pattern (independent review 2026-11-11)",
@@ -323,7 +323,7 @@
     {
       "fingerprint": "20e47fadb4aa79e3",
       "check": "unused-import",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "IRiskModuleViews",
       "reason": "Used by @inheritdoc IRiskModuleViews NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
       "approval": "approved by pattern (independent review 2026-11-11)",
@@ -332,7 +332,7 @@
     {
       "fingerprint": "e129dec5f52bb7e1",
       "check": "contract-locks-ether",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "RiskModule",
       "reason": "Same as ac0d473439addc9e (fingerprint moved by the speed-limit edit): the only payable function is OpenZeppelin UUPSUpgradeable.upgradeToAndCall, callable only by APPLICATION_ADMIN (the timelock); the RiskModule holds no funds (REQ-RISK-005), has no receive or fallback, and ERC1967Utils rejects value without calldata. Covered by TEST-035, TEST-242.",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
@@ -341,7 +341,7 @@
     {
       "fingerprint": "b56efa3eab11693c",
       "check": "state-change-without-event",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "RiskModule.checkPledge",
       "reason": "The only state change is the pledge-window charge, made inside a pledge that emits its own events in Collateralization; the window is readable through getPledgeSpeed and the Lens. Same reasoning as the CollateralizationDebtMark entries. Covered by TEST-320, TEST-325.",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
@@ -350,7 +350,7 @@
     {
       "fingerprint": "6066e843a6200a9f",
       "check": "state-change-without-event",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "RiskModule.preBorrowCheck",
       "reason": "The only state change is the borrow-window charges, made inside a borrow that emits its own events in the AaveAdapter and the Aave V4 Spoke; the windows are readable through getBorrowSpeed and the Lens. Same reasoning as the CollateralizationDebtMark entries. Covered by TEST-320, TEST-326.",
       "approval": "approved (Josue, 2026-11-12, pop-up: accept the speed-limit findings)",
@@ -359,42 +359,42 @@
     {
       "fingerprint": "0aaa23a8fc28d7fc",
       "check": "state-change-without-event",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "creditRepay",
       "reason": "A repay credit changes only the speed windows, which have no event: the charges of preBorrowCheck and checkPledge emit none either, and getBorrowSpeed and getSpeedWindow report the windows (REQ-RISK-095, REQ-RISK-097). The repay itself emits Repaid. Covered by TEST-321, TEST-326."
     },
     {
       "fingerprint": "3bb42fb2c7989a9e",
       "check": "state-change-without-event",
-      "file": "src/policy/risk-module/RiskModule.sol",
+      "file": "src/risk/RiskModule.sol",
       "function": "creditWithdraw",
       "reason": "As creditRepay: a withdrawal credit changes only the pledge window, reported by getPledgeSpeed and getSpeedWindow; the withdrawal emits CollateralReleased or RecordReduced. Covered by TEST-322, TEST-018."
     },
     {
       "fingerprint": "6ba33bd61dfdab3a",
       "check": "reentrancy-state-change",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "Constructor only: the PositionManager's poolManager() and WETH9() are views read once to fix the immutables; no code of the LPVault can run before the constructor returns.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "ae864f517cc74a35",
       "check": "reentrancy-state-change",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "Constructor only: the PositionManager's poolManager() and WETH9() are views read once to fix the immutables; no code of the LPVault can run before the constructor returns.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "e9b808064008904f",
       "check": "unused-import",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "74bd0ba18ae5e3fe",
       "check": "unused-import",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "Used by @inheritdoc NatSpec, which must name the interface that declares each function; Aderyn does not count NatSpec references.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     }

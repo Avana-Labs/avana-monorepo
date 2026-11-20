@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClTickMath} from "../../../src/amm/concentrated-liquidity/ClTickMath.sol";
-import {LPPriceMath} from "../../../src/oracle/LPPriceMath.sol";
+import {ClTickMath} from "../../../src/integrations/shared/ClTickMath.sol";
+import {LPPriceMath} from "../../../src/oracle/libraries/LPPriceMath.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 

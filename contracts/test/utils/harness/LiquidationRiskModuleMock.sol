@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {IRiskModule} from "../../../src/policy/risk-module/IRiskModule.sol";
+import {IRiskModule} from "../../../src/risk/interfaces/IRiskModule.sol";
 
 /// @title LiquidationRiskModuleMock
 /// @notice Storage-backed stand-in for the RiskModule reads the LiquidationModule makes, linked as its RISK_MODULE in

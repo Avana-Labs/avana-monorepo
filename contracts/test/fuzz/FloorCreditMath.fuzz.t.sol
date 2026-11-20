@@ -3,15 +3,15 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ClTickMath} from "../../src/amm/concentrated-liquidity/ClTickMath.sol";
-import {FloorCreditMath} from "../../src/custody/lp-vault/libraries/FloorCreditMath.sol";
+import {ClTickMath} from "../../src/integrations/shared/ClTickMath.sol";
+import {FloorCreditMath} from "../../src/vault/libraries/FloorCreditMath.sol";
 import {BigUint} from "../utils/BigUint.sol";
 import {FloorCreditMathHarness} from "../utils/harness/FloorCreditMathHarness.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Test} from "forge-std/Test.sol";
 
 /// @title FloorCreditMathFuzzTest
-/// @notice The floor credit of a position inside a band market (contracts/src/custody/lp-vault/FLOOR-CREDIT-PROOF.md) over
+/// @notice The floor credit of a position inside a band market (contracts/src/vault/FLOOR-CREDIT-PROOF.md) over
 /// random bands, positions, liquidities and prices: the position is worth at least its credit in band liquidity at
 /// every price below, inside and above the band; the credit rounds down and stays within a few units of the exact
 /// formula; it is non-decreasing in liquidity; a near-full-range band credits almost nothing; positions outside the

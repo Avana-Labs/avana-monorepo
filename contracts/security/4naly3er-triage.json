@@ -59,7 +59,7 @@
     {
       "fingerprint": "fa0049c6afde1ebb",
       "check": "Division by zero not prevented",
-      "file": "src/amm/concentrated-liquidity/ClTickMath.sol",
+      "file": "src/integrations/shared/ClTickMath.sol",
       "function": "ClTickMath.getSqrtPriceAtTick",
       "reason": "Division by zero not possible: Uniswap v4-core TickMath.getSqrtPriceAtTick (differential test TEST-037); before the division `price` is the Q128.128 square-root ratio of -|tick|, at least about MIN_SQRT_PRICE * 2^32 > 0 for |tick| <= MAX_TICK (checked on the first line).",
       "approval": "pending review (approved pattern)",
@@ -68,7 +68,7 @@
     {
       "fingerprint": "783ddb7590bfa01b",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/amm/concentrated-liquidity/ClTickMath.sol",
+      "file": "src/integrations/shared/ClTickMath.sol",
       "function": "ClTickMath.getSqrtPriceAtTick",
       "reason": "Cannot truncate: Uniswap v4-core TickMath, Q128.128 to Q64.96 rounded up; the result is at most MAX_SQRT_PRICE < 2^160 for every tick in range (checked on the first line); forge-lint unsafe-typecast suppression on the line above states the bound; differential test TEST-037 over every tick bucket.",
       "approval": "pending review (approved pattern)",
@@ -77,7 +77,7 @@
     {
       "fingerprint": "57d29d255d89d305",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/amm/concentrated-liquidity/ClTickMath.sol",
+      "file": "src/integrations/shared/ClTickMath.sol",
       "function": "ClTickMath.getTickAtSqrtPrice",
       "reason": "Cannot truncate: Uniswap v4-core TickMath.getTickAtSqrtPrice; for a sqrt price in [MIN_SQRT_PRICE, MAX_SQRT_PRICE) (checked on the first line) both candidate ticks lie within one tick of the true tick, inside int24; suppression comment on the line above; fuzz TEST-279 inverts sqrtRatioAtTick over every tick.",
       "approval": "pending review (approved pattern)",
@@ -86,7 +86,7 @@
     {
       "fingerprint": "33872914871b7127",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/amm/concentrated-liquidity/ClTickMath.sol",
+      "file": "src/integrations/shared/ClTickMath.sol",
       "function": "ClTickMath.getTickAtSqrtPrice",
       "reason": "Cannot truncate: the second candidate tick of the same TickMath step, within one tick of the true tick (see the line above).",
       "approval": "pending review (approved pattern)",
@@ -95,52 +95,52 @@
     {
       "fingerprint": "9a56655a20e1afad",
       "check": "`abi.encodePacked()` should not be used with dynamic types when passing the result to a hash function such as `keccak256()`",
-      "file": "src/amm/uniswap-v3/UniswapV3Integration.sol",
+      "file": "src/integrations/uniswap-v3/UniswapV3Integration.sol",
       "reason": "No dynamic type: the operands are the 1-byte literal 0xff, an address, and two bytes32 values, the 85-byte CREATE2 preimage of EIP-1014 (Uniswap v3-periphery PoolAddress.computeAddress), which must be packed; fixed sizes make the encoding injective.",
       "approval": "approved (Josue, 2026-11-11)"
     },
     {
       "fingerprint": "f7a950bfbeeec75d",
       "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "Not a signature: keccak256(abi.encode(PoolKey)) is Uniswap v4's PoolId by definition (PoolIdLibrary.toId).",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "f5d910639e6f02c9",
       "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "Not a signature: keccak256(abi.encode(PoolKey)) is Uniswap v4's PoolId by definition (PoolIdLibrary.toId).",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "9f2a6bf5fadd95fd",
       "check": "Sweeping may break accounting if tokens with multiple addresses are used",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "The PositionManager action named SWEEP, used only for WETH to the recipient of the same batch (REQ-AMM-V4-004); the LPVault keeps no balance-based accounting.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "d9d571600af28855",
       "check": "Sweeping may break accounting if tokens with multiple addresses are used",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "The PositionManager action named SWEEP, used only for WETH to the recipient of the same batch (REQ-AMM-V4-004); the LPVault keeps no balance-based accounting.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     },
     {
       "fingerprint": "71857ce276c10210",
       "check": "`abi.encodePacked()` should not be used with dynamic types when passing the result to a hash function such as `keccak256()`",
-      "file": "src/amm/uniswap-v4/UniswapV4Integration.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4Integration.sol",
       "reason": "The only abi.encodePacked in this file is _push's abi.encodePacked(b.actions, action), which appends one action byte to the PositionManager's packed action string as v4-periphery expects; the result goes to modifyLiquidities and is never hashed. 4naly3er reports the instance on a blank line (537, three lines below _push), so the fingerprint is a blank line's; reviewedFiles pins the review to the file as read.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review",
       "reviewedFiles": {
-        "src/amm/uniswap-v4/UniswapV4Integration.sol": "25adcba7b8ed1cb7d80d443ade61ac3cfbd408438b1061d81a877be86bbd3a35"
+        "src/integrations/uniswap-v4/UniswapV4Integration.sol": "25adcba7b8ed1cb7d80d443ade61ac3cfbd408438b1061d81a877be86bbd3a35"
       }
     },
     {
       "fingerprint": "a7839525e3779b8b",
       "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
-      "file": "src/amm/uniswap-v4/UniswapV4State.sol",
+      "file": "src/integrations/uniswap-v4/UniswapV4State.sol",
       "reason": "The low 160 bits of the v4 pool's slot0 word, its sqrtPriceX96 field, decoded as v4-core's StateLibrary decodes it; the comment and the unsafe-typecast suppression above the line state the layout.",
       "approval": "proposed (univ4-lane, 2026-11-15), pending Josue's review"
     }

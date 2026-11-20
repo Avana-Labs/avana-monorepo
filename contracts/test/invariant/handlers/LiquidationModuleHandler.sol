@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 // Copyright (c) 2026 Avana Labs
 
-import {ILPVault} from "../../../src/custody/lp-vault/ILPVault.sol";
-import {ILiquidationModule} from "../../../src/liquidation/liquidation-module/ILiquidationModule.sol";
-import {AaveAdapter} from "../../../src/policy/aave-adapter/AaveAdapter.sol";
+import {ILPVault} from "../../../src/vault/interfaces/ILPVault.sol";
+import {ILiquidationModule} from "../../../src/liquidation/interfaces/ILiquidationModule.sol";
+import {AaveAdapter} from "../../../src/adapter/AaveAdapter.sol";
 import {LPVaultTestToken, MockPositionManager} from "../../utils/mocks/LPVaultMocks.sol";
 import {LiquidationTestSpoke} from "../../utils/mocks/LiquidationTestMocks.sol";
 import {Test} from "forge-std/Test.sol";
