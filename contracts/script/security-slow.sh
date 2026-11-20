@@ -659,7 +659,7 @@ hevm_targets() {
     # hevm test reads <root>/out; an isolated root keeps that build out of the workspace's out/.
     local root="$OUT/hevm/root" f
     rm -rf "$root" && mkdir -p "$root"
-    for f in src test dependencies foundry.toml remappings.txt; do ln -s "$ROOT/$f" "$root/$f"; done
+    for f in src test script dependencies foundry.toml remappings.txt; do ln -s "$ROOT/$f" "$root/$f"; done
     if (cd "$root" && forge build --ast --skip script >"$ROOT/$OUT/hevm/test-build.log" 2>&1) &&
       capped "hevm test" hevm test --root "$root" --solver z3 --num-solvers 1 --smt-memory "$HEVM_SMT_MEMORY" \
         --smt-timeout "$HEVM_SMT_TIMEOUT" 2>&1 | tee "$OUT/hevm/test.log"; then
@@ -705,7 +705,7 @@ isolated_root() {
   solc=$(solc_bin) || return 1
   rm -rf "$root" && mkdir -p "$root/bin"
   cp -R src test "$root/"
-  for f in dependencies foundry.toml remappings.txt $DEP_OUTS; do
+  for f in script dependencies foundry.toml remappings.txt $DEP_OUTS; do
     [ -e "$f" ] && ln -s "$ROOT/$f" "$root/$f"
   done
   ln -s "$solc" "$root/bin/solc"
