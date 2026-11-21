@@ -82,7 +82,11 @@ def main() -> int:
                 fields = row.strip().split()
                 if len(fields) != 4:
                     continue
-                _local_ref, local_sha, _remote_ref, remote_sha = fields
+                local_ref, local_sha, _remote_ref, remote_sha = fields
+                for name in names:
+                    pattern = re.compile(rf"(?<![A-Za-z0-9]){re.escape(name)}(?![A-Za-z0-9])", re.IGNORECASE)
+                    if pattern.search(local_ref):
+                        findings.append(f"branch name contains a disallowed AI/tool name ({name})")
                 if set(local_sha) == {"0"}:
                     continue
                 if set(remote_sha) == {"0"}:
