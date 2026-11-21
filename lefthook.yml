@@ -22,8 +22,20 @@ pre-commit:
       glob: "*.{sol,py,js,mjs,sh,json}"
       run: contracts/script/check-licence.sh
 
-# No AI credit in a commit message; the commit-messages workflow checks the same on a pull request's commits.
+# Local disclosure scan of staged additions; Gitleaks remains the dedicated credential detector.
+    premerge-policy:
+      run: python contracts/script/premerge_scan.py --staged
+    # No AI credit in a commit message; the commit-messages workflow checks the same on a pull request's commits.
 commit-msg:
   commands:
     ai-credit:
       run: contracts/script/check-ai-credit.sh --message {1}
+
+
+# A commit hook cannot protect a remote branch by itself. Scan outgoing commits before push.
+# Git has no standard pre-branch-creation or pre-PR hook.
+pre-push:
+  parallel: false
+  commands:
+    premerge-policy:
+      run: python contracts/script/premerge_scan.py --push
