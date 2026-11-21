@@ -72,7 +72,7 @@ Security tools (Slither, Halmos, Echidna, Medusa, hevm, Mythril, Aderyn, Semgrep
 | Core size report (≤ 800 lines per contract, ≤ 4,000 core) | `contracts/script/check-core-size.sh` | Every PR |
 | Gas snapshots, generated ABIs | `contracts/snapshots/`, `packages/protocol` | Every PR |
 | Branch coverage, ≥ 80% per file | `contracts/script/check-coverage.sh` | Full suite |
-| Slither, Aderyn, Semgrep, solhint, 4naly3er | `contracts/script/security-fast.sh` | Full suite |
+| Slither, Aderyn, Semgrep, solhint, 4naly3er | `contracts/script/security-fast.sh` | Contract-source PRs and full suite |
 | Deep invariants, fork, differential, SMTChecker | `contracts.yml` long suite | Manual |
 | Halmos, Echidna, Medusa, hevm, Mythril | `security-slow.yml` | Manual |
 | Mutation (slither-mutate, Gambit, Necessist) | `mutation-gate.yml` | Manual |
