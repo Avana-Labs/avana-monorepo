@@ -4,6 +4,9 @@
 pre-commit:
   parallel: false
   commands:
+    # Local disclosure scan of staged additions; Gitleaks remains the dedicated credential detector.
+    premerge-policy:
+      run: python contracts/script/premerge_scan.py --staged
     # Secret scan of the staged changes with the same rules as CI (.gitleaks.toml), so a finding is fixed before it
     # enters history instead of being allowlisted after. Gitleaks comes from PATH or $GITLEAKS; the version CI pins is
     # in .github/workflows/gitleaks.yml. A missing binary fails the hook, so no unscanned change is committed. An
@@ -30,7 +33,6 @@ commit-msg:
   commands:
     ai-credit:
       run: contracts/script/check-ai-credit.sh --message {1}
-
 
 # A commit hook cannot protect a remote branch by itself. Scan outgoing commits before push.
 # Git has no standard pre-branch-creation or pre-PR hook.
