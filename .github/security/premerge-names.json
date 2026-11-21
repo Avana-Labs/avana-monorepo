@@ -1,6 +1,6 @@
 {
   "disallowed_names": [
-    "Claude", "Anthropic", "ChatGPT", "GPT", "OpenAI",
+    "Claude", "Anthropic", "Codex", "ChatGPT", "GPT", "OpenAI",
     "Gemini", "Bard", "Copilot", "Cursor", "Windsurf", "Codeium", "Tabnine",
     "Amazon Q", "Sourcegraph Cody", "Devin", "Replit", "Grok", "xAI",
     "DeepSeek", "Llama", "Meta AI", "Mistral", "Qwen", "Kimi", "Perplexity",
