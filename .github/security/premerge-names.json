@@ -1,0 +1,6 @@
+{
+  "disallowed_names": [
+    "Claude", "ChatGPT", "Gemini", "Copilot", "Cursor", "Grok",
+    "DeepSeek", "Llama", "Mistral", "Qwen", "Kimi", "Perplexity"
+  ]
+}
