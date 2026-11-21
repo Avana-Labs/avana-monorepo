@@ -1,6 +1,11 @@
 {
   "disallowed_names": [
-    "Claude", "ChatGPT", "Gemini", "Copilot", "Cursor", "Grok",
-    "DeepSeek", "Llama", "Mistral", "Qwen", "Kimi", "Perplexity"
+    "Claude", "Anthropic", "ChatGPT", "GPT", "OpenAI",
+    "Gemini", "Bard", "Copilot", "Cursor", "Windsurf", "Codeium", "Tabnine",
+    "Amazon Q", "Sourcegraph Cody", "Devin", "Replit", "Grok", "xAI",
+    "DeepSeek", "Llama", "Meta AI", "Mistral", "Qwen", "Kimi", "Perplexity",
+    "Cohere", "Command R", "Aya", "Phi", "JetBrains AI", "Cline", "Roo Code",
+    "Aider", "Continue", "OpenRouter", "Hugging Face", "Fireworks AI",
+    "Together AI", "Yi", "GLM", "MiniMax"
   ]
 }
