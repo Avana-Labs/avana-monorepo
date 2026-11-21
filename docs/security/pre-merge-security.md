@@ -1,11 +1,5 @@
 # Pre-merge security
 
-## Local hooks
-
-Install Lefthook in a clone, then run `lefthook install`. The pre-commit hook scans staged additions with Gitleaks and `contracts/script/premerge_scan.py`. It checks for credential patterns, private IPs, internal hostnames, local user paths, 12-digit infrastructure account identifiers, debug output, sensitive filenames, restricted AI/tool names, restricted codenames and configured incorrect terminology. A finding exits non-zero and blocks the commit. The pre-push hook repeats the policy scan on outgoing commits and branch names.
-
-When dependency files change, the local hook runs npm/Python dependency audits. When Solidity source changes, it runs `contracts/script/security-fast.sh` using the pinned local analysis tools. CI repeats the dependency and contract checks.
-
 PR CI runs the same policy scan on the complete PR diff, title, body and branch name. If it finds a policy violation, the workflow fails and cancels the other queued or running CI workflows associated with that PR. GitHub schedules independent workflows concurrently, so this fast scan cannot be guaranteed to start before every other workflow; cancellation occurs as soon as its failure step runs.
 
 The names and terminology policy is in [`.github/security/premerge-names.json`](../../.github/security/premerge-names.json), owned by the security team in CODEOWNERS. Add unreleased codenames to `restricted_names` and incorrect phrases with their preferred term to `incorrect_terminology`. The checked-in AI/tool list is an initial maintained vocabulary, not a complete list of every product or model.
