@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 15347)
-Total output lines: 1268
+Warning: truncated output (original token count: 15381)
+Total output lines: 1269
 
 name: contracts
 
@@ -9,7 +9,8 @@ name: contracts
 #   build, the ci test profile in 3 shards at a short depth (fuzz 1,000 runs, invariants 64 runs at depth 64), gas
 #   snapshots and the generated-ABI check. A change to Solidity scripts only (script/**/*.sol) runs the build alone. A
 #   change to shell or Python scripts, certora/ or docs only runs the script tests (script/*.test.sh) and no forge;
-#   security/ (size margins, licence allowlist) runs the build.
+#   security/ (size margins, licence allowlist) runs the build. Any PR that changes contracts/src/ also runs the fast
+#   static-analysis tier (Slither, upgradeability, Aderyn, Semgrep and 4naly3er).
 #   A pull request labelled `hotfix` (playbook P-05) also runs the touched contracts' invariant campaigns at full depth.
 # - full (`suite: full` by hand): the ci profile in 10 shards (fuzz 10,000 runs, invariants 1,000 at depth 100), gas,
 #   ABIs, branch coverage and the fast security tier.
@@ -491,10 +492,7 @@ jobs:
           persist-credentials: false
 
       - name: Read the pinned Foundry version
-        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
-
-      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
-      …3347 tokens truncated…        echo "fork tests: $passed passed, $skipped skipped, $failed failed" | tee -a "$GITHUB_STEP_SUMMARY"
+        run: echo "FOUNDRY_VERSION=$(cat …3381 tokens truncated…        echo "fork tests: $passed passed, $skipped skipped, $failed failed" | tee -a "$GITHUB_STEP_SUMMARY"
           if [ "$passed" -eq 0 ]; then
             echo "ran=false" >> "$GITHUB_OUTPUT"
             echo "reason=no fork test passed ($skipped skipped, $failed failed)" >> "$GITHUB_OUTPUT"
