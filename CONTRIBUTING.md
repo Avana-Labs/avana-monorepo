@@ -22,9 +22,9 @@ FOUNDRY_PROFILE=aave forge build
 
 `forge soldeer install` installs the dependencies pinned in `contracts/soldeer.lock`; `script/install-security-tools.sh` installs the pinned analysis tools (Slither, Halmos, Semgrep, certora-cli and Gambit, Mythril, solhint, Echidna, Medusa, Aderyn, hevm, Bitwuzla, the Semgrep rules and 4naly3er); `--necessist` adds Necessist, which needs cargo. The `aave` build produces the Aave V4 artifacts the test fixtures deploy.
 
-The pre-commit hook ([`lefthook.yml`](lefthook.yml)) runs a local disclosure scan and Gitleaks on staged changes, `forge fmt --check` and the file-size check on staged Solidity, the licence-header check on staged Solidity, Python, JavaScript, shell and JSON files, and `trace.py` on changes to the specification, sources, tests or Certora specs. The disclosure scan checks added lines for private IPs, internal hostnames, local user paths, debug output and AI/tool names listed in [`.github/security/premerge-names.json`](.github/security/premerge-names.json). A pre-push hook repeats the disclosure scan on outgoing commits, so it runs before code is sent to a remote branch. CI repeats the repository's security checks.
+The pre-commit hook ([`lefthook.yml`](lefthook.yml)) runs a local disclosure scan and Gitleaks on staged changes, dependency audits when lockfiles or requirements change, `script/security-fast.sh` when Solidity source changes, `forge fmt --check` and the file-size check on staged Solidity, and the licence-header check on staged Solidity, Python, JavaScript, shell and JSON files. The policy scan checks added lines and sensitive filenames against [`.github/security/premerge-names.json`](.github/security/premerge-names.json). A pre-push hook repeats the scan on outgoing commits and branch names. PR CI also scans the diff, title, body and branch, and cancels other CI on a policy finding.
 
-Install the hooks once per clone with `lefthook install`. Git has no standard hook that can block branch creation or pull-request creation; the local pre-commit hook blocks commits and pre-push blocks sending the commits that normally precede a pull request. Outgoing email needs a mail-provider DLP rule and is outside Git hooks.
+Install the hooks once per clone with `lefthook install`. Git has no standard hook that blocks branch creation or PR creation. Outgoing mail uses provider DLP; setup for Microsoft 365 and Google Workspace is in [`docs/security/pre-merge-security.md`](docs/security/pre-merge-security.md).
 
 Commit messages and pull request text carry no AI credit (no AI co-author trailer, no "Generated with" line). The `commit-msg` hook, installed by the same `lefthook install`, runs [`contracts/script/check-ai-credit.sh`](contracts/script/check-ai-credit.sh) on each message, and the `commit-messages` workflow checks a pull request's own commits, title and body.
 
@@ -83,3 +83,4 @@ pragma solidity 0.8.28;
 ```
 
 Code ported from another project keeps that project's licence: its file carries the origin's SPDX identifier and names the origin and commit in its header, a Solidity file is added to `contracts/security/licence-allowlist.txt`, and the component gets an entry in [`LICENSES/THIRD_PARTY_LICENSES.md`](LICENSES/THIRD_PARTY_LICENSES.md) and, where its licence requires one, in [`NOTICE`](LICENSES/NOTICE).
+
