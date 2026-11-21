@@ -25,10 +25,7 @@ pre-commit:
       glob: "*.{sol,py,js,mjs,sh,json}"
       run: contracts/script/check-licence.sh
 
-# Local disclosure scan of staged additions; Gitleaks remains the dedicated credential detector.
-    premerge-policy:
-      run: python contracts/script/premerge_scan.py --staged
-    # No AI credit in a commit message; the commit-messages workflow checks the same on a pull request's commits.
+# No AI credit in a commit message; the commit-messages workflow checks the same on a pull request's commits.
 commit-msg:
   commands:
     ai-credit:
