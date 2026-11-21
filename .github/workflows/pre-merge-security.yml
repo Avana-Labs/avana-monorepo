@@ -1,0 +1,97 @@
+name: pre-merge-security
+
+# This is the short first-response gate for pull requests. When a policy finding occurs, cancel every other queued or
+# running workflow associated with that PR so expensive builds do not continue.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: pre-merge-security-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: write
+
+env:
+  GITLEAKS_VERSION: "8.30.1"
+  GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+
+jobs:
+  scan:
+    name: pre-merge policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pinned Gitleaks
+        run: |
+          set -euo pipefail
+          curl -sSfL -o "$RUNNER_TEMP/gitleaks.tar.gz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP" gitleaks
+
+      - name: Scan PR commits for secrets
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          git show "$BASE_SHA:.gitleaks.toml" >"$RUNNER_TEMP/gitleaks.toml"
+          "$RUNNER_TEMP/gitleaks" git . --config "$RUNNER_TEMP/gitleaks.toml" --redact=100 \
+            --log-opts="$BASE_SHA...$HEAD_SHA" --exit-code=1
+
+      - name: Use the base branch policy and scanner when available
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if git cat-file -e "$BASE_SHA:contracts/script/premerge_scan.py" 2>/dev/null; then
+            git show "$BASE_SHA:contracts/script/premerge_scan.py" >"$RUNNER_TEMP/premerge_scan.py"
+            git show "$BASE_SHA:.github/security/premerge-names.json" >"$RUNNER_TEMP/premerge-names.json"
+          else
+            cp contracts/script/premerge_scan.py "$RUNNER_TEMP/premerge_scan.py"
+            cp .github/security/premerge-names.json "$RUNNER_TEMP/premerge-names.json"
+          fi
+
+      - name: Scan changed files, PR text and branch name
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PREMERGE_TITLE: ${{ github.event.pull_request.title }}
+          PREMERGE_BODY: ${{ github.event.pull_request.body }}
+          PREMERGE_BRANCH: ${{ github.event.pull_request.head.ref }}
+          PREMERGE_REPO_ROOT: ${{ github.workspace }}
+          PREMERGE_POLICY_PATH: ${{ runner.temp }}/premerge-names.json
+        run: |
+          set -euo pipefail
+          python "$RUNNER_TEMP/premerge_scan.py" --range "$BASE_SHA...$HEAD_SHA"
+          python "$RUNNER_TEMP/premerge_scan.py" --pr-text
+
+      - name: Cancel all other CI for this pull request on a policy finding
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CURRENT_RUN: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          for status in queued in_progress; do
+            gh api --paginate --slurp "repos/$REPO/actions/runs?per_page=100&status=$status" |
+              jq -r --arg pr "$PR_NUMBER" --arg current "$CURRENT_RUN" \
+                '.[].workflow_runs[] | select((.id | tostring) != $current) | select(any(.pull_requests[]?; .number == ($pr | tonumber))) | .id' |
+              while IFS= read -r run_id; do
+                [ -n "$run_id" ] || continue
+                gh api --method POST "repos/$REPO/actions/runs/$run_id/cancel" >/dev/null
+              done
+          done
+

@@ -4,6 +4,31 @@
 pre-commit:
   parallel: false
   commands:
+    # Local policy scan of staged additions for internal metadata and disallowed AI/tool names. The same scan runs
+    # before pushes below; Gitleaks remains the dedicated credential detector.
+    premerge-policy:
+      run: python contracts/script/premerge_scan.py --staged
+    # Vulnerable dependency updates fail before commit. npm audit checks the monorepo root lockfile.
+    npm-dependency-audit:
+      glob: "package-lock.json"
+      run: npm audit --audit-level=moderate --ignore-scripts
+    contracts-npm-dependency-audit:
+      root: contracts/
+      glob: "package-lock.json"
+      run: npm audit --audit-level=moderate --ignore-scripts
+    contracts-python-dependency-audit:
+      root: contracts/
+      glob: "requirements.txt"
+      run: uvx --from pip-audit pip-audit -r requirements.txt
+    mythril-python-dependency-audit:
+      root: contracts/
+      glob: "requirements-mythril.txt"
+      run: uvx --from pip-audit pip-audit -r requirements-mythril.txt
+    # Contract analyzers are the repository's existing fast tier; run them when Solidity source changes.
+    contract-security:
+      root: contracts/
+      glob: "src/**/*.sol"
+      run: script/security-fast.sh
     # Secret scan of the staged changes with the same rules as CI (.gitleaks.toml), so a finding is fixed before it
     # enters history instead of being allowlisted after. Gitleaks comes from PATH or $GITLEAKS; the version CI pins is
     # in .github/workflows/gitleaks.yml. A missing binary fails the hook, so no unscanned change is committed. An
@@ -27,3 +52,12 @@ commit-msg:
   commands:
     ai-credit:
       run: contracts/script/check-ai-credit.sh --message {1}
+
+# A commit hook cannot protect a remote branch by itself. Scan each outgoing commit range before it is pushed, which
+# also gates the normal path to opening a pull request. Git has no standard pre-branch-creation or pre-PR hook.
+pre-push:
+  parallel: false
+  commands:
+    premerge-policy:
+      run: python contracts/script/premerge_scan.py --push
+

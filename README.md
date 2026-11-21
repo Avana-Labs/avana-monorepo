@@ -72,10 +72,11 @@ Security tools (Slither, Halmos, Echidna, Medusa, hevm, Mythril, Aderyn, Semgrep
 | Core size report (≤ 800 lines per contract, ≤ 4,000 core) | `contracts/script/check-core-size.sh` | Every PR |
 | Gas snapshots, generated ABIs | `contracts/snapshots/`, `packages/protocol` | Every PR |
 | Branch coverage, ≥ 80% per file | `contracts/script/check-coverage.sh` | Full suite |
-| Slither, Aderyn, Semgrep, solhint, 4naly3er | `contracts/script/security-fast.sh` | Full suite |
+| Slither, Aderyn, Semgrep, solhint, 4naly3er | `contracts/script/security-fast.sh` | Contract-source PRs and full suite |
 | Deep invariants, fork, differential, SMTChecker | `contracts.yml` long suite | Manual |
 | Halmos, Echidna, Medusa, hevm, Mythril | `security-slow.yml` | Manual |
 | Mutation (slither-mutate, Gambit, Necessist) | `mutation-gate.yml` | Manual |
+| Pre-merge secret, metadata and naming policy; cancel other PR CI on a finding | `pre-merge-security.yml` | Every PR |
 | Certora Prover | [`contracts/certora/`](contracts/certora/) | Locally in WSL |
 
 ## CI
@@ -83,6 +84,7 @@ Security tools (Slither, Halmos, Echidna, Medusa, hevm, Mythril, Aderyn, Semgrep
 | Workflow | Trigger | Scope |
 |---|---|---|
 | [`contracts.yml`](.github/workflows/contracts.yml) | PR, manual | Build, tests, size, gas, ABIs, liquidator; `full` and `long` suites by hand |
+| [`pre-merge-security.yml`](.github/workflows/pre-merge-security.yml) | PR | Fast disclosure policy gate; cancels other PR CI on findings |
 | [`security-slow.yml`](.github/workflows/security-slow.yml) | Manual | Slow security tier on the current contracts |
 | [`mutation-gate.yml`](.github/workflows/mutation-gate.yml) | Manual | Mutation testing per layer |
 | [`services.yml`](.github/workflows/services.yml) | PR | One job per affected package |
@@ -94,3 +96,4 @@ Security tools (Slither, Halmos, Echidna, Medusa, hevm, Mythril, Aderyn, Semgrep
 - [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) · [Release process](docs/release.md)
 - [Governance](docs/governance/README.md) · [Audit evidence](docs/audit/README.md)
 - Licence: Business Source License 1.1 ([`LICENSE`](LICENSE)); third-party code keeps its licence ([`NOTICE`](LICENSES/NOTICE), [`LICENSES/THIRD_PARTY_LICENSES.md`](LICENSES/THIRD_PARTY_LICENSES.md)).
+
