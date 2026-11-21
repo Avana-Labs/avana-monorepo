@@ -11,6 +11,7 @@
 /contracts/                                      @Avana-Labs/contracts
 # Triage files can silence an analyzer finding, so a security reviewer approves every change.
 /contracts/security/                             @Avana-Labs/security
+/contracts/script/premerge_scan.py               @Avana-Labs/security
 # The pinned fork blocks set the chain state every fork test sees.
 /contracts/test/utils/fixtures/ForkConstants.sol @Avana-Labs/contracts @Avana-Labs/security
 
@@ -40,3 +41,4 @@
 # Licences and notices.
 /LICENSE                                         @Avana-Labs/security
 /LICENSES/                                       @Avana-Labs/security
+
