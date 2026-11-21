@@ -33,6 +33,7 @@
 # CI, dependency policy, secret scanning and these rules.
 /.github/                                        @Avana-Labs/security
 /.gitleaks.toml                                  @Avana-Labs/security
+/.github/security/                               @Avana-Labs/security
 /lefthook.yml                                    @Avana-Labs/security
 /SECURITY.md                                     @Avana-Labs/security
 
