@@ -15,10 +15,10 @@ POLICY = ROOT / ".github" / "security" / "premerge-names.json"
 
 # High-confidence disclosure patterns. Gitleaks handles credential formats separately.
 METADATA_RULES = (
-    ("private IP address", re.compile(r"(?<![\\d.])(?:10\\.(?:\\d{1,3}\\.){2}\\d{1,3}|192\\.168\\.(?:\\d{1,3}\\.)\\d{1,3}|172\\.(?:1[6-9]|2\\d|3[01])\\.(?:\\d{1,3}\\.)\\d{1,3})(?![\\d.])")),
-    ("internal hostname", re.compile(r"\\b(?:[a-z0-9-]+\\.)+(?:internal|intranet|corp|private)\\b", re.IGNORECASE)),
-    ("local user path", re.compile(r"(?:[A-Z]:\\\\Users\\\\[^\\\\\\s]+|/home/[^/\\s]+|/Users/[^/\\s]+)", re.IGNORECASE)),
-    ("debug output", re.compile(r"\\b(?:console\\.log\\s*\\(|debugger\\s*;|print\\s*\\(\\s*['\\"](?:DEBUG|TRACE))", re.IGNORECASE)),
+    ("private IP address", re.compile(r"(?<![\d.])(?:10\.(?:\d{1,3}\.){2}\d{1,3}|192\.168\.(?:\d{1,3}\.)\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.(?:\d{1,3}\.)\d{1,3})(?![\d.])")),
+    ("internal hostname", re.compile(r"\b(?:[a-z0-9-]+\.)+(?:internal|intranet|corp|private)\b", re.IGNORECASE)),
+    ("local user path", re.compile(r"(?:[A-Z]:\\Users\\[^\\\s]+|/home/[^/\s]+|/Users/[^/\s]+)", re.IGNORECASE)),
+    ("debug output", re.compile(r"\b(?:console\.log\s*\(|debugger\s*;|print\s*\(\s*['\"](?:DEBUG|TRACE))", re.IGNORECASE)),
 )
 
 
@@ -49,7 +49,7 @@ def scan_diff(diff: str, names: list[str]) -> list[str]:
         if line.startswith("+++ b/"):
             path = line[6:]
         elif line.startswith("@@"):
-            match = re.search(r"\\+(\\d+)", line)
+            match = re.search(r"\+(\d+)", line)
             line_no = int(match.group(1)) - 1 if match else 0
         elif line.startswith("+") and not line.startswith("+++"):
             line_no += 1
