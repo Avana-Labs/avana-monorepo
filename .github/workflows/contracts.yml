@@ -97,6 +97,7 @@ jobs:
       tests: ${{ steps.sort.outputs.tests }}
       build: ${{ steps.sort.outputs.build }}
       liquidator: ${{ steps.sort.outputs.liquidator }}
+      security: ${{ steps.sort.outputs.security }}
     defaults:
       run:
         working-directory: .
@@ -111,13 +112,16 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$EVENT" != pull_request ]; then
-            { echo "tests=true"; echo "build=true"; echo "liquidator=true"; } >> "$GITHUB_OUTPUT"; exit 0
+            { echo "tests=true"; echo "build=true"; echo "liquidator=true"; echo "security=true"; } >> "$GITHUB_OUTPUT"; exit 0
           fi
           # Listed first, so a failed API call fails the job instead of leaving an empty list that skips the tests.
           files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
           [ -n "$files" ] || { echo "::error::the pull request lists no changed files"; exit 1; }
-          tests=false build=false liquidator=false
+          tests=false build=false liquidator=false security=false
           while IFS= read -r f; do
+            case "$f" in
+              contracts/src/*) security=true ;;
+            esac
             case "$f" in
               *.md) kind=none ;;
               contracts/script/install-security-tools.sh) kind=tests ;;
@@ -138,7 +142,8 @@ jobs:
           echo "tests=$tests" | tee -a "$GITHUB_OUTPUT"
           echo "build=$build" | tee -a "$GITHUB_OUTPUT"
           echo "liquidator=$liquidator" | tee -a "$GITHUB_OUTPUT"
-          { echo "### Changed files"; echo "forge tests: $tests; forge build: $build; liquidator: $liquidator"; } >> "$GITHUB_STEP_SUMMARY"
+          echo "security=$security" | tee -a "$GITHUB_OUTPUT"
+          { echo "### Changed files"; echo "forge tests: $tests; forge build: $build; liquidator: $liquidator; fast security: $security"; } >> "$GITHUB_STEP_SUMMARY"
 
   scripts:
     # Each runs its script on fixtures, with stand-ins on PATH for the tools it calls: check-sizes.test.sh,
@@ -1097,7 +1102,7 @@ jobs:
     name: security (fast tier)
     # Required on contract PRs; full and long manual suites use the same fast tier.
     needs: changes
-    if: ${{ (github.event_name == 'pull_request' && needs.changes.outputs.build == 'true') || (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only) }}
+    if: ${{ (github.event_name == 'pull_request' && needs.changes.outputs.security == 'true') || (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
@@ -1231,13 +1236,14 @@ jobs:
           BUILD: ${{ needs.changes.outputs.build == 'true' }}
           LIQUIDATOR: ${{ needs.changes.outputs.liquidator == 'true' && !inputs.only }}
           TESTS: ${{ needs.changes.outputs.tests == 'true' && !inputs.only }}
+          SECURITY: ${{ github.event_name == 'pull_request' && needs.changes.outputs.security == 'true' }}
           FULL: ${{ github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only }}
           LONG: ${{ github.event_name == 'workflow_dispatch' && inputs.suite == 'long' }}
           HOTFIX: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix') }}
           # A manual run with `only` runs just those long-check targets; every skipped job is not selected.
           ONLY: ${{ inputs.only != '' && inputs.only != null }}
         run: |
-          args=(--argjson build "$BUILD" --argjson liquidator "$LIQUIDATOR" --argjson tests "$TESTS" --argjson full "$FULL" --argjson longrun "$LONG"
+          args=(--argjson build "$BUILD" --argjson liquidator "$LIQUIDATOR" --argjson tests "$TESTS" --argjson security "$SECURITY" --argjson full "$FULL" --argjson longrun "$LONG"
             --argjson hotfix "$HOTFIX" --argjson only "$ONLY"
             --argjson long '["plan","invariant","fork","differential","smtchecker"]')
           defs='def due($k):
@@ -1245,7 +1251,8 @@ jobs:
               elif $k == "build" then $build
               elif $k == "liquidator" then $liquidator
               elif $k == "test" or $k == "gas" or $k == "abis" then $tests
-              elif $k == "coverage" or $k == "fast-security" then $full
+              elif $k == "coverage" then $full
+              elif $k == "fast-security" then ($security or $full)
               elif ($long | index($k)) != null then ($longrun or $only)
               elif $k == "hotfix-plan" then $hotfix
               else false end;

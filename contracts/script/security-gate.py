@@ -292,7 +292,17 @@ def accepted_by(finding: dict, entries: list[dict]) -> dict | None:
             if e["fingerprint"] == finding["fingerprint"]:
                 return e
             continue
-        if e.get("check") != finding["check"] or not fnmatch.fnmatch(finding["file"], e.get("files", "")):
+        patterns = e.get("files", "")
+        # Accept legacy triage globs serialized as character arrays, and lists of glob strings.
+        if isinstance(patterns, list):
+            if not all(isinstance(pattern, str) for pattern in patterns):
+                raise SystemExit("security-gate: triage 'files' must be a glob string or a list of glob strings")
+            patterns = ["".join(patterns)] if all(len(pattern) <= 1 for pattern in patterns) else patterns
+        elif isinstance(patterns, str):
+            patterns = [patterns]
+        else:
+            raise SystemExit("security-gate: triage 'files' must be a glob string or a list of glob strings")
+        if e.get("check") != finding["check"] or not any(fnmatch.fnmatch(finding["file"], pattern) for pattern in patterns):
             continue
         if e.get("while") == "no-implementation-in-folder" and has_implementation((ROOT / finding["file"]).parent):
             continue
