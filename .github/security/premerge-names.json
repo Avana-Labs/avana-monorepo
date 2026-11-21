@@ -1,11 +1,16 @@
 {
   "disallowed_names": [
-    "Claude", "Anthropic", "Codex", "ChatGPT", "GPT", "OpenAI",
-    "Gemini", "Bard", "Copilot", "Cursor", "Windsurf", "Codeium", "Tabnine",
-    "Amazon Q", "Sourcegraph Cody", "Devin", "Replit", "Grok", "xAI",
-    "DeepSeek", "Llama", "Meta AI", "Mistral", "Qwen", "Kimi", "Perplexity",
-    "Cohere", "Command R", "Aya", "Phi", "JetBrains AI", "Cline", "Roo Code",
-    "Aider", "Continue", "OpenRouter", "Hugging Face", "Fireworks AI",
-    "Together AI", "Yi", "GLM", "MiniMax"
-  ]
+    "Aider", "Amazon Q", "Amazon Q Developer", "Anthropic", "Augment Code",
+    "Aya", "Bard", "Blackbox AI", "ChatGPT", "Claude", "Claude Code",
+    "Cline", "Codeium", "Codex", "Cohere", "Command R", "Continue",
+    "Copilot", "Cursor", "DeepSeek", "Devin", "Fireworks AI", "Gemini",
+    "Gemini Code Assist", "GLM", "Grok", "GPT", "Hugging Face", "Kimi",
+    "Llama", "Manus", "Meta AI", "MiniMax", "Mistral", "OpenAI",
+    "OpenHands", "OpenRouter", "Perplexity", "Phi", "Qodo", "Qwen",
+    "Replit Agent", "Roo Code", "Sourcegraph Cody", "Tabnine", "Together AI",
+    "Windsurf", "xAI", "Yi"
+  ],
+  "restricted_names": [],
+  "incorrect_terminology": []
 }
+
