@@ -1,0 +1,11 @@
+{
+  "accepted": [
+    {
+      "fingerprint": "5914f412c88bdc8c",
+      "check": "SWC-113",
+      "file": "UniswapV2Integration",
+      "reason": "Multiple calls in one transaction: an unwind reads the market's own pair and its factory (getReserves, totalSupply, kLast, feeTo) to size the LP that holds the unwound liquidity (#382), then unwraps and burns. The pair is fixed at listMarket from the factory, every call is to it or to Avana's own wrapper, the LPVault holds its nonReentrant lock for the whole unwind, and any failing call reverts the whole unwind; no call result is trusted for amounts (balance differences are). Covered by test_unwind_burnsTheLiquidityNow_feeGrowthStaysWithThePosition and test_zeroReserveAfterRebase_unwindNeitherRevertsNorBurnsPastTheRecord.",
+      "approval": "approved 2026-11-23"
+    }
+  ]
+}

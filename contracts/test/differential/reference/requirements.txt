@@ -1,0 +1,3 @@
+# The reference uses the Python standard library only (exact integer and Fraction arithmetic).
+# The arbitrary-precision powers of 1.0001 in the concentrated-liquidity pricing checks (MATH-UO-06, MATH-UO-07,
+# MATH-UO-17) use mpmath==1.3.0 in the spec models; this reference lists no package.

@@ -1,0 +1,95 @@
+// SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) 2026 Avana Labs
+// Stores validated listing metadata: one `marketContent` row per entry (a later listing replaces an earlier one for
+// the same key), and the page slug on the scope row it names, so the page is reachable under its listed slug.
+
+import { v } from "convex/values";
+import { internalMutation } from "../_generated/server";
+import type { MetadataEntry } from "../lib/metadata.ts";
+
+export const mark = internalMutation({
+  args: { chainId: v.number(), operationId: v.string(), status: v.union(v.literal("noMetadata"), v.literal("rejected")), error: v.optional(v.string()) },
+  handler: async (ctx, a) => {
+    const op = await ctx.db.query("listingOperations").withIndex("by_op", (q) => q.eq("chainId", a.chainId).eq("operationId", a.operationId)).unique();
+    if (op) await ctx.db.patch(op._id, { status: a.status, ...(a.error ? { error: a.error } : {}), updatedAt: Date.now() });
+  },
+});
+
+export const store = internalMutation({
+  args: { chainId: v.number(), operationId: v.string(), contentHash: v.string(), entries: v.any() },
+  handler: async (ctx, { chainId, operationId, contentHash, entries }) => {
+    const now = Date.now();
+    for (const e of entries as MetadataEntry[]) {
+      const row = {
+        scope: e.scope,
+        chainId,
+        key: e.key,
+        slug: e.slug,
+        name: e.name,
+        ...(e.symbol ? { symbol: e.symbol } : {}),
+        ...(e.category ? { category: e.category } : {}),
+        ...(e.venueLabel ? { venueLabel: e.venueLabel } : {}),
+        ...(e.iconUrl ? { iconUrl: e.iconUrl } : {}),
+        description: e.description,
+        ...(e.longText ? { longText: e.longText } : {}),
+        stats: [...e.stats],
+        history: [...e.history],
+        faqs: [...e.faqs],
+        ...(e.visuals ? { visuals: [...e.visuals] } : {}),
+        ...(e.resources ? { resources: [...e.resources] } : {}),
+        ...(e.links
+          ? {
+              links: {
+                ...(e.links.website ? { website: e.links.website } : {}),
+                ...(e.links.x ? { x: e.links.x } : {}),
+                ...(e.links.docs ? { docs: e.links.docs } : {}),
+                ...(e.links.github ? { github: e.links.github } : {}),
+                ...(e.links.audits ? { audits: e.links.audits.map((a) => ({ label: a.label, href: a.href })) } : {}),
+              },
+            }
+          : {}),
+        ...(e.risk
+          ? {
+              risk: {
+                summary: e.risk.summary,
+                ...(e.risk.reviewedAt ? { reviewedAt: e.risk.reviewedAt } : {}),
+                factors: e.risk.factors.map((x) => ({ id: x.id, label: x.label, level: x.level, text: x.text, ...(x.bps !== undefined ? { bps: x.bps } : {}) })),
+                ...(e.risk.dependencies ? { dependencies: e.risk.dependencies.map((d) => ({ kind: d.kind, label: d.label, address: d.address })) } : {}),
+              },
+            }
+          : {}),
+        ...(e.disclosures
+          ? { disclosures: { ...(e.disclosures.borrow ? { borrow: e.disclosures.borrow } : {}), ...(e.disclosures.lend ? { lend: e.disclosures.lend } : {}) } }
+          : {}),
+        contentHash,
+        operationId,
+        loadedAt: now,
+      };
+      const existing = await ctx.db.query("marketContent").withIndex("by_key", (q) => q.eq("scope", e.scope).eq("chainId", chainId).eq("key", e.key)).unique();
+      if (existing) await ctx.db.replace(existing._id, row);
+      else await ctx.db.insert("marketContent", row);
+      if (e.scope === "lend") {
+        const [hub, assetId] = e.key.split(":") as [string, string];
+        const a = await ctx.db.query("hubAssets").withIndex("by_key", (q) => q.eq("chainId", chainId).eq("hub", hub).eq("assetId", assetId)).unique();
+        if (a) await ctx.db.patch(a._id, { slug: e.slug });
+      } else if (e.scope === "asset") {
+        const [spoke, reserveId] = e.key.split(":") as [string, string];
+        const r = await ctx.db.query("spokeReserves").withIndex("by_key", (q) => q.eq("chainId", chainId).eq("spoke", spoke).eq("reserveId", reserveId)).unique();
+        if (r) await ctx.db.patch(r._id, { slug: e.slug });
+      } else if (e.scope === "pool") {
+        // `integrationId:marketId`: each integration's RiskModule numbers its own markets.
+        const [integrationId, marketId] = e.key.split(":") as [string, string];
+        const m = await ctx.db
+          .query("markets")
+          .withIndex("by_key", (q) => q.eq("chainId", chainId).eq("integrationId", Number(integrationId)).eq("marketId", marketId))
+          .unique();
+        if (m) await ctx.db.patch(m._id, { slug: e.slug });
+      } else if (e.scope === "hub") {
+        const h = await ctx.db.query("hubs").withIndex("by_key", (q) => q.eq("chainId", chainId).eq("hub", e.key)).unique();
+        if (h) await ctx.db.patch(h._id, { slug: e.slug });
+      }
+    }
+    const op = await ctx.db.query("listingOperations").withIndex("by_op", (q) => q.eq("chainId", chainId).eq("operationId", operationId)).unique();
+    if (op) await ctx.db.patch(op._id, { status: "loaded", updatedAt: now });
+  },
+});

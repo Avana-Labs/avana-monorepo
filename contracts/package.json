@@ -1,0 +1,16 @@
+{
+  "name": "avana-contracts-tooling",
+  "private": true,
+  "description": "Node tools of the contracts workspace: solhint, and npm entry points for the security tiers.",
+  "license": "BUSL-1.1",
+  "scripts": {
+    "security:install": "script/install-security-tools.sh",
+    "security:fast": "script/security-fast.sh",
+    "security:slow": "script/security-slow.sh",
+    "solhint": "solhint --config .solhint.json --max-warnings 0 'src/**/*.sol'"
+  },
+  "devDependencies": {
+    "@openzeppelin/upgrades-core": "1.47.0",
+    "solhint": "6.2.5"
+  }
+}

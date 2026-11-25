@@ -1,0 +1,422 @@
+{
+  "_comment": "Local test world, second listing on the Base Hub: the Aero Slipstream Stocks Spoke on the test stock tokens (hubs/base/world.json). Structure and page text only; the market numbers live with the operator local scripts.",
+  "hub": {
+    "label": "base",
+    "tier": 3
+  },
+  "spokes": [
+    {
+      "label": "slipStocks",
+      "integration": "slipstream",
+      "category": "Stocks",
+      "name": "Aero Slipstream Stocks"
+    }
+  ],
+  "lendAssets": [
+    {
+      "symbol": "USDC",
+      "category": "stable",
+      "risk": {
+        "summary": "USDC lent on the Hub. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "symbol": "GHO",
+      "category": "stable",
+      "risk": {
+        "summary": "GHO lent on the Hub. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          }
+        ]
+      }
+    }
+  ],
+  "borrowAssets": [
+    {
+      "symbol": "GHO",
+      "risk": {
+        "summary": "GHO borrowed against stock liquidity positions. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "symbol": "USDC",
+      "risk": {
+        "summary": "USDC borrowed against stock liquidity positions. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          }
+        ]
+      }
+    }
+  ],
+  "borrowable": {
+    "slipStocks": [
+      "USDC",
+      "GHO"
+    ]
+  },
+  "collateral": [
+    {
+      "symbol": "USDC"
+    },
+    {
+      "symbol": "AMZNc"
+    },
+    {
+      "symbol": "SNDKc"
+    },
+    {
+      "symbol": "GOOGLc"
+    },
+    {
+      "symbol": "NVDAc"
+    },
+    {
+      "symbol": "SPCXc"
+    },
+    {
+      "symbol": "METAc"
+    }
+  ],
+  "markets": [
+    {
+      "name": "slip-AMZNc-USDC-cl100",
+      "pool": "AMZNc-USDC-cl100-g0",
+      "spoke": "slipStocks",
+      "category": "stock",
+      "risk": {
+        "summary": "AMZNc/USDC. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          }
+        ]
+      }
+    },
+    {
+      "name": "slip-SNDKc-USDC-cl100",
+      "pool": "SNDKc-USDC-cl100-g0",
+      "spoke": "slipStocks",
+      "category": "stock",
+      "risk": {
+        "summary": "SNDKc/USDC. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          }
+        ]
+      }
+    },
+    {
+      "name": "slip-GOOGLc-USDC-cl100",
+      "pool": "GOOGLc-USDC-cl100-g0",
+      "spoke": "slipStocks",
+      "category": "stock",
+      "risk": {
+        "summary": "GOOGLc/USDC. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          }
+        ]
+      }
+    },
+    {
+      "name": "slip-NVDAc-USDC-cl100",
+      "pool": "NVDAc-USDC-cl100-g0",
+      "spoke": "slipStocks",
+      "category": "stock",
+      "risk": {
+        "summary": "NVDAc/USDC. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          }
+        ]
+      }
+    },
+    {
+      "name": "slip-SPCXc-USDC-cl100",
+      "pool": "SPCXc-USDC-cl100-g0",
+      "spoke": "slipStocks",
+      "category": "stock",
+      "risk": {
+        "summary": "SPCXc/USDC. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          }
+        ]
+      }
+    },
+    {
+      "name": "slip-METAc-USDC-cl100",
+      "pool": "METAc-USDC-cl100-g0",
+      "spoke": "slipStocks",
+      "category": "stock",
+      "risk": {
+        "summary": "METAc/USDC. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "elevated",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "marketHours",
+            "label": "Market hours",
+            "level": "elevated",
+            "text": "Tokenized stocks trade around the clock while their reference market does not. Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          }
+        ]
+      }
+    }
+  ],
+  "tokens": [
+    {
+      "symbol": "USDC",
+      "name": "USD Coin"
+    },
+    {
+      "symbol": "GHO",
+      "name": "Gho Token"
+    },
+    {
+      "symbol": "AMZNc",
+      "name": "Amazon"
+    },
+    {
+      "symbol": "SNDKc",
+      "name": "Sandisk"
+    },
+    {
+      "symbol": "GOOGLc",
+      "name": "Alphabet"
+    },
+    {
+      "symbol": "NVDAc",
+      "name": "NVIDIA"
+    },
+    {
+      "symbol": "SPCXc",
+      "name": "SpaceX"
+    },
+    {
+      "symbol": "METAc",
+      "name": "Meta Platforms"
+    }
+  ]
+}

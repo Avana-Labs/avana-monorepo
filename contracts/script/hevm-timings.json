@@ -1,0 +1,11 @@
+{
+  "harness:AvanaRolesProperties": 119,
+  "src:AaveAdapter": 233,
+  "src:AvanaRoles": 101,
+  "src:ClTickMath": 113,
+  "src:LPPriceMath": 123,
+  "src:RiskModule": 140,
+  "src:SlipstreamIntegration": 135,
+  "src:UniswapV3Integration": 127,
+  "src:VaultToken": 141
+}

@@ -1,0 +1,36 @@
+{
+  "name": "@avana/services-common",
+  "version": "0.0.0",
+  "private": true,
+  "license": "BUSL-1.1",
+  "description": "Types shared by the Avana indexer, keeper and Convex: chains, manifest view, provenance, export pages, chart series and the snapshot rows read at one block.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./export": "./src/export.ts",
+    "./keeperStream": "./src/keeperStream.ts",
+    "./series": "./src/series.ts",
+    "./views": "./src/views/index.ts",
+    "./fixtures": "./src/views/fixtures.ts",
+    "./chains": "./src/chains.ts",
+    "./env": "./src/env.ts",
+    "./gas": "./src/gas.ts",
+    "./keystore": "./src/keystore.ts"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "dependencies": {
+    "@avana/protocol": "file:../../packages/protocol",
+    "viem": "2.57.11"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  }
+}

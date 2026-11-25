@@ -1,0 +1,10 @@
+# Prettier already respects .gitignore, so only list paths NOT covered there.
+
+# Lockfile (never reformat)
+package-lock.json
+
+# Build/report artifacts not in .gitignore
+.next-lighthouse/
+dist/
+.reports/
+coverage/

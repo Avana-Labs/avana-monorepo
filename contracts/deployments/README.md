@@ -1,0 +1,73 @@
+# deployments
+
+Release manifests of Avana's deployments, one per chain and release, and the public contract table of each final deployment.
+
+A release manifest (schema 2) names every contract of one deployment: the Avana AccessManager and each AMM integration's core stack (LPVault, RiskModule, LiquidationModule, AaveAdapter, FlashloanRepay) with runtime code hashes and deployment blocks, the operator flash liquidators, the markets (two per pool: Full range and Custom range, with band, LTV, vault token and LPOracle), the debt reserves with their First-Loss Reserves, the loss layers, the governance accounts, the RiskModules' keeper registry and the keeper top-up wallet with its refill rule, the fee recipient, and every third-party contract the deployment relies on (Aave V4 Hubs, Spokes and oracles, the Aave V3 Pool, Uniswap v3 and v4, Aerodrome Slipstream, tokens, price feeds). It is produced from the deploy outputs `avana.json`, `markets.json` and `coverage.json` and the chain. The indexer, the bot runner, the monitor and Convex start only from a manifest (`AVANA_MANIFEST`) and refuse one whose ABI hash differs from the ABIs they were built with.
+
+## Layout
+
+| Path | Contents |
+|---|---|
+| `release-manifest.schema.json` | JSON Schema (draft 2020-12) of a manifest, written from `packages/protocol/src/manifest/schema.ts` by `npm run manifest -- schema`. |
+| `<network>/<release>.json` | The manifest of a deployment as produced, before review (`ethereum`, `base`, `sepolia`, `base-sepolia`). |
+| `verified/<network>-<release>.json` | A manifest that passed every deployment check and was approved by the governance Safe's signers; the only manifests the services and the web app load in production. |
+| `<network>/README.md` | The public contract table of the network's final deployment: every contract with its address, proxy and implementation, runtime code hash and explorer link. |
+
+Local rehearsals (anvil) write their outputs and manifests to `contracts/deployments-local/<network>/`, which git ignores. They are learning deployments and are never published: `publish` refuses a manifest of anvil or of a release tagged `-local`, `-test` or `-learn`.
+
+## Stages
+
+1. **Local (anvil).** `contracts/script/e2e/e2e-local.sh` deploys the whole world on a fresh anvil node: Avana's own Aave V4 (three Hubs, CDP Spokes per AMM protocol and risk tier, Lend Spokes), Uniswap v3, Aerodrome Slipstream, test tokens and movable feeds, Uniswap v4 with Permit2, dozens of pools, then Avana, its first two timelock operations, the later releases (day 2, and rehearsal 08's exotic pools and borrowable assets: `contracts/script/e2e/day2-additions.ts`, `exotic-additions.ts`), every step again with nothing new, the hostile tokens refused, the manifest and its verification, the keeper and the indexer, and the scenarios. Each step is recorded as pass, fail or not-run in `contracts/deployments-local/anvil/e2e-status.json`.
+2. **Sepolia and Base Sepolia.** The same configs, world and Hub files as a local rehearsal, one command per chain. Every signer is an encrypted keystore, keystores stand in for the governance Safe and the Aave PayloadsController, and the timelock's floors are 60 s on these chains. The command that runs it is operator software and is not in this repository.
+3. **Ethereum and Base.** Aave V4 is the Aave DAO's: steps 01, 02 and the execution of 06 do not run; `03_DeployAvana` reads the DAO's addresses from `contracts/script/deploy/config/<network>.json`, and `06_AaveDeploymentPayload` writes the AIP draft only.
+
+Every stage uses the same scripts and differs only in `contracts/script/deploy/config/<network>.json` and the environment (`contracts/.env.example`): RPC URLs and keys are never written in a file.
+
+## Producing, checking and publishing a manifest
+
+From `packages/protocol`:
+
+```bash
+# After the deploy scripts have run on <network>:
+npm run manifest -- produce --network sepolia --rpc-env RPC_SEPOLIA --release v1.0.0
+# Deployment checks against the chain: code hashes, runtime code against the release build with immutables masked
+#, the immutable wiring of each core stack, every market against its RiskModule record (two per pool, one
+# LTV), the keeper registry, and the AccessManager's admin and the deployer's renunciation replayed from its role
+# events. Exit 1 on any failed check; pending checks are listed.
+npm run manifest -- verify --manifest ../../deployments/sepolia/v1.0.0.json --rpc-env RPC_SEPOLIA
+# Final deployment only: verify, copy to verified/ and write the public table <network>/README.md.
+npm run manifest -- publish --manifest ../../deployments/sepolia/v1.0.0.json --rpc-env RPC_SEPOLIA
+```
+
+A check is pending, not passed, while the operation that completes it has not executed (for example the guardian roles before the `guardian-roles` operation) or while a contract is not deployed (the concentrated-liquidity LPOracle implementation). `publish` refuses a manifest with any failed or pending check. A newly verified manifest is committed together with the regenerated address library of `@avana/protocol` (`npm run addresses -w packages/protocol`, which writes `packages/protocol/src/addresses/generated.ts` from `verified/`); the `services` workflow fails while that file is stale. The live-configuration checks (reserve flags, caps, First-Loss Reserve funding against the summed draw caps) extend `verify` as markets are listed.
+
+## Test-network stand-ins
+
+On anvil and Sepolia the world Avana runs against is built from pinned sources where they are vendored and from stand-ins where they are not. Every stand-in is marked `standIn: true` in the manifest and "(test-network stand-in)" in the contract table. Pinned commits of every vendored third-party source are in [`contracts/external/README.md`](../external/README.md).
+
+| Contract | Source |
+|---|---|
+| Aave V4 (AccessManager, configurators, TreasurySpoke, Hubs, Spokes, AaveOracles, interest-rate strategies, `LiquidationLogic`) | Pinned release a3ef63e, built by the `aave` profile; real |
+| Uniswap v3 factory and pools, NonfungiblePositionManager, SwapRouter | Core 5ea68a7 and periphery 24ccf01 with OpenZeppelin 3.4.2-solc-0.7, built by the `univ3` profile; real |
+| Uniswap v4 PoolManager, PositionManager, StateView and Permit2 | v4-core e50237c (v4.0.0) and v4-periphery ea2bf2e built by the `univ4` profile, Permit2 cc56ad0 by the `permit2` profile; real. Every `world.uniswapV4Pools` pool is hookless, initialized at the feeds' price with a full-range position paid through Permit2 (native ETH by value) |
+| Aerodrome Slipstream CLFactory, CLPool, NonfungiblePositionManager, SwapRouter | Tag v1.0.0 (37eead2) for position-manager generations 0–2 and main f8717fa for generation 3, built by the `slipstream-v1` and `slipstream-main` profiles; real code, four separate instances standing for the four Base generations of 2.21 |
+| Aerodrome AERO, VotingEscrow, Voter, FactoryRegistry, Minter, RewardsDistributor, v2 PoolFactory, gauge and rewards factories; Slipstream CLGauge and CLGaugeFactory per generation | Aerodrome contracts v1.0 (1e08fb9, `aerodrome` profile) and the Slipstream gauges of each generation; every Slipstream pool gets its gauge from `Voter.createGauge`, as on Base; real |
+| Aave V3 market: PoolAddressesProvider and registry, Pool and PoolConfigurator proxies, ACLManager, AaveOracle, `DefaultReserveInterestRateStrategyV2`, aToken and variable-debt-token implementations, Collector, RewardsController | Aave V3 origin v3.7.0 (cff15de), `aave-v3` profile, deployed by `02_DeployWorld` (`script/deploy/lib/WorldAaveV3.sol`) through Aave's own setup, pool, periphery, getters and tokens batches, with BorrowLogic, FlashLoanLogic, LiquidationLogic, PoolLogic and SupplyLogic deployed first and linked into the pool batch; every token listed with its primary feed as oracle source, flash loans enabled (premium 5 bps) and $50,000,000 supplied per token, then every market role handed to the network's Aave DAO account, which grants `FLASH_BORROWER` in step 06; real |
+| Multicall3 at `0xcA11bde05977b3631167028862bE2a173976CA11` | mds1/multicall v3.1.0 (a1fa064) pinned as source; on anvil the runtime of [`contracts/external/multicall3/`](../external/multicall3/README.md) is placed with `anvil_setCode` and its code hash checked; the public networks have the deployed contract. The runtime is Ethereum's deployed code at that address, code hash `0xd5c1…0891` |
+| Tokens (USDC, USDT, DAI, GHO, WETH, WBTC, …) | `TestToken` stand-ins with the real decimals; the deployer mints |
+| USDC on anvil (`kind: "blocklist"`) | `BlocklistToken` (`contracts/script/deploy/local/HostileTokens.sol`): a `TestToken` whose minter can block an address, which then can neither send nor receive, as Circle can block a USDC holder; nothing is blocked until the rehearsal blocks a borrower |
+| WETH (the token marked `weth9: true`) | `TestWETH9` (`contracts/script/deploy/local/`): a `TestToken` with WETH9's `deposit`, `withdraw` and `receive`, which the Uniswap v4 PositionManager's `WRAP` and `UNWRAP` call; only ether deposited can be withdrawn |
+| Chainlink feeds | Chainlink's `AccessControlledOCR2Aggregator` (libocr 199a6f1) behind `EACAggregatorProxy` (chainlink v2.10.0), four per token (primary, alternate, standby, second source), four local oracles (f = 1), the addresses of `AVANA_OCR_ORACLES`, each signing from an encrypted Foundry keystore (on anvil, `e2e-local.sh` generates them for each fresh deployment in `contracts/deployments-local/anvil/keystore` with a random password; no key or mnemonic is set anywhere); prices move only by signed OCR2 reports (`contracts/script/e2e/scenarios/ocr2.ts`); real |
+| LINK (OCR2 payment token) | `TestToken` stand-in: the aggregators only book payments, nothing is withdrawn on a test network |
+| Aave governance v3 Executor | `AaveGovernanceExecutorStandIn` (`contracts/script/deploy/local/`): the same `executeTransaction(target, value, signature, data, withDelegatecall)`, placed with `anvil_setCode` at the network's Aave DAO account (the admin Aave V4's deployment set), owned by a PayloadsController stand-in account; every Aave-side AIP runs through it by `delegatecall`, as on Ethereum. On Sepolia and Base Sepolia, `AaveGovernanceExecutorOwnedStandIn` (the same code, its owner set by the constructor) is deployed through the Safe Singleton Factory before Aave V4, owned by the PayloadsController stand-in |
+| Uniswap v4 swaps on anvil | `UniswapV4PoolActor` (`contracts/script/deploy/local/`, `world.uniswapV4PoolActor`): swaps on a hookless v4 pool from its own balance, as the Uniswap v3 SwapRouter does for v3 pools; the rehearsal moves v4 pools and accrues their fees with it |
+| GHO fixed price source | `FixedPriceSource` (`contracts/script/deploy/local/`): an 8-decimal source answering $1.00, the stand-in for Aave's fixed GHO source of a fixed-price debt reserve |
+| Aave's main V4 Spoke (the price Spoke of every CDP Spoke) | `AaveV4PriceSpokeStandIn` (`contracts/script/deploy/local/`): the pinned `AaveOracle` (a3ef63e, from `out-aave/`) bound to a contract serving the Spoke reads Avana makes (`ORACLE`, `getReserve`, `getReserveCount`, `getDynamicReserveConfig`, `getLiquidationConfig`); every standard world token is a reserve priced by its primary feed. LPOracles read token prices from its `AaveOracle.getReservePrice` as they do from Aave's own Spoke on Ethereum and Base |
+
+### Licence of the vendored Aerodrome Slipstream
+
+Slipstream's `LICENSE.md` is the Business Source License 1.1 (Licensor Perpetual Cyclist Services LLC, Licensed Work "Velodrome Smart Contracts"), with a change date of the earlier of 2026-01-01 or a date the licensor specifies, and GNU GPL v2.0 or later as the change licence. Avana uses the vendored source only to build local and test-network deployments (anvil, Sepolia), never for production contracts; on Base, Avana's LPVault reads the Aerodrome deployment itself.
+
+## Manifest fields the services read
+
+`services/common/src/manifest.ts` names the subset the keeper and the indexer use. The services view has one Hub (`aave.hub`, the Stable LP Hub) and one Lend Spoke (`aave.lendSpoke`); the full manifest also lists every Hub and Lend Spoke in `aave.hubs` and `aave.lendSpokes`.

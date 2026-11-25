@@ -1,0 +1,60 @@
+{
+  "excluded_detectors": [],
+  "accepted": [
+    {
+      "fingerprint": "7b6b15fa63186dfa",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/AaveAdapter.sol",
+      "reason": "Solidity 0.8 checked arithmetic outside any unchecked block; a guard on the same line or the record's own invariant keeps it from underflowing, and a violation reverts."
+    },
+    {
+      "fingerprint": "6bbc82643685df9b",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/integrations/UniswapV2Positions.sol",
+      "reason": "Solidity 0.8 checked arithmetic outside any unchecked block; a guard on the same line or the record's own invariant keeps it from underflowing, and a violation reverts."
+    },
+    {
+      "fingerprint": "f15d25cc87c28a63",
+      "check": "exact-balance-check",
+      "file": "src/integrations/UniswapV2Positions.sol",
+      "reason": "A check that a computed amount (LP received, vault tokens seized) is nonzero, not an equality on a raw balance."
+    },
+    {
+      "fingerprint": "b72ca471b0e91afd",
+      "check": "exact-balance-check",
+      "file": "src/LiquidationModule.sol",
+      "reason": "A check that a computed amount (LP received, vault tokens seized) is nonzero, not an equality on a raw balance."
+    },
+    {
+      "fingerprint": "69d72d6372666726",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/RiskModule.sol",
+      "reason": "Solidity 0.8 checked arithmetic outside any unchecked block; a guard on the same line or the record's own invariant keeps it from underflowing, and a violation reverts."
+    },
+    {
+      "fingerprint": "9aeedc741489a4df",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/LPVault.sol",
+      "reason": "Solidity 0.8 checked arithmetic outside any unchecked block; a guard on the same line or the record's own invariant keeps it from underflowing, and a violation reverts."
+    },
+    {
+      "fingerprint": "5d5faa49dfc95316",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/LPVault.sol",
+      "reason": "Solidity 0.8 checked arithmetic outside any unchecked block; a guard on the same line or the record's own invariant keeps it from underflowing, and a violation reverts."
+    },
+    {
+      "fingerprint": "72ca3751d8efdebd",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/LPVault.sol",
+      "reason": "Solidity 0.8 checked arithmetic outside any unchecked block; a guard on the same line or the record's own invariant keeps it from underflowing, and a violation reverts."
+    },
+    {
+      "fingerprint": "0124651cb7ee1a24",
+      "check": "basic-arithmetic-underflow",
+      "file": "src/FirstLossReserve.sol",
+      "reason": "`owed - front` in coverDeficit runs only after the line above reverts FirstLossLayerNotExhausted when front != 0 && front >= owed, so front < owed or front == 0; the subtraction is checked (Solidity 0.8) regardless. Covered by test_lossOrder_offsetRefusesWhileAvanaCoversTheWholeDeficit and test_lossOrder_oneWeiInAvanaCannotBlockTheOffset.",
+      "approval": "approved 2026-11-23"
+    }
+  ]
+}

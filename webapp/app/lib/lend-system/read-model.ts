@@ -1,0 +1,474 @@
+import { formatCompactUsd } from "@/app/lib/borrow-market-rows"
+import { formatActivityTokenAmount } from "@/app/lib/currency/format"
+import { calculateMaxWithdrawable, calculateTotalApy } from "@/app/lib/lend-system/model/formulas"
+import type { LendMarket, LendSystemState } from "@/app/lib/lend-system/model"
+import type { LendPageData } from "@/app/lib/data/providers/lend/types"
+import type { PortfolioLendTabData, PortfolioStrategyBucket } from "@/app/lib/data/providers/portfolio/types"
+import { LEND_GROUP_TITLES, type LendAssetGroup, type LendFeaturedAsset } from "@/app/lib/data/lend-rows"
+import { getLocalAssetIcon } from "@/app/lib/local-asset-icons"
+import { formatReliableLendApyLabel } from "./illiquid-apy"
+import type { LendTransactionHistoryItem, LendWalletReadSnapshot, LendYieldSnapshot } from "./contracts"
+import { formatPercent } from "@/app/lib/format"
+
+function formatTokenQuantity(value: number, symbol: string) {
+  if (value > 0 && value < 0.01) return `<0.01 ${symbol}`
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M ${symbol}`
+  if (value >= 1_000) return `${(value / 1_000).toFixed(2)}K ${symbol}`
+  return `${value.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${symbol}`
+}
+
+function formatPositiveUsd(value: number) {
+  return value > 0 && value < 0.01 ? "<$0.01" : formatCompactUsd(value)
+}
+
+export type LendFeaturedSnapshot = {
+  marketId: string
+  symbol: string
+  displayName: string
+  eyebrow: string
+  apyLabel: string
+  apyPct: number
+  /** Supply APY as a percent — matches the list-row "Supply APY" column so the card and table agree. */
+  supplyApyPct: number
+  tone: "green" | "blue"
+  iconUrl: string
+  href: string
+  sparklinePath?: string
+}
+
+type LendMarketRow = {
+  marketId: string
+  href: string
+  asset: string
+  assetName: string
+  logoSrc?: string
+  supplyApyLabel: string
+  rewardsApyLabel: string
+  totalApyLabel: string
+  totalSuppliedLabel: string
+  availableLiquidityLabel: string
+  utilizationLabel: string
+  reserveFactorLabel: string
+  status: string
+  supplyApy: number
+  rewardsApy: number
+  totalApy: number
+  totalSupplied: number
+  availableLiquidity: number
+  utilization: number
+  reserveFactor: number
+}
+
+/** A market's supply in USD: services/convex's figure, else tokens × price. */
+function suppliedUsdOf(market: LendMarket): number {
+  return market.totalSuppliedUsd ?? market.totalSupplied * market.assetPriceUsd
+}
+
+/** A market's available liquidity in USD: services/convex's figure, else tokens × price. */
+function availableUsdOf(market: LendMarket): number {
+  return market.availableLiquidityUsd ?? market.availableLiquidity * market.assetPriceUsd
+}
+
+/** Featured Lend cards: the three largest Hub assets by supply. */
+function featuredMarkets(markets: LendMarket[]): LendMarket[] {
+  return [...markets].sort((a, b) => suppliedUsdOf(b) - suppliedUsdOf(a)).slice(0, 3)
+}
+
+export function buildLendFeaturedSnapshots(markets: LendMarket[]): LendFeaturedSnapshot[] {
+  return featuredMarkets(markets).map((market) => ({
+    marketId: market.marketId,
+    symbol: market.asset.symbol,
+    displayName: market.asset.name,
+    eyebrow: market.category === "stable" ? "Stablecoin" : "Crypto",
+    apyLabel: formatPercent(market.totalApy * 100),
+    apyPct: market.totalApy * 100,
+    supplyApyPct: market.supplyApy * 100,
+    tone: market.category === "stable" ? "green" : "blue",
+    iconUrl: getLocalAssetIcon(market.asset.symbol) ?? "",
+    href: `/lend/markets/${market.marketId}`,
+  }))
+}
+
+function featuredAssetsRecord(markets: LendMarket[]): Record<string, LendFeaturedAsset> {
+  const record: Record<string, LendFeaturedAsset> = {}
+  for (const market of featuredMarkets(markets)) {
+    record[market.marketId] = {
+      id: market.marketId,
+      symbol: market.asset.symbol,
+      displayName: market.asset.name,
+      eyebrow: market.category === "stable" ? "Stablecoin" : "Crypto",
+      apy: market.totalApy * 100,
+      tone: market.category === "stable" ? "green" : "blue",
+      iconUrl: getLocalAssetIcon(market.asset.symbol) ?? "",
+    }
+  }
+  return record
+}
+
+/** Width and height of the featured cards' sparkline drawing (hot-markets.tsx scales it to the card). */
+const SPARKLINE_WIDTH = 396
+const SPARKLINE_HEIGHT = 60
+
+/**
+ * A featured card's sparkline path ("M0,60L18.857,30…") from its supply APY points, oldest first: higher APY sits
+ * higher. Fewer than two points draw nothing.
+ */
+export function lendSparklinePath(points: readonly number[]): string {
+  if (points.length < 2) return ""
+  const max = Math.max(...points)
+  const min = Math.min(...points)
+  const range = max - min || 1
+  const step = SPARKLINE_WIDTH / (points.length - 1)
+  return points
+    .map((value, index) => {
+      const x = Number((index * step).toFixed(3))
+      const y = Number((((max - value) / range) * SPARKLINE_HEIGHT).toFixed(3))
+      return `${index === 0 ? "M" : "L"}${x},${y}`
+    })
+    .join("")
+}
+
+/** The page's featured cards with their sparklines (`fetchLendSparklines`), by market id; a card without one is unchanged. */
+export function withFeaturedSparklines(page: LendPageData, sparklines: Readonly<Record<string, readonly number[]>>): LendPageData {
+  const featuredAssets: Record<string, LendFeaturedAsset> = {}
+  for (const [id, asset] of Object.entries(page.featuredAssets)) {
+    const points = sparklines[id] ?? []
+    const path = lendSparklinePath(points)
+    featuredAssets[id] = path ? { ...asset, path, values: [...points] } : asset
+  }
+  return { ...page, featuredAssets }
+}
+
+/** Lend list groups from the Hub assets: stablecoins first, then everything else. */
+function buildAssetGroups(markets: LendMarket[]): LendAssetGroup[] {
+  const groups: LendAssetGroup[] = [
+    { title: LEND_GROUP_TITLES.stable, rows: [] },
+    { title: LEND_GROUP_TITLES.crypto, rows: [] },
+  ]
+  for (const market of markets) {
+    const tvlUsd = suppliedUsdOf(market)
+    const availableUsd = availableUsdOf(market)
+    const group = market.category === "stable" ? groups[0] : groups[1]
+    group.rows.push({
+      symbol: market.asset.symbol,
+      name: market.asset.name,
+      apy: formatPercent(market.totalApy * 100),
+      apyValue: market.totalApy * 100,
+      totalDepositsPrimary: formatTokenQuantity(market.totalSupplied, market.asset.symbol),
+      totalDepositsSecondary: formatPositiveUsd(tvlUsd),
+      totalDepositsValue: tvlUsd,
+      availableLiquidityPrimary: formatTokenQuantity(market.availableLiquidity, market.asset.symbol),
+      availableLiquiditySecondary: formatPositiveUsd(availableUsd),
+      availableLiquidityValue: availableUsd,
+      hub: market.hubId ?? "",
+      ...(market.hubLabel ? { hubLabel: market.hubLabel } : {}),
+      market: market.marketId,
+      logoSrc: getLocalAssetIcon(market.asset.symbol),
+      logoAlt: `${market.asset.symbol} logo`,
+    })
+  }
+  return groups.filter((group) => group.rows.length > 0)
+}
+
+const formatFractionPct = (value: number) => formatPercent(value * 100)
+
+function formatSupplyApyLabel(supplyApy: number, tvlUsd: number) {
+  return formatReliableLendApyLabel(supplyApy, tvlUsd, formatFractionPct)
+}
+
+function formatTotalApyLabel(totalApy: number, tvlUsd: number) {
+  return formatReliableLendApyLabel(totalApy, tvlUsd, formatFractionPct)
+}
+
+export function catalogMarketToRow(market: LendMarket): LendMarketRow {
+  const tvlUsd = suppliedUsdOf(market)
+  return {
+    marketId: market.marketId,
+    href: `/lend/markets/${market.marketId}`,
+    asset: market.asset.symbol,
+    assetName: market.asset.name,
+    logoSrc: getLocalAssetIcon(market.asset.symbol),
+    supplyApyLabel: formatSupplyApyLabel(market.supplyApy, tvlUsd),
+    rewardsApyLabel: market.rewardsApy > 0 ? formatPercent(market.rewardsApy * 100) : "No rewards",
+    totalApyLabel: formatTotalApyLabel(market.totalApy, tvlUsd),
+    totalSuppliedLabel: formatCompactUsd(suppliedUsdOf(market)),
+    availableLiquidityLabel: formatCompactUsd(availableUsdOf(market)),
+    utilizationLabel: formatPercent(market.utilization * 100),
+    reserveFactorLabel: formatPercent(market.reserveFactor * 100),
+    status: market.status,
+    supplyApy: market.supplyApy,
+    rewardsApy: market.rewardsApy,
+    totalApy: market.totalApy,
+    totalSupplied: market.totalSupplied,
+    availableLiquidity: market.availableLiquidity,
+    utilization: market.utilization,
+    reserveFactor: market.reserveFactor,
+  }
+}
+
+export function buildLendPageData(_walletId: string, state?: LendSystemState): LendPageData {
+  const markets = state ? Object.values(state.markets) : []
+  const assetGroups = buildAssetGroups(markets).map((group) => ({
+    ...group,
+    rows: group.rows.map((row) => {
+      // By market id, not symbol: the same asset listed on two Hubs has two markets.
+      const market = markets.find((entry) => entry.marketId === row.market)
+      const rowMarket = market ? catalogMarketToRow(market) : null
+      return {
+        ...row,
+        marketId: rowMarket?.marketId,
+        href: rowMarket?.href,
+        apy: rowMarket?.totalApyLabel ?? row.apy,
+        apyValue: rowMarket
+          ? rowMarket.totalApyLabel.includes("Illiquid")
+            ? 0
+            : rowMarket.totalApy * 100
+          : row.apyValue,
+        supplyApyLabel: rowMarket?.supplyApyLabel,
+        rewardsApyLabel: rowMarket?.rewardsApyLabel ?? "No rewards",
+        totalApyLabel: rowMarket?.totalApyLabel ?? row.apy,
+        supplyApyValue: rowMarket?.supplyApy ?? row.apyValue / 100,
+        rewardsApyValue: rowMarket?.rewardsApy ?? 0,
+        totalDepositsLabel: market ? formatTokenQuantity(market.totalSupplied, market.asset.symbol) : undefined,
+        totalDepositsSecondaryLabel: market ? formatPositiveUsd(suppliedUsdOf(market)) : undefined,
+        totalDepositsSortValue: market ? suppliedUsdOf(market) : undefined,
+        utilizationLabel: rowMarket?.utilizationLabel ?? "—",
+        utilizationValue: rowMarket?.utilization ?? 0,
+        availableLiquidityLabel: market
+          ? formatTokenQuantity(market.availableLiquidity, market.asset.symbol)
+          : undefined,
+        availableLiquiditySecondaryLabel: market ? formatPositiveUsd(availableUsdOf(market)) : undefined,
+        availableLiquiditySortValue: market ? availableUsdOf(market) : undefined,
+        reserveFactorLabel: rowMarket?.reserveFactorLabel ?? "—",
+        reserveFactorValue: rowMarket?.reserveFactor ?? 0,
+        status: rowMarket?.status ?? "active",
+      }
+    }),
+  }))
+
+  return {
+    markets: markets.map((market) => ({
+      symbol: market.asset.symbol,
+      name: market.asset.name,
+      apy: market.totalApy * 100,
+      apyChange24h: 0,
+      tvl: formatCompactUsd(suppliedUsdOf(market)),
+      tvlUsd: suppliedUsdOf(market),
+      // Unrounded: the hero averages it by TVL, so a market under 0.5% must still count.
+      utilization: market.utilization * 100,
+      type: market.riskTier,
+      protocol: market.asset.symbol,
+      color: "text-foreground",
+      bg: "bg-card",
+      soon: market.status !== "active",
+      event: null,
+    })),
+    featuredAssets: featuredAssetsRecord(markets),
+    featuredSequence: featuredMarkets(markets).map((market) => market.marketId),
+    featuredSnapshots: buildLendFeaturedSnapshots(markets),
+    assetGroups,
+  }
+}
+
+const STRATEGY_TIERS = [
+  {
+    riskTier: "low" as const,
+    tone: "conservative" as const,
+    title: "Conservative Strategy",
+    description: "Stable assets with lower risk",
+  },
+  {
+    riskTier: "medium" as const,
+    tone: "moderate" as const,
+    title: "Moderate Strategy",
+    description: "Balanced risk-reward ratio",
+  },
+  {
+    riskTier: "high" as const,
+    tone: "aggressive" as const,
+    title: "Aggressive Strategy",
+    description: "High risk, high potential returns",
+  },
+]
+
+// Buckets by YIELD, not collateral risk tier: a "stable" asset paying 30% APY is not
+// conservative, so bucketing by APY keeps the risk-reward narrative honest.
+function strategyTierForApyPct(apyPct: number): "low" | "medium" | "high" {
+  if (apyPct < 8) return "low"
+  if (apyPct < 18) return "medium"
+  return "high"
+}
+
+export function buildLendStrategyBuckets(markets: LendMarket[]): PortfolioStrategyBucket[] {
+  const buckets: PortfolioStrategyBucket[] = []
+  for (const tier of STRATEGY_TIERS) {
+    const tierMarkets = markets
+      .filter((market) => market.status !== "paused" && strategyTierForApyPct(market.totalApy * 100) === tier.riskTier)
+      .sort((a, b) => b.totalApy - a.totalApy)
+    if (tierMarkets.length === 0) continue
+
+    const apys = tierMarkets.map((market) => market.totalApy * 100)
+    const minApy = Math.min(...apys)
+    const maxApy = Math.max(...apys)
+    const apyRangeLabel =
+      minApy === maxApy ? `${maxApy.toFixed(1)}% APY` : `${minApy.toFixed(1)}-${maxApy.toFixed(1)}% APY range`
+
+    buckets.push({
+      title: tier.title,
+      description: tier.description,
+      apyRangeLabel,
+      tone: tier.tone,
+      pools: tierMarkets.map((market) => ({
+        name: `Aave ${market.asset.symbol}`,
+        apyPct: market.totalApy * 100,
+        tvlUsd: suppliedUsdOf(market),
+        isUp: market.rewardsApy > 0,
+        allocationUsd: 0,
+      })),
+    })
+  }
+  return buckets
+}
+
+export function buildPortfolioLendData(
+  walletId: string,
+  state: LendSystemState,
+  history: LendTransactionHistoryItem[] = [],
+): PortfolioLendTabData {
+  const walletPositions = Object.values(state.positions).filter((position) => position.walletId === walletId)
+  const positions = walletPositions.filter((position) => position.walletId === walletId && position.status === "active")
+  const claimableRewardsUsd = walletPositions.reduce((sum, position) => sum + position.rewardsEarnedUsd, 0)
+  const closedRewardsUsd = walletPositions
+    .filter((position) => position.status === "closed")
+    .reduce((sum, position) => sum + position.rewardsEarnedUsd, 0)
+
+  const investments = positions.map((position) => {
+    const market = state.markets[position.marketId]!
+    const maxWithdrawable = calculateMaxWithdrawable(position.currentSuppliedAmount, market.availableLiquidity)
+    const walletBalance = state.walletBalances[walletId]?.[position.marketId] ?? 0
+    return {
+      id: position.positionId,
+      marketId: position.marketId,
+      symbol: position.asset,
+      name: market.asset.name,
+      balance: position.currentSuppliedAmount,
+      priceUsd: market.assetPriceUsd,
+      suppliedUsd: position.suppliedValueUsd,
+      principalUsd: position.principalAmount * market.assetPriceUsd,
+      earnedUsd: position.interestEarned * market.assetPriceUsd + position.rewardsEarnedUsd,
+      interestUsd: position.interestEarned * market.assetPriceUsd,
+      rewardsEarnedUsd: position.rewardsEarnedUsd,
+      // Supply APY, not totalApy, is the canonical lend rate — the same number /lend and the
+      // deposit action show. Rewards are surfaced separately.
+      dailyEarnedUsd: (position.suppliedValueUsd * market.supplyApy) / 365,
+      apyPct: market.supplyApy * 100,
+      principalAmount: position.principalAmount,
+      interestEarned: position.interestEarned,
+      availableToWithdraw: maxWithdrawable,
+      walletBalance,
+      status: position.status,
+    }
+  })
+
+  return {
+    investments,
+    positions: investments,
+    strategyBuckets: buildLendStrategyBuckets(Object.values(state.markets)),
+    history: buildLendActivityHistory(walletId, history, state),
+    rewardsSummary: {
+      claimableUsd: claimableRewardsUsd,
+      totalEarnedUsd: investments.reduce((sum, item) => sum + item.earnedUsd, 0) + closedRewardsUsd,
+    },
+  }
+}
+
+/**
+ * Canonical Lend Net APY: supplied-weighted mean of each investment's apyPct, returned as a
+ * percent. Weighting must stay supplied-based to match the server blend
+ * (computePortfolioNetApyPct) and keep a $1 position from swaying the headline.
+ */
+export function lendNetApyPct(investments: ReadonlyArray<{ suppliedUsd: number; apyPct: number }>): number {
+  const totalSuppliedUsd = investments.reduce((sum, item) => sum + item.suppliedUsd, 0)
+  if (totalSuppliedUsd <= 0) return 0
+  return investments.reduce((sum, item) => sum + item.apyPct * item.suppliedUsd, 0) / totalSuppliedUsd
+}
+
+export function buildLendWalletSnapshot(
+  walletId: string,
+  state: LendSystemState,
+  transactionHistory: LendTransactionHistoryItem[],
+): LendWalletReadSnapshot {
+  const portfolio = buildPortfolioLendData(walletId, state, transactionHistory)
+  const totalSuppliedUsd = portfolio.investments.reduce((sum, item) => sum + item.suppliedUsd, 0)
+  const totalEarnedUsd =
+    portfolio.rewardsSummary?.totalEarnedUsd ?? portfolio.investments.reduce((sum, item) => sum + item.earnedUsd, 0)
+  const rewardsEarnedUsd =
+    portfolio.rewardsSummary?.claimableUsd ??
+    portfolio.investments.reduce((sum, item) => sum + (item.earnedUsd - (item.interestEarned ?? 0) * item.priceUsd), 0)
+  // Supplied-weighted, matching the dashboard tab and the server blend. `currentApy` is a
+  // fraction, hence /100.
+  const averageApy = lendNetApyPct(portfolio.investments) / 100
+
+  return {
+    walletId,
+    transactionHistory,
+    metrics: {
+      suppliedAmount: portfolio.investments.reduce((sum, item) => sum + item.balance, 0),
+      suppliedValueUsd: totalSuppliedUsd,
+      principalAmount: portfolio.investments.reduce((sum, item) => sum + (item.principalAmount ?? 0), 0),
+      interestEarned: portfolio.investments.reduce((sum, item) => sum + (item.interestEarned ?? 0), 0),
+      rewardsEarnedUsd,
+      totalEarnedUsd,
+      currentApy: averageApy,
+    },
+    yieldSnapshots: buildLendYieldSnapshots(state),
+  }
+}
+
+function buildLendYieldSnapshots(state: LendSystemState): LendYieldSnapshot[] {
+  return Object.values(state.markets).map((market) => ({
+    marketId: market.marketId,
+    asset: market.asset.symbol,
+    supplyApy: market.supplyApy,
+    rewardsApy: market.rewardsApy,
+    totalApy: calculateTotalApy(market.supplyApy, market.rewardsApy),
+    utilization: market.utilization,
+    availableLiquidity: market.availableLiquidity,
+    totalSupplied: market.totalSupplied,
+    capturedAt: state.now,
+  }))
+}
+
+export function buildLendActivityHistory(
+  walletId: string,
+  history: LendTransactionHistoryItem[],
+  state?: LendSystemState,
+): PortfolioLendTabData["history"] {
+  return history
+    .filter((item) => item.walletId === walletId)
+    .map((item) => ({
+      id: item.id,
+      at: new Date(item.timestamp).toISOString(),
+      product: "lend" as const,
+      kind:
+        item.kind === "deposit"
+          ? ("supply" as const)
+          : item.kind === "withdraw"
+            ? ("withdraw" as const)
+            : ("claim" as const),
+      status: item.status === "success" ? ("confirmed" as const) : ("failed" as const),
+      // The recorded USD when known: tokens × the price that happened to be loaded read the same
+      // deposit as -$68.82 and then -$52.70.
+      amountUsd:
+        item.kind === "claim"
+          ? item.amount
+          : (item.amountUsd ?? item.amount * (state?.markets[item.marketId]?.assetPriceUsd ?? Number.NaN)),
+      primaryLabel: item.asset,
+      secondaryLabel:
+        item.kind === "claim"
+          ? `${item.amount.toFixed(2)} USD rewards`
+          : formatActivityTokenAmount(item.amount, item.asset),
+      txHash: item.hash,
+      marketId: item.marketId,
+    }))
+}

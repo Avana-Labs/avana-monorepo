@@ -1,0 +1,17 @@
+# Build context of services/Dockerfile: the npm workspace only. Allowlist, so nothing new enters an image by accident.
+*
+!package.json
+!package-lock.json
+!packages/protocol/
+!packages/export/package.json
+!services/
+services/convex/
+!services/convex/package.json
+!packages/liquidator/package.json
+!packages/liquidator/bot/
+**/node_modules
+**/test
+**/.env
+**/.env.*
+**/.ponder
+**/generated

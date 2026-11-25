@@ -1,0 +1,280 @@
+{
+  "accepted": [
+    {
+      "fingerprint": "d795f3b77986471e",
+      "check": "require-revert-in-loop",
+      "file": "src/integrations/SlipstreamIntegration.sol",
+      "function": "SlipstreamIntegration._positionKeyOf generation loop",
+      "reason": "The loop runs over the four allowlisted indices (GENERATION_COUNT = 4) and calls _generation(g), whose only revert (UnsupportedNft for an index at or above GENERATION_COUNT) is unreachable from it; that revert serves keys whose generation byte is outside the allowlist (REQ-AMM-SLIP-001). Bounded loop, nothing to move after it. forge-lint suppression on the revert line with the same reason. Covered by TEST-015 (onlyAnAllowlistedManagerMayPush, pushedNftIsOnlyAStrayOnEveryGeneration).",
+      "approval": "approved by pattern (independent review 2026-11-11)",
+      "review": "Pattern: bounded loops (GENERATION_COUNT = 4; the revert in _generation is unreachable from the loop)."
+    },
+    {
+      "fingerprint": "e4b5d5870f871d17",
+      "check": "reentrancy-state-change",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "Constructor only: the PositionManager's poolManager() and WETH9() are views read once to fix the immutables; no code of the LPVault can run before the constructor returns.",
+      "approval": "approved 2026-11-23"
+    },
+    {
+      "fingerprint": "f5fa6ebd17a3511d",
+      "check": "reentrancy-state-change",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "Constructor only: the PositionManager's poolManager() and WETH9() are views read once to fix the immutables; no code of the LPVault can run before the constructor returns.",
+      "approval": "approved 2026-11-23"
+    },
+    {
+      "fingerprint": "a0cdb92928bf90b2",
+      "check": "unchecked-return",
+      "file": "src/AaveAdapter.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "70f32adada58bd4d",
+      "check": "unchecked-return",
+      "file": "src/AaveAdapter.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "e33ec6743b92f881",
+      "check": "unchecked-return",
+      "file": "src/AaveAdapter.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "4cb7a47333c7c58e",
+      "check": "reentrancy-state-change",
+      "file": "src/integrations/SlipstreamIntegration.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "d795f3b77986471e",
+      "check": "require-revert-in-loop",
+      "file": "src/integrations/SlipstreamIntegration.sol",
+      "reason": "A failed check reverts the whole call, the intended outcome inside the loop."
+    },
+    {
+      "fingerprint": "d5abe6cad5572a3c",
+      "check": "reentrancy-state-change",
+      "file": "src/integrations/UniswapV2Integration.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "642275827ba87bba",
+      "check": "unchecked-return",
+      "file": "src/integrations/UniswapV2Integration.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "6d9890474402bf44",
+      "check": "reentrancy-state-change",
+      "file": "src/integrations/UniswapV2Positions.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "6c1ee77272900b7d",
+      "check": "unsafe-oz-erc721-mint",
+      "file": "src/integrations/UniswapV2Positions.sol",
+      "reason": "`_mint` on purpose, as Uniswap v3's position manager does: no receiver callback runs, so there is no reentrancy hook; the receiver is the caller's choice."
+    },
+    {
+      "fingerprint": "ab19ec8037380d0b",
+      "check": "reentrancy-state-change",
+      "file": "src/integrations/UniswapV3Integration.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "e4b5d5870f871d17",
+      "check": "reentrancy-state-change",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "f5fa6ebd17a3511d",
+      "check": "reentrancy-state-change",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "366dea8d6f29a295",
+      "check": "require-revert-in-loop",
+      "file": "src/LiquidationModule.sol",
+      "reason": "A failed check reverts the whole call, the intended outcome inside the loop."
+    },
+    {
+      "fingerprint": "d4977df5e3c125c1",
+      "check": "uninitialized-local-variable",
+      "file": "src/LiquidationModule.sol",
+      "reason": "A loop counter starting at its default 0."
+    },
+    {
+      "fingerprint": "0e9d644a40e99bac",
+      "check": "uninitialized-local-variable",
+      "file": "src/LiquidationModule.sol",
+      "reason": "A loop counter starting at its default 0."
+    },
+    {
+      "fingerprint": "6893b7b3ece168ec",
+      "check": "reentrancy-state-change",
+      "file": "src/LPOracle.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "2c71e4ae89d71476",
+      "check": "state-variable-could-be-immutable",
+      "file": "src/LPOracle.sol",
+      "reason": "A string, which Solidity cannot make immutable; it is set once in the constructor."
+    },
+    {
+      "fingerprint": "5c906dc091835dbc",
+      "check": "reentrancy-state-change",
+      "file": "src/FlashloanRepay.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "1a121bfb6b7d0717",
+      "check": "unchecked-return",
+      "file": "src/FlashloanRepay.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "8689fb670f9a5ca2",
+      "check": "require-revert-in-loop",
+      "file": "src/libraries/SwapCalls.sol",
+      "reason": "A failed check reverts the whole call, the intended outcome inside the loop."
+    },
+    {
+      "fingerprint": "8e6c09e969e636bc",
+      "check": "require-revert-in-loop",
+      "file": "src/libraries/SwapCalls.sol",
+      "reason": "A failed check reverts the whole call, the intended outcome inside the loop."
+    },
+    {
+      "fingerprint": "49018cec69f00fa8",
+      "check": "uninitialized-local-variable",
+      "file": "src/libraries/SwapCalls.sol",
+      "reason": "A loop counter starting at its default 0."
+    },
+    {
+      "fingerprint": "2c62eafdd4f1cf8a",
+      "check": "uninitialized-local-variable",
+      "file": "src/libraries/SwapCalls.sol",
+      "reason": "A loop counter starting at its default 0."
+    },
+    {
+      "fingerprint": "04f51311498b46c9",
+      "check": "reentrancy-state-change",
+      "file": "src/FirstLossReserve.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "b78aba6d61c958f0",
+      "check": "reentrancy-state-change",
+      "file": "src/FirstLossReserve.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "725e698b34dd2415",
+      "check": "reentrancy-state-change",
+      "file": "src/FirstLossReserve.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "ed5c3227c67d87ec",
+      "check": "reentrancy-state-change",
+      "file": "src/FirstLossReserve.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "2575e8276e66be02",
+      "check": "require-revert-in-loop",
+      "file": "src/FirstLossReserve.sol",
+      "reason": "A failed check reverts the whole call, the intended outcome inside the loop."
+    },
+    {
+      "fingerprint": "2fa74ca0797b5215",
+      "check": "uninitialized-local-variable",
+      "file": "src/FirstLossReserve.sol",
+      "reason": "A loop counter starting at its default 0."
+    },
+    {
+      "fingerprint": "668e92f419684add",
+      "check": "reentrancy-state-change",
+      "file": "src/RiskModule.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "e5cdef3e4e06ad78",
+      "check": "reentrancy-state-change",
+      "file": "src/RiskModule.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "4090efc0a5945350",
+      "check": "reentrancy-state-change",
+      "file": "src/RiskModule.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "8a727dd392e49a80",
+      "check": "reentrancy-state-change",
+      "file": "src/RiskModule.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "3ebfe2e0ff56a3d4",
+      "check": "reentrancy-state-change",
+      "file": "src/RiskModule.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "bba969ebd2e33f7a",
+      "check": "require-revert-in-loop",
+      "file": "src/libraries/BandMath.sol",
+      "reason": "A failed check reverts the whole call, the intended outcome inside the loop."
+    },
+    {
+      "fingerprint": "62924a3993863b1b",
+      "check": "costly-loop",
+      "file": "src/LPVault.sol",
+      "reason": "Bounded by the caller's own input: one entry per position asked for, or the account's own positions."
+    },
+    {
+      "fingerprint": "496aa2a8168732e5",
+      "check": "costly-loop",
+      "file": "src/LPVault.sol",
+      "reason": "Bounded by the caller's own input: one entry per position asked for, or the account's own positions."
+    },
+    {
+      "fingerprint": "c03b1acda830892f",
+      "check": "empty-block",
+      "file": "src/LPVault.sol",
+      "reason": "The default pledge hook; integrations that need a check override it."
+    },
+    {
+      "fingerprint": "82e5254e1f89c33b",
+      "check": "empty-block",
+      "file": "src/LPVault.sol",
+      "reason": "The default record hook of a pledge; an integration that keeps its own per-record state (the Uniswap v2 LPVault's record LP) overrides it."
+    },
+    {
+      "fingerprint": "85191eb08380d7ef",
+      "check": "reentrancy-state-change",
+      "file": "src/LPVault.sol",
+      "reason": "State written after view reads of trusted contracts (Aave, Uniswap, Aerodrome or Avana's own) in a constructor, a governance-restricted or a nonReentrant function; no callback can reenter."
+    },
+    {
+      "fingerprint": "0060b710ad0a2db7",
+      "check": "require-revert-in-loop",
+      "file": "src/LPVault.sol",
+      "reason": "A failed check reverts the whole call, the intended outcome inside the loop."
+    },
+    {
+      "fingerprint": "d8f99c5612ef65cc",
+      "check": "unchecked-return",
+      "file": "src/LPOracle.sol",
+      "function": "LPOracle.constructor",
+      "reason": "The constructor calls _prices() only for its reverts: both reserves are read once so a source Aave cannot price (none, 0 or below, reverting, above MAX_PRICE) fails the deployment, as AaveOracle.setReserveSource reads a new source once. The values are not stored: the oracle is stateless and every read prices live (design/oracle.md). Covered by test_deadSourceAtDeployment_reverts."
+    }
+  ]
+}

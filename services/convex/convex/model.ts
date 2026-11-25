@@ -1,0 +1,229 @@
+// SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) 2026 Avana Labs
+// Reads shared by the queries: the scope rows, their content and the joins between them. A Borrow asset page and
+// the Lend page join the same `hubAssets` document; nothing here copies a Hub figure into another row.
+
+import type { HubAssetRow, HubAssetSpokeRow, HubRow, MarketReserveDebtRow, MarketRow, SpokeReserveRow } from "@avana/services-common/views";
+import type { Doc } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
+import { combineSources, sumOver, type StoredPoint, type Values } from "./lib/charts.ts";
+import { hubLabel, marketKey } from "./lib/format.ts";
+import { type PoolPricing, lpFeeAprPct } from "./lib/windows.ts";
+import { hubAssetKey, lendSnapshot, assetSnapshot, poolSnapshot } from "./lib/pages.ts";
+import type { MarketSnapshotRow, PageContent, PageScope, Visual } from "./lib/uiTypes.ts";
+
+export type ContentScope = Doc<"marketContent">["scope"];
+
+/** A stored row typed as the shared row it was written from (addresses are stored lower-case hex). */
+type Stored<Row> = Row & { readonly slug: string; readonly updatedAt: number };
+export type HubAssetDoc = Stored<HubAssetRow>;
+export type SpokeReserveDoc = Stored<SpokeReserveRow>;
+export type MarketDoc = Stored<MarketRow>;
+export type HubDoc = Stored<HubRow>;
+
+export interface World {
+  readonly hubs: HubDoc[];
+  readonly hubAssets: HubAssetDoc[];
+  readonly slices: (HubAssetSpokeRow & { updatedAt: number })[];
+  readonly reserves: SpokeReserveDoc[];
+  readonly markets: MarketDoc[];
+  readonly debts: MarketReserveDebtRow[];
+  readonly content: Doc<"marketContent">[];
+  readonly assetsByKey: Map<string, HubAssetDoc>;
+  /** `chainId:hub` → Hub. */
+  readonly hubsByKey: Map<string, HubDoc>;
+}
+
+/** The typed view of stored rows; the schema stores exactly these fields. */
+export const asRows = {
+  hubs: (d: Doc<"hubs">[]) => d as unknown as HubDoc[],
+  hubAssets: (d: Doc<"hubAssets">[]) => d as unknown as HubAssetDoc[],
+  slices: (d: Doc<"hubAssetSpokes">[]) => d as unknown as (HubAssetSpokeRow & { updatedAt: number })[],
+  reserves: (d: Doc<"spokeReserves">[]) => d as unknown as SpokeReserveDoc[],
+  markets: (d: Doc<"markets">[]) => d as unknown as MarketDoc[],
+  debts: (d: Doc<"marketReserveDebt">[]) => d as unknown as MarketReserveDebtRow[],
+};
+
+/** Every scope row. The tables hold one row per Hub, Hub asset, Spoke slice, reserve and market: hundreds of rows. */
+export async function loadWorld(ctx: QueryCtx): Promise<World> {
+  const [hubs, hubAssets, slices, reserves, markets, debts, content] = await Promise.all([
+    ctx.db.query("hubs").collect(),
+    ctx.db.query("hubAssets").collect(),
+    ctx.db.query("hubAssetSpokes").collect(),
+    ctx.db.query("spokeReserves").collect(),
+    ctx.db.query("markets").collect(),
+    ctx.db.query("marketReserveDebt").collect(),
+    ctx.db.query("marketContent").collect(),
+  ]);
+  const assets = asRows.hubAssets(hubAssets);
+  const hubRows = asRows.hubs(hubs);
+  return {
+    hubs: hubRows,
+    hubAssets: assets,
+    slices: asRows.slices(slices),
+    reserves: asRows.reserves(reserves),
+    markets: asRows.markets(markets),
+    debts: asRows.debts(debts),
+    content,
+    assetsByKey: new Map(assets.map((a) => [hubAssetKey(a), a])),
+    hubsByKey: new Map(hubRows.map((h) => [`${h.chainId}:${h.hub}`, h])),
+  };
+}
+
+/** A Hub's label: its listing content name, else the manifest's label, else its short address. */
+export function hubLabelOf(w: World, chainId: number, hub: string): string {
+  return contentOf(w, "hub", chainId, hub)?.name ?? hubLabel(w.hubsByKey.get(`${chainId}:${hub}`)?.label, hub);
+}
+
+/**
+ * The Hub asset whose price values a token on a chain: on `preferHub` when that Hub lists it, else on the Hub of the
+ * lowest tier, then the lowest address. A token on several Hubs has one price per Lend Spoke oracle; this picks one
+ * deterministically for figures that are not tied to a Hub (pool volume, the price list).
+ */
+export function priceAsset(w: World, chainId: number, token: string, preferHub?: string): HubAssetDoc | undefined {
+  const all = w.hubAssets.filter((a) => a.chainId === chainId && a.underlying === token);
+  const tier = (a: HubAssetDoc) => w.hubsByKey.get(`${chainId}:${a.hub}`)?.tier || Number.MAX_SAFE_INTEGER;
+  return all.find((a) => a.hub === preferHub) ?? [...all].sort((x, y) => tier(x) - tier(y) || x.hub.localeCompare(y.hub))[0];
+}
+
+export function contentOf(w: World, scope: ContentScope, chainId: number, key: string): PageContent | null {
+  return w.content.find((c) => c.scope === scope && c.chainId === chainId && c.key === key) ?? null;
+}
+
+/** A token's symbol from its content, or its short address until the listing names it. */
+export function symbolOf(w: World, chainId: number, token: string): string {
+  return contentOf(w, "token", chainId, token)?.symbol ?? `${token.slice(0, 6)}…`;
+}
+
+export const reserveKey = (r: { chainId: number; spoke: string; reserveId: string }) => `${r.spoke}:${r.reserveId}`;
+export const lendKey = (a: { hub: string; assetId: string }) => `${a.hub}:${a.assetId}`;
+
+export function sliceOf(w: World, r: SpokeReserveRow): (HubAssetSpokeRow & { updatedAt: number }) | undefined {
+  return w.slices.find((s) => s.chainId === r.chainId && s.hub === r.hub && s.assetId === r.assetId && s.spoke === r.spoke);
+}
+
+/** USD prices and decimals of a market's two pool tokens; a token with no Hub asset takes the other's price. */
+export function poolPricing(w: World, m: MarketDoc): PoolPricing | null {
+  const assets = m.tokens.map((t) => priceAsset(w, m.chainId, t, m.hub));
+  const known = assets.find((a) => a !== undefined);
+  if (!known) return null;
+  const price = (i: number) => Number(BigInt((assets[i] ?? known).priceUsd8)) / 1e8;
+  return { decimals: [m.tokenDecimals[0] ?? 18, m.tokenDecimals[1] ?? 18], priceUsd: [price(0), price(1)] };
+}
+
+/** The pool's last swap state (price and active liquidity) from its buckets, or null before any swap. */
+export function lastPoolState(buckets: ReadonlyMap<number, Values>): { sqrtPriceX96: string; liquidity: string } | null {
+  let best: number | undefined;
+  for (const [t, v] of buckets) if (v.sqrtPriceX96 !== undefined && (best === undefined || t > best)) best = t;
+  const v = best === undefined ? undefined : buckets.get(best);
+  return v?.sqrtPriceX96 ? { sqrtPriceX96: v.sqrtPriceX96, liquidity: v.liquidity ?? "0" } : null;
+}
+
+/** Pool volume and fees over the last 24 hourly buckets, valued at the Lend Spoke price of each token (`priceAsset`), and the market range's LP fee APR over them. */
+export async function pool24h(ctx: QueryCtx, w: World, m: MarketDoc, now: number): Promise<{ volumeUsd: number; feesUsd: number; lpFeeAprPct?: number }> {
+  const key = `${m.chainId}:${m.pool}`;
+  const from = Math.floor(now / 3_600) * 3_600 - 24 * 3_600;
+  const rows = await ctx.db
+    .query("series")
+    .withIndex("by_scope", (q) => q.eq("scopeKind", "pool").eq("scopeKey", key).eq("resolution", "hour").gte("bucketStart", from))
+    .collect();
+  const buckets = combineSources("pool", rows as StoredPoint[]);
+  const priced = m.tokens.map((t, i) => ({ i, asset: priceAsset(w, m.chainId, t, m.hub) }));
+  const side = priced.find((p) => p.asset !== undefined);
+  if (!side?.asset) return { volumeUsd: 0, feesUsd: 0 };
+  const price = Number(BigInt(side.asset.priceUsd8)) / 1e8;
+  const scale = 10 ** side.asset.decimals;
+  const value = (metric: string) => (Number(sumOver(buckets, `${metric}${side.i}`, from, Number.MAX_SAFE_INTEGER)) / scale) * price;
+  // Fees are charged on the input side of each swap, so both tokens' fees count; the other side at the same price.
+  const otherFees = Number(sumOver(buckets, `fees${1 - side.i}`, from, Number.MAX_SAFE_INTEGER)) / 10 ** (m.tokenDecimals[1 - side.i] ?? side.asset.decimals);
+  const pricing = poolPricing(w, m);
+  const state = lastPoolState(buckets);
+  const recent = [...buckets.entries()].filter(([t]) => t >= from).map(([, v]) => v);
+  const lpFeeAprPct = pricing && state ? lpFeeAprPct24h(recent, { sqrtPriceX96: state.sqrtPriceX96, tickLower: m.bandLower, tickUpper: m.bandUpper }, pricing) : undefined;
+  return { volumeUsd: value("volume"), feesUsd: value("fees") + otherFees * price, ...(lpFeeAprPct === undefined ? {} : { lpFeeAprPct }) };
+}
+
+const lpFeeAprPct24h = (buckets: readonly Values[], current: { sqrtPriceX96: string; tickLower: number; tickUpper: number }, p: PoolPricing) => lpFeeAprPct(buckets, 1, current, p);
+
+/** A Spoke's name from its listing entry; none until the listing names it. */
+export function spokeNameOf(w: World, chainId: number, spoke: string): string | undefined {
+  return contentOf(w, "spoke", chainId, spoke.toLowerCase())?.name?.trim() || undefined;
+}
+
+/**
+ * A market's pair icons from its two tokens' listing entries (symbol and iconUrl), in the neutral style the app gives
+ * a token without a listed visual. None until both tokens have an entry.
+ */
+export function pairVisuals(w: World, m: MarketDoc): Visual[] | undefined {
+  const entries = m.tokens.map((t) => contentOf(w, "token", m.chainId, t.toLowerCase()));
+  if (entries.length < 2 || entries.some((c) => !c)) return undefined;
+  return entries.map((c) => {
+    const symbol = c!.symbol ?? c!.name;
+    return { symbol, shortLabel: symbol.slice(0, 4), bgClassName: "bg-muted", textClassName: "text-foreground", ...(c!.iconUrl ? { iconUrl: c!.iconUrl } : {}) };
+  });
+}
+
+/** Every list row, one per Lend asset, CDP debt reserve and market. */
+export async function snapshotRows(ctx: QueryCtx, w: World, now: number, only?: PageScope): Promise<MarketSnapshotRow[]> {
+  const rows: MarketSnapshotRow[] = [];
+  if (!only || only === "lend") {
+    for (const a of w.hubAssets) rows.push(lendSnapshot(a, contentOf(w, "lend", a.chainId, lendKey(a)), symbolOf(w, a.chainId, a.underlying), hubLabelOf(w, a.chainId, a.hub)));
+  }
+  if (!only || only === "asset") {
+    for (const r of w.reserves) {
+      const asset = w.assetsByKey.get(hubAssetKey(r));
+      const slice = sliceOf(w, r);
+      if (!asset || !slice) continue;
+      rows.push(
+        assetSnapshot(r, slice, asset, contentOf(w, "asset", r.chainId, reserveKey(r)), symbolOf(w, r.chainId, r.asset), hubLabelOf(w, r.chainId, r.hub)),
+      );
+    }
+  }
+  if (!only || only === "pool") {
+    // The last 24 h of each chain end at its own series clock when that runs ahead (`seriesNow`).
+    const chainNow = new Map<number, number>();
+    for (const m of w.markets) {
+      if (!chainNow.has(m.chainId)) chainNow.set(m.chainId, Math.max(now, await seriesNow(ctx, m.chainId)));
+      const debts = w.debts.filter((d) => d.chainId === m.chainId && d.integrationId === m.integrationId && d.marketId === m.marketId);
+      const reserves = w.reserves.filter((r) => r.chainId === m.chainId);
+      const row = poolSnapshot(m, debts, reserves, w.assetsByKey, await pool24h(ctx, w, m, chainNow.get(m.chainId)!), contentOf(w, "pool", m.chainId, marketKey(m)), hubLabelOf(w, m.chainId, m.hub), pairVisuals(w, m));
+      const spokeName = spokeNameOf(w, m.chainId, m.spoke);
+      rows.push(spokeName ? { ...row, spokeName } : row);
+    }
+  }
+  return rows;
+}
+
+/** The scope row behind a page slug. */
+export function bySlug(w: World, scope: PageScope, slug: string): HubAssetDoc | SpokeReserveDoc | MarketDoc | null {
+  if (scope === "lend") return w.hubAssets.find((a) => a.slug === slug) ?? null;
+  if (scope === "asset") return w.reserves.find((r) => r.slug === slug) ?? null;
+  return w.markets.find((m) => m.slug === slug) ?? null;
+}
+
+/**
+ * "Now" for one chain's charts, in seconds: the wall clock, or the chain's own clock when its series already run past
+ * it. The indexer buckets series by block time, and a local chain whose time was advanced (the deploy's timelock steps)
+ * runs ahead of the wall clock: windowing its charts by the wall clock would cut off everything it recorded since.
+ * On a live network the chain's clock trails the wall clock, so this is the wall clock.
+ */
+export async function seriesNow(ctx: QueryCtx, chainId: number | undefined): Promise<number> {
+  const wall = Math.floor(Date.now() / 1000);
+  if (chainId === undefined || !Number.isFinite(chainId)) return wall;
+  const checkpoint = await ctx.db.query("ingestCheckpoints").withIndex("by_chain", (q) => q.eq("chainId", chainId)).first();
+  return Math.max(wall, checkpoint?.seriesThroughTime ?? 0);
+}
+
+/** The chain of a series scope key: every key starts with its chain id ("31337:0x…:0"). */
+export const chainOfScopeKey = (key: string): number | undefined => {
+  const chainId = Number.parseInt(key.split(":")[0] ?? "", 10);
+  return Number.isFinite(chainId) ? chainId : undefined;
+};
+
+/** All stored points of one scope at one resolution, both sources. */
+export async function scopePoints(ctx: QueryCtx, scopeKind: string, scopeKey: string, resolution: "hour" | "day", from = 0): Promise<StoredPoint[]> {
+  return (await ctx.db
+    .query("series")
+    .withIndex("by_scope", (q) => q.eq("scopeKind", scopeKind).eq("scopeKey", scopeKey).eq("resolution", resolution).gte("bucketStart", from))
+    .collect()) as StoredPoint[];
+}

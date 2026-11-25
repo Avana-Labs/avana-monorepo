@@ -1,0 +1,374 @@
+{
+  "excluded_detectors": [
+    {
+      "check": "naming-convention",
+      "reason": "Getters of immutables and constants keep the SCREAMING_SNAKE_CASE name of the value they expose (HUB(), ADAPTER(), RESCUE_MIN_PLEDGE_USD()), as Aave V4 and OpenZeppelin name them; naming is not a security property."
+    },
+    {
+      "check": "unindexed-event-address",
+      "reason": "Which event fields are indexed is fixed by the spec's event definitions and the indexer's topic layout, not chosen per detector."
+    }
+  ],
+  "accepted": [
+    {
+      "fingerprint": "5c036e41452518fb",
+      "check": "divide-before-multiply",
+      "file": "src/libraries/ClTickMath.sol",
+      "function": "ClTickMath.getSqrtPriceAtTick(int24)",
+      "reason": "Intended inversion, not lost precision: for a positive tick `type(uint256).max / price` inverts the Q128.128 ratio exactly as Uniswap v4-core TickMath.getSqrtPriceAtTick does (Slither pairs it with the table products above it on the same variable); the result is rounded up to Q64.96 afterwards. Covered by TEST-279 (tickBoundsMatchUniswap, tickAtSqrtRatioInvertsSqrtRatioAtTick) and the TEST-037 differential suite (tickMapMatchesReference).",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces a2b58ce48cdc5468 (ClPriceMath.sqrtRatioAtTick, approved by Avana Labs 2026-11-10 by pattern): the tick math moved into the MIT ClTickMath (v4-core TickMath), which ClPriceMath.sqrtRatioAtTick now calls."
+    },
+    {
+      "fingerprint": "f4c284311ed96012",
+      "check": "cyclomatic-complexity",
+      "file": "src/libraries/ClTickMath.sol",
+      "function": "ClTickMath.getSqrtPriceAtTick(int24)",
+      "reason": "getSqrtPriceAtTick is Uniswap v4-core TickMath.getSqrtPriceAtTick: one branch per bit of |tick| over the magic-constant table, kept line for line so it can be compared with the audited original; splitting it would only hide the table. forge-lint suppression on the function with the same reason. Covered by TEST-279 (tickBoundsMatchUniswap) and the TEST-037 differential suite (tickMapMatchesReference).",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces d1115e0b28e5b4e8 (ClPriceMath.sqrtRatioAtTick, approved by Avana Labs 2026-11-10 by pattern): the same table, now in ClTickMath."
+    },
+    {
+      "fingerprint": "86297d5bc7254322",
+      "check": "reentrancy-no-eth",
+      "file": "src/AaveAdapter.sol",
+      "reason": "The external call is `new AccountProxy`, Avana's own contract whose constructor calls nothing; reached only inside nonReentrant entry points."
+    },
+    {
+      "fingerprint": "551ac92545848072",
+      "check": "too-many-digits",
+      "file": "src/AaveAdapter.sol",
+      "reason": "The literal is AccountProxy's creation code (`type(AccountProxy).creationCode`), not a number."
+    },
+    {
+      "fingerprint": "c6dcab4a6c80bcb3",
+      "check": "unused-return",
+      "file": "src/AaveAdapter.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "27d707cb34c159dd",
+      "check": "unused-return",
+      "file": "src/AaveAdapter.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "ab26e71ee465c859",
+      "check": "unused-return",
+      "file": "src/AaveAdapter.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "71075fdf4f4575c3",
+      "check": "unused-return",
+      "file": "src/AaveAdapter.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "a9dd6b6d9841ba7f",
+      "check": "unused-return",
+      "file": "src/AaveAdapter.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "2e747635f5ea1b49",
+      "check": "unused-return",
+      "file": "src/AaveAdapter.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "317dd612d8df9251",
+      "check": "missing-zero-check",
+      "file": "src/AccountProxy.sol",
+      "reason": "Only the AaveAdapter deploys an AccountProxy, with `owner` set to the caller's wallet (msg.sender), never zero."
+    },
+    {
+      "fingerprint": "f4c284311ed96012",
+      "check": "cyclomatic-complexity",
+      "file": "src/libraries/ClTickMath.sol",
+      "reason": "Uniswap's TickMath: one branch per bit of the tick."
+    },
+    {
+      "fingerprint": "5c036e41452518fb",
+      "check": "divide-before-multiply",
+      "file": "src/libraries/ClTickMath.sol",
+      "reason": "Uniswap v4-core TickMath.getSqrtPriceAtTick kept as written: the inversion follows the Q128 products by design."
+    },
+    {
+      "fingerprint": "8e08a48f514265c1",
+      "check": "calls-loop",
+      "file": "src/integrations/NfpmLPVault.sol",
+      "reason": "Bounded loop: Slipstream's four fixed generations, one account's positions in one market, the Spokes of one Hub asset, or the actions of one Uniswap v4 batch; every callee is Aave, Uniswap, Aerodrome or Avana's own contract, and a revert fails the whole call by design."
+    },
+    {
+      "fingerprint": "2e341b67513e18da",
+      "check": "timestamp",
+      "file": "src/integrations/NfpmLPVault.sol",
+      "reason": "block.timestamp is only the deadline passed to the position manager; the flagged comparison is on token amounts."
+    },
+    {
+      "fingerprint": "ac4527bb454d410f",
+      "check": "calls-loop",
+      "file": "src/integrations/SlipstreamIntegration.sol",
+      "reason": "Bounded loop: Slipstream's four fixed generations, one account's positions in one market, the Spokes of one Hub asset, or the actions of one Uniswap v4 batch; every callee is Aave, Uniswap, Aerodrome or Avana's own contract, and a revert fails the whole call by design."
+    },
+    {
+      "fingerprint": "7d98103dfedf4f6f",
+      "check": "calls-loop",
+      "file": "src/integrations/SlipstreamIntegration.sol",
+      "reason": "Bounded loop: Slipstream's four fixed generations, one account's positions in one market, the Spokes of one Hub asset, or the actions of one Uniswap v4 batch; every callee is Aave, Uniswap, Aerodrome or Avana's own contract, and a revert fails the whole call by design."
+    },
+    {
+      "fingerprint": "3dcb65ebe3fbe701",
+      "check": "unused-return",
+      "file": "src/integrations/SlipstreamIntegration.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "f4c331ac27552a8d",
+      "check": "unused-return",
+      "file": "src/integrations/SlipstreamIntegration.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "bfa7e5013206baf8",
+      "check": "unused-return",
+      "file": "src/integrations/UniswapV2Integration.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "3ef72263e019b8e4",
+      "check": "unused-return",
+      "file": "src/integrations/UniswapV2Integration.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "396f79c75a935ee6",
+      "check": "unused-return",
+      "file": "src/integrations/UniswapV2Integration.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "e4af955423ddfc33",
+      "check": "unused-return",
+      "file": "src/integrations/UniswapV2Integration.sol",
+      "reason": "_recordPledge reads the wrapper's position for its LP amount only; the pair was already checked against the market by the pledge (PoolMismatch). Covered by test_directIncrease_isNotCreditedAndNeverUnwound."
+    },
+    {
+      "fingerprint": "824729123dbbc09f",
+      "check": "reentrancy-benign",
+      "file": "src/integrations/UniswapV2Integration.sol",
+      "reason": "_increase adds to the record's LP the amount the wrapper reports it received, known only after the call. The callee is Avana's own UniswapV2Positions (nonReentrant, no roles), whose only external call pulls the factory pair's own LP token; the LPVault holds its nonReentrant lock for the whole top-up, so no callback can reach the write. Covered by test_addLiquidity_afterADirectIncreaseCreditsOnlyTheNewLp."
+    },
+    {
+      "fingerprint": "a6eb79b181eccab9",
+      "check": "incorrect-equality",
+      "file": "src/integrations/UniswapV2Positions.sol",
+      "reason": "A zero guard on a computed amount (credit, liquidity, fees, LP received), not an equality on a balance anyone can set."
+    },
+    {
+      "fingerprint": "9aa9718d21b8e502",
+      "check": "unused-return",
+      "file": "src/integrations/UniswapV3Integration.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "b488554a1b6ef74f",
+      "check": "unused-return",
+      "file": "src/integrations/UniswapV3Integration.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "7e61ee374a3584c5",
+      "check": "assembly",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "One reviewed memory write (shrinking an array to its length, writing the input amount into route calldata); solhint gates the same site."
+    },
+    {
+      "fingerprint": "362ac6ea7ea98726",
+      "check": "calls-loop",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "Bounded loop: Slipstream's four fixed generations, one account's positions in one market, the Spokes of one Hub asset, or the actions of one Uniswap v4 batch; every callee is Aave, Uniswap, Aerodrome or Avana's own contract, and a revert fails the whole call by design."
+    },
+    {
+      "fingerprint": "0cd29ea06877ba1c",
+      "check": "calls-loop",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "Bounded loop: Slipstream's four fixed generations, one account's positions in one market, the Spokes of one Hub asset, or the actions of one Uniswap v4 batch; every callee is Aave, Uniswap, Aerodrome or Avana's own contract, and a revert fails the whole call by design."
+    },
+    {
+      "fingerprint": "5b62e8fdb9da83b3",
+      "check": "calls-loop",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "Bounded loop: Slipstream's four fixed generations, one account's positions in one market, the Spokes of one Hub asset, or the actions of one Uniswap v4 batch; every callee is Aave, Uniswap, Aerodrome or Avana's own contract, and a revert fails the whole call by design."
+    },
+    {
+      "fingerprint": "09d6638f0f81b197",
+      "check": "unused-return",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "9f1dc69974fc1f97",
+      "check": "unused-return",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "adfc5e247fb7c844",
+      "check": "unused-return",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "b5ccac70519d3aaf",
+      "check": "calls-loop",
+      "file": "src/LiquidationModule.sol",
+      "reason": "Bounded loop: Slipstream's four fixed generations, one account's positions in one market, the Spokes of one Hub asset, or the actions of one Uniswap v4 batch; every callee is Aave, Uniswap, Aerodrome or Avana's own contract, and a revert fails the whole call by design."
+    },
+    {
+      "fingerprint": "ece2ce29d38ef663",
+      "check": "calls-loop",
+      "file": "src/LiquidationModule.sol",
+      "reason": "Bounded loop: Slipstream's four fixed generations, one account's positions in one market, the Spokes of one Hub asset, or the actions of one Uniswap v4 batch; every callee is Aave, Uniswap, Aerodrome or Avana's own contract, and a revert fails the whole call by design."
+    },
+    {
+      "fingerprint": "27d91d4cac534c1f",
+      "check": "dead-code",
+      "file": "src/LiquidationModule.sol",
+      "reason": "Called by the liquidation path (`Pricing memory pr = _pricing(...)` in LiquidationModule); Slither misses the call."
+    },
+    {
+      "fingerprint": "cda81509da761804",
+      "check": "unused-return",
+      "file": "src/LiquidationModule.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "a29ab9d284dc908c",
+      "check": "unused-return",
+      "file": "src/LiquidationModule.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "169957ea22161d7f",
+      "check": "reentrancy-events",
+      "file": "src/FlashloanRepay.sol",
+      "reason": "Every call before the event is to the nonReentrant adapter, the Aave V3 Pool or the wallet's own route, inside the wallet's own flash callback."
+    },
+    {
+      "fingerprint": "c314ca04e8ffbd5f",
+      "check": "uninitialized-local",
+      "file": "src/FlashloanRepay.sol",
+      "reason": "A memory struct filled field by field on the lines after its declaration."
+    },
+    {
+      "fingerprint": "5a7f7f7bf9a069c5",
+      "check": "unused-return",
+      "file": "src/FlashloanRepay.sol",
+      "reason": "Only the values used here are needed: the ignored ones are tuple fields of a pool, position or Aave read, Aave share counts beside the amounts used, LPVault payouts sent straight to the recipient, or the Uniswap v2 burn whose amounts are measured by balance difference (integrations/uniswap-v2/DESIGN.md)."
+    },
+    {
+      "fingerprint": "d1a61a124a2ac83f",
+      "check": "assembly",
+      "file": "src/libraries/SwapCalls.sol",
+      "reason": "One reviewed memory write (shrinking an array to its length, writing the input amount into route calldata); solhint gates the same site."
+    },
+    {
+      "fingerprint": "c5c5676ad014703d",
+      "check": "low-level-calls",
+      "file": "src/libraries/SwapCalls.sol",
+      "reason": "The caller's own swap route to a target outside Avana's contracts; the revert reason is bubbled."
+    },
+    {
+      "fingerprint": "fc3c9579c041e40c",
+      "check": "calls-loop",
+      "file": "src/FirstLossReserve.sol",
+      "reason": "Bounded loop: Slipstream's four fixed generations, one account's positions in one market, the Spokes of one Hub asset, or the actions of one Uniswap v4 batch; every callee is Aave, Uniswap, Aerodrome or Avana's own contract, and a revert fails the whole call by design."
+    },
+    {
+      "fingerprint": "1c43bc73549ff15d",
+      "check": "uninitialized-state",
+      "file": "src/libraries/RiskModuleStorage.sol",
+      "reason": "A mapping of arrays written by push in the inheriting implementation; Slither reads the never-assigned mapping itself as uninitialized."
+    },
+    {
+      "fingerprint": "6d2a51fbb9669ce7",
+      "check": "cyclomatic-complexity",
+      "file": "src/libraries/AaveConfigLogic.sol",
+      "reason": "One check per activation condition, each with its own failure reason."
+    },
+    {
+      "fingerprint": "7f845b5bdbfde88d",
+      "check": "uninitialized-local",
+      "file": "src/libraries/AaveConfigLogic.sol",
+      "reason": "Set in the try branch; the catch branch reverts."
+    },
+    {
+      "fingerprint": "417eda10fcf114c8",
+      "check": "divide-before-multiply",
+      "file": "src/libraries/BandMath.sol",
+      "reason": "Rounds a tick to a multiple of the tick spacing: the division truncates on purpose."
+    },
+    {
+      "fingerprint": "438b1b81e87b8c8e",
+      "check": "divide-before-multiply",
+      "file": "src/libraries/BandMath.sol",
+      "reason": "Rounds a tick to a multiple of the tick spacing: the division truncates on purpose."
+    },
+    {
+      "fingerprint": "2cefd58ad929fc4c",
+      "check": "divide-before-multiply",
+      "file": "src/libraries/BandMath.sol",
+      "reason": "Rounds a tick to a multiple of the tick spacing: the division truncates on purpose."
+    },
+    {
+      "fingerprint": "bcd2c77a324af341",
+      "check": "arbitrary-send-erc20",
+      "file": "src/LPVault.sol",
+      "reason": "`from`/`payer` is always the AaveAdapter's own msg.sender (AaveAdapter.pledge and addLiquidity pass it), and only the adapter role reaches these restricted functions."
+    },
+    {
+      "fingerprint": "75f14e20c57735cf",
+      "check": "arbitrary-send-erc20",
+      "file": "src/LPVault.sol",
+      "reason": "`from`/`payer` is always the AaveAdapter's own msg.sender (AaveAdapter.pledge and addLiquidity pass it), and only the adapter role reaches these restricted functions."
+    },
+    {
+      "fingerprint": "115307ba7025c0a6",
+      "check": "costly-loop",
+      "file": "src/LPVault.sol",
+      "reason": "One delete per position the caller asks to collect; the caller bounds the loop."
+    },
+    {
+      "fingerprint": "fb8412cb333c02e6",
+      "check": "incorrect-equality",
+      "file": "src/LPVault.sol",
+      "reason": "A zero guard on a computed amount (credit, liquidity, fees, LP received), not an equality on a balance anyone can set."
+    },
+    {
+      "fingerprint": "89f3f84cf52aaf2f",
+      "check": "incorrect-equality",
+      "file": "src/LPVault.sol",
+      "reason": "A zero guard on a computed amount (credit, liquidity, fees, LP received), not an equality on a balance anyone can set."
+    },
+    {
+      "fingerprint": "7dc23203a22399f7",
+      "check": "incorrect-equality",
+      "file": "src/LPVault.sol",
+      "reason": "A zero guard on a computed amount (credit, liquidity, fees, LP received), not an equality on a balance anyone can set."
+    },
+    {
+      "fingerprint": "1ffb9d9e66540f57",
+      "check": "incorrect-equality",
+      "file": "src/LPVault.sol",
+      "reason": "A zero guard on a computed amount (credit, liquidity, fees, LP received), not an equality on a balance anyone can set."
+    },
+    {
+      "fingerprint": "4b598f81e2cf388a",
+      "check": "uninitialized-state",
+      "file": "src/libraries/LPVaultStorage.sol",
+      "reason": "A mapping of arrays written by push in the inheriting implementation; Slither reads the never-assigned mapping itself as uninitialized."
+    }
+  ]
+}

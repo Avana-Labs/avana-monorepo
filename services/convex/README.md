@@ -1,0 +1,218 @@
+# Convex
+
+The backend the web app reads. This folder is one Convex project (`@avana/convex` in the services workspace): the schema, the public queries of every Lend and Borrow screen, the import of the indexer's [private export](../indexer/EXPORT.md) (`convex/ingest/`), the current-value sampler, the listing metadata load (`convex/listing/`) and the frontend fee quote. Convex never holds a transaction target, receiver, amount or calldata for a protocol action; the app builds every call itself and reads wallet values live over RPC.
+
+| Path | Contents |
+|---|---|
+| `convex/schema.ts` | Tables, one owner per number (below) |
+| `convex/markets.ts`, `detailHydration.ts`, `allocation.ts`, `contractAddresses.ts`, `borrow/`, `lend/` | The screens' queries, under the names and shapes the app calls |
+| `convex/hubAssets.ts`, `spokeReserves.ts`, `collateralMarkets.ts`, `series.ts`, `marketContent.ts` | The same rows by scope key, and one chart query for every series |
+| `convex/prices.ts`, `liquidity.ts` | The app's price layer (Lend Spoke oracle prices) and its liquidity overlay (always empty: rows are live) |
+| `convex/frontendFee.ts` | Fee rules and the fee + gas total shown before signing |
+| `convex/ingest/` | Export pull, series pull, pool history, current-value sampler, the mutations that apply them |
+| `convex/listing/` | Listing metadata: fetch, hash check, store |
+| `convex/wallet/`, `kept.ts` | A wallet's accounts and last samples; its older activity on request (`wallet/history:older`: a signed `/export/v1/history` page, checked and returned unstored, 20 requests a minute per wallet, "unavailable" while the indexer reindexes); typed stubs of kept features (rewards, referrals, swap quotes, the in-app assistant) |
+| `convex/lib/` | Pure functions the tests run offline: page numbers, charts, fees, metadata, event decoding; `exportClient.ts` configures the export client of `@avana/export` (signing and page checks) |
+| `convex/auth.config.ts`, `walletAuth.ts`, `rateLimits.ts`, `writeRateLimit.ts`, `codedError.ts` | The web app's SIWE→JWT issuer (only the per-wallet features below use it; protocol queries stay public), the wallet guard, the SIWE route rate limiter and coded errors |
+| `convex/wallet/profiles.ts`, `support.ts`, `fx.ts`, `tokenPrices.ts` | Per-wallet display preferences, Support Center requests, FX rates (open.er-api.com, hourly) and DefiLlama prices of tokens outside the protocol (display only; protocol values use `prices.ts`) |
+| `convex/askAI*.ts`, `convex/lib/askAI/`, `convex.config.ts`, `knowledge/` | Ask AI: threads, turn queue, quotas, the agent (Convex Agent + OpenAI), the market cache (DefiLlama pools, Aave markets), knowledge search over `askAICorpus.generated.ts` (rendered from `knowledge/*.md` by `scripts/render-ask-ai-corpus.mjs`). The wallet tools answer "not available yet" until they read the chain. Components: agent, rag, rate-limiter |
+| `convex/_generated/` | Convex's generated API and types, committed; `npx convex dev` rewrites them (without a deployment, `node scripts/write-generated-api.mjs` rewrites `api.d.ts` the same way) |
+
+## Scopes
+
+A chain has several Aave V4 Hubs. Each has one or more supply-only Lend Spokes (Aave standard Spokes with `drawCap = 0`) and its CDP Spokes (one per AMM protocol), and each (Hub, debt asset) its First-Loss Reserve. Every number belongs to the narrowest scope that owns it, and is stored once:
+
+| Table | Key | Holds | Pages |
+|---|---|---|---|
+| `hubs` | chain, Hub | Label, tier, recorded flag, application state, Lend and CDP Spokes, lend assets. No totals: they are the sum of the Hub's `hubAssets` | Lend totals by Hub (`markets.getLendTotals`), Hub list and page (`hubs.list`, `hubs.get`, `hubs.getBySlug`) |
+| `hubAssets` | chain, Hub, assetId | Added, owed (drawn + premium), liquidity, deficit, fees, rates, rate curve, reserve factor, every Lend Spoke reserve on it and the first one's oracle price, coverage | Lend list and page; the Hub block and Hub charts of every Borrow asset page |
+| `hubAssetSpokes` | chain, Hub, assetId, Spoke | One Spoke's added, owed, deficit, caps, kind (lend, cdp, coverage, deficit offset, fee receiver, other) | Lend allocation by Spoke; "borrowed via this Spoke" on a Borrow asset page |
+| `spokeReserves` | chain, Spoke, reserveId | A CDP debt reserve's flags, debt price, breaker. No Hub totals | Borrow list asset rows, Borrow asset page |
+| `markets` | chain, integrationId, marketId | A collateral market, one of a pool's two (Full range or Custom range): pool key, band, LTV, vault token, LPOracle price, collateral value, collateral factor, bonus, collateral risk, liquidation config, the reserve's paused and frozen flags (a depegged market is frozen); per debt reserve the market's rate | Borrow list pool rows, pool page, "Assets you can borrow" |
+| `marketReserveDebt` | chain, integrationId, marketId, Spoke, reserveId | Debt a market backs in one debt reserve, and its borrowers | Pool page "debt backed"; Borrow asset page split by market |
+| `positions` | chain, Spoke, proxy | An account's collateral and debt value at the last daily sample | Wallets at risk, borrower lists |
+| `series` | scope kind, scope key, resolution, bucket | Every chart point | Every chart |
+| `marketContent` | scope, chain, on-chain key | Names, slugs, descriptions, FAQs, history, long text | Every page's text |
+
+The Lend page reads a `hubAssets` row; the same token on two Hubs is two rows and two pages (default slug `ethereum-<hub label>-usdc`), each row naming its Hub (`hubId`, `hubLabel`). Where the Lend screen shows one figure (`markets.getLendTotals`), it adds the Hub assets of every Hub, and splits the same totals by Hub and by token. A Borrow asset page reads its `spokeReserves` row, the `hubAssetSpokes` row of its Spoke and the **same** `hubAssets` row, so the two pages cannot show different supply, liquidity, utilization, rates or rate curve. "Borrowed" is owed (drawn + premium) everywhere; "available" is the Hub's liquidity, bounded on a Borrow asset page by its Spoke's cap room, never supplied − borrowed. Every USD figure of an asset uses its Lend Spoke's oracle price; a figure not tied to a Hub (pool volume, the price list) prices a token on the market's Hub, else on the Hub of the lowest tier.
+
+Example (Ethereum, USDC, illustrative): the Hub holds 10,000,000 added (Lend Spoke 9,800,000, First-Loss Reserve 200,000) and 3,000,000 owed, 1,000,000 by CDP Spoke U and 2,000,000 by CDP Spoke X, so liquidity is 7,000,000 and utilization 30 %. The Lend page shows 10,000,000 supplied, 3,000,000 borrowed, 7,000,000 available. U's Borrow asset page shows the same 10,000,000 Hub supply and 30 % utilization, 1,000,000 borrowed via U and `min(4,000,000 cap − 1,000,000, 7,000,000) = 3,000,000` available; X's shows 2,000,000 and `min(3,000,000 − 2,000,000, 7,000,000) = 1,000,000`. 1,000,000 + 2,000,000 is the Lend page's 3,000,000. If lenders withdraw 5,000,000, liquidity falls to 2,000,000: U can draw 2,000,000 and X 1,000,000, but together only 2,000,000. Rates: a 6 % drawn rate with a 10 % reserve factor gives lenders `6 % × 30 % × 0.9 = 1.62 %` (APY `e^0.0162 − 1`); a market with 5 % collateral risk charges its borrowers `6 % × 1.05 = 6.30 %`. `test/reconcile.test.ts` checks every one of these sums on fixture data.
+
+## Current values
+
+`ingest/sampler.refresh` runs every 60 s per chain. At one block it reads, over Convex's own RPC (`RPC_<CHAIN>`, `RPC_<CHAIN>_FALLBACK`), the chain snapshot of `@avana/services-common/views`: every Hub of the deployment with its assets and Spokes, every Lend Spoke's reserves and oracle prices, each Hub asset's totals, its Spokes, rate curve and draw-cap coverage (each RiskModule's `coverage(hub, asset)` and the First-Loss Reserve's balance), every CDP debt reserve of the manifest, and every market of the manifest (two per pool) from its RiskModule record, LPOracle price and vault-token reserve. One mutation writes the rows; every row carries the block. A row whose values are unchanged is left alone until its stored read is 10 minutes old (`UNCHANGED_REWRITE_MS`), so subscriptions re-run when a value changes, not at every refresh. The same reader runs in the indexer's hourly sampler, so current rows and chart points come from the same calls.
+
+A market appears once its release manifest is written (`deployments:setFromManifest`), at the next run, with a default slug (`ethereum-market-1-4`: integration 1's market 4, since each integration's RiskModule numbers its own markets; `ethereum-core`) until its listing metadata (which may also name a Hub, scope `hub`) loads. A Borrow asset page's default slug is `<chain>-<spoke>-<symbol>`; when one Spoke draws the same symbol from two Hubs, each of those pages adds its Hub's label (`ethereum-univ3stable-core-usdc`), and two tokens with one symbol on one Hub add the token's address (`lib/format.ts`, `assetSlugs`). The same run stores the chain's base fee, priority fee and native USD price (`deployments.nativeUsdFeed`) for the fee quote.
+
+Debt, interest and health factor of a wallet change without events and are never served from Convex: the app reads them live at a stated block (`Spoke.getUserAccountData`, `AaveAdapter.accountOf`; [EVENTS.md](../indexer/EVENTS.md#live-reads)).
+
+## Chart series
+
+The indexer samples every Hub asset, Spoke slice, market, market debt and account once an hour of block time and aggregates every pool's swaps, mints and burns; `ingest/pull` imports closed buckets from `/export/v1/series` after the series cursor (`ingestCheckpoints.seriesThroughTime`). A bucket keeps the first sample in it, so all scopes of one bucket share a block and add up as the current rows do.
+
+Queries fill gaps: a sampled value repeats through a bucket with no sample, a summed pool value is 0 for a bucket with no trade. Hourly buckets serve 1D and 1W, daily buckets the longer ranges; a chart's last point is the current row. `series.get` returns any metric of any scope with its block; the screens' hero queries (`markets.get*HeroSeries`, `getSupplyBorrow`) return daily `YYYY-MM-DD` points.
+
+When the import sees `MarketRegistered`, it schedules `ingest/poolHistory.backfill`: the pool's swaps before its listing, from `POOL_HISTORY_DAYS` (default 90) days earlier, in 10,000-block ranges from `/export/v1/pool-history`. Each range is applied once, in order (`poolBackfills`), into `series` rows with source `history`; queries merge them with the live buckets by the pool's merge rules, so a new market's volume, fee and price charts start with data.
+
+## Listing metadata
+
+Names, slugs, descriptions, FAQs, history and long text of the pages a listing adds are one JSON file (`lib/metadata.ts`, version 1): a list of entries, each with its scope (`lend`, `asset`, `pool`, `spoke`, `token`) and on-chain key (`hub:assetId`, `spoke:reserveId`, `integrationId:marketId`, or an address). The governance listing operation commits to it: keccak256 of the file's bytes is the operation's metadata hash.
+
+1. The import records an operation that carries that hash.
+2. On the operation's execution, `listing/load.loadMetadata` fetches `<LISTING_CONTENT_URL>/<hash>.json`.
+3. It refuses the file unless keccak256 of its bytes equals the salt, it names the chain the operation ran on, every key is in its on-chain form and every slug is unique in its scope.
+4. One mutation stores each entry in `marketContent` and sets the slug on the row it names.
+
+A 404 marks the operation as carrying no metadata; a refused file is recorded with its reason and nothing is stored. A later listing's entry for the same key replaces the earlier one.
+
+Version 2 (version 1 files stay valid) adds per entry:
+
+| Field | Rules | Shown as |
+|---|---|---|
+| `links` | `website`, `docs`, `github`: https URLs; `x`: an x.com or twitter.com profile; `audits`: up to 20 `{ label, href }` | The page's Website, X, docs and audit links (`readContent`, `readSiloedMarket`) |
+| `risk` | `summary` up to 2,000 characters; up to 12 `factors` `{ id, label, level: low | moderate | elevated | high, text }` | The Lend and Borrow asset risk card (hidden without it); on a pool page, after the collateral risk premium |
+| `faqs` | At most 30 | The page's FAQ |
+| Lend entries | Must name `symbol` and `category` | List grouping (stable or crypto) |
+
+A version 1 entry carrying `links` or `risk` is refused.
+
+## Frontend fee
+
+The app charges 10 bps on every app action: supply, withdraw, pledge, withdraw collateral, borrow, repay, repay with collateral, deleverage, and swap if it ships. A keeper's liquidation is not an app action and pays none. No contract charges, computes or enforces the fee, so a direct contract caller pays none.
+
+- **Collection.** The app adds one ERC-20 transfer to the action's batch (`wallet_sendCalls`, EIP-5792, or a smart account's multicall), so fee and action succeed or revert together.
+- **Recipient.** The RiskModule's `feeRecipient`, the same address that receives the 20 % liquidation fee share; it changes only through governance. The app reads it on chain before it builds the batch; Convex holds no recipient. Frontend fees are transfers from user accounts, and liquidation fees come from the LiquidationModule's `FeePaid` event, so the two are told apart by source.
+- **A fee leg that would revert.** The app simulates the batch; if the fee transfer would revert (a token that blocklists `feeRecipient`, for example), it drops the fee leg and sends the action alone.
+- **Rules.** `feeConfig` holds on or off, a default rate, a rate per action, exempt actions and a USD cap per action. Until a row is written the default applies: on, 10 bps, no exempt action, no cap. Every rate must be an integer from 0 to `MAX_FEE_BPS` = 25, the ceiling the listing ARFC commits to; `setConfig` rejects a higher rate, and a stored rule above it makes `quote` throw rather than charge it. `frontendFee.setConfig` is internal (dashboard or CLI only); Avana operations set the rate within the ceiling.
+
+`frontendFee.quote(chainId, action, token, amount?, positionValueUsd8?, gasUnits, l1FeeWei?)` returns the fee in the fee token's base units and USD, the gas cost and the total. `token` is the token the fee is paid in: the action token, or for pledge and withdraw collateral the market's debt stablecoin.
+
+- fee, amount basis: `⌊amount × bps / 10⁴⌋` in the action token;
+- fee, LP-value basis (pledge, withdraw collateral): `⌊valueUsd8 × bps × 10^d / (10⁴ × priceUsd8)⌋` in the debt stablecoin, where `valueUsd8` is the position's LPOracle value, and `d` and `priceUsd8` are the stablecoin's decimals and price;
+- either fee is then cut to the USD cap (rounded down), so the user never pays above the stated rate;
+- gas `gasUnits × (baseFee + priorityFee) + l1Fee`, where `gasUnits` is the wallet's simulation of the whole batch, fee transfer included, and `l1Fee` the OP Stack data fee on Base;
+- total: amount + fee + gas for supply, pledge, repay, repay with collateral, deleverage and swap; amount − fee − gas for withdraw, borrow and withdraw collateral.
+
+Examples, with 200,000 gas at 20 gwei + 1 gwei and ETH at $3,000:
+
+- Supplying 10,000 USDC: fee 10 USDC, gas 0.0042 ETH = $12.60, total $10,022.60.
+- Pledging a position worth $200,000 in a GHO market: fee 200 GHO, paid from the wallet.
+- Withdrawing a position worth $10,000 with the fee paid in USDC at $0.9999: fee `⌊10¹² × 10 × 10⁶ / (10⁴ × 99,990,000)⌋` = 10,001,000 units, 10.001 USDC.
+
+The app builds the transfer with the same function (`lib/fees.ts`), so the amount shown is the amount sent.
+
+## Screens
+
+| Screen | Queries |
+|---|---|
+| Lend list | `markets.listLendMarketSnapshots`, `prices.getPriceSnapshot` |
+| Lend page | `detailHydration.getLendDetail`, `markets.getQuickStats`, `markets.getLendHeroSeries`, `lend.cashflow.getBreakdown`, `markets.getRecentTransactions`, `hubAssets.allocation` |
+| Borrow list | `markets.listBorrowMarketSnapshots` (pool rows: markets; asset rows: CDP debt reserves) |
+| Borrow pool page | `detailHydration.getBorrowPoolDetail`, `markets.getQuickStats`, `markets.getPoolHeroSeries`, `borrow.liquidationRisk.getLiquidationRisk` |
+| Borrow asset page | `detailHydration.getBorrowAssetDetail`, `markets.getQuickStats`, `markets.getAssetHeroSeries`, `borrow.cashflow.getBreakdownForAsset`, `spokeReserves.byMarket` |
+| Action pages | `frontendFee.quote`, `frontendFee.getConfig` |
+| Dashboard | `wallet.positions.listForWallet` (accounts and last samples); balances are read live |
+
+## Tables of the import
+
+| Table | Key | Contents |
+|---|---|---|
+| `ingestCheckpoints` | `chainId` | `throughBlock`, `throughBlockHash`, `schemaVersion`, `lastPageHash`, `seriesThroughTime`, `updatedAt` |
+| `ingestCheckpointHistory` | `chainId + throughBlock` | One verified checkpoint every 1,000 blocks, with its block hash; the rebuild starting points |
+| `ingestedLogs` | `key` (`chainId:txHash:logIndex`) | The last 30 days of decoded logs with the scope keys each page's feed reads (`hubAssetKey`, `spokeReserveKey`, `marketKey`, `wallet`); older activity is fetched from the export's history endpoint on request |
+| `accounts` | `chainId + Spoke + proxy` | Wallet ↔ proxy from `UserProxyCreated` |
+| `parameterChanges` | scope, chain, key, time | Changelog rows with previous and current values, from configuration events |
+| `listingOperations`, `poolBackfills` | operation; pool | Listing metadata state; pool-history progress |
+
+Each page's activity feed shows its own events and none twice: the Lend page the Lend Spoke's supplies and withdrawals and the CDP Spokes' borrows, repays and liquidations of its asset; a Borrow asset page its CDP Spoke's reserve events; a pool page Avana's account events (`CollateralAdded`, `Borrowed`, `Repaid`, `LiquidationSettled`, …).
+
+## Scheduled pull
+
+A Convex cron runs `ingest/pull.pull` for each chain every 60 s; the export serves finalized blocks only. The chains are those of the deployment variable `AVANA_CHAIN_IDS` (comma-separated chain IDs; `1,8453` on the production deployment, `11155111,84532` on the test deployment), and every per-chain cron (the pull, the sampler, Merkl) follows it (`convex/lib/cronChains.ts`). A deployment without `AVANA_CHAIN_IDS`, such as a development deployment, schedules no cron at all. Crons are read when the functions are pushed: a changed list takes effect at the next push. The action:
+
+1. Reads the checkpoint `(throughBlock, throughBlockHash)`.
+2. Checks that `throughBlockHash` is still the hash of `throughBlock` over Convex's own RPC (not the indexer's). A mismatch goes to [reorg rebuild](#reorg-rebuild).
+3. Requests `GET /export/v1/pages?chainId&after=throughBlock&limit=500`, signed with the HMAC key from Convex environment variables (`INDEXER_EXPORT_URL`, `INDEXER_EXPORT_KEY_ID`, `INDEXER_EXPORT_SECRET`). A 204 ends the event pages.
+4. Validates the page with `@avana/export` (`packages/export`): known `schemaVersion`; `fromBlock = throughBlock + 1`; `toBlock ≤ finalizedBlock`; records ordered by `(blockNumber, logIndex)` and inside `fromBlock..toBlock`; every record's `blockHash` equal to the page's entry for its block; `pageHash` recomputed from the canonical JSON; `toBlockHash` equal to the hash of `toBlock` over Convex's own RPC.
+5. Calls the internal mutation `ingest/apply.applyPage(page)`.
+6. Repeats while pages keep coming, up to 20 pages per run, then pulls series pages the same way.
+
+## Atomic page updates
+
+`applyPage` is one Convex mutation, so a page is applied entirely or not at all:
+
+- It re-reads the checkpoint inside the mutation and applies the page only if `page.after.throughBlock` equals it. Two overlapping runs therefore cannot both apply the same range: the second sees the moved checkpoint and returns without writing.
+- Each record is inserted into `ingestedLogs` unless its `key` already exists; an existing key with a different `blockHash` aborts the mutation and starts the rebuild. A page delivered twice, or a record that appears in two pages, changes nothing the second time.
+- The decoded rows (accounts, changelog rows, listing operations) are written by the same decoder the rebuild uses, in record order.
+- The checkpoint moves to `{ throughBlock: toBlock, throughBlockHash: toBlockHash, lastPageHash: pageHash }`; every 1,000 blocks a row is added to `ingestCheckpointHistory`.
+
+A page holds at most 500 records and each record touches at most a few rows, which keeps one mutation inside Convex's per-transaction read and write limits. Series pages apply the same way against `seriesThroughTime`.
+
+## Reorg rebuild
+
+The export serves only finalized blocks, so a rebuild means something outside normal operation happened: Convex's RPC and the indexer disagree on a finalized hash, the indexer was re-pointed or reindexed differently, or a finalized block was reverted. In each case:
+
+1. Ingestion of that chain stops and an error is logged for engineering.
+2. Convex walks `ingestCheckpointHistory` back to the newest checkpoint whose block hash still matches its own RPC.
+3. In bounded mutations (`ingest/apply.rewind`) it deletes `ingestedLogs`, changelog and account rows above that checkpoint, then sets the checkpoint to it.
+4. The pull resumes from there and rebuilds the rows from the export.
+
+<a id="rebuild"></a>A new `schemaVersion` rebuilds from block 0 into fresh tables and switches the views when the new tables reach the old checkpoint.
+
+## Transaction progress
+
+After the user's wallet submits, the app calls `intents.submit` (signed-in wallet, the hash, a kind from a fixed list and the page; never a target, amount or calldata). The chain's intent tracker reads each open intent's receipt over Convex's own RPC about once a block (`lib/intents.ts`), only while the chain has open intents: `submit` schedules it, each run schedules the next while intents stay open, and the `wake intent trackers` cron restarts it every 5 minutes if a run was lost:
+
+| From | To | When |
+|---|---|---|
+| `pending` | `included` / `failed` | The receipt shows success / a revert |
+| `pending` | `dropped` (final) | No receipt an hour after submission |
+| `included`, `failed` | `pending` | The receipt's block is no longer canonical (reorg) |
+| any open | `indexed` (final) | An imported (finalized) log carries the hash |
+| `included` | `confirmed` (final) | Its block is finalized and the export still has no log of it 10 minutes later (an approval, a swap outside the protocol) |
+| `failed` | final | Its block is finalized |
+
+`intents.listForWallet` returns the wallet's latest intents with explorer links.
+
+## SIWE sessions
+
+The web app's server opens a session after it verifies a SIWE signature (`siweSessions.open`, keyed by the SHA-256 of the session JWT's ID, at most 7 days), revokes it on logout (`revoke`) or for every device (`revokeWallet`), and checks it (`status`). Each call needs `CONVEX_SESSION_SECRET` (at least 32 characters; unset refuses every call). A Convex JWT carrying that hash as its `sid` claim authorizes per-wallet features only while the session is open (`walletAuth.requireWalletSession`); intents use it. Expired sessions are pruned daily.
+
+## Wallet activity
+
+`wallet.live.accounts` reads the wallet's accounts at the head over Convex's RPC: each market's account from its integration's `AaveAdapter.accountOf` (one per wallet and market), then the market Spoke's `getUserAccountData` and each debt reserve's `getUserTotalDebt`, unstored and rate limited per wallet, for clients that cannot read the chain themselves.
+
+`wallet.activity.listForWallet` pages through the wallet's logs of the last 30 days (`ingestedLogs.by_wallet`, exact cursor) as dashboard rows, each with the page it belongs to and an explorer link; `wallet/history:older` serves anything older, and with `rows` also returns that page as dashboard rows: decoded as the import decodes logs, without the events Convex still holds, dated by their block's time (read from Convex's RPC by block hash once and kept in `blockTimestamps`) and with the token amount but no USD value. `deployments.explorers` returns each chain's explorer for links the app builds itself.
+
+## Configuration
+
+Convex environment variables: `RPC_<CHAIN>` and `RPC_<CHAIN>_FALLBACK` (`MAINNET`, `BASE`), `INDEXER_EXPORT_URL`, `INDEXER_EXPORT_KEY_ID`, `INDEXER_EXPORT_SECRET` (base64, at least 32 bytes), `LISTING_CONTENT_URL`, `POOL_HISTORY_DAYS`, `CONVEX_SESSION_SECRET`. Each chain's `deployments` row is written from its verified release manifest (schema 2) with `deployments.setFromManifest` (internal; the manifest JSON, the explorer URL and the native USD feed), or field by field with `deployments.setDeployment`.
+
+## Build and test
+
+From the repository root, `npm ci --ignore-scripts` installs this package with the rest of the workspace. Then, from this folder:
+
+```bash
+npm run typecheck   # tsc --noEmit, against the committed convex/_generated/
+npm run test        # vitest run: offline, no deployment needed
+npx convex dev      # against a Convex deployment; regenerates convex/_generated/
+```
+
+| Test | Checks |
+|---|---|
+| `reconcile.test.ts` | Borrow asset pages' borrowed amounts add up to the Lend page's; every page shows the same Hub supply, utilization and rates; available is liquidity bounded by cap room; the Lend allocation adds up to the Hub; a Spoke's split by market adds up to its owed amount |
+| `fees.test.ts` | Fee per action, exemptions, USD cap, rounding down, gas with and without an L1 data fee, totals for paying and receiving actions |
+| `charts.test.ts` | History and live parts of one bucket merge; gaps filled per metric; ranges and the live last point; quick-stat deltas |
+| `ingest.test.ts` | Export page checks (gap, overlap, finality, order, block hash, tampered content); request signature equals the indexer's HMAC; metadata accepted only when its bytes hash to the salt, refused on chain, slug or key errors |
+| `activity.test.ts` | Each event lands in the right pages' feeds and in no page twice; changelog rows with previous values; listing operations from the timelock |
+
+The import's fork tests: duplicate, overlapping, out-of-order and tampered pages leave the state of a clean run; an Anvil reorg below the checkpoint with an indexer pointed at a different branch rebuilds to the state of a clean run; an end-to-end fork run goes from pledge, borrow, price drop and keeper liquidation through the indexer, export and Convex to the UI.
+
+## Detail-page jobs
+
+| Module | Schedule | Serves |
+|---|---|---|
+| `windows.getRateWindows` | Read time | 1D, 30D and 90D averages of supply APY, borrow APR and utilization; on pool pages the market's borrow APR and the LP fee APR of its tick range (`lib/windows.ts`: fees per unit of active liquidity over the value of one unit across the range, 0 out of range). Pool rows' `supplyApyPct` is the 24 h LP fee APR |
+| `rollups.rollUp` → `rollups.history` | Daily, 00:30 UTC | Each market's liquidations, collateral seized, debt repaid and bad debt, and each Hub asset's interest, reserve and supplier shares, for the UTC day that ended; events are valued at their hour's price. Kept past the 30-day log window |
+| `riskScores.score` | Hourly | The market risk score, model `avana-risk-v1` (`lib/riskScore.ts`: premium, cap usage, price state, breaker, Hub pause, debt below HF 1.10, recent bad debt). The pool risk card shows it with each input's points |
+| `incentives.refresh` → `incentives.forPage` | Hourly per chain | Merkl's live opportunities matched to each page: `rewards` with the APR or `none` (checked, no campaign), each with `asOf` (the last successful check) and `stale` when Merkl failed since or that check is over 3 hours old; `unknown` until a check succeeds. `MERKL_API_URL` overrides the API |

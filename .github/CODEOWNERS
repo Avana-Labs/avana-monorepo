@@ -1,0 +1,5 @@
+# Code owners. The last matching line wins.
+
+*                                                @Avana-Labs/core
+/contracts/                                      @Avana-Labs/contracts
+/.github/                                        @Avana-Labs/security

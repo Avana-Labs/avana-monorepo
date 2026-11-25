@@ -1,0 +1,553 @@
+{
+  "excluded_detectors": [
+    {
+      "check": "Using `delegatecall` inside a loop",
+      "reason": "Not run: its regex nests unbounded repetitions ((...\\n)*)* and backtracks exponentially on files with loops and no delegatecall (more than ten minutes on CollateralizationLedger.sol alone). Slither's delegatecall-loop and msg-value-loop detectors, which run in the same fast tier with no exclusion, check the same pattern on the compiled code.",
+      "approval": "approved (Avana Labs, 2026-11-11)",
+      "review": "Excluded detector (performance). Checked 2026-11-11 repo-wide: the five delegatecall sites (ParameterStoreRouter, MarketRegistryRouter, LPOracle x3) are single calls, none in a loop, and src/ has no msg.value; Slither delegatecall-loop and msg-value-loop run unexcluded."
+    },
+    {
+      "check": "Solidity version 0.8.20+ may not work on other chains due to `PUSH0`",
+      "reason": "Avana compiles for EVM cancun (REQ-ARCH-053); PUSH0 exists on every chain Avana deploys to. Aderyn's push-zero-opcode is excluded for the same reason.",
+      "approval": "approved (Avana Labs, 2026-11-11)",
+      "review": "Excluded detector. Checked 2026-11-11: foundry.toml evm_version = cancun and solc 0.8.28 for all of src/; not one of the eight approved patterns (was marked approved-pattern by mistake)."
+    },
+    {
+      "check": "Centralization Risk for trusted owners",
+      "reason": "Every privileged function is held by the AvanaTimelock by design (2.15 role table); the role checks are reviewed through the spec's permission tables and the hostile-component tests, not one finding per function. Aderyn's centralization-risk is excluded for the same reason.",
+      "approval": "approved (Avana Labs, 2026-11-11)",
+      "review": "Excluded detector. Checked 2026-11-11: every admin role is TIMELOCK-only by _grantRole override; not one of the eight approved patterns."
+    },
+    {
+      "check": "Upgradeable contract is missing a `__gap[50]` storage variable to allow for new storage variables in later versions",
+      "reason": "Avana's upgradeable contracts keep all state in ERC-7201 namespaces (OpenZeppelin 5 pattern, REQ-ARCH-050), where a storage gap has no role; the layout step snapshots every namespace and fails on any change to an existing slot.",
+      "approval": "approved (Avana Labs, 2026-11-11)",
+      "review": "Excluded detector. Checked 2026-11-11 repo-wide: the three UUPS contracts (DebtOracle, MarketRegistry, ParameterStore) and the LPOracle keep state only in ERC-7201 namespaces; every layout snapshot has zero plain storage slots. Not one of the eight approved patterns."
+    },
+    {
+      "check": "Upgradeable contract not initialized",
+      "reason": "Regex on any line that names an upgradeable base or an initializer (it matches interfaces, the timelock's selector list and the initializer bodies themselves). The property it approximates, that every upgradeable base is initialized and the implementation's initializers are disabled, is checked on compiled code by slither-check-upgradeability and by OpenZeppelin upgrades-core validate (missing-initializer, missing-initializer-call) in the same tier.",
+      "approval": "approved (Avana Labs, 2026-11-11)",
+      "review": "Excluded detector. Checked 2026-11-11: each UUPS constructor calls _disableInitializers and slither-check-upgradeability plus upgrades-core validate run in the same tier."
+    },
+    {
+      "check": "Initializers could be front-run",
+      "reason": "Every Avana proxy runs initialize in the ERC1967Proxy constructor, in the deploying transaction (REQ-ACCESS-150, script/README.md step 3), so no transaction can come between deployment and initialization; the regex matches every initialize declaration, interfaces included. slither-check-upgradeability's initialize checks run in the same tier.",
+      "approval": "approved (Avana Labs, 2026-11-11)",
+      "review": "Excluded detector. Checked 2026-11-11: initialize runs in the ERC1967Proxy constructor (REQ-ACCESS-150, script/README.md step 3), and each initialize also rejects any timelock other than the implementation's immutable TIMELOCK, so a front-run could not take the admin role."
+    },
+    {
+      "check": "Fees can be set to be greater than 100%.",
+      "reason": "Regex on any setter whose name contains `fee` (it also matches setFeed*, setFeeRecipient and _feedChanged) without a literal bound in the same function. Every ParameterStore setter checks the hard bounds of 1.5 (OutOfBounds; maxFlashFeeBps <= FLASH_FEE_MAX_BPS, avanaFeeShareBps <= FEE_SHARE_MAX_BPS), covered by the ParameterStore unit tests; collectFees transfers accrued fees and sets none.",
+      "approval": "approved (Avana Labs, 2026-11-11)",
+      "review": "Excluded detector. Checked 2026-11-11 repo-wide: the only fee setters are ParameterStore's (setMaxFlashFeeBps <= FLASH_FEE_MAX_BPS = 100, setAvanaFeeShareBps <= FEE_SHARE_MAX_BPS = 5,000, and the same bounds in initialize). A fee setter added elsewhere would not be flagged by this detector."
+    },
+    {
+      "check": "Loss of precision",
+      "reason": "Flags every division. Avana's rounding direction is part of each formula's specification (floor or ceil against the user or protocol), checked by the Z3 and SymPy models and the differential suites; Slither's divide-before-multiply runs in the same tier.",
+      "approval": "approved (Avana Labs, 2026-11-11)",
+      "review": "Excluded detector. Checked 2026-11-11: rounding direction is specified per formula and checked by Z3/SymPy and the differential suites; Slither divide-before-multiply runs."
+    },
+    {
+      "check": "`decimals()` is not a part of the ERC-20 standard",
+      "reason": "Avana reads decimals() only from tokens it configures through a timelock operation or a deployment: listed tokens (the listing reverts if the call fails, REQ-CONFIG-050; MarketRegistry's credit-line coverage check reads a listed debt asset), the constructor checks of PegModuleRoute (its tokenOut) and AvanaFirstLossReserve (its Hub asset), the LPOracle's guarded static read, and oracle interfaces (Chainlink AggregatorV3, Aave V4 oracle and price feeds, Avana's LPOracle) where decimals() is part of the interface. A token without decimals() makes the configuring call revert (fail closed).",
+      "approval": "approved (Avana Labs, 2026-11-11)",
+      "review": "Excluded detector. Checked 2026-11-11 repo-wide; the reason was incomplete and is corrected: besides listed tokens and oracle interfaces, decimals() is read in constructors of PegModuleRoute (tokenOut) and AvanaFirstLossReserve (Hub asset) and by MarketRegistry's credit-line coverage check, each of which reverts for a token without decimals() (fail closed)."
+    }
+  ],
+  "accepted": [
+    {
+      "fingerprint": "30a17231ea1542f0",
+      "check": "Division by zero not prevented",
+      "file": "src/libraries/ClTickMath.sol",
+      "function": "ClTickMath.getSqrtPriceAtTick",
+      "reason": "Division by zero not possible: Uniswap v4-core TickMath.getSqrtPriceAtTick (differential test TEST-037); before the division `price` is the Q128.128 square-root ratio of -|tick|, at least about MIN_SQRT_PRICE * 2^32 > 0 for |tick| <= MAX_TICK (checked on the first line).",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces e8ae241b2aa2f712 (approved by Avana Labs 2026-11-11): the tick math moved from ClPriceMath.sqrtRatioAtTick into the MIT ClTickMath."
+    },
+    {
+      "fingerprint": "aecb224700b199a8",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/libraries/ClTickMath.sol",
+      "function": "ClTickMath.getSqrtPriceAtTick",
+      "reason": "Cannot truncate: Uniswap v4-core TickMath, Q128.128 to Q64.96 rounded up; the result is at most MAX_SQRT_PRICE < 2^160 for every tick in range (checked on the first line); forge-lint unsafe-typecast suppression on the line above states the bound; differential test TEST-037 over every tick bucket.",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces 61d80744e934256e (approved by Avana Labs 2026-11-11): the tick math moved from ClPriceMath into the MIT ClTickMath."
+    },
+    {
+      "fingerprint": "00bebc6b2abce362",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/libraries/ClTickMath.sol",
+      "function": "ClTickMath.getTickAtSqrtPrice",
+      "reason": "Cannot truncate: Uniswap v4-core TickMath.getTickAtSqrtPrice; for a sqrt price in [MIN_SQRT_PRICE, MAX_SQRT_PRICE) (checked on the first line) both candidate ticks lie within one tick of the true tick, inside int24; suppression comment on the line above; fuzz TEST-279 inverts sqrtRatioAtTick over every tick.",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces 063afc7243c78431 (approved by Avana Labs 2026-11-11): the tick math moved from ClPriceMath into the MIT ClTickMath."
+    },
+    {
+      "fingerprint": "650f5b981e14b0e8",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/libraries/ClTickMath.sol",
+      "function": "ClTickMath.getTickAtSqrtPrice",
+      "reason": "Cannot truncate: the second candidate tick of the same TickMath step, within one tick of the true tick (see the line above).",
+      "approval": "pending review (approved pattern)",
+      "review": "Replaces f266c56c5d130aad (approved by Avana Labs 2026-11-11): the tick math moved from ClPriceMath into the MIT ClTickMath."
+    },
+    {
+      "fingerprint": "b40473f7103bede2",
+      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "Not a signature: keccak256(abi.encode(PoolKey)) is Uniswap v4's PoolId by definition (PoolIdLibrary.toId).",
+      "approval": "approved 2026-11-23"
+    },
+    {
+      "fingerprint": "1764f583d2b50583",
+      "check": "Sweeping may break accounting if tokens with multiple addresses are used",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "The PositionManager action named SWEEP, used only for WETH to the recipient of the same batch (REQ-AMM-V4-004); the LPVault keeps no balance-based accounting.",
+      "approval": "approved 2026-11-23"
+    },
+    {
+      "fingerprint": "cd82ede2e9f28020",
+      "check": "`abi.encodePacked()` should not be used with dynamic types when passing the result to a hash function such as `keccak256()`",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "The only abi.encodePacked in this file is _push's abi.encodePacked(b.actions, action), which appends one action byte to the PositionManager's packed action string as v4-periphery expects; the result goes to modifyLiquidities and is never hashed. 4naly3er reports the instance on a blank line (537, three lines below _push), so the fingerprint is a blank line's; reviewedFiles pins the review to the file as read.",
+      "approval": "approved 2026-11-23",
+      "reviewedFiles": {
+        "src/integrations/UniswapV4Integration.sol": "25adcba7b8ed1cb7d80d443ade61ac3cfbd408438b1061d81a877be86bbd3a35"
+      }
+    },
+    {
+      "fingerprint": "7f7ef24ed082cb20",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/integrations/UniswapV4State.sol",
+      "reason": "The low 160 bits of the v4 pool's slot0 word, its sqrtPriceX96 field, decoded as v4-core's StateLibrary decodes it; the comment and the unsafe-typecast suppression above the line state the layout.",
+      "approval": "approved 2026-11-23"
+    },
+    {
+      "fingerprint": "a47200309a314433",
+      "check": "Contracts are vulnerable to fee-on-transfer accounting-related issues",
+      "file": "src/AaveAdapter.sol",
+      "reason": "Fee-on-transfer and rebasing tokens are not listed (the hostile-token stand-ins are refused at listing); debt assets are Aave reserves."
+    },
+    {
+      "fingerprint": "a85f7b16bba5fd62",
+      "check": "Prevent accidentally burning tokens",
+      "file": "src/AaveAdapter.sol",
+      "reason": "Mint, burn and transfer go to Avana-controlled or caller-chosen recipients; VaultToken mint and burn are restricted to the adapter and module roles."
+    },
+    {
+      "fingerprint": "40091fd1d462f92d",
+      "check": "Prevent accidentally burning tokens",
+      "file": "src/AaveAdapter.sol",
+      "reason": "Mint, burn and transfer go to Avana-controlled or caller-chosen recipients; VaultToken mint and burn are restricted to the adapter and module roles."
+    },
+    {
+      "fingerprint": "304a1b73e7ccde52",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/AaveAdapter.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "2b30b85bbebbe1b6",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/AaveAdapter.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "e809af9d3a3e5814",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/AaveAdapter.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "aecb224700b199a8",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/libraries/ClTickMath.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "00bebc6b2abce362",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/libraries/ClTickMath.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "650f5b981e14b0e8",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/libraries/ClTickMath.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "30a17231ea1542f0",
+      "check": "Division by zero not prevented",
+      "file": "src/libraries/ClTickMath.sol",
+      "reason": "The divisor cannot be zero: TickMath's price is a product of nonzero constants, and the tick spacing is checked > 0 (`InvalidTickSpacing`)."
+    },
+    {
+      "fingerprint": "874244948ad79887",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/integrations/NfpmLPVault.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "5134165c8571d988",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/integrations/UniswapV2Integration.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "0c96a1e3a65dfe69",
+      "check": "Prevent accidentally burning tokens",
+      "file": "src/integrations/UniswapV2Integration.sol",
+      "reason": "Mint, burn and transfer go to Avana-controlled or caller-chosen recipients; VaultToken mint and burn are restricted to the adapter and module roles."
+    },
+    {
+      "fingerprint": "5e70090c8a40952d",
+      "check": "Prevent accidentally burning tokens",
+      "file": "src/integrations/UniswapV2Integration.sol",
+      "reason": "Mint, burn and transfer go to Avana-controlled or caller-chosen recipients; VaultToken mint and burn are restricted to the adapter and module roles."
+    },
+    {
+      "fingerprint": "461e11e0b7aa3f1e",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/integrations/UniswapV2Integration.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "da72f3f0d6ea621d",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/integrations/UniswapV2Integration.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "8011f24f7612fb13",
+      "check": "Contracts are vulnerable to fee-on-transfer accounting-related issues",
+      "file": "src/integrations/UniswapV2Positions.sol",
+      "reason": "Fee-on-transfer and rebasing tokens are not listed (the hostile-token stand-ins are refused at listing); debt assets are Aave reserves."
+    },
+    {
+      "fingerprint": "9e115f8226f5f779",
+      "check": "Prevent accidentally burning tokens",
+      "file": "src/integrations/UniswapV2Positions.sol",
+      "reason": "Mint, burn and transfer go to Avana-controlled or caller-chosen recipients; VaultToken mint and burn are restricted to the adapter and module roles."
+    },
+    {
+      "fingerprint": "f7c1d815feadd707",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/integrations/UniswapV2Positions.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "3a41d214d9f28341",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/integrations/UniswapV2Positions.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "513e62ccc1ec82c0",
+      "check": "`_safeMint()` should be used rather than `_mint()` wherever possible",
+      "file": "src/integrations/UniswapV2Positions.sol",
+      "reason": "`_mint` on purpose, as Uniswap v3's position manager does: no receiver callback, so no reentrancy hook."
+    },
+    {
+      "fingerprint": "99c52e33e2aa3507",
+      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "The hash is an identifier (a Uniswap v4 PoolId, the listed feeds), never signed."
+    },
+    {
+      "fingerprint": "8cba65c5cacca799",
+      "check": "Lack of EIP-712 compliance: using `keccak256()` directly on an array or struct variable",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "The hash is an identifier (a Uniswap v4 PoolId, the listed feeds), never signed."
+    },
+    {
+      "fingerprint": "6146c08da70af77b",
+      "check": "Missing checks for `address(0)` when assigning values to address state variables",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "Read from the Uniswap v4 PositionManager given at construction, which is checked; a zero WETH9 is no such PositionManager."
+    },
+    {
+      "fingerprint": "1859f0097c9feb36",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "4a0e09c3e87400b2",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "1764f583d2b50583",
+      "check": "Sweeping may break accounting if tokens with multiple addresses are used",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "The sweep sends this contract's balance of the market's tokens or WETH right after its own action; it holds no other user's balance between calls."
+    },
+    {
+      "fingerprint": "a08ffc5a563e601e",
+      "check": "Sweeping may break accounting if tokens with multiple addresses are used",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "The sweep sends this contract's balance of the market's tokens or WETH right after its own action; it holds no other user's balance between calls."
+    },
+    {
+      "fingerprint": "d58f134aa8b319de",
+      "check": "Sweeping may break accounting if tokens with multiple addresses are used",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "The sweep sends this contract's balance of the market's tokens or WETH right after its own action; it holds no other user's balance between calls."
+    },
+    {
+      "fingerprint": "4737e59dc0c32cf0",
+      "check": "Sweeping may break accounting if tokens with multiple addresses are used",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "The sweep sends this contract's balance of the market's tokens or WETH right after its own action; it holds no other user's balance between calls."
+    },
+    {
+      "fingerprint": "6b7bfa79d53a6eba",
+      "check": "`abi.encodePacked()` should not be used with dynamic types when passing the result to a hash function such as `keccak256()`",
+      "file": "src/integrations/UniswapV4Integration.sol",
+      "reason": "The packed bytes are Uniswap v4 action codes passed to modifyLiquidities, never hashed."
+    },
+    {
+      "fingerprint": "7f7ef24ed082cb20",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/integrations/UniswapV4State.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "4a1ac76436a903f8",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/LiquidationModule.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "60e0be4355a88048",
+      "check": "Contracts are vulnerable to fee-on-transfer accounting-related issues",
+      "file": "src/LiquidationModule.sol",
+      "reason": "Fee-on-transfer and rebasing tokens are not listed (the hostile-token stand-ins are refused at listing); debt assets are Aave reserves."
+    },
+    {
+      "fingerprint": "148ec9282acfbe8a",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/LiquidationModule.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "e58f10877207db6c",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/LiquidationModule.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "5d08755af2fc77b3",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/LiquidationModule.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "7295fa96ece3a269",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/LPOracle.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "6be2ca2a6ca282cb",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/libraries/LPPriceMath.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "55681d7725552e35",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/FlashloanRepay.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "e673f229082fc3ac",
+      "check": "Sweeping may break accounting if tokens with multiple addresses are used",
+      "file": "src/FlashloanRepay.sol",
+      "reason": "The sweep sends this contract's balance of the market's tokens or WETH right after its own action; it holds no other user's balance between calls."
+    },
+    {
+      "fingerprint": "4d0f246b0a7aea1e",
+      "check": "Sweeping may break accounting if tokens with multiple addresses are used",
+      "file": "src/FlashloanRepay.sol",
+      "reason": "The sweep sends this contract's balance of the market's tokens or WETH right after its own action; it holds no other user's balance between calls."
+    },
+    {
+      "fingerprint": "20229ab868a2b712",
+      "check": "Sweeping may break accounting if tokens with multiple addresses are used",
+      "file": "src/FlashloanRepay.sol",
+      "reason": "The sweep sends this contract's balance of the market's tokens or WETH right after its own action; it holds no other user's balance between calls."
+    },
+    {
+      "fingerprint": "9acba15a560f3b11",
+      "check": "Sweeping may break accounting if tokens with multiple addresses are used",
+      "file": "src/FlashloanRepay.sol",
+      "reason": "The sweep sends this contract's balance of the market's tokens or WETH right after its own action; it holds no other user's balance between calls."
+    },
+    {
+      "fingerprint": "874b3698c8881168",
+      "check": "External call recipient may consume all transaction gas",
+      "file": "src/libraries/SwapCalls.sol",
+      "reason": "The swap target is the caller's own route in the caller's own transaction; griefing only costs the caller."
+    },
+    {
+      "fingerprint": "84f85ce86f964416",
+      "check": "Unsafe solidity low-level call can cause gas grief attack",
+      "file": "src/libraries/SwapCalls.sol",
+      "reason": "The swap target is the caller's own route in the caller's own transaction; griefing only costs the caller."
+    },
+    {
+      "fingerprint": "3e40a06ac9ba877e",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/FirstLossReserve.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "73f806134ccbc37f",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/RiskModule.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "62fb5834af0f0e57",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/RiskModule.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "8ebf340f8e2eb6b4",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/libraries/BandMath.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "ef7e4b56d3544b0d",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/libraries/BandMath.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "0f2bcb067e359464",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/libraries/BandMath.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "4fd97bdc0036ae9c",
+      "check": "Division by zero not prevented",
+      "file": "src/libraries/BandMath.sol",
+      "reason": "The divisor cannot be zero: TickMath's price is a product of nonzero constants, and the tick spacing is checked > 0 (`InvalidTickSpacing`)."
+    },
+    {
+      "fingerprint": "dda8ef049a812961",
+      "check": "Division by zero not prevented",
+      "file": "src/libraries/BandMath.sol",
+      "reason": "The divisor cannot be zero: TickMath's price is a product of nonzero constants, and the tick spacing is checked > 0 (`InvalidTickSpacing`)."
+    },
+    {
+      "fingerprint": "fd4bbe19efd6a106",
+      "check": "Prevent accidentally burning tokens",
+      "file": "src/VaultToken.sol",
+      "reason": "Mint, burn and transfer go to Avana-controlled or caller-chosen recipients; VaultToken mint and burn are restricted to the adapter and module roles."
+    },
+    {
+      "fingerprint": "4a9a9b6f109820f5",
+      "check": "Prevent accidentally burning tokens",
+      "file": "src/VaultToken.sol",
+      "reason": "Mint, burn and transfer go to Avana-controlled or caller-chosen recipients; VaultToken mint and burn are restricted to the adapter and module roles."
+    },
+    {
+      "fingerprint": "f9d5f46844cabcbc",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/LPVault.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "b85278cada526c11",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/LPVault.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    },
+    {
+      "fingerprint": "1b9c24a64ce50587",
+      "check": "Contracts are vulnerable to fee-on-transfer accounting-related issues",
+      "file": "src/LPVault.sol",
+      "reason": "Fee-on-transfer and rebasing tokens are not listed (the hostile-token stand-ins are refused at listing); debt assets are Aave reserves."
+    },
+    {
+      "fingerprint": "920d3da12d926590",
+      "check": "Contracts are vulnerable to fee-on-transfer accounting-related issues",
+      "file": "src/LPVault.sol",
+      "reason": "Fee-on-transfer and rebasing tokens are not listed (the hostile-token stand-ins are refused at listing); debt assets are Aave reserves."
+    },
+    {
+      "fingerprint": "5adef06893130aa4",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/LPVault.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "27cd245bd9256e64",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/LPVault.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "bb7f80eb528593fe",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/LPVault.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "28cb2b1d90a4c137",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/LPVault.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "6f9e4dd090a74489",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/LPVault.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "b7a989ab564307fb",
+      "check": "Some tokens may revert when zero value transfers are made",
+      "file": "src/LPVault.sol",
+      "reason": "A zero-value transfer revert would only fail the caller's own zero-amount call; listed tokens are Aave reserves that accept zero transfers, and most sites skip zero."
+    },
+    {
+      "fingerprint": "3c1481d37ae4a70c",
+      "check": "Unsafe ERC20 operation(s)",
+      "file": "src/LPVault.sol",
+      "reason": "An ERC-721 `transferFrom` on purpose: no receiver hook runs (LPVault design), ownership is checked first, and a release goes to the owner's chosen recipient."
+    },
+    {
+      "fingerprint": "7aea367359e87eef",
+      "check": "Unsafe ERC20 operation(s)",
+      "file": "src/LPVault.sol",
+      "reason": "An ERC-721 `transferFrom` on purpose: no receiver hook runs (LPVault design), ownership is checked first, and a release goes to the owner's chosen recipient."
+    },
+    {
+      "fingerprint": "a891286b1df6426d",
+      "check": "Using `transferFrom` on ERC721 tokens",
+      "file": "src/LPVault.sol",
+      "reason": "`transferFrom` on purpose: no receiver hook runs (LPVault design), ownership is checked first, and a release goes to the owner's chosen recipient."
+    },
+    {
+      "fingerprint": "f3ebae2095531162",
+      "check": "Using `transferFrom` on ERC721 tokens",
+      "file": "src/LPVault.sol",
+      "reason": "`transferFrom` on purpose: no receiver hook runs (LPVault design), ownership is checked first, and a release goes to the owner's chosen recipient."
+    },
+    {
+      "fingerprint": "7195a96bda96c1c2",
+      "check": "Consider using OpenZeppelin's SafeCast library to prevent unexpected overflows when downcasting",
+      "file": "src/libraries/FloorCreditMath.sol",
+      "reason": "Each downcast is bounded where it happens: TickMath's tick and price ranges, bps values checked against their maxima, an address widened to bytes32, unit decimals of at most 18, or a credit at most the position's liquidity."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+# Python tools for the contracts workspace, installed into contracts/.venv by script/install-security-tools.sh
+# (uv, Python 3.11, --exclude-newer cutoff) or by hand:
+#   python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+# Exact pins; each release was at least two weeks old when pinned. Mythril has its own venv and file
+# (requirements-mythril.txt) because its z3-solver pin conflicts with Halmos.
+certora-cli==8.20.3
+# Halmos requires Python 3.11 or later; on an older interpreter pip skips it and the Halmos
+# commands in README.md need a 3.11+ venv (CI uses Python 3.12).
+halmos==0.3.3 ; python_version >= "3.11"
+# Static analysis (security-fast.sh). crytic-compile drives `forge build` and hands Slither the Foundry artifacts;
+# Echidna and Medusa call the same crytic-compile from this venv.
+slither-analyzer==0.11.6
+crytic-compile==0.4.2
+# Semgrep (security-fast.sh `semgrep`) runs the smart-contract rules that script/install-security-tools.sh --rules clones
+# at a pinned commit into tools/semgrep-smart-contracts. It lowers click to 8.4 and wcmatch to 8.5; certora-cli pins
+# neither and uses only wcmatch.glob.globmatch and GLOBSTAR, which 8.5 provides.
+semgrep==1.182.1

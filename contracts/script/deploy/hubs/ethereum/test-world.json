@@ -1,0 +1,576 @@
+{
+  "_comment": "Local test world: the approved Spoke set and names on the test world's pools (off-fork). Structure and page text only; the market numbers live with the operator local scripts.",
+  "hub": {
+    "label": "ethereum",
+    "tier": 3,
+    "disclosures": {
+      "borrow": "Borrowing against a liquidity position can lead to its liquidation when the position's value falls. Test network listing; not a risk review.",
+      "lend": "Lent assets are borrowed by others; withdrawals depend on the Hub's unborrowed balance. Test network listing; not a risk review."
+    }
+  },
+  "spokes": [
+    {
+      "label": "uniV3Stable",
+      "integration": "uniswap-v3",
+      "category": "Stable",
+      "name": "Uniswap v3 Stable"
+    },
+    {
+      "label": "uniV3BlueChip",
+      "integration": "uniswap-v3",
+      "category": "Blue-chip",
+      "name": "Uniswap v3 Blue-chip"
+    },
+    {
+      "label": "uniV3CorrelatedEth",
+      "integration": "uniswap-v3",
+      "category": "Correlated ETH",
+      "name": "Uniswap v3 Correlated ETH"
+    },
+    {
+      "label": "uniV3GovDefi",
+      "integration": "uniswap-v3",
+      "category": "Gov/DeFi",
+      "name": "Uniswap v3 Gov/DeFi"
+    }
+  ],
+  "lendAssets": [
+    {
+      "symbol": "GHO",
+      "category": "stable",
+      "risk": {
+        "summary": "GHO lent on the Hub. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "symbol": "USDC",
+      "category": "stable",
+      "risk": {
+        "summary": "USDC lent on the Hub. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "symbol": "USDT",
+      "category": "stable",
+      "risk": {
+        "summary": "USDT lent on the Hub. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          }
+        ]
+      }
+    }
+  ],
+  "borrowAssets": [
+    {
+      "symbol": "GHO",
+      "risk": {
+        "summary": "GHO borrowed against liquidity positions. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          }
+        ]
+      }
+    },
+    {
+      "symbol": "USDC",
+      "risk": {
+        "summary": "USDC borrowed against liquidity positions. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          }
+        ]
+      }
+    }
+  ],
+  "borrowable": {
+    "uniV3Stable": [
+      "GHO",
+      "USDC"
+    ],
+    "uniV3BlueChip": [
+      "USDC",
+      "GHO"
+    ],
+    "uniV3CorrelatedEth": [
+      "USDC",
+      "GHO"
+    ],
+    "uniV3GovDefi": [
+      "USDC",
+      "GHO"
+    ]
+  },
+  "collateral": [
+    {
+      "symbol": "USDC"
+    },
+    {
+      "symbol": "USDT"
+    },
+    {
+      "symbol": "DAI"
+    },
+    {
+      "symbol": "WETH"
+    },
+    {
+      "symbol": "wstETH"
+    },
+    {
+      "symbol": "WBTC"
+    },
+    {
+      "symbol": "AAVE"
+    },
+    {
+      "symbol": "UNI"
+    },
+    {
+      "symbol": "LINK"
+    }
+  ],
+  "markets": [
+    {
+      "name": "uni-USDC-USDT-100",
+      "pool": "USDC-USDT-100",
+      "spoke": "uniV3Stable",
+      "category": "stable",
+      "risk": {
+        "summary": "A test-world pair. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          }
+        ]
+      }
+    },
+    {
+      "name": "uni-DAI-USDT-100",
+      "pool": "DAI-USDT-100",
+      "spoke": "uniV3Stable",
+      "category": "stable",
+      "risk": {
+        "summary": "A test-world pair. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          }
+        ]
+      }
+    },
+    {
+      "name": "uni-WETH-USDC-500",
+      "pool": "WETH-USDC-500",
+      "spoke": "uniV3BlueChip",
+      "category": "crypto",
+      "risk": {
+        "summary": "A test-world pair. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          }
+        ]
+      }
+    },
+    {
+      "name": "uni-WBTC-USDC-3000",
+      "pool": "WBTC-USDC-3000",
+      "spoke": "uniV3BlueChip",
+      "category": "crypto",
+      "risk": {
+        "summary": "A test-world pair. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          }
+        ]
+      }
+    },
+    {
+      "name": "uni-wstETH-WETH-100",
+      "pool": "wstETH-WETH-100",
+      "spoke": "uniV3CorrelatedEth",
+      "category": "crypto",
+      "risk": {
+        "summary": "A test-world pair. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          }
+        ]
+      }
+    },
+    {
+      "name": "uni-AAVE-WETH-3000",
+      "pool": "AAVE-WETH-3000",
+      "spoke": "uniV3GovDefi",
+      "category": "crypto",
+      "risk": {
+        "summary": "A test-world pair. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          }
+        ]
+      }
+    },
+    {
+      "name": "uni-UNI-WETH-3000",
+      "pool": "UNI-WETH-3000",
+      "spoke": "uniV3GovDefi",
+      "category": "crypto",
+      "risk": {
+        "summary": "A test-world pair. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          }
+        ]
+      }
+    },
+    {
+      "name": "uni-LINK-WETH-3000",
+      "pool": "LINK-WETH-3000",
+      "spoke": "uniV3GovDefi",
+      "category": "crypto",
+      "risk": {
+        "summary": "A test-world pair. Test network listing; not a risk review.",
+        "reviewedAt": "2026-11-16",
+        "factors": [
+          {
+            "id": "pairVolatility",
+            "label": "Pair volatility",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "liquidityDepth",
+            "label": "Liquidity depth",
+            "level": "moderate",
+            "text": "Test network listing; not a risk review."
+          },
+          {
+            "id": "oracle",
+            "label": "Oracle",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "smartContract",
+            "label": "Smart-contract surface",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          },
+          {
+            "id": "expectedIl",
+            "label": "Expected IL",
+            "level": "moderate",
+            "text": "Not rated on the test networks."
+          }
+        ]
+      }
+    }
+  ],
+  "tokens": [
+    {
+      "symbol": "GHO",
+      "name": "Gho Token"
+    },
+    {
+      "symbol": "USDC",
+      "name": "USD Coin"
+    },
+    {
+      "symbol": "USDT",
+      "name": "Tether USD"
+    },
+    {
+      "symbol": "DAI",
+      "name": "DAI"
+    },
+    {
+      "symbol": "WETH",
+      "name": "Wrapped Ether"
+    },
+    {
+      "symbol": "wstETH",
+      "name": "Wrapped stETH"
+    },
+    {
+      "symbol": "WBTC",
+      "name": "Wrapped Bitcoin"
+    },
+    {
+      "symbol": "AAVE",
+      "name": "Aave"
+    },
+    {
+      "symbol": "UNI",
+      "name": "Uniswap"
+    },
+    {
+      "symbol": "LINK",
+      "name": "Chainlink"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "test/integration/GoldenVectors.integration.t.sol": 0.0,
+  "test/integration/RiskPremiumThreshold.integration.t.sol": 0.2,
+  "test/integration/VaultToken.AaveV4.integration.t.sol": 0.1,
+  "test/invariant/Balances.invariant.t.sol": 199.1,
+  "test/unit/AaveV4Fixture.unit.t.sol": 0.1,
+  "test/unit/AvanaRoles.unit.t.sol": 0.1,
+  "test/unit/VaultToken.unit.t.sol": 4.5
+}

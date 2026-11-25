@@ -1,0 +1,13 @@
+{
+  "name": "listing-activate",
+  "chainId": 11155111,
+  "accessManager": "0xf100000000000000000000000000000000000010",
+  "scheduler": "0xf100000000000000000000000000000000000047",
+  "delay": 345600,
+  "labels": [
+    "activateMarket 1",
+    "activateMarket 2",
+    "activateMarket 1",
+    "activateMarket 2"
+  ]
+}

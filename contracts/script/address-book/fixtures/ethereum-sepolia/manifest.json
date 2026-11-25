@@ -1,0 +1,676 @@
+{
+  "schemaVersion": 2,
+  "chainId": 11155111,
+  "network": "sepolia",
+  "release": "v1.0.0",
+  "commit": "bfbe960b364a7458b5ee43087c40a4d53e937108",
+  "abiHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000009",
+  "deployer": "0xf100000000000000000000000000000000000001",
+  "create3Factory": "0xf100000000000000000000000000000000000002",
+  "feeRecipient": "0xf10000000000000000000000000000000000004d",
+  "sequencerFeed": null,
+  "avana": {
+    "accessManager": {
+      "address": "0xf100000000000000000000000000000000000010",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000010",
+      "startBlock": 7000000,
+      "artifact": "AccessManager.sol:AccessManager"
+    },
+    "integrations": [
+      {
+        "integrationId": 1,
+        "kind": "uniswap-v3",
+        "lpVault": {
+          "address": "0xf100000000000000000000000000000000000011",
+          "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000011",
+          "startBlock": 7000000,
+          "artifact": "UniswapV3Integration.sol:UniswapV3Integration"
+        },
+        "riskModule": {
+          "address": "0xf100000000000000000000000000000000000012",
+          "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000012",
+          "startBlock": 7000000,
+          "artifact": "RiskModule.sol:RiskModule"
+        },
+        "liquidationModule": {
+          "address": "0xf100000000000000000000000000000000000013",
+          "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000013",
+          "startBlock": 7000000,
+          "artifact": "LiquidationModule.sol:LiquidationModule"
+        },
+        "aaveAdapter": {
+          "address": "0xf100000000000000000000000000000000000014",
+          "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000014",
+          "startBlock": 7000000,
+          "artifact": "AaveAdapter.sol:AaveAdapter"
+        },
+        "flashloanRepay": {
+          "address": "0xf100000000000000000000000000000000000015",
+          "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000015",
+          "startBlock": 7000000,
+          "artifact": "FlashloanRepay.sol:FlashloanRepay"
+        }
+      },
+      {
+        "integrationId": 3,
+        "kind": "uniswap-v4",
+        "lpVault": {
+          "address": "0xf100000000000000000000000000000000000031",
+          "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000031",
+          "startBlock": 7000000,
+          "artifact": "UniswapV4Integration.sol:UniswapV4Integration"
+        },
+        "riskModule": {
+          "address": "0xf100000000000000000000000000000000000032",
+          "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000032",
+          "startBlock": 7000000,
+          "artifact": "RiskModule.sol:RiskModule"
+        },
+        "liquidationModule": {
+          "address": "0xf100000000000000000000000000000000000033",
+          "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000033",
+          "startBlock": 7000000,
+          "artifact": "LiquidationModule.sol:LiquidationModule"
+        },
+        "aaveAdapter": {
+          "address": "0xf100000000000000000000000000000000000034",
+          "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000034",
+          "startBlock": 7000000,
+          "artifact": "AaveAdapter.sol:AaveAdapter"
+        },
+        "flashloanRepay": {
+          "address": "0xf100000000000000000000000000000000000036",
+          "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000036",
+          "startBlock": 7000000,
+          "artifact": "FlashloanRepay.sol:FlashloanRepay"
+        }
+      }
+    ],
+    "flashLiquidators": [
+      {
+        "address": "0xf100000000000000000000000000000000000016",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000016",
+        "startBlock": 7000000,
+        "artifact": "liquidator:FlashLiquidator.sol:FlashLiquidator",
+        "integrationId": 1,
+        "operator": "0xf10000000000000000000000000000000000004c"
+      },
+      {
+        "address": "0xf100000000000000000000000000000000000037",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000037",
+        "startBlock": 7000000,
+        "artifact": "liquidator:FlashLiquidator.sol:FlashLiquidator",
+        "integrationId": 3,
+        "operator": "0xf10000000000000000000000000000000000004c"
+      }
+    ]
+  },
+  "markets": [
+    {
+      "marketId": "1",
+      "name": "uni-USDC-USDT-100",
+      "integrationId": 1,
+      "kind": "full-range",
+      "pool": "0x000000000000000000000000f100000000000000000000000000000000000035",
+      "spoke": "0xf100000000000000000000000000000000000041",
+      "hub": "0xf100000000000000000000000000000000000040",
+      "vaultToken": {
+        "address": "0xf100000000000000000000000000000000000050",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000050",
+        "startBlock": 7000000,
+        "artifact": "VaultToken.sol:VaultToken"
+      },
+      "lpOracle": {
+        "address": "0xf100000000000000000000000000000000000051",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000051",
+        "startBlock": 7000000,
+        "artifact": "LPOracle.sol:LPOracle"
+      },
+      "reserveId": "3",
+      "tokens": [
+        "0xf10000000000000000000000000000000000002a",
+        "0xf10000000000000000000000000000000000002c"
+      ],
+      "bandLower": -887272,
+      "bandUpper": 887272,
+      "ltvBps": 9000,
+      "unitDecimals": 6,
+      "feeds": [
+        {
+          "feed": "0xf100000000000000000000000000000000000061",
+          "heartbeatSeconds": 86400
+        },
+        {
+          "feed": "0xf100000000000000000000000000000000000062",
+          "heartbeatSeconds": 86400
+        }
+      ]
+    },
+    {
+      "marketId": "2",
+      "name": "uni-USDC-USDT-100",
+      "integrationId": 1,
+      "kind": "custom-range",
+      "pool": "0x000000000000000000000000f100000000000000000000000000000000000035",
+      "spoke": "0xf100000000000000000000000000000000000041",
+      "hub": "0xf100000000000000000000000000000000000040",
+      "vaultToken": {
+        "address": "0xf100000000000000000000000000000000000052",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000052",
+        "startBlock": 7000000,
+        "artifact": "VaultToken.sol:VaultToken"
+      },
+      "lpOracle": {
+        "address": "0xf100000000000000000000000000000000000053",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000053",
+        "startBlock": 7000000,
+        "artifact": "LPOracle.sol:LPOracle"
+      },
+      "reserveId": "4",
+      "tokens": [
+        "0xf10000000000000000000000000000000000002a",
+        "0xf10000000000000000000000000000000000002c"
+      ],
+      "bandLower": -101,
+      "bandUpper": 100,
+      "ltvBps": 9000,
+      "unitDecimals": 6,
+      "feeds": [
+        {
+          "feed": "0xf100000000000000000000000000000000000061",
+          "heartbeatSeconds": 86400
+        },
+        {
+          "feed": "0xf100000000000000000000000000000000000062",
+          "heartbeatSeconds": 86400
+        }
+      ]
+    },
+    {
+      "marketId": "1",
+      "name": "univ4-USDC-USDT-100",
+      "integrationId": 3,
+      "kind": "full-range",
+      "pool": "0xbb8befb877085e372f719ee5d9250ce5fd182d0de717b2ba5ec20020b60c6592",
+      "spoke": "0xf100000000000000000000000000000000000042",
+      "hub": "0xf100000000000000000000000000000000000040",
+      "vaultToken": {
+        "address": "0xf100000000000000000000000000000000000054",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000054",
+        "startBlock": 7000000,
+        "artifact": "VaultToken.sol:VaultToken"
+      },
+      "lpOracle": {
+        "address": "0xf100000000000000000000000000000000000055",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000055",
+        "startBlock": 7000000,
+        "artifact": "LPOracle.sol:LPOracle"
+      },
+      "reserveId": "3",
+      "tokens": [
+        "0xf10000000000000000000000000000000000002a",
+        "0xf10000000000000000000000000000000000002c"
+      ],
+      "bandLower": -887272,
+      "bandUpper": 887272,
+      "ltvBps": 9000,
+      "unitDecimals": 6,
+      "feeds": [
+        {
+          "feed": "0xf100000000000000000000000000000000000061",
+          "heartbeatSeconds": 86400
+        },
+        {
+          "feed": "0xf100000000000000000000000000000000000062",
+          "heartbeatSeconds": 86400
+        }
+      ]
+    },
+    {
+      "marketId": "2",
+      "name": "univ4-USDC-USDT-100",
+      "integrationId": 3,
+      "kind": "custom-range",
+      "pool": "0xbb8befb877085e372f719ee5d9250ce5fd182d0de717b2ba5ec20020b60c6592",
+      "spoke": "0xf100000000000000000000000000000000000042",
+      "hub": "0xf100000000000000000000000000000000000040",
+      "vaultToken": {
+        "address": "0xf100000000000000000000000000000000000056",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000056",
+        "startBlock": 7000000,
+        "artifact": "VaultToken.sol:VaultToken"
+      },
+      "lpOracle": {
+        "address": "0xf100000000000000000000000000000000000057",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000057",
+        "startBlock": 7000000,
+        "artifact": "LPOracle.sol:LPOracle"
+      },
+      "reserveId": "4",
+      "tokens": [
+        "0xf10000000000000000000000000000000000002a",
+        "0xf10000000000000000000000000000000000002c"
+      ],
+      "bandLower": -101,
+      "bandUpper": 100,
+      "ltvBps": 9000,
+      "unitDecimals": 6,
+      "feeds": [
+        {
+          "feed": "0xf100000000000000000000000000000000000061",
+          "heartbeatSeconds": 86400
+        },
+        {
+          "feed": "0xf100000000000000000000000000000000000062",
+          "heartbeatSeconds": 86400
+        }
+      ]
+    }
+  ],
+  "debtReserves": [
+    {
+      "spoke": "0xf100000000000000000000000000000000000041",
+      "debtReserveId": "0",
+      "asset": "0xf100000000000000000000000000000000000027",
+      "decimals": 18,
+      "isGho": true,
+      "firstLossReserve": "0xf100000000000000000000000000000000000070",
+      "feeds": [
+        {
+          "feed": "0xf100000000000000000000000000000000000060",
+          "heartbeatSeconds": 86400
+        }
+      ]
+    },
+    {
+      "spoke": "0xf100000000000000000000000000000000000041",
+      "debtReserveId": "1",
+      "asset": "0xf10000000000000000000000000000000000002a",
+      "decimals": 6,
+      "isGho": false,
+      "firstLossReserve": "0xf100000000000000000000000000000000000072",
+      "feeds": [
+        {
+          "feed": "0xf100000000000000000000000000000000000061",
+          "heartbeatSeconds": 86400
+        }
+      ]
+    },
+    {
+      "spoke": "0xf100000000000000000000000000000000000042",
+      "debtReserveId": "0",
+      "asset": "0xf100000000000000000000000000000000000027",
+      "decimals": 18,
+      "isGho": true,
+      "firstLossReserve": "0xf100000000000000000000000000000000000070",
+      "feeds": [
+        {
+          "feed": "0xf100000000000000000000000000000000000060",
+          "heartbeatSeconds": 86400
+        }
+      ]
+    },
+    {
+      "spoke": "0xf100000000000000000000000000000000000042",
+      "debtReserveId": "1",
+      "asset": "0xf10000000000000000000000000000000000002a",
+      "decimals": 6,
+      "isGho": false,
+      "firstLossReserve": "0xf100000000000000000000000000000000000072",
+      "feeds": [
+        {
+          "feed": "0xf100000000000000000000000000000000000061",
+          "heartbeatSeconds": 86400
+        }
+      ]
+    }
+  ],
+  "coverage": {
+    "firstLossReserves": [
+      {
+        "address": "0xf100000000000000000000000000000000000070",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000070",
+        "startBlock": 7000000,
+        "artifact": "FirstLossReserve.sol:FirstLossReserve",
+        "hub": "0xf100000000000000000000000000000000000040",
+        "hubLabel": "stable",
+        "asset": "0xf100000000000000000000000000000000000027",
+        "symbol": "GHO",
+        "minimum": "100000000000000000000000"
+      },
+      {
+        "address": "0xf100000000000000000000000000000000000072",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000072",
+        "startBlock": 7000000,
+        "artifact": "FirstLossReserve.sol:FirstLossReserve",
+        "hub": "0xf100000000000000000000000000000000000040",
+        "hubLabel": "stable",
+        "asset": "0xf10000000000000000000000000000000000002a",
+        "symbol": "USDC",
+        "minimum": "1000000000000"
+      }
+    ],
+    "daoDeficitOffsets": [
+      {
+        "address": "0xf100000000000000000000000000000000000071",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000071",
+        "startBlock": 7000000,
+        "artifact": null,
+        "hub": "0xf100000000000000000000000000000000000040",
+        "hubLabel": "stable",
+        "asset": "0xf100000000000000000000000000000000000027",
+        "symbol": "GHO",
+        "minimum": "75000000000000000000000"
+      },
+      {
+        "address": "0xf100000000000000000000000000000000000073",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000073",
+        "startBlock": 7000000,
+        "artifact": null,
+        "hub": "0xf100000000000000000000000000000000000040",
+        "hubLabel": "stable",
+        "asset": "0xf10000000000000000000000000000000000002a",
+        "symbol": "USDC",
+        "minimum": "75000000000"
+      }
+    ]
+  },
+  "aave": {
+    "hubs": [
+      {
+        "address": "0xf100000000000000000000000000000000000040",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000040",
+        "implementation": "0xf100000000000000000000000000000000000840",
+        "implementationCodeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000840",
+        "startBlock": 6990000,
+        "label": "stable",
+        "tier": 1
+      }
+    ],
+    "borrowSpokes": [
+      {
+        "address": "0xf100000000000000000000000000000000000041",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000041",
+        "implementation": "0xf100000000000000000000000000000000000841",
+        "implementationCodeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000841",
+        "startBlock": 6990000,
+        "label": "uniV3Stable"
+      },
+      {
+        "address": "0xf100000000000000000000000000000000000042",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000042",
+        "implementation": "0xf100000000000000000000000000000000000842",
+        "implementationCodeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000842",
+        "startBlock": 6990000,
+        "label": "uniV4Stable"
+      }
+    ],
+    "lendSpokes": [
+      {
+        "address": "0xf100000000000000000000000000000000000043",
+        "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000043",
+        "implementation": "0xf100000000000000000000000000000000000843",
+        "implementationCodeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000843",
+        "startBlock": 6990000,
+        "label": "lendStable"
+      }
+    ],
+    "v3Pool": {
+      "address": "0xf100000000000000000000000000000000000080",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000080",
+      "implementation": "0xf100000000000000000000000000000000000880",
+      "implementationCodeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000880",
+      "startBlock": 6990000
+    },
+    "accessManager": "0xf100000000000000000000000000000000000090"
+  },
+  "roles": {
+    "governanceSafe": "0xf100000000000000000000000000000000000047",
+    "aaveGovernanceExecutor": "0xf100000000000000000000000000000000000048",
+    "emergencyGuardian": "0xf100000000000000000000000000000000000049",
+    "aaveProtocolGuardian": "0xf10000000000000000000000000000000000004a",
+    "jointConfigSafe": "0xf10000000000000000000000000000000000004b",
+    "keepers": [
+      "0xf10000000000000000000000000000000000004c"
+    ],
+    "keeperTopUp": {
+      "wallet": "0xf10000000000000000000000000000000000004e",
+      "minBalanceWei": "3000000000000000000",
+      "targetBalanceWei": "10000000000000000000"
+    }
+  },
+  "external": [
+    {
+      "name": "Spoke uniV3Stable",
+      "group": "aave-v4",
+      "address": "0xf100000000000000000000000000000000000041",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000041",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "AaveOracle uniV3Stable",
+      "group": "aave-v4",
+      "address": "0xf100000000000000000000000000000000000141",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000141",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "Spoke uniV4Stable",
+      "group": "aave-v4",
+      "address": "0xf100000000000000000000000000000000000042",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000042",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "AaveOracle uniV4Stable",
+      "group": "aave-v4",
+      "address": "0xf100000000000000000000000000000000000142",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000142",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "Spoke lendStable",
+      "group": "aave-v4",
+      "address": "0xf100000000000000000000000000000000000043",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000043",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "AaveOracle lendStable",
+      "group": "aave-v4",
+      "address": "0xf100000000000000000000000000000000000143",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000143",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "accessManager",
+      "group": "aave-v4",
+      "address": "0xf100000000000000000000000000000000000090",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000090",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "hubConfigurator",
+      "group": "aave-v4",
+      "address": "0xf100000000000000000000000000000000000091",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000091",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "spokeConfigurator",
+      "group": "aave-v4",
+      "address": "0xf100000000000000000000000000000000000092",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000092",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "treasurySpoke",
+      "group": "aave-v4",
+      "address": "0xf100000000000000000000000000000000000093",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000093",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "liquidationLogic",
+      "group": "aave-v4",
+      "address": "0xf100000000000000000000000000000000000094",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000094",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "Hub stable",
+      "group": "aave-v4",
+      "address": "0xf100000000000000000000000000000000000040",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000040",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "Interest-rate strategy stable",
+      "group": "aave-v4",
+      "address": "0xf100000000000000000000000000000000000095",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000095",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "UniswapV3Factory",
+      "group": "uniswap-v3",
+      "address": "0xf1000000000000000000000000000000000000a0",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc000000a0",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "NonfungiblePositionManager",
+      "group": "uniswap-v3",
+      "address": "0xf1000000000000000000000000000000000000a1",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc000000a1",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "CLFactory generation 0",
+      "group": "slipstream",
+      "address": "0xf1000000000000000000000000000000000000a2",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc000000a2",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "PoolAddressesProvider",
+      "group": "aave-v3",
+      "address": "0xf1000000000000000000000000000000000000a3",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc000000a3",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "ACLManager",
+      "group": "aave-v3",
+      "address": "0xf1000000000000000000000000000000000000a4",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc000000a4",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "Pool (flash loans)",
+      "group": "aave-v3",
+      "address": "0xf100000000000000000000000000000000000080",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000080",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "Permit2",
+      "group": "uniswap-v4",
+      "address": "0xf1000000000000000000000000000000000000a6",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc000000a6",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "PoolManager",
+      "group": "uniswap-v4",
+      "address": "0xf1000000000000000000000000000000000000a5",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc000000a5",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "PositionManager",
+      "group": "uniswap-v4",
+      "address": "0xf1000000000000000000000000000000000000a7",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc000000a7",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "GHO",
+      "group": "token",
+      "address": "0xf100000000000000000000000000000000000027",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000027",
+      "implementation": null,
+      "standIn": true
+    },
+    {
+      "name": "USDC",
+      "group": "token",
+      "address": "0xf10000000000000000000000000000000000002a",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc0000002a",
+      "implementation": null,
+      "standIn": true
+    },
+    {
+      "name": "USDT",
+      "group": "token",
+      "address": "0xf10000000000000000000000000000000000002c",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc0000002c",
+      "implementation": null,
+      "standIn": true
+    },
+    {
+      "name": "GHO / USD (primary)",
+      "group": "feed",
+      "address": "0xf100000000000000000000000000000000000060",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000001",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "USDC / USD (primary)",
+      "group": "feed",
+      "address": "0xf100000000000000000000000000000000000061",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000001",
+      "implementation": null,
+      "standIn": false
+    },
+    {
+      "name": "USDT / USD (primary)",
+      "group": "feed",
+      "address": "0xf100000000000000000000000000000000000062",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc00000001",
+      "implementation": null,
+      "standIn": false
+    }
+  ],
+  "uniswapV4": {
+    "poolManager": {
+      "address": "0xf1000000000000000000000000000000000000a5",
+      "codeHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccc000000a5",
+      "startBlock": 7000000,
+      "artifact": null
+    }
+  }
+}

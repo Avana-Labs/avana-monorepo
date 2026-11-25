@@ -1,0 +1,228 @@
+// SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) 2026 Avana Labs
+// Transaction progress (README, "Transaction progress"; states in lib/intents.ts). The signed-in wallet records the
+// hash of a transaction it just submitted; a tracker per chain reads each open intent's receipt over Convex's own RPC
+// and moves it, so progress survives a page reload or another device. Convex stores no target, amount or calldata.
+// The tracker runs about once a block only while the chain has open intents: a submit schedules it, each run schedules
+// the next while intents stay open, and a cron every 5 minutes restarts a chain whose run was lost.
+
+import { v } from "convex/values";
+import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
+import { type ActionCtx, type MutationCtx, internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { chainSchedule } from "./lib/cronChains.ts";
+import { codedError } from "./codedError";
+import { INTENT_KINDS, type IntentState, type IntentStatus, isFinal, nextIntentState } from "./lib/intents.ts";
+import { explorerLinks } from "./lib/explorer.ts";
+import { noteFirstSeen } from "./lib/membership.ts";
+import { activateReferral } from "./lib/referrals.ts";
+import { awardQuestForIntent } from "./lib/rewards.ts";
+import { awardFeePoints, feeTransfers, type ReceiptLog } from "./lib/feePoints.ts";
+import { FEE_ACTIONS } from "./lib/fees.ts";
+import { rpcClient } from "./lib/rpc.ts";
+import { parseAbi } from "viem";
+import { consumeWriteBudget } from "./writeRateLimit";
+import { requireWalletSession } from "./walletAuth";
+
+const TX_HASH = /^0x[0-9a-f]{64}$/;
+/** Open intents read per tracker run and chain; the rest wait for the next run. */
+const TRACK_BATCH = 50;
+
+/** A scheduled tracker run that has not scheduled the next after this long is taken as lost and scheduled again. */
+export const TRACKER_LOST_MS = 5 * 60_000;
+
+const trackerOf = (ctx: MutationCtx, chainId: number) => ctx.db.query("intentTrackers").withIndex("by_chain", (q) => q.eq("chainId", chainId)).unique();
+const hasOpen = async (ctx: MutationCtx, chainId: number) =>
+  (await ctx.db.query("intents").withIndex("by_open", (q) => q.eq("chainId", chainId).eq("open", true)).first()) !== null;
+
+/** Schedules the chain's next tracker run about one block from now; its scheduling time is the run's token. */
+async function scheduleRun(ctx: MutationCtx, chainId: number, row: { _id: Id<"intentTrackers"> } | null) {
+  const run = Date.now();
+  await ctx.scheduler.runAfter(chainSchedule(chainId).intentSeconds * 1_000, internal.intents.track, { chainId, run });
+  if (row) await ctx.db.patch(row._id, { run });
+  else await ctx.db.insert("intentTrackers", { chainId, run });
+}
+
+/** Starts the chain's tracker unless a run is already scheduled and not lost. */
+export async function wakeTracker(ctx: MutationCtx, chainId: number): Promise<void> {
+  const row = await trackerOf(ctx, chainId);
+  if (row && Date.now() - row.run < TRACKER_LOST_MS) return;
+  await scheduleRun(ctx, chainId, row);
+}
+
+const pageArg = v.optional(v.object({ scope: v.union(v.literal("lend"), v.literal("asset"), v.literal("pool")), slug: v.string() }));
+
+export const submit = mutation({
+  args: { wallet: v.string(), chainId: v.number(), txHash: v.string(), kind: v.string(), page: pageArg },
+  handler: async (ctx, { wallet, chainId, txHash, kind, page }) => {
+    const w = await requireWalletSession(ctx, wallet);
+    await consumeWriteBudget(ctx, `wallet:${w}`);
+    const hash = txHash.toLowerCase();
+    if (!TX_HASH.test(hash)) throw codedError("INVALID_INTENT: txHash is a 32-byte hash");
+    if (!(INTENT_KINDS as readonly string[]).includes(kind)) throw codedError("INVALID_INTENT: unknown kind");
+    if (page && (page.slug.length === 0 || page.slug.length > 96)) throw codedError("INVALID_INTENT: page slug");
+    if (!(await ctx.db.query("deployments").withIndex("by_chain", (q) => q.eq("chainId", chainId)).unique())) throw codedError("INVALID_INTENT: chain not served");
+    const existing = await ctx.db.query("intents").withIndex("by_tx", (q) => q.eq("chainId", chainId).eq("txHash", hash)).unique();
+    if (existing) {
+      if (existing.wallet !== w) throw codedError("INVALID_INTENT: transaction recorded by another wallet");
+      return { id: existing._id, status: existing.status };
+    }
+    const now = Date.now();
+    const id = await ctx.db.insert("intents", { wallet: w, chainId, txHash: hash, kind, ...(page ? { page } : {}), status: "pending", submittedAt: now, open: true, checkedAt: 0, updatedAt: now });
+    await noteFirstSeen(ctx, w, now, "intent");
+    await wakeTracker(ctx, chainId);
+    return { id, status: "pending" as const };
+  },
+});
+
+/** The signed-in wallet's latest intents, newest first, each with its explorer link. */
+export const listForWallet = query({
+  args: { wallet: v.string(), limit: v.optional(v.number()) },
+  handler: async (ctx, { wallet, limit }) => {
+    const w = await requireWalletSession(ctx, wallet);
+    const rows = await ctx.db
+      .query("intents")
+      .withIndex("by_wallet", (q) => q.eq("wallet", w))
+      .order("desc")
+      .take(Math.min(Math.max(Math.floor(limit ?? 20), 1), 100));
+    const explorers = new Map((await ctx.db.query("deployments").collect()).map((d) => [d.chainId, explorerLinks(d.explorerUrl)]));
+    return rows.map((r) => {
+      const href = explorers.get(r.chainId)?.tx(r.txHash);
+      return {
+        chainId: r.chainId,
+        txHash: r.txHash,
+        kind: r.kind,
+        ...(r.page ? { page: r.page } : {}),
+        status: r.status,
+        final: isFinal(r.status, r.finalizedAt),
+        submittedAt: r.submittedAt,
+        ...(r.blockNumber ? { blockNumber: r.blockNumber } : {}),
+        ...(href ? { href } : {}),
+        updatedAt: r.updatedAt,
+      };
+    });
+  },
+});
+
+export const open = internalQuery({
+  args: { chainId: v.number() },
+  handler: async (ctx, { chainId }) => ctx.db.query("intents").withIndex("by_open", (q) => q.eq("chainId", chainId).eq("open", true)).order("asc").take(TRACK_BATCH),
+});
+
+export const isIndexed = internalQuery({
+  args: { chainId: v.number(), txHash: v.string() },
+  handler: async (ctx, { chainId, txHash }) => (await ctx.db.query("ingestedLogs").withIndex("by_tx", (q) => q.eq("txHash", txHash)).collect()).some((l) => l.chainId === chainId),
+});
+
+export const apply = internalMutation({
+  args: {
+    id: v.id("intents"),
+    expected: v.string(),
+    /** Null when the observation changed nothing: only the check time moves. */
+    next: v.union(v.null(), v.object({ status: v.string(), blockNumber: v.optional(v.string()), blockHash: v.optional(v.string()), finalizedAt: v.optional(v.number()) })),
+  },
+  handler: async (ctx, { id, expected, next }) => {
+    const row = await ctx.db.get(id);
+    // Another run moved it first: its observation is as new as this one.
+    if (!row || row.status !== expected) return;
+    const now = Date.now();
+    if (next === null) {
+      await ctx.db.patch(id, { checkedAt: now });
+      return;
+    }
+    const status = next.status as IntentStatus;
+    const { _id, _creationTime, blockNumber: _b, blockHash: _h, finalizedAt: _f, ...rest } = row;
+    await ctx.db.replace(id, { ...rest, ...next, status, open: !isFinal(status, next.finalizedAt), checkedAt: now, updatedAt: now });
+    // The transaction is on chain: it completes the quest of its kind (a failed or dropped one does not).
+    if (status === "included" || status === "indexed" || status === "confirmed") {
+      await awardQuestForIntent(ctx, row.wallet, row.kind, now);
+      await activateReferral(ctx, row.wallet, { intent: row.kind }, now);
+    }
+  },
+});
+
+
+/**
+ * Awards fee points for a confirmed transaction: the ERC-20 transfers from the wallet to the ParameterStore's
+ * `feeRecipient` in its receipt, priced by Convex (lib/feePoints.ts). Internal: only the tracker calls it, with logs it
+ * read itself, so a client never sets an amount.
+ */
+export const awardFee = internalMutation({
+  args: { wallet: v.string(), chainId: v.number(), txHash: v.string(), transfers: v.array(v.object({ token: v.string(), amount: v.string() })) },
+  handler: async (ctx, { wallet, chainId, txHash, transfers }) => awardFeePoints(ctx, { wallet, chainId, txHash, transfers, at: Date.now() }),
+});
+
+/**
+ * One tracker run for a chain: reads the receipt, the canonical hash of the stored block and finality per open intent.
+ * `run` is the token the run was scheduled with; however the run ends, `afterTrack` then schedules the next one while
+ * the chain still has open intents.
+ */
+export const track = internalAction({
+  args: { chainId: v.number(), run: v.optional(v.number()) },
+  handler: async (ctx, { chainId, run }) => {
+    try {
+      await trackOnce(ctx, chainId);
+    } finally {
+      await ctx.runMutation(internal.intents.afterTrack, { chainId, ...(run !== undefined ? { run } : {}) });
+    }
+  },
+});
+
+/** After a run: the next run about one block later while the chain has open intents, else the chain's tracker stops. */
+export const afterTrack = internalMutation({
+  args: { chainId: v.number(), run: v.optional(v.number()) },
+  handler: async (ctx, { chainId, run }) => {
+    const row = await trackerOf(ctx, chainId);
+    // A newer run holds the chain (this one was taken as lost), or none was scheduled: nothing to schedule from here.
+    if (!row || row.run !== run) return;
+    if (await hasOpen(ctx, chainId)) await scheduleRun(ctx, chainId, row);
+    else await ctx.db.delete(row._id);
+  },
+});
+
+/** Every 5 minutes: a chain with open intents and no live tracker run gets one (a run lost to a crash or a deploy). */
+export const wake = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    for (const d of await ctx.db.query("deployments").collect()) {
+      if (await hasOpen(ctx, d.chainId)) await wakeTracker(ctx, d.chainId);
+    }
+  },
+});
+
+async function trackOnce(ctx: ActionCtx, chainId: number): Promise<void> {
+  const intents = await ctx.runQuery(internal.intents.open, { chainId });
+  if (intents.length === 0) return;
+  const client = rpcClient(chainId);
+  const finalized = await client.getBlock({ blockTag: "finalized" }).then((b) => b.number.toString(), () => null);
+  let feeRecipient: string | null | undefined;
+  for (const i of intents) {
+    let logs: readonly ReceiptLog[] = [];
+    const receipt = await client.getTransactionReceipt({ hash: i.txHash as `0x${string}` }).then(
+      (r) => {
+        logs = r.logs;
+        return { success: r.status === "success", blockNumber: r.blockNumber.toString(), blockHash: r.blockHash.toLowerCase() };
+      },
+      () => null,
+    );
+    const canonicalHash = i.blockNumber ? await client.getBlock({ blockNumber: BigInt(i.blockNumber) }).then((b) => b.hash?.toLowerCase() ?? null, () => null) : null;
+    const indexed = await ctx.runQuery(internal.intents.isIndexed, { chainId, txHash: i.txHash });
+    const state: IntentState = { status: i.status, submittedAt: i.submittedAt, ...(i.blockNumber ? { blockNumber: i.blockNumber } : {}), ...(i.blockHash ? { blockHash: i.blockHash } : {}), ...(i.finalizedAt !== undefined ? { finalizedAt: i.finalizedAt } : {}) };
+    const next = nextIntentState(state, { receipt, canonicalHash, indexed, finalizedBlock: finalized, now: Date.now() });
+    const { submittedAt: _s, ...fields } = next;
+    await ctx.runMutation(internal.intents.apply, { id: i._id, expected: i.status, next: next === state ? null : fields });
+    // The first time the transaction is seen on chain, its fee transfer earns points. A failure here never stops tracking.
+    if (receipt?.success && i.status === "pending" && (FEE_ACTIONS as readonly string[]).includes(i.kind)) {
+      try {
+        if (feeRecipient === undefined) {
+          // The manifest's fee recipient, recorded on the deployment row.
+          feeRecipient = (await ctx.runQuery(internal.ingest.apply.state, { chainId })).deployment?.feeRecipient ?? null;
+        }
+        const transfers = feeRecipient ? feeTransfers(logs, i.wallet, feeRecipient) : [];
+        if (transfers.length > 0) await ctx.runMutation(internal.intents.awardFee, { wallet: i.wallet, chainId, txHash: i.txHash, transfers });
+      } catch (e) {
+        console.error(`fee points ${chainId} ${i.txHash}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+  }
+}

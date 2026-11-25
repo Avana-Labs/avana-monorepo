@@ -1,0 +1,46 @@
+# Pre-commit checks, installed once per clone with `lefthook install` (a single binary; no Node runtime in the hook).
+# Each command runs only when matching files are staged; CI repeats every check, so a skipped hook never lets a
+# failure through.
+pre-commit:
+  parallel: false
+  commands:
+    # Vulnerable dependency updates fail before commit. npm audit checks the monorepo root lockfile.
+    npm-dependency-audit:
+      glob: "package-lock.json"
+      run: npm audit --audit-level=moderate --ignore-scripts
+    contracts-npm-dependency-audit:
+      root: contracts/
+      glob: "package-lock.json"
+      run: npm audit --audit-level=moderate --ignore-scripts
+    contracts-python-dependency-audit:
+      root: contracts/
+      glob: "requirements.txt"
+      run: uvx --from pip-audit pip-audit -r requirements.txt
+    mythril-python-dependency-audit:
+      root: contracts/
+      glob: "requirements-mythril.txt"
+      run: uvx --from pip-audit pip-audit -r requirements-mythril.txt
+    # Contract analyzers are the repository's existing fast tier; run them when Solidity source changes.
+    contract-security:
+      root: contracts/
+      glob: "src/**/*.sol"
+      run: script/security-fast.sh
+    # Secret scan of the staged changes with the same rules as CI (.gitleaks.toml), so a finding is fixed before it
+    # enters history. Gitleaks comes from PATH or $GITLEAKS; the version CI pins is in .github/workflows/gitleaks.yml.
+    # A missing binary fails the hook, so no unscanned change is committed.
+    gitleaks:
+      run: '"${GITLEAKS:-gitleaks}" git . --pre-commit --staged --config .gitleaks.toml --redact=100 --no-banner --exit-code=1'
+    forge-fmt:
+      root: contracts/
+      glob: "*.sol"
+      run: forge fmt --check {staged_files}
+    file-size:
+      root: contracts/
+      glob: "*.sol"
+      run: script/check-file-size.sh
+    licence:
+      glob: "*.{sol,py,js,mjs,sh,json}"
+      run: contracts/script/check-licence.sh
+
+# A commit hook cannot protect a remote branch by itself. Git has no standard pre-branch-creation or pre-PR hook.
+

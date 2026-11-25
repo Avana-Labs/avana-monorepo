@@ -1,0 +1,150 @@
+version = 2
+
+[[dependencies]]
+name = "@openzeppelin-contracts"
+version = "5.1.0"
+url = "https://soldeer-revisions.s3.amazonaws.com/@openzeppelin-contracts/5_1_0_19-10-2024_10:28:52_contracts.zip"
+checksum = "fd3d1ea561cb27897008aee18ada6e85f248eb161c86e4435272fc2b5777574f"
+integrity = "cb6cf6e878f2943b2291d5636a9d72ac51d43d8135896ceb6cf88d36c386f212"
+
+[[dependencies]]
+name = "@openzeppelin-contracts-upgradeable"
+version = "5.1.0"
+url = "https://soldeer-revisions.s3.amazonaws.com/@openzeppelin-contracts-upgradeable/5_1_0_19-10-2024_10:28:58_contracts-upgradeable.zip"
+checksum = "87854223d14941d6fda3d78d900217e79e25755ea5bc48beca035766fa6a4e7e"
+integrity = "826fb621339dcee4261f848b283ec86364743d3c289d61f621747d95e315215a"
+
+[[dependencies]]
+name = "aave-solidity-utils"
+version = "fdc69f9"
+git = "https://github.com/aave-dao/solidity-utils.git"
+rev = "fdc69f984036585d508889147734902dc0c64bf3"
+
+[[dependencies]]
+name = "aave-v3-origin"
+version = "3.7.0"
+git = "https://github.com/aave-dao/aave-v3-origin.git"
+rev = "cff15de6d1271b0c800fc001f4aea4c263e8a597"
+
+[[dependencies]]
+name = "aave-v4"
+version = "a3ef63e"
+git = "https://github.com/aave/aave-v4.git"
+rev = "a3ef63ea6415d25237a9775bf66e76e9993561c2"
+
+[[dependencies]]
+name = "aerodrome-contracts"
+version = "1.0"
+git = "https://github.com/aerodrome-finance/contracts.git"
+rev = "1e08fb9765ec7ccf5946cd4eb041bd25f76e872d"
+
+[[dependencies]]
+name = "excessively-safe-call"
+version = "81cd99c"
+git = "https://github.com/nomad-xyz/ExcessivelySafeCall.git"
+rev = "81cd99ce3e69117d665d7601c330ea03b97acce0"
+
+[[dependencies]]
+name = "forge-std"
+version = "1.17.0"
+url = "https://soldeer-revisions.s3.amazonaws.com/forge-std/1_17_0_01-10-2026_10:59:49_forge-std-1.17.zip"
+checksum = "a77ad38d5fbef0ec10d1f4d191698e5fbaa2bffbee5d1aced91a39da5e9b908c"
+integrity = "fa706c8a7caf3426c90f75e6aafa3224b0a6c899b490800cf6944e4ec42f9344"
+
+[[dependencies]]
+name = "gho-core"
+version = "c6335a0"
+git = "https://github.com/aave/gho-core.git"
+rev = "c6335a0bb9cba099960c5378b1ff0db190b8da8f"
+
+[[dependencies]]
+name = "halmos-cheatcodes"
+version = "6da4e69"
+git = "https://github.com/a16z/halmos-cheatcodes.git"
+rev = "6da4e692c357ba6d641a2e677a28298cac9f76ab"
+
+[[dependencies]]
+name = "libocr"
+version = "199a6f1"
+git = "https://github.com/smartcontractkit/libocr.git"
+rev = "199a6f17c59863999480e990c7c0b6ba7796ec92"
+
+[[dependencies]]
+name = "multicall"
+version = "3.1.0"
+git = "https://github.com/mds1/multicall.git"
+rev = "a1fa0644fa412cd3237ef7081458ecb2ffad7dbe"
+
+[[dependencies]]
+name = "openzeppelin-contracts-aerodrome"
+version = "7b3e7b7"
+git = "https://github.com/OpenZeppelin/openzeppelin-contracts.git"
+rev = "7b3e7b7055d6e1226d4920ca7d7c446c0c0bfff5"
+
+[[dependencies]]
+name = "openzeppelin-contracts-solc-0.7"
+version = "3.4.2"
+url = "https://soldeer-revisions.s3.amazonaws.com/@openzeppelin-contracts/3_4_2-solc-0_7_22-01-2024_13:13:06_contracts.zip"
+checksum = "81842c01d5b80f937a0b5594f8f2c0e6f5b6e3826cae80851f6df237ba07d0e9"
+integrity = "21282c5f3e54deec657bc38147d420a62de5327ec0918600eb05551e5a7b40a9"
+
+[[dependencies]]
+name = "openzeppelin-contracts-upgradeable-aave"
+version = "fa52531"
+git = "https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable.git"
+rev = "fa525310e45f91eb20a6d3baa2644be8e0adba31"
+
+[[dependencies]]
+name = "permit2"
+version = "cc56ad0"
+git = "https://github.com/Uniswap/permit2.git"
+rev = "cc56ad0f3439c502c246fc5cfcc3db92bb8b7219"
+
+[[dependencies]]
+name = "slipstream"
+version = "1.0.0"
+git = "https://github.com/aerodrome-finance/slipstream.git"
+rev = "37eead2c7e5302a204dec78bfa0775bbb8ff48a2"
+
+[[dependencies]]
+name = "slipstream-main"
+version = "f8717fa"
+git = "https://github.com/aerodrome-finance/slipstream.git"
+rev = "f8717faaae6e6717db3c8e3850149c01a79c0603"
+
+[[dependencies]]
+name = "solady"
+version = "0.1.26"
+url = "https://soldeer-revisions.s3.amazonaws.com/solady/0_1_26_25-08-2025_15:30:06_solady.zip"
+checksum = "9872ac7cfd32c1eba32800508a1325c49f4a4aa8c6f670454db91971a583e26b"
+integrity = "5da4b5ca9cbad98812a4b75ad528ff34c72a0b84433204be6d1420c81de1d6ff"
+
+[[dependencies]]
+name = "solmate"
+version = "4b47a19"
+git = "https://github.com/transmissions11/solmate.git"
+rev = "4b47a19038b798b4a33d9749d25e570443520647"
+
+[[dependencies]]
+name = "uniswap-v3-core"
+version = "5ea68a7"
+git = "https://github.com/Uniswap/v3-core.git"
+rev = "5ea68a77cb541c6b3812df783be71ba8c081e25f"
+
+[[dependencies]]
+name = "uniswap-v3-periphery"
+version = "24ccf01"
+git = "https://github.com/Uniswap/v3-periphery.git"
+rev = "24ccf014fe7f81d74a14c1689d6fdf123f280e45"
+
+[[dependencies]]
+name = "uniswap-v4-core"
+version = "e50237c"
+git = "https://github.com/Uniswap/v4-core.git"
+rev = "e50237c43811bd9b526eff40f26772152a42daba"
+
+[[dependencies]]
+name = "uniswap-v4-periphery"
+version = "ea2bf2e"
+git = "https://github.com/Uniswap/v4-periphery.git"
+rev = "ea2bf2e1ba6863bb809fc2ff791744f308c4a26d"

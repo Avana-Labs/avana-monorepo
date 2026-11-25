@@ -1,0 +1,171 @@
+{
+  "_comment": "Base test world additions (local only): test stock tokens, the Slipstream pools the Aero Slipstream Stocks Spoke lists (stock/USDC), and Uniswap v3 stock/WETH and stock/USDT pools.",
+  "tokens": [
+    {
+      "symbol": "AMZNc",
+      "decimals": 18,
+      "price8": 22000000000
+    },
+    {
+      "symbol": "SNDKc",
+      "decimals": 18,
+      "price8": 6000000000
+    },
+    {
+      "symbol": "GOOGLc",
+      "decimals": 18,
+      "price8": 17500000000
+    },
+    {
+      "symbol": "NVDAc",
+      "decimals": 18,
+      "price8": 18000000000
+    },
+    {
+      "symbol": "SPCXc",
+      "decimals": 18,
+      "price8": 12000000000
+    },
+    {
+      "symbol": "METAc",
+      "decimals": 18,
+      "price8": 60000000000
+    }
+  ],
+  "uniswapPools": [
+    {
+      "name": "AMZNc-WETH-3000",
+      "a": "AMZNc",
+      "b": "WETH",
+      "fee": 3000,
+      "usd": 1000000
+    },
+    {
+      "name": "AMZNc-USDT-3000",
+      "a": "AMZNc",
+      "b": "USDT",
+      "fee": 3000,
+      "usd": 1000000
+    },
+    {
+      "name": "SNDKc-WETH-3000",
+      "a": "SNDKc",
+      "b": "WETH",
+      "fee": 3000,
+      "usd": 1000000
+    },
+    {
+      "name": "SNDKc-USDT-3000",
+      "a": "SNDKc",
+      "b": "USDT",
+      "fee": 3000,
+      "usd": 1000000
+    },
+    {
+      "name": "GOOGLc-WETH-3000",
+      "a": "GOOGLc",
+      "b": "WETH",
+      "fee": 3000,
+      "usd": 1000000
+    },
+    {
+      "name": "GOOGLc-USDT-3000",
+      "a": "GOOGLc",
+      "b": "USDT",
+      "fee": 3000,
+      "usd": 1000000
+    },
+    {
+      "name": "NVDAc-WETH-3000",
+      "a": "NVDAc",
+      "b": "WETH",
+      "fee": 3000,
+      "usd": 1000000
+    },
+    {
+      "name": "NVDAc-USDT-3000",
+      "a": "NVDAc",
+      "b": "USDT",
+      "fee": 3000,
+      "usd": 1000000
+    },
+    {
+      "name": "SPCXc-WETH-3000",
+      "a": "SPCXc",
+      "b": "WETH",
+      "fee": 3000,
+      "usd": 1000000
+    },
+    {
+      "name": "SPCXc-USDT-3000",
+      "a": "SPCXc",
+      "b": "USDT",
+      "fee": 3000,
+      "usd": 1000000
+    },
+    {
+      "name": "METAc-WETH-3000",
+      "a": "METAc",
+      "b": "WETH",
+      "fee": 3000,
+      "usd": 1000000
+    },
+    {
+      "name": "METAc-USDT-3000",
+      "a": "METAc",
+      "b": "USDT",
+      "fee": 3000,
+      "usd": 1000000
+    }
+  ],
+  "slipstreamPools": [
+    {
+      "name": "AMZNc-USDC-cl100-g0",
+      "a": "AMZNc",
+      "b": "USDC",
+      "tickSpacing": 100,
+      "generation": 0,
+      "usd": 2000000
+    },
+    {
+      "name": "SNDKc-USDC-cl100-g0",
+      "a": "SNDKc",
+      "b": "USDC",
+      "tickSpacing": 100,
+      "generation": 0,
+      "usd": 2000000
+    },
+    {
+      "name": "GOOGLc-USDC-cl100-g0",
+      "a": "GOOGLc",
+      "b": "USDC",
+      "tickSpacing": 100,
+      "generation": 0,
+      "usd": 2000000
+    },
+    {
+      "name": "NVDAc-USDC-cl100-g0",
+      "a": "NVDAc",
+      "b": "USDC",
+      "tickSpacing": 100,
+      "generation": 0,
+      "usd": 2000000
+    },
+    {
+      "name": "SPCXc-USDC-cl100-g0",
+      "a": "SPCXc",
+      "b": "USDC",
+      "tickSpacing": 100,
+      "generation": 0,
+      "usd": 2000000
+    },
+    {
+      "name": "METAc-USDC-cl100-g0",
+      "a": "METAc",
+      "b": "USDC",
+      "tickSpacing": 100,
+      "generation": 0,
+      "usd": 2000000
+    }
+  ]
+}

@@ -1,0 +1,203 @@
+// SPDX-License-Identifier: BUSL-1.1
+// Copyright (c) 2026 Avana Labs
+// The snapshot reader on a chain with several Hubs: every row is keyed by its Hub, two Lend Spokes on one Hub and a
+// third on another are read, each covered Hub asset carries its draw-cap coverage from the RiskModule and its First-Loss
+// Reserve's balance, the Hub identities hold per Hub asset, a pool's two markets (Full range and Custom range) are read
+// from the RiskModule and the LPOracle, and a Hub a later release step deploys appears once it has code.
+
+import { describe, expect, it } from "vitest";
+import {
+  CDP_A,
+  CDP_B,
+  CDP_C,
+  COV_C,
+  HUB_A,
+  HUB_B,
+  HUB_C,
+  LEND_A,
+  LEND_A2,
+  LEND_B,
+  LEND_C,
+  OFFSET_C,
+  USDC,
+  type FakeChain,
+  fakeChainClient,
+  fixtureHubsChain,
+  fixtureHubsDeployment,
+} from "../src/views/fixtures.ts";
+import { reconcileHubAsset } from "../src/views/math.ts";
+import { readChainSnapshot } from "../src/views/snapshot.ts";
+import type { Address } from "../src/views/types.ts";
+
+const at = { blockNumber: 100n, timestamp: 1_767_225_600 };
+const read = (chain: FakeChain = fixtureHubsChain.start) => readChainSnapshot(fakeChainClient(chain), fixtureHubsDeployment, at);
+const six = (whole: number) => (BigInt(whole) * 10n ** 6n).toString();
+
+describe("a chain with two Hubs and three Lend Spokes", () => {
+  it("lists each Hub with its label, tier, Lend Spokes, CDP Spokes and lend assets", async () => {
+    const snap = await read();
+    expect(snap.hubs.map((h) => [h.hub, h.label, h.tier, h.assetCount, h.lendAssetIds, h.lendSpokes, h.cdpSpokes])).toEqual([
+      [HUB_A, "Stable", 1, 4, ["0", "1"], [LEND_A, LEND_A2], [CDP_A]],
+      [HUB_B, "Core", 2, 2, ["0", "1"], [LEND_B], [CDP_B]],
+    ]);
+  });
+
+  it("keys every Hub asset by its Hub, so the same token on two Hubs is two rows", async () => {
+    const snap = await read();
+    expect(snap.hubAssets.map((a) => `${a.hub}:${a.assetId}`)).toEqual([`${HUB_A}:0`, `${HUB_A}:1`, `${HUB_B}:0`, `${HUB_B}:1`]);
+    const usdc = snap.hubAssets.filter((a) => a.underlying === USDC);
+    expect(usdc.map((a) => [a.hub, a.added, a.owed, a.liquidity])).toEqual([
+      [HUB_A, six(10_000_000), six(3_000_000), six(7_000_000)],
+      [HUB_B, six(6_000_000), six(2_000_000), six(4_000_000)],
+    ]);
+    expect(usdc.map((a) => a.priceUsd8)).toEqual(["100000000", "100010000"]);
+  });
+
+  it("reads both Lend Spokes of one Hub asset and prices it at the manifest's first", async () => {
+    const a0 = (await read()).hubAssets[0]!;
+    expect(a0.lend).toEqual({ spoke: LEND_A, reserveId: "0", paused: false, frozen: false });
+    expect(a0.lendReserves).toEqual([
+      { spoke: LEND_A, reserveId: "0", paused: false, frozen: false },
+      { spoke: LEND_A2, reserveId: "0", paused: false, frozen: true },
+    ]);
+  });
+
+  it("classifies each Spoke on each Hub asset, a CDP Spoke drawing from another Hub included", async () => {
+    const snap = await read();
+    const kinds = (hub: Address, assetId: string) => snap.slices.filter((s) => s.hub === hub && s.assetId === assetId).map((s) => [s.spoke, s.kind, s.homeHub]);
+    expect(kinds(HUB_A, "0").map(([, kind]) => kind)).toEqual(["lend", "lend", "coverage", "feeReceiver", "cdp"]);
+    expect(kinds(HUB_B, "0")).toEqual([
+      [LEND_B, "lend", "0x0000000000000000000000000000000000000000"],
+      [CDP_B, "cdp", HUB_B],
+      [CDP_A, "cdp", HUB_A],
+    ]);
+  });
+
+  it("holds the Hub identities on every Hub asset of every Hub", async () => {
+    const snap = await read();
+    for (const a of snap.hubAssets) {
+      const r = reconcileHubAsset(a, snap.slices);
+      expect([a.hub, a.assetId, r.owedReconciles, r.addedReconciles, r.onlyCdpDraws, r.balanceHolds]).toEqual([a.hub, a.assetId, true, true, true, true]);
+    }
+  });
+
+  it("reads the draw-cap coverage of each covered Hub asset from the RiskModules and the First-Loss Reserve's balance", async () => {
+    const snap = await read();
+    const exposure = (hub: string) => snap.hubAssets.find((a) => a.hub === hub && a.underlying === USDC)!.exposure;
+    // Hub A USDC: CDP A's draw cap of 4,000,000 at the fake RiskModule's 5 % needs 200,000, the First-Loss Reserve's balance.
+    expect(exposure(HUB_A)).toMatchObject({ drawCapSum: "4000000", required: six(200_000), fundedBalance: six(200_000), coverageBoundHolds: true, uncovered: "0" });
+    // Hub B USDC has no First-Loss Reserve.
+    expect(exposure(HUB_B)).toBeNull();
+  });
+
+  it("reads each CDP debt reserve with the Hub that funds it, its flags and its price, GHO at its fixed source", async () => {
+    const snap = await read();
+    expect(snap.spokeReserves.map((r) => [r.spoke, r.reserveId, r.hub, r.assetId, r.borrowable, r.fixedPrice])).toEqual([
+      [CDP_A, "1", HUB_A, "0", true, false],
+      [CDP_A, "2", HUB_A, "1", true, false],
+      [CDP_A, "3", HUB_B, "0", true, false],
+      [CDP_B, "1", HUB_B, "0", true, false],
+      [CDP_B, "2", HUB_B, "1", true, true],
+    ]);
+    expect(snap.spokeReserves[0]!.debtPrice).toBe("100000000");
+  });
+
+  it("does not take a supply-shaped Spoke on a manifest Hub for a Lend Spoke", async () => {
+    const stranger = "0x5100000000000000000000000000000000000001" as Address;
+    const chain: FakeChain = {
+      ...fixtureHubsChain.start,
+      hubs: fixtureHubsChain.start.hubs.map((h) =>
+        h.hub !== HUB_A ? h : { ...h, assets: h.assets.map((a, i) => (i !== 1 ? a : { ...a, slices: [...a.slices, { spoke: stranger, added: 0n, owed: 0n, addCap: 10, drawCap: 0 }] })) },
+      ),
+    };
+    const snap = await read(chain);
+    expect(snap.slices.find((s) => s.spoke === stranger)?.kind).toBe("other");
+    expect(snap.hubs[0]!.lendSpokes).toEqual([LEND_A, LEND_A2]);
+  });
+
+  it("refuses a Lend Spoke reserve on a Hub the manifest does not list", async () => {
+    const dep = { ...fixtureHubsDeployment, hubs: [fixtureHubsDeployment.hubs[0]!] };
+    await expect(readChainSnapshot(fakeChainClient(fixtureHubsChain.start), dep, at)).rejects.toThrow(/which the manifest does not list/);
+  });
+
+  it("fails the whole snapshot when a required view reverts", async () => {
+    const chain = fakeChainClient(fixtureHubsChain.start);
+    const broken = {
+      multicall: async (calls: Parameters<typeof chain.multicall>[0]) =>
+        (await chain.multicall(calls)).map((r, i) => (calls[i]!.functionName === "getAssetOwed" ? { status: "failure" as const, error: new Error("revert") } : r)),
+    };
+    await expect(readChainSnapshot(broken, fixtureHubsDeployment, at)).rejects.toThrow(/reverted/);
+  });
+});
+
+describe("a pool's two markets", () => {
+  it("reads the Full range and Custom range market of one pool with the same LTV and each its own band", async () => {
+    const snap = await read();
+    expect(snap.markets.map((m) => [m.marketId, m.kind, m.active, m.bandLower, m.bandUpper, m.ltvBps, m.hub, m.spoke, m.hubAssetId])).toEqual([
+      ["1", "full-range", true, -887_270, 887_270, 9_000, HUB_A, CDP_A, "2"],
+      ["2", "custom-range", true, -100, 100, 9_000, HUB_A, CDP_A, "3"],
+    ]);
+    expect(snap.markets[0]!.pool).toBe(snap.markets[1]!.pool);
+  });
+
+  it("prices the vault token at the LPOracle and values what the Spoke holds", async () => {
+    const m = (await read()).markets[0]!;
+    expect(m).toMatchObject({
+      acceptedPrice: "200000000",
+      suppliedUnits: (1_000n * 10n ** 18n).toString(),
+      suppliedUsd8: (2_000n * 10n ** 8n).toString(),
+      vaultDecimals: 18,
+      symbol: "av-1",
+      tokenDecimals: [6, 6],
+      collateralFactorBps: 9_000,
+      maxLiquidationBonusBps: 10_500,
+      liquidationFeeBps: 1_000,
+      collateralRiskBps: 500,
+      liquidation: { targetHealthFactorWad: "1100000000000000000", healthFactorForMaxBonusWad: "950000000000000000", liquidationBonusFactorBps: 5_000 },
+    });
+  });
+
+  it("charges each debt reserve of the market's Spoke drawnRate × (1 + collateralRisk)", async () => {
+    const m = (await read()).markets[0]!;
+    // ⌈6 % × 1.05⌉ RAY on Hub A's USDC and USDT, ⌈8 % × 1.05⌉ on Hub B's USDC.
+    expect(m.borrow).toEqual([
+      { reserveId: "1", borrowRateRay: (63n * 10n ** 24n).toString() },
+      { reserveId: "2", borrowRateRay: (63n * 10n ** 24n).toString() },
+      { reserveId: "3", borrowRateRay: (84n * 10n ** 24n).toString() },
+    ]);
+  });
+
+  it("shows a depegged market frozen on its Spoke (depeg = freeze)", async () => {
+    const chain: FakeChain = { ...fixtureHubsChain.start, markets: fixtureHubsChain.start.markets.map((m) => (m.marketId === 2n ? { ...m, frozen: true } : m)) };
+    const snap = await read(chain);
+    expect(snap.markets.map((m) => [m.marketId, m.frozen])).toEqual([
+      ["1", false],
+      ["2", true],
+    ]);
+  });
+});
+
+describe("a Hub a later release step deploys", () => {
+  it("is left out while it has no code, and read with its Lend, Coverage, CDP and deficit-offset Spokes and market once it has", async () => {
+    const before = await read(fixtureHubsChain.start);
+    const after = await read(fixtureHubsChain.later);
+    expect(before.hubs.map((h) => h.hub)).toEqual([HUB_A, HUB_B]);
+    expect(before.markets.map((m) => m.marketId)).toEqual(["1", "2"]);
+    expect(after.hubs.map((h) => h.hub)).toEqual([HUB_A, HUB_B, HUB_C]);
+    expect(after.hubs[2]).toMatchObject({ hub: HUB_C, label: "Edge", tier: 3, lendAssetIds: ["0"], lendSpokes: [LEND_C], cdpSpokes: [CDP_C] });
+
+    const c0 = after.hubAssets.find((a) => a.hub === HUB_C)!;
+    expect([c0.assetId, c0.underlying, c0.added, c0.owed, c0.priceUsd8, c0.lend.spoke]).toEqual(["0", USDC, six(2_050_000), six(500_000), "100000000", LEND_C]);
+    expect(after.slices.filter((s) => s.hub === HUB_C).map((s) => s.kind)).toEqual(["lend", "coverage", "deficitOffset", "feeReceiver", "cdp"]);
+    expect(c0.exposure).toMatchObject({ firstLossReserve: COV_C, fundedBalance: six(100_000), deficitOffset: OFFSET_C, offsetFunded: six(50_000) });
+    expect(reconcileHubAsset(c0, after.slices).balanceHolds).toBe(true);
+    expect(after.spokeReserves.filter((r) => r.spoke === CDP_C).map((r) => [r.hub, r.assetId])).toEqual([[HUB_C, "0"]]);
+    expect(after.markets.map((m) => [m.marketId, m.hub, m.spoke])).toEqual([
+      ["1", HUB_A, CDP_A],
+      ["2", HUB_A, CDP_A],
+      ["3", HUB_C, CDP_C],
+    ]);
+    // Rows of the Hubs that were there before do not change.
+    expect(after.hubAssets.filter((a) => a.hub !== HUB_C)).toEqual(before.hubAssets);
+  });
+});

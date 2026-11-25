@@ -1,0 +1,1281 @@
+name: contracts
+
+# Foundry workspace in contracts/. CI runs three suites (decided 2026-11-17 to cut Actions minutes):
+# - fast (every pull request that touches contracts/, and `suite: fast` by hand): the `changes` job sorts the pull
+#   request's files. A change to Solidity, foundry.toml, the dependencies, test/ or snapshots/ runs format, lint and
+#   build, the ci test profile in 3 shards at a short depth (fuzz 1,000 runs, invariants 64 runs at depth 64), gas
+#   snapshots and the generated-ABI check. A change to Solidity scripts only (script/**/*.sol) runs the build alone. A
+#   change to shell or Python scripts, certora/ or docs only runs the script tests (script/*.test.sh) and no forge;
+#   security/ (size margins, licence allowlist) runs the build. Any PR that changes contracts/src/ also runs the fast
+#   static-analysis tier (Slither, upgradeability, Aderyn, Semgrep and 4naly3er).
+#   A pull request labelled `hotfix` (playbook P-05) also runs the touched contracts' invariant campaigns at full depth.
+# - full (`suite: full` by hand): the ci profile in 10 shards (fuzz 10,000 runs, invariants 1,000 at depth 100), gas,
+#   ABIs, branch coverage and the fast security tier.
+# - long (`suite: long` by hand, the default of a manual run): the full suite plus the long checks: the deep invariant
+#   campaign (the 10 test shards then leave test/invariant/ out, so each campaign runs once), fork tests, the FFI
+#   differential suite and SMTChecker, one target per job, each at most 4 hours (a deep invariant file at most 6):
+#   `plan` lists the invariant files and SMTChecker contracts with script/ci-shards.py, so a new one gets its own job
+#   on the next run. Certora runs locally in WSL, not in CI (certora/README.md).
+#   Run it after a large protocol change and on the commit of a release tag before an upgrade is scheduled. Halmos
+#   runs in the slow security tier, one job per check at loop 16. The slow security tier (security-slow.yml) and the
+#   per-layer mutation gates (mutation-gate.yml) are manual as well.
+# Nothing runs on a push to main, on a schedule or on a tag: the pull request already ran the fast suite on the same
+# change. A manual run on main records the base contract sizes that pull requests compare against. A long check that
+# cannot run (a missing secret, fork pins still 0, every fork test skipped) reports "not run" in its job summary, and
+# the gate fails on it in a long run; outside one the gate lists it as not due.
+# Tool versions are pinned: Foundry by contracts/.foundry-version, Node by .nvmrc, every action by commit SHA (the
+# release tag in the trailing comment), dependencies by soldeer.lock, Python tools (Slither, Halmos, Semgrep, ...)
+# by contracts/requirements.txt and contracts/requirements-mythril.txt, solhint and @openzeppelin/upgrades-core by
+# contracts/package-lock.json, Echidna, Medusa, Aderyn and hevm by version and sha256, the Semgrep rules and 4naly3er
+# by commit and Necessist by crate version in contracts/script/install-security-tools.sh; Gambit is the binary in the
+# pinned certora-cli wheel.
+
+on:
+  pull_request:
+    # `labeled` and `unlabeled` rerun the checks when the `hotfix` label is added or removed.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    paths:
+      - "contracts/**"
+      - "packages/liquidator/src/**"
+      - "packages/liquidator/test/**"
+      - "packages/liquidator/foundry.toml"
+      - "docs/audit/**/*.sol"
+      - "packages/protocol/src/abis/**"
+      - "packages/protocol/scripts/generate-abis.mjs"
+      - ".github/workflows/contracts.yml"
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "fast (the pull-request suite), full (10 shards at ci depth, coverage, security fast tier) or long (full plus every long check)"
+        required: true
+        type: choice
+        default: long
+        options: [fast, full, long]
+      only:
+        # One or a few long-check targets, to prove a change to one of them without the whole long set: the plan keeps
+        # only these legs, and the short set and the other long checks are skipped (the gate lists them as not
+        # selected). Empty: the full manual run.
+        description: "Only these long-check targets, space-separated: smt:<Contract>, invariant:<test/invariant/... file> (empty: everything)"
+        required: false
+        default: ""
+        type: string
+      smt_query_timeout_ms:
+        # Overrides [profile.smt.model_checker] timeout (solc's limit per solver query) for this run, to measure a
+        # contract's time and results at another limit. Empty: foundry.toml's.
+        description: "SMTChecker solver timeout per query in ms (empty: foundry.toml's)"
+        required: false
+        default: ""
+        type: string
+
+concurrency:
+  # A newer pull-request run cancels the older one on the same ref; a manual run finishes, so a later one never
+  # cancels a long check.
+  group: contracts-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.13.1"
+
+defaults:
+  run:
+    working-directory: contracts
+
+jobs:
+  changes:
+    # Sorts a pull request's files: `tests` when a change can alter what forge builds or tests, `build` when it also
+    # covers Solidity scripts. A file this list does not know counts as `tests`. A manual run sets both.
+    name: changed files
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      tests: ${{ steps.sort.outputs.tests }}
+      build: ${{ steps.sort.outputs.build }}
+      liquidator: ${{ steps.sort.outputs.liquidator }}
+      security: ${{ steps.sort.outputs.security }}
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Sort the changed files
+        id: sort
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != pull_request ]; then
+            { echo "tests=true"; echo "build=true"; echo "liquidator=true"; echo "security=true"; } >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          # Listed first, so a failed API call fails the job instead of leaving an empty list that skips the tests.
+          files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
+          [ -n "$files" ] || { echo "::error::the pull request lists no changed files"; exit 1; }
+          tests=false build=false liquidator=false security=false
+          while IFS= read -r f; do
+            case "$f" in
+              contracts/src/*) security=true ;;
+            esac
+            case "$f" in
+              *.md) kind=none ;;
+              contracts/script/install-security-tools.sh) kind=tests ;;
+              # security/ holds the size margins and licence allowlist the build job checks.
+              contracts/script/*.sol|.github/security/*) kind=build ;;
+              contracts/script/*|contracts/certora/*|contracts/tools/*) kind=none ;;
+              contracts/echidna.yaml|contracts/medusa.json|contracts/slither.config.json|contracts/aderyn.toml) kind=none ;;
+              contracts/requirements.txt|contracts/requirements-mythril.txt|contracts/package.json|contracts/package-lock.json) kind=none ;;
+              contracts/Makefile) kind=none ;;
+              # The bot's TypeScript runs in services.yml; its Solidity here, against contracts/src.
+              packages/liquidator/src/*|packages/liquidator/test/*|packages/liquidator/foundry.toml) kind=liquidator ;;
+              packages/liquidator/*) kind=none ;;
+              *) kind=tests ;;
+            esac
+            echo "$kind $f"
+            case "$kind" in tests) tests=true; build=true; liquidator=true ;; build) build=true ;; liquidator) liquidator=true ;; esac
+          done <<< "$files"
+          echo "tests=$tests" | tee -a "$GITHUB_OUTPUT"
+          echo "build=$build" | tee -a "$GITHUB_OUTPUT"
+          echo "liquidator=$liquidator" | tee -a "$GITHUB_OUTPUT"
+          echo "security=$security" | tee -a "$GITHUB_OUTPUT"
+          { echo "### Changed files"; echo "forge tests: $tests; forge build: $build; liquidator: $liquidator; fast security: $security"; } >> "$GITHUB_STEP_SUMMARY"
+
+  scripts:
+    # Each runs its script on fixtures, with stand-ins on PATH for the tools it calls: check-sizes.test.sh,
+    # mutation-records.test.sh (multi-line mutants and Necessist removals kept whole, timed-out mutants never
+    # counted as killed), mutation-ledger.test.sh (the mutation gate's target keys), security-gate.test.sh
+    # (the triage's reviewed-file hashes) and check-core-size.test.sh (the core size report's counting and limits).
+    name: script tests (script/*.test.sh)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Script tests
+        run: for t in script/*.test.sh; do echo "== $t"; "$t"; done
+
+      - name: Core size report
+        # Code lines of each core contract (at most 800, its own libraries included), the core total (at most 4,000,
+        # the AMM parts not counted) and the policy part, AaveAdapter + RiskModule (at most 1,500).
+        run: |
+          set -o pipefail
+          script/check-core-size.sh | tee core-size.txt
+          { echo '### Core size'; echo '```'; cat core-size.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+  liquidator:
+    # The liquidation bot's contracts (packages/liquidator/), which compile against contracts/src: format, lint and their own
+    # unit and fuzz tests. Due whenever contracts/src or packages/liquidator/ Solidity changes.
+    name: liquidator contracts (fmt, lint, tests)
+    needs: changes
+    if: needs.changes.outputs.liquidator == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - name: Cache Soldeer dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - name: Install dependencies (soldeer.lock)
+        run: forge soldeer install
+
+      - name: Format, lint and test
+        working-directory: packages/liquidator
+        run: |
+          forge fmt --check
+          forge lint
+          forge test
+
+  build:
+    name: fmt, lint, build
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - name: Cache Soldeer dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - name: Install dependencies (soldeer.lock)
+        # TEST-001: install fails if foundry.toml and soldeer.lock disagree.
+        run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
+
+      - name: Check formatting
+        run: forge fmt --check
+
+      - name: File size limits (Q-240)
+        # Implementation files at most 500 lines of code, interface files at most 900 lines including NatSpec.
+        run: script/check-file-size.sh
+
+      - name: Licence headers
+        # BUSL-1.1 SPDX and Avana Labs copyright on every Avana-owned .sol file; ported files carry the identifier in
+        # .github/security/licence-allowlist.txt; no file carries UNLICENSED (docs/licenses/LICENSING.md, docs/licenses/THIRD_PARTY_LICENSES.md).
+        run: script/check-licence.sh
+
+      - name: Lint src
+        run: forge lint src
+
+      - name: Check the Foundry version against contracts/.foundry-version
+        run: |
+          forge --version | grep -F "Version: ${FOUNDRY_VERSION#v}"
+
+      - name: Restore the last build (out*, cache*)
+        # Keyed on every input of the builds; a miss restores the newest earlier build (restore-keys) and forge compiles
+        # only what changed. out-security/ is not cached: it holds the size baseline of the steps below.
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            contracts/out*
+            contracts/cache*
+            !contracts/out-security
+          key: forge-build-${{ runner.os }}-${{ hashFiles('contracts/.foundry-version', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/remappings.txt', 'contracts/src/**/*.sol', 'contracts/test/**/*.sol', 'contracts/script/**/*.sol', 'contracts/external/**/*.sol') }}
+          restore-keys: |
+            forge-build-${{ runner.os }}-
+
+      - name: Build
+        run: forge build --sizes
+
+      - name: Restore the base branch's contract sizes
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/out-security/sizes-base.json
+          key: sizes-main-${{ github.event.pull_request.base.sha }}
+          restore-keys: sizes-main-
+
+      - name: Contract-size margins (EIP-170 minus .github/security/size-margins.json), with the change against main
+        run: |
+          if [ -f out-security/sizes-base.json ]; then
+            script/check-sizes.sh --base out-security/sizes-base.json | tee sizes.txt
+          else
+            script/check-sizes.sh | tee sizes.txt
+          fi
+          { echo '### Contract sizes'; echo '```'; cat sizes.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record this commit's sizes as the base for pull requests (a manual run on main)
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+        run: cp out-security/sizes.json out-security/sizes-base.json
+
+      - name: Save the base sizes
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/out-security/sizes-base.json
+          key: sizes-main-${{ github.sha }}
+
+      - name: Build Aave V4 with Aave's compiler settings
+        run: |
+          FOUNDRY_PROFILE=aave forge build
+          FOUNDRY_PROFILE=univ3 forge build
+          FOUNDRY_PROFILE=univ3-periphery forge build
+          FOUNDRY_PROFILE=slipstream-v1 forge build
+          FOUNDRY_PROFILE=slipstream-main forge build
+          FOUNDRY_PROFILE=univ4 forge build
+          FOUNDRY_PROFILE=permit2 forge build
+          FOUNDRY_PROFILE=aerodrome forge build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge-out
+          path: |
+            contracts/out
+            contracts/out-aave
+            contracts/out-univ3
+            contracts/out-univ3-periphery
+            contracts/out-slipstream-v1
+            contracts/out-slipstream-main
+            contracts/out-univ4
+            contracts/out-permit2
+            contracts/out-aerodrome
+            contracts/cache
+          retention-days: 7
+
+  test:
+    # The suite is split into shards that run side by side (3 in the fast suite, 10 in the full and long ones): every
+    # test file (fork and differential excluded) is assigned by its measured run time (script/test-shard.sh,
+    # script/test-shard.py, script/test-timings.json), so the shards take about equal time and each unit runs in
+    # exactly one shard. A file of test/invariant/ is one unit: Foundry runs all invariants of a test contract in one
+    # campaign, so running them one by one would repeat the campaign's calls per invariant. A campaign over 20 minutes runs as
+    # segments of ceil(runs / m) runs each, at the same depth and with a seed of their own. Each shard reuses the build
+    # job's compiled output. In a long run the deep invariant job runs every file of test/invariant/, so the shards
+    # leave them out (TEST_SHARD_SKIP_INVARIANT).
+    name: tests (ci profile, shard ${{ matrix.shard }}/${{ (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && 10 || 3 }})
+    needs: [changes, build]
+    if: ${{ needs.changes.outputs.tests == 'true' && !inputs.only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON((github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && '[1,2,3,4,5,6,7,8,9,10]' || '[1,2,3]') }}
+    env:
+      FOUNDRY_PROFILE: ci
+      SHARDS: ${{ (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && 10 || 3 }}
+      # The fast suite: fuzz 1,000 runs (the default profile's) and invariants 64 runs at depth 64.
+      FAST: ${{ (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast') && '0' || '1' }}
+      TEST_SHARD_SKIP_INVARIANT: ${{ (github.event_name == 'workflow_dispatch' && inputs.suite == 'long') && '1' || '0' }}
+      # script/test-shard.sh writes each forge invocation's results here (`--json-file`), uploaded per shard.
+      TEST_RESULTS_DIR: ${{ github.workspace }}/contracts/out-results
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
+
+      - name: Reuse the build job's compiled output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge-out
+          path: contracts
+
+      - name: Unit, fuzz, integration, hostile and invariant suites, shard ${{ matrix.shard }} (fast suite fuzz 1,000 and invariants 64 x 64; full suite fuzz 10,000 and invariants 1,000 x 100; long suite leaves invariants to the deep job; TEST-007)
+        # A fresh seed per run widens coverage over time; the seed is printed for reproduction. The fast suite runs the
+        # fuzz and invariant suites as a short check; the full suite runs them at the ci profile. A long run leaves
+        # the invariant suites to the deep invariant job.
+        # test/hostile/ does not exist yet: contracts/test/README.md section 6 describes the hostile suite it will hold.
+        run: |
+          SEED=$(printf '0x%x' "$(( $(date +%s) + ${{ matrix.shard }} ))")
+          echo "fuzz seed: $SEED"
+          if [ "$FAST" = 1 ]; then
+            export FOUNDRY_FUZZ_RUNS=1000 FOUNDRY_INVARIANT_RUNS=64 FOUNDRY_INVARIANT_DEPTH=64
+            echo "fast suite: fuzz 1,000 runs, invariant suites 64 runs at depth 64"
+          fi
+          if [ "$TEST_SHARD_SKIP_INVARIANT" = 1 ]; then
+            echo "invariant suites: left out here; the deep invariant job runs each file of test/invariant/"
+          fi
+          # -vv: from -vvv forge writes every test's traces into the results file; test-shard.sh prints the failures'
+          # traces with --rerun -vvv.
+          script/test-shard.sh ${{ matrix.shard }} "$SHARDS" --fuzz-seed "$SEED" -vv
+
+      - name: Upload this shard's results (forge --json-file)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: test-results-${{ matrix.shard }}
+          path: contracts/out-results
+          if-no-files-found: warn
+          retention-days: 14
+
+  hotfix-plan:
+    # A pull request labelled `hotfix` (an emergency fix, playbook P-05) also runs the touched contracts' invariant
+    # campaigns at the full ci profile, one campaign (or one segment of a long campaign) per job, with the same depth
+    # main runs. The rest of the long checks run on the release tag of the upgrade, during the timelock delay.
+    name: hotfix plan
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      units: ${{ steps.plan.outputs.units }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: List the touched contracts' invariant campaigns (script/hotfix-units.py)
+        id: plan
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          FOUNDRY_PROFILE: ci
+        run: |
+          set -euo pipefail
+          units=$(git diff --name-only "$BASE"...HEAD | python3 script/hotfix-units.py)
+          echo "units=$units" | tee -a "$GITHUB_OUTPUT"
+
+  hotfix:
+    name: hotfix depth ${{ matrix.unit.unit }}
+    needs: [build, hotfix-plan]
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix') && needs.hotfix-plan.outputs.units != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        unit: ${{ fromJSON(needs.hotfix-plan.outputs.units) }}
+    env:
+      FOUNDRY_PROFILE: ci
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
+
+      - name: Reuse the build job's compiled output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge-out
+          path: contracts
+
+      - name: One invariant campaign or segment at the full ci profile (1,000 runs at depth 100)
+        env:
+          UNIT: ${{ matrix.unit.unit }}
+        run: |
+          SEED=$(printf '0x%x' "$(date +%s)")
+          echo "fuzz seed: $SEED"
+          script/test-shard.sh --unit "$UNIT" --fuzz-seed "$SEED" -vv
+
+  gas:
+    name: gas snapshots
+    needs: [changes, build]
+    if: ${{ needs.changes.outputs.tests == 'true' && !inputs.only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
+
+      - name: Download the build
+        # The build job's full output and cache. Building only test/gas/ here would compile some contracts only under
+        # their extra compiler profiles, and the fixtures' name-based deployCode would then match two artifacts.
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge-out
+          path: contracts
+
+      - name: Gas snapshots (test/gas against the committed snapshots/)
+        # The gas profile sets gas_snapshot_check: a measured value that differs from snapshots/<Group>.json fails the
+        # step. `make gas` rewrites the snapshots; a PR that changes gas commits them.
+        env:
+          FOUNDRY_PROFILE: gas
+          FORGE_SNAPSHOT_CHECK: "true"
+        run: forge test -vvv
+
+  abis:
+    # The ABIs that packages/protocol publishes to the services and the app are generated from these builds; a contract
+    # change that alters an ABI must commit the regenerated files (`npm run generate -w packages/protocol`).
+    name: generated ABIs (packages/protocol)
+    needs: [changes, build]
+    if: ${{ needs.changes.outputs.tests == 'true' && !inputs.only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
+
+      - name: Reuse the build job's compiled output
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge-out
+          path: contracts
+
+      - name: Build Aave V4 artifacts (the Spoke and Hub ABIs come from out-aave/)
+        run: |
+          FOUNDRY_PROFILE=aave forge build
+          FOUNDRY_PROFILE=univ3 forge build
+
+      - name: Build the liquidator's contracts (the FlashLiquidator ABI comes from packages/liquidator/out/)
+        working-directory: packages/liquidator
+        run: forge build
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install the workspace's npm dependencies (viem computes ABI_HASH)
+        working-directory: .
+        run: npm ci --no-audit --no-fund --ignore-scripts
+
+      - name: Committed ABIs equal the ones generated from this build
+        working-directory: .
+        run: node packages/protocol/scripts/generate-abis.mjs --check
+
+  plan:
+    name: plan the long jobs
+    # Long check: a manual run of the long suite (or with `only`) only.
+    if: github.event_name == 'workflow_dispatch' && (inputs.suite == 'long' || inputs.only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      invariant: ${{ steps.plan.outputs.invariant }}
+      smt: ${{ steps.plan.outputs.smt }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: List every target (script/ci-shards.py), or only the dispatch's `only` targets
+        id: plan
+        env:
+          ONLY: ${{ inputs.only }}
+        run: |
+          set -euo pipefail
+          declare -A key=([invariant]=file [smt]=contract)
+          matched=0
+          for t in invariant smt; do
+            legs=$(python3 script/ci-shards.py "$t")
+            if [ -n "$ONLY" ]; then
+              # shellcheck disable=SC2086 # ONLY is a space-separated list
+              want=$(printf '%s\n' $ONLY | sed -n "s/^$t://p" | jq -R . | jq -sc .)
+              legs=$(echo "$legs" | jq -c --arg k "${key[$t]}" --argjson want "$want" \
+                '[.[] | select(.[$k] as $v | $want | any(.[]; . == $v))]')
+              matched=$((matched + $(echo "$legs" | jq length)))
+            fi
+            echo "$t=$legs" | tee -a "$GITHUB_OUTPUT"
+          done
+          # shellcheck disable=SC2086
+          if [ -n "$ONLY" ] && [ "$matched" -ne "$(printf '%s\n' $ONLY | wc -l)" ]; then
+            echo "::error::only: $matched of '$ONLY' match a target (smt:<Contract>, invariant:<test/invariant/... file>)"
+            exit 1
+          fi
+
+  invariant:
+    # One job per file of test/invariant/ (the invariant profile's match_path), each with the profile's 2,000 runs
+    # at depth 400: 0.8 million handler calls, 8 times the ci profile's campaign; the ProxyManager campaign (about 3.9
+    # hours at 1 million calls, measured 2026-11-12) needs about 3.1 hours, so the job has GitHub's maximum of 6 hours.
+    # A file whose calls are slow pins fewer runs inline (`invariant.invariant.*`, Integration: 40,000 calls of the
+    # whole real stack). The test shards of the same run leave test/invariant/ out, so each campaign runs once, here,
+    # with a fresh seed; its results (forge --json-file) are uploaded like the shards'.
+    name: deep invariant campaign (${{ matrix.file }})
+    needs: [build, plan]
+    if: (github.event_name == 'workflow_dispatch' && (inputs.suite == 'long' || inputs.only)) && needs.plan.outputs.invariant != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.invariant) }}
+    env:
+      FOUNDRY_PROFILE: invariant
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
+
+      - name: Reuse the build job's compiled output
+        # The whole project's build, as the test shards use it, with the out-aave/ and other pinned third-party
+        # artifacts the fixtures deploy (vm.getCode / deployCode). A build of only this file's import graph (the
+        # invariant profile's match_path) compiled each contract the fixtures deploy by name only in the profiles of
+        # the suites that import it, so `deployCode("X.sol:X")` could find copies in two other profiles and none in
+        # the test's own, and failed `multiple matching artifacts found` (Integration, run 43653564553).
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge-out
+          path: contracts
+
+      - name: Invariant suite ${{ matrix.file }} (2,000 runs, depth 400, unless the file pins its own)
+        env:
+          FILE: ${{ matrix.file }}
+          TEST_RESULTS_DIR: ${{ github.workspace }}/contracts/out-results
+        # -vv with the results file; script/test-shard.sh reruns a failure at -vvv to print its traces.
+        run: |
+          SEED=$(printf '0x%x' "$(( $(date +%s) + ${{ strategy.job-index }} ))")
+          echo "fuzz seed: $SEED"
+          script/test-shard.sh --unit "$FILE" --fuzz-seed "$SEED" -vv
+
+      - name: Upload this campaign's results (forge --json-file)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: invariant-results-${{ strategy.job-index }}
+          path: contracts/out-results
+          if-no-files-found: warn
+          retention-days: 14
+
+  fork:
+    name: Ethereum and Base fork tests
+    # Runs the fork profile when the RPC_MAINNET and RPC_BASE secrets are set and both blocks of
+    # test/utils/fixtures/ForkConstants.sol are pinned (TEST-003). Otherwise, or when every fork test skips, the job
+    # writes "not run" and why to its summary and sets `ran` to false; the gate fails on that in the runs where the job
+    # is due (a long run). Any failing fork test fails the job.
+    needs: build
+    # Long check: a manual run of the long suite only.
+    if: github.event_name == 'workflow_dispatch' && inputs.suite == 'long' && !inputs.only
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    outputs:
+      ran: ${{ steps.result.outputs.ran || 'false' }}
+      reason: ${{ steps.result.outputs.reason || steps.ready.outputs.reason }}
+    env:
+      FOUNDRY_PROFILE: fork
+      RPC_MAINNET: ${{ secrets.RPC_MAINNET }}
+      RPC_BASE: ${{ secrets.RPC_BASE }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Secrets and pinned blocks
+        id: ready
+        # Fork blocks are pinned in test/utils/fixtures/ForkConstants.sol (TEST-003), never taken from CI variables.
+        run: |
+          why=()
+          [ -n "$RPC_MAINNET" ] && [ -n "$RPC_BASE" ] || why+=("the RPC_MAINNET or RPC_BASE secret is not set")
+          if grep -Eq '(MAINNET|BASE)_FORK_BLOCK = 0;' test/utils/fixtures/ForkConstants.sol; then
+            why+=("a fork block in test/utils/fixtures/ForkConstants.sol is still 0, so every fork test would skip")
+          fi
+          if [ "${#why[@]}" -gt 0 ]; then
+            reason=$(IFS='; '; echo "${why[*]}")
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "reason=$reason" >> "$GITHUB_OUTPUT"
+            echo "::warning title=fork tests not run::$reason"
+            echo "**Fork tests: not run.** $reason." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Read the pinned Foundry version
+        if: steps.ready.outputs.ready == 'true'
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        if: steps.ready.outputs.ready == 'true'
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: steps.ready.outputs.ready == 'true'
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - name: Cache fork RPC responses for the pinned blocks
+        if: steps.ready.outputs.ready == 'true'
+        # Keyed on the file that holds both pins, so a new Ethereum or Base block starts a fresh cache.
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.foundry/cache/rpc
+          key: rpc-${{ hashFiles('contracts/test/utils/fixtures/ForkConstants.sol') }}
+
+      - if: steps.ready.outputs.ready == 'true'
+        run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
+
+      - name: Build Aave V4 artifacts for the fork fixture
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          FOUNDRY_PROFILE=aave forge build
+          FOUNDRY_PROFILE=univ3 forge build
+
+      - name: Fork tests (Uniswap v3, Chainlink, Aave V3 Pool, GSMs, Sky LitePSM)
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          mkdir -p out-results
+          # -vv keeps traces out of the results file; the failed tests run again with --rerun -vvv to print them.
+          forge test --json-file out-results/fork.json -vv || { forge test --rerun -vvv || true; exit 1; }
+
+      - name: Hostile-component tests on the fork
+        # The hostile-component suite of contracts/test/README.md section 6, run when test/hostile/ holds tests.
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          if [ -d test/hostile ]; then
+            AVANA_FIXTURE=fork forge test --match-path 'test/hostile/**' --json-file out-results/hostile.json -vv \
+              || { AVANA_FIXTURE=fork forge test --match-path 'test/hostile/**' --rerun -vvv || true; exit 1; }
+          else
+            echo "No test/hostile/ folder: the hostile-component tests did not run."
+            echo "Hostile-component tests: not run (no test/hostile/ folder)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Did any fork test run
+        id: result
+        if: ${{ !cancelled() && steps.ready.outputs.ready == 'true' }}
+        run: |
+          read -r passed skipped failed < <(python3 script/forge-results.py --counts out-results/*.json)
+          echo "fork tests: $passed passed, $skipped skipped, $failed failed" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$passed" -eq 0 ]; then
+            echo "ran=false" >> "$GITHUB_OUTPUT"
+            echo "reason=no fork test passed ($skipped skipped, $failed failed)" >> "$GITHUB_OUTPUT"
+            echo "**Fork tests: not run.** No fork test passed ($skipped skipped)." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "ran=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload the fork results
+        if: ${{ !cancelled() && steps.ready.outputs.ready == 'true' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fork-results
+          path: contracts/out-results
+          retention-days: 14
+
+  differential:
+    name: FFI differential (vs mpmath)
+    needs: build
+    # Long check: a manual run of the long suite only.
+    if: github.event_name == 'workflow_dispatch' && inputs.suite == 'long' && !inputs.only
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      FOUNDRY_PROFILE: differential
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
+
+      - name: Install the Python reference
+        run: |
+          python -m venv .venv
+          if [ -f test/differential/reference/requirements.txt ]; then
+            .venv/bin/pip install -r test/differential/reference/requirements.txt
+          fi
+
+      - name: Build Uniswap v3 artifacts for the fixture
+        # The differential suites deploy the Uniswap v3 pool and position manager from out-univ3/ (vm.getCode).
+        run: FOUNDRY_PROFILE=univ3 forge build
+
+      - name: Differential fuzzing (TEST-037)
+        run: |
+          mkdir -p out-results
+          # -vv keeps traces out of the results file; the failed tests run again with --rerun -vvv to print them.
+          forge test --json-file out-results/differential.json -vv || { forge test --rerun -vvv || true; exit 1; }
+
+      - name: Upload the differential results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: differential-results
+          path: contracts/out-results
+          retention-days: 14
+
+  smtchecker:
+    # One job per contract of [profile.smt.model_checker] contracts: the job narrows that map to its contract in the
+    # runner's copy of foundry.toml, with every other setting (engine, targets, invariants, 100-second query timeout)
+    # unchanged, and builds only that contract's import graph. solc 0.8.28 on Linux loads Z3 at run time
+    # (libz3.so.4.12) and, without it, reports warning 7649 (CHC) or 8158 (BMC) and checks nothing; the job installs the
+    # library from the pinned Z3 release (sha256 below) and fails on either warning. Counterexamples fail the job;
+    # unproved targets are listed in the job summary and the log artifact, not hidden.
+    name: SMTChecker ${{ matrix.contract }}
+    needs: [plan]
+    if: (github.event_name == 'workflow_dispatch' && (inputs.suite == 'long' || inputs.only)) && needs.plan.outputs.smt != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.smt) }}
+    env:
+      FOUNDRY_PROFILE: smt
+      # Z3 4.12.6, the last 4.12 release (solc 0.8.28 loads libz3.so.4.12), glibc 2.35 build; sha256 of the zip.
+      Z3_VERSION: "4.12.6"
+      Z3_SHA256: "6719feaa729c321a73db870d7f7ebc111c6e0919ba4e0b34942976e3788d4a6d"
+      # Wall-clock budget of one contract's model check. solc's own limit is per query, so a contract with many
+      # queries can run for hours; past this budget the build is stopped and the job fails as "timed out", reported
+      # apart from proved and unproved targets.
+      SMT_BUDGET_MINUTES: "90"
+      SMT_QUERY_TIMEOUT_MS: ${{ inputs.smt_query_timeout_ms }}
+      # Contracts whose timeout is recorded as "timed out" in the report without failing the job (decided 2026-11-16).
+      # Contracts on which the model check runs out of time or memory on a hosted runner: a timeout, the memory cap or
+      # a solc crash (signal) is reported in the summary, not failed. Their properties are carried by Certora, Halmos and the invariant tests.
+      # Added 2026-11-22 with the user's approval, after narrowed targets (assert, underflow, overflow only, with and
+      # without the contract and reentrancy invariants) also gave no result:
+      # - AaveAdapter: timed out at the 90-minute budget in runs 45028812600 and 45055518663, and narrowed in 45058799277
+      #   and 45059339657. Covered by certora/specs/AaveAdapterAccounts.spec and AaveAdapterRouting.spec,
+      #   test/fuzz/AaveAdapter.fuzz.t.sol and the adapter calls of test/invariant/LiquidationModule.invariant.t.sol.
+      # - LiquidationModule: stopped at the 12 GB memory cap (SMT_MEMORY_CAP_KB) in runs 45028812600 and 45055518663,
+      #   timed out at 90 minutes narrowed with invariants in 45058799277 and hit the memory cap narrowed without them in
+      #   45059339657. Covered by certora/specs/LiquidationModule.spec and test/invariant/LiquidationModule.invariant.t.sol.
+      SMT_TIMEOUT_REPORTED: "AaveAdapter LiquidationModule LPOracle RiskModule UniswapV3Integration"
+      SMT_TIMEOUT_REPORTED_NOTE: "Certora, Halmos and the invariant tests carry this contract's properties"
+      # Solver memory cap per solc process (KiB) on a 16 GB hosted runner; above it solc is stopped and the job reports
+      # instead of the runner being shut down.
+      SMT_MEMORY_CAP_KB: "12582912"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
+
+      - name: Install the Z3 library solc loads (libz3.so.4.12, Z3 ${{ env.Z3_VERSION }}, checked by sha256)
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          name="z3-${Z3_VERSION}-x64-glibc-2.35"
+          curl -fsSL --retry 3 -o z3.zip "https://github.com/Z3Prover/z3/releases/download/z3-${Z3_VERSION}/${name}.zip"
+          echo "${Z3_SHA256}  z3.zip" | sha256sum -c -
+          mkdir -p z3lib
+          unzip -q -j z3.zip "${name}/bin/libz3.so" -d z3lib
+          mv z3lib/libz3.so z3lib/libz3.so.4.12
+          rm z3.zip
+          echo "LD_LIBRARY_PATH=${RUNNER_TEMP}/z3lib" >> "$GITHUB_ENV"
+
+      - name: Probe that CHC runs and reports (a contract with one overflow and one assert target, both safe)
+        # A target with no verification condition (no arithmetic, assert, division or array access) has no CHC result
+        # whether or not the solver ran; this probe, built the same way, must report its targets as proved safe, so an
+        # empty result on the target below means it has nothing to check.
+        working-directory: ${{ runner.temp }}
+        env:
+          FOUNDRY_PROFILE: default
+        run: |
+          set -euo pipefail
+          mkdir -p smt-probe/src
+          cd smt-probe
+          cat > foundry.toml <<'TOML'
+          [profile.default]
+          solc_version = "0.8.28"
+          auto_detect_solc = false
+          optimizer = false
+
+          [profile.default.model_checker]
+          engine = "chc"
+          timeout = 100_000
+          targets = ["assert", "overflow"]
+          solvers = ["z3"]
+          show_proved_safe = true
+          contracts = { "src/Probe.sol" = ["Probe"] }
+          TOML
+          printf '%s\n' '// SPDX-License-Identifier: BUSL-1.1' 'pragma solidity 0.8.28;' \
+            'contract Probe {' '    uint256 public x;' \
+            '    function set(uint8 a) external { x = uint256(a) + 1; assert(x > a); }' '}' > src/Probe.sol
+          forge build src/Probe.sol --build-info
+          python3 "$GITHUB_WORKSPACE/contracts/script/smt-report.py" --require-results out src/Probe.sol \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Model-check ${{ matrix.contract }}
+        env:
+          CONTRACT: ${{ matrix.contract }}
+        # The source path goes before any option: `--skip` takes several values and would take it as one.
+        run: |
+          set -euo pipefail
+          python3 script/ci-shards.py smt-only "$CONTRACT" > foundry.toml.smt
+          mv foundry.toml.smt foundry.toml
+          if [ -n "${SMT_QUERY_TIMEOUT_MS:-}" ]; then
+            [[ "$SMT_QUERY_TIMEOUT_MS" =~ ^[0-9]+$ ]] || { echo "::error::smt_query_timeout_ms is not a number of ms"; exit 1; }
+            [ "$(grep -c '^timeout = ' foundry.toml)" = 1 ] || { echo "::error::expected one timeout line in foundry.toml"; exit 1; }
+            sed -i "s/^timeout = .*/timeout = ${SMT_QUERY_TIMEOUT_MS}/" foundry.toml
+          fi
+          echo "solver timeout per query: $(grep '^timeout = ' foundry.toml | cut -d' ' -f3) ms; budget ${SMT_BUDGET_MINUTES} min" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+          src=$(grep -oE "\"[^\"]+\" = \[\"${CONTRACT}\"\]" foundry.toml | head -n 1 | cut -d'"' -f2)
+          [ -f "$src" ] || { echo "::error::no source file for $CONTRACT in [profile.smt.model_checker] contracts"; exit 1; }
+          echo "target: $src:$CONTRACT"
+          echo "SMT_SOURCE=$src" >> "$GITHUB_ENV"
+          start=$SECONDS
+          rm -f smt-memcap
+          (
+            while sleep 5; do
+              for pid in $(pgrep -f solc || true); do
+                rss=$(awk '/^VmRSS:/ {print $2}' "/proc/$pid/status" 2>/dev/null || echo 0)
+                if [ "${rss:-0}" -gt "$SMT_MEMORY_CAP_KB" ]; then
+                  echo "$rss" > smt-memcap
+                  kill -9 "$pid" 2>/dev/null || true
+                fi
+              done
+            done
+          ) &
+          watcher=$!
+          set +e
+          timeout --kill-after=60 "${SMT_BUDGET_MINUTES}m" forge build "$src" --force --build-info 2>&1 | tee smt.log
+          rc=${PIPESTATUS[0]}
+          set -e
+          kill "$watcher" 2>/dev/null || true
+          echo "model check and build: $((SECONDS - start)) s" | tee -a "$GITHUB_STEP_SUMMARY"
+          limited=0
+          if [ -f smt-memcap ]; then
+            limited=1
+            msg="$src: solc stopped at the memory cap ($(cat smt-memcap) KiB resident), no result (proved 0, unproved 0)"
+          elif [ "$rc" = 124 ] || [ "$rc" = 137 ]; then
+            limited=1
+            msg="$src: timed out after ${SMT_BUDGET_MINUTES} min, no result (proved 0, unproved 0)"
+          elif sig=$(grep -oE 'solc exited with signal: [0-9]+ \([A-Z]+\)' smt.log | head -n 1) && [ -n "$sig" ]; then
+            limited=1
+            msg="$src: ${sig}, no result (proved 0, unproved 0)"
+          fi
+          if [ "$limited" = 1 ]; then
+            echo "SMT_TIMED_OUT=1" >> "$GITHUB_ENV"
+            if [[ " $SMT_TIMEOUT_REPORTED " == *" $CONTRACT "* ]]; then
+              msg="$msg; reported, not failed: $SMT_TIMEOUT_REPORTED_NOTE"
+              echo "$msg" | tee smt-results.txt >> "$GITHUB_STEP_SUMMARY"
+              echo "::warning::$msg"
+              exit 0
+            fi
+            echo "$msg" | tee smt-results.txt >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::$msg"
+          fi
+          exit "$rc"
+
+      - name: Solver ran, CHC results present, no counterexample; unproved targets listed
+        # forge prints errors and warnings only; script/smt-report.py reads every result, info messages (proved safe)
+        # included, from the build-info files, and fails unless exactly one solc job analysed the source.
+        if: ${{ !cancelled() && env.SMT_TIMED_OUT != '1' }}
+        env:
+          CONTRACT: ${{ matrix.contract }}
+        run: |
+          set -o pipefail
+          echo "### SMTChecker $CONTRACT" >> "$GITHUB_STEP_SUMMARY"
+          python3 script/smt-report.py out-smt "$SMT_SOURCE" "$GITHUB_STEP_SUMMARY" | tee smt-results.txt
+
+      - name: Upload the SMTChecker log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: smtchecker-${{ matrix.contract }}
+          path: |
+            contracts/smt.log
+            contracts/smt-results.txt
+          retention-days: 14
+
+  coverage:
+    name: branch coverage (per-file minimums)
+    # The full and long suites.
+    needs: build
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc
+
+      - name: Reuse the build job's compiled output
+        # out-aave and out-univ3 for the fixtures; out/ for the tests that read build artifacts, which forge
+        # coverage does not write.
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge-out
+          path: contracts
+
+      - name: forge coverage (coverage profile) and the minimums of .github/security/coverage-thresholds.json
+        run: script/check-coverage.sh
+
+      - name: Upload coverage reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage
+          path: contracts/out-security/coverage
+          retention-days: 14
+
+  fast-security:
+    name: security (fast tier)
+    # Required on contract PRs; full and long manual suites use the same fast tier.
+    needs: changes
+    if: ${{ (github.event_name == 'pull_request' && needs.changes.outputs.security == 'true') || (github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      # upload-sarif reads the workflow run on a private repository.
+      actions: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Read the pinned Foundry version
+        run: echo "FOUNDRY_VERSION=$(cat .foundry-version)" >> "$GITHUB_ENV"
+
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1.9.2
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: contracts/package-lock.json
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: contracts/dependencies
+          key: soldeer-${{ hashFiles('contracts/soldeer.lock') }}
+
+      - name: Cache pinned security binaries, Semgrep rules and 4naly3er
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            contracts/tools/bin
+            contracts/tools/semgrep-smart-contracts
+            contracts/tools/4naly3er
+          key: security-bin-${{ runner.os }}-${{ hashFiles('contracts/script/install-security-tools.sh') }}
+
+      - name: Install dependencies and pinned tools (Slither, Semgrep, solhint, upgrades-core, Aderyn, rules, 4naly3er)
+        env:
+          BINARIES: aderyn
+        run: |
+          forge soldeer install
+          script/install-security-tools.sh --solc --binaries --python --node --rules --4naly3er
+
+      - name: Restore the security build of src/ (out-security/build/src)
+        # Keyed on every input of that build, exact match only, with no restore-keys: an older build compiled
+        # incrementally would leave Slither two compilations of the same sources (security-fast.sh, step_build).
+        id: security-build
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            contracts/out-security/build/src
+            contracts/out-security/build/src-cache
+          key: security-build-${{ runner.os }}-${{ hashFiles('contracts/.foundry-version', 'contracts/foundry.toml', 'contracts/soldeer.lock', 'contracts/remappings.txt', 'contracts/src/**/*.sol') }}
+
+      - name: "forge fmt, file size, licence headers, forge lint, build, CVL methods check, solhint, Slither, upgradeability check, Aderyn, Semgrep, 4naly3er, storage layout"
+        # Every contract under src/ is in scope as soon as it exists; the gates and triage files are in
+        # slither.config.json, aderyn.toml, .solhint.json, foundry.toml [lint] and security/.
+        env:
+          SECURITY_BUILD_CACHED: ${{ steps.security-build.outputs.cache-hit == 'true' && '1' || '0' }}
+          # Each slither-check-upgradeability process loads the whole src/ build. With the Uniswap v4 contracts in src/,
+          # four at once got the 4-core runner shut down during the step twice (exit 143, most likely out of memory).
+          UPGRADEABILITY_JOBS: "2"
+        run: script/security-fast.sh
+
+      - name: Upload Slither SARIF
+        if: ${{ !cancelled() && hashFiles('contracts/out-security/slither.sarif') != '' }}
+        # Code scanning on a private repository needs GitHub Code Security; without it the upload is refused,
+        # which must not fail the gate: the same reports are kept as the security-fast artifact below.
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: contracts/out-security/slither.sarif
+          category: slither
+
+      - name: Upload Aderyn SARIF
+        if: ${{ !cancelled() && hashFiles('contracts/out-security/aderyn.sarif') != '' }}
+        # Code scanning on a private repository needs GitHub Code Security; without it the upload is refused,
+        # which must not fail the gate: the same reports are kept as the security-fast artifact below.
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: contracts/out-security/aderyn.sarif
+          category: aderyn
+
+      - name: Upload Semgrep SARIF
+        if: ${{ !cancelled() && hashFiles('contracts/out-security/semgrep.sarif') != '' }}
+        # Code scanning on a private repository needs GitHub Code Security; without it the upload is refused,
+        # which must not fail the gate: the same reports are kept as the security-fast artifact below.
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: contracts/out-security/semgrep.sarif
+          category: semgrep
+
+      - name: Upload reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: security-fast
+          path: |
+            contracts/out-security
+            !contracts/out-security/build
+          retention-days: 14
+
+  gate:
+    # Passes only when every job and every leg of each matrix that is due in this run passed. Due: `changes` and
+    # `scripts` always; `liquidator` when contracts/src or the bot's Solidity changed; `build` when the changes need a
+    # forge build; tests, gas and ABIs when they need forge tests;
+    # coverage and the fast security tier in the full and long suites; the long checks in the long suite; `hotfix-plan` on a pull request labelled `hotfix`. A job that is not due is
+    # skipped by design and listed as not due; a due job that was skipped, failed or was cancelled fails the gate. A
+    # due long check that did not run (the fork job's `ran` output false: a missing secret, an unpinned block, every
+    # fork test skipped) fails the gate, as a failed one does. No branch rule requires this check.
+    name: gate
+    if: always()
+    needs: [changes, scripts, liquidator, build, plan, test, hotfix-plan, hotfix, gas, abis, invariant, fork, differential, smtchecker, coverage, fast-security]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every due job and shard to pass
+        # This job has no checkout, so contracts/ does not exist here.
+        working-directory: .
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          BUILD: ${{ needs.changes.outputs.build == 'true' }}
+          LIQUIDATOR: ${{ needs.changes.outputs.liquidator == 'true' && !inputs.only }}
+          TESTS: ${{ needs.changes.outputs.tests == 'true' && !inputs.only }}
+          SECURITY: ${{ github.event_name == 'pull_request' && needs.changes.outputs.security == 'true' }}
+          FULL: ${{ github.event_name == 'workflow_dispatch' && inputs.suite != 'fast' && !inputs.only }}
+          LONG: ${{ github.event_name == 'workflow_dispatch' && inputs.suite == 'long' }}
+          HOTFIX: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'hotfix') }}
+          # A manual run with `only` runs just those long-check targets; every skipped job is not selected.
+          ONLY: ${{ inputs.only != '' && inputs.only != null }}
+        run: |
+          args=(--argjson build "$BUILD" --argjson liquidator "$LIQUIDATOR" --argjson tests "$TESTS" --argjson security "$SECURITY" --argjson full "$FULL" --argjson longrun "$LONG"
+            --argjson hotfix "$HOTFIX" --argjson only "$ONLY"
+            --argjson long '["plan","invariant","fork","differential","smtchecker"]')
+          defs='def due($k):
+              if $k == "changes" or $k == "scripts" then true
+              elif $k == "build" then $build
+              elif $k == "liquidator" then $liquidator
+              elif $k == "test" or $k == "gas" or $k == "abis" then $tests
+              elif $k == "coverage" then $full
+              elif $k == "fast-security" then ($security or $full)
+              elif ($long | index($k)) != null then ($longrun or $only)
+              elif $k == "hotfix-plan" then $hotfix
+              else false end;
+            def notrun($k; $v): $k == "fork" and $v.result == "success" and ($v.outputs.ran // "false") != "true";'
+          report=$(echo "$RESULTS" | jq -r "${args[@]}" "$defs"'
+            to_entries[] | .key as $k | .value as $v
+            | if $only and $v.result == "skipped" then "\($k): not selected (manual run with only)"
+              elif (due($k) | not) and $v.result == "skipped" then "\($k): not due in this run"
+              elif notrun($k; $v) then "\($k): NOT RUN (\($v.outputs.reason // "no reason given"))"
+              else "\($k): \($v.result)" end')
+          echo "$report"
+          { echo '### Gate'; echo '```'; echo "$report"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          bad=$(echo "$RESULTS" | jq -r "${args[@]}" "$defs"'
+            [to_entries[] | .key as $k | .value as $v
+             | select(
+                 ($v.result == "failure" or $v.result == "cancelled")
+                 or ($v.result == "skipped" and due($k) and ($only | not))
+                 or notrun($k; $v))
+             | $k] | join(", ")')
+          if [ -n "$bad" ]; then echo "not passed: $bad"; exit 1; fi

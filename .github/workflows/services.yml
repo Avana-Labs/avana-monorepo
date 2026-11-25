@@ -1,0 +1,287 @@
+name: services
+
+# The off-chain TypeScript packages and the web app. services/common, services/indexer, services/keeper,
+# packages/protocol, packages/export, packages/rpc and webapp/. Every pull request that changes one of them, the
+# workspace manifests, contracts/deployments/ or this file runs the affected package checks. A change under webapp/
+# or services/convex also runs the web app's lint, typecheck, unit tests and production build.
+# The packages form one npm workspace (a push to main does not rerun this workflow). The changes job runs one job per
+# affected package, plus every package that links it. A change to the workspace manifests, .nvmrc,
+# contracts/deployments/, services/Dockerfile, .dockerignore or this file runs every package: refuse an `@avana/` dependency that would come from the
+# public registry, install the whole workspace with npm ci from the lock file (lifecycle scripts never run), then Ponder
+# codegen where the package defines it (the indexer), the package's typecheck script (tsc --noEmit) and its test
+# script (vitest run). The `@avana/` scope is not registered on the public registry, so each such dependency must be a
+# `file:` or `workspace:` link and the lock file must record it as a link; otherwise the job fails before installing.
+# A second job per service builds its image (services/Dockerfile, indexer and keeper) and checks it starts. The gate job passes only
+# when every package and image job passed.
+# Tool versions are pinned: Node by .nvmrc, every action by commit SHA (the release tag in the trailing comment),
+# every direct dependency by exact version and every transitive one by the lock file.
+
+on:
+  pull_request:
+    paths:
+      - "services/**"
+      - "webapp/**"
+      - "packages/liquidator/**"
+      - "packages/protocol/**"
+      - "packages/export/**"
+      - "packages/rpc/**"
+      - "contracts/deployments/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".nvmrc"
+      - ".github/workflows/services.yml"
+      - ".github/scripts/check-npm-overrides.mjs"
+      - ".dockerignore"
+  workflow_dispatch:
+
+concurrency:
+  group: services-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    # Lists the packages a pull request affects, and the service images among them (indexer, keeper). A
+    # manual run lists every package and image.
+    name: changed packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      packages: ${{ steps.sort.outputs.packages }}
+      images: ${{ steps.sort.outputs.images }}
+      web: ${{ steps.sort.outputs.web }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Sort the changed files
+        id: sort
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          all=(services/common services/indexer services/keeper services/convex packages/protocol packages/export packages/rpc packages/liquidator)
+          declare -A hit=()
+          web=false
+          if [ "$EVENT" != pull_request ]; then
+            for p in "${all[@]}"; do hit[$p]=1; done
+            web=true
+          else
+            # Listed first, so a failed API call fails the job instead of leaving an empty list that skips the checks.
+            files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | .filename, (.previous_filename // empty)')
+            [ -n "$files" ] || { echo "::error::the pull request lists no changed files"; exit 1; }
+            while IFS= read -r f; do
+              case "$f" in
+                *.md) ;;
+                package.json|package-lock.json|.nvmrc|.dockerignore|contracts/deployments/*|services/Dockerfile|.github/workflows/services.yml)
+                  for p in "${all[@]}"; do hit[$p]=1; done
+                  web=true ;;
+                webapp/*|.github/scripts/check-npm-overrides.mjs)
+                  web=true ;;
+                services/convex/*)
+                  web=true
+                  for p in "${all[@]}"; do case "$f" in "$p"/*) hit[$p]=1 ;; esac; done ;;
+                *)
+                  for p in "${all[@]}"; do case "$f" in "$p"/*) hit[$p]=1 ;; esac; done ;;
+              esac
+            done <<< "$files"
+            # Add every package that links an affected one (file: links in its package.json), until nothing changes.
+            changed=1
+            while [ "$changed" = 1 ]; do
+              changed=0
+              for p in "${all[@]}"; do
+                [ -n "${hit[$p]:-}" ] && continue
+                for link in $(jq -r '[(.dependencies // {}), (.devDependencies // {})] | add | to_entries[]
+                    | select(.key | startswith("@avana/")) | .value | select(startswith("file:")) | ltrimstr("file:")' "$p/package.json"); do
+                  dep=$(realpath -m --relative-to=. "$p/$link")
+                  if [ -n "${hit[$dep]:-}" ]; then hit[$p]=1; changed=1; break; fi
+                done
+              done
+            done
+          fi
+          packages=$(for p in "${all[@]}"; do if [ -n "${hit[$p]:-}" ]; then echo "$p"; fi; done | jq -R . | jq -cs .)
+          images=$(for t in indexer keeper; do if [ -n "${hit[services/$t]:-}" ]; then echo "$t"; fi; done | jq -R . | jq -cs .)
+          echo "packages=$packages" | tee -a "$GITHUB_OUTPUT"
+          echo "images=$images" | tee -a "$GITHUB_OUTPUT"
+          echo "web=$web" | tee -a "$GITHUB_OUTPUT"
+          { echo "### Affected packages"; echo "packages: $packages"; echo "images: $images"; echo "web: $web"; } >> "$GITHUB_STEP_SUMMARY"
+
+  check:
+    name: ${{ matrix.package }}
+    needs: changes
+    if: needs.changes.outputs.packages != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.changes.outputs.packages) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Refuse @avana/ dependencies that would come from the public registry
+        run: |
+          status=0
+          for manifest in package.json services/*/package.json packages/*/package.json; do
+            [ -f "$manifest" ] || continue
+            bad=$(jq -r '[(.dependencies // {}), (.devDependencies // {}), (.optionalDependencies // {}), (.peerDependencies // {})]
+              | add | to_entries[]
+              | select((.key | startswith("@avana/")) and ((.value | startswith("file:") or startswith("workspace:")) | not))
+              | "\(.key)@\(.value)"' "$manifest")
+            if [ -n "$bad" ]; then
+              echo "::error file=$manifest,title=unlinked @avana dependency::$bad would be fetched from the public npm registry; link it with file: or a workspace"
+              status=1
+            fi
+          done
+          unlinked=$(jq -r '.packages | to_entries[]
+            | select((.key | test("(^|/)node_modules/@avana/")) and (.value.link != true))
+            | .key' package-lock.json)
+          if [ -n "$unlinked" ]; then
+            echo "::error file=package-lock.json,title=unlinked @avana dependency::the lock file resolves $unlinked from a registry instead of linking the workspace package"
+            status=1
+          fi
+          exit $status
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund --ignore-scripts
+
+      - name: Codegen (Ponder virtual modules for the indexer)
+        working-directory: ${{ matrix.package }}
+        run: npm run codegen --if-present
+
+      - name: Typecheck
+        working-directory: ${{ matrix.package }}
+        run: npm run typecheck
+
+      - name: Generated address library is current (packages/protocol)
+        # src/addresses/generated.ts is written from contracts/deployments/verified/ by `npm run addresses -w packages/protocol`;
+        # a published manifest is committed together with the regenerated file.
+        if: matrix.package == 'packages/protocol'
+        working-directory: ${{ matrix.package }}
+        run: npm run check-addresses
+
+      - name: Test
+        working-directory: ${{ matrix.package }}
+        run: npm run test --if-present
+
+  image:
+    # services/Dockerfile: each long-running service's image builds from the lock file and starts its runtime as the
+    # node user. The base images are pinned by digest in those files.
+    name: image ${{ matrix.target }}
+    needs: changes
+    if: needs.changes.outputs.images != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.changes.outputs.images) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: docker build -f services/Dockerfile --target "${{ matrix.target }}" -t "avana/${{ matrix.target }}:ci" .
+
+      - name: Runtime starts as the node user
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          user=$(docker run --rm "avana/$TARGET:ci" id -un)
+          [ "$user" = node ] || { echo "::error::runs as $user, not node"; exit 1; }
+          if [ "$TARGET" = indexer ]; then
+            docker run --rm "avana/$TARGET:ci" npx --no-install ponder --version
+          else
+            docker run --rm "avana/$TARGET:ci" npx --no-install tsx --version
+            # With no configuration the service must refuse to start (non-zero exit), not crash on a missing module.
+            set +e
+            out=$(docker run --rm "avana/$TARGET:ci" 2>&1); code=$?
+            set -e
+            echo "$out" | tail -5
+            if [ "$code" -eq 0 ]; then echo "::error::started with no configuration"; exit 1; fi
+            if echo "$out" | grep -qE "ERR_MODULE_NOT_FOUND|Cannot find (module|package)"; then echo "::error::missing module in the image"; exit 1; fi
+          fi
+
+  web:
+    name: web
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: webapp
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Lock file applies the npm overrides
+        working-directory: .
+        run: node .github/scripts/check-npm-overrides.mjs
+
+      - name: Install dependencies
+        working-directory: .
+        run: npm ci --no-audit --no-fund --ignore-scripts
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  gate:
+    # Passes only when the changes job and every due package and image job passed; a job with nothing to check
+    # (an empty list) is skipped by design.
+    name: services-gate
+    if: always()
+    needs: [changes, check, image, web]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every job to pass
+        working-directory: .
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          PACKAGES: ${{ needs.changes.outputs.packages }}
+          IMAGES: ${{ needs.changes.outputs.images }}
+          WEB: ${{ needs.changes.outputs.web }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          bad=$(echo "$RESULTS" | jq -r '[to_entries[]
+            | select(.value.result != "success")
+            | select((.value.result == "skipped" and ((.key == "check" and env.PACKAGES == "[]") or (.key == "image" and env.IMAGES == "[]") or (.key == "web" and env.WEB != "true"))) | not)
+            | .key] | join(", ")')
+          if [ -n "$bad" ]; then echo "::error::not passed: $bad"; exit 1; fi

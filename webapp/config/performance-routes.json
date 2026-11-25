@@ -1,0 +1,38 @@
+{
+  "primaryRoutes": [
+    { "route": "/", "heroText": "Borrow", "heroRole": "tab", "marker": "Borrow" },
+    { "route": "/swap", "heroText": "Swap", "heroRole": "tab", "marker": "Swap | Avana" },
+    { "route": "/borrow", "heroText": "Borrow TVL", "marker": "Borrow | Avana" },
+    { "route": "/borrow/assets/usdc", "heroText": "USD Coin", "marker": "USD Coin" },
+    { "route": "/borrow/markets/uni-v3-bluechip-weth-usdc", "heroText": "Total supplied", "marker": "Total supplied" },
+    { "route": "/borrow/assets/uni-v3-bluechip%3Ausdc", "heroText": "Asset data", "marker": "Asset data" },
+    { "route": "/lend", "heroText": "Lend TVL", "marker": "Lend | Avana" },
+    { "route": "/lend/markets/usdc", "heroText": "Supply APY", "marker": "Supply APY" },
+    { "route": "/dashboard", "heroText": "Dashboard", "marker": "Dashboard" },
+    { "route": "/support-center", "heroText": "Support Center", "heroRole": "heading", "marker": "Support Center" }
+  ],
+  "actionRoutes": [
+    { "name": "borrow-select", "path": "/actions/borrow/borrow", "marker": "Borrow" },
+    {
+      "name": "borrow-configure",
+      "path": "/actions/borrow/borrow?asset=uni-v3-bluechip:usdc&amount=500",
+      "marker": "Borrow"
+    },
+    { "name": "repay-select", "path": "/actions/borrow/repay", "marker": "Repay" },
+    { "name": "repay-configure", "path": "/actions/borrow/repay?amount=500", "marker": "Repay" },
+    {
+      "name": "supply-configure",
+      "path": "/actions/borrow/supply?market=uni-v3-bluechip-weth-usdc&amount=1000",
+      "marker": "Pledge"
+    },
+    {
+      "name": "remove-configure",
+      "path": "/actions/borrow/remove?market=uni-v3-bluechip-weth-usdc",
+      "marker": "Remove"
+    },
+    { "name": "borrow-claim", "path": "/actions/borrow/claim?market=uni-v3-bluechip-weth-usdc", "marker": "Claim" },
+    { "name": "lend-deposit", "path": "/actions/lend/deposit?amount=10&market=usdc", "marker": "Deposit" },
+    { "name": "lend-withdraw-select", "path": "/actions/lend/withdraw", "marker": "Withdraw" },
+    { "name": "lend-withdraw-configure", "path": "/actions/lend/withdraw?market=gho&amount=1", "marker": "Withdraw" }
+  ]
+}

@@ -1,0 +1,67 @@
+"use client"
+
+import { useState } from "react"
+import dynamic from "next/dynamic"
+import type { HomeMode } from "@/app/lib/home-view-model"
+import { HomeWorkspaceCard } from "@/app/components/home/home-workspace-card"
+import { HomeSwapAction } from "@/app/components/home/home-swap-action"
+import { ActionSessionLoading } from "@/app/components/action-page/action-session-loading"
+import { HomeWorkspaceSkeleton } from "@/app/components/loading-states"
+import { RouteErrorFallback } from "@/app/components/route-error-fallback"
+import { AvanaSessionsProvider, useBorrowSessionContext } from "@/app/lib/avana-session/avana-sessions-provider"
+import { useMarketsLoadState } from "@/app/lib/avana-session/use-markets-load-state"
+
+// Swap is the initial mode. Fetch the other action forms only when selected,
+// keeping their configuration/picker graph off the initial workspace load.
+const BorrowActionPageClient = dynamic(
+  () => import("@/app/components/action-page/borrow-action-page-client").then((mod) => mod.BorrowActionPageClient),
+  { loading: ActionSessionLoading },
+)
+
+export function HomePageWorkspaceRuntime({
+  walletId,
+  initialMode = "swap",
+}: {
+  walletId?: string
+  initialMode?: HomeMode
+}) {
+  if (walletId) {
+    return (
+      <AvanaSessionsProvider walletId={walletId}>
+        <HomePageWorkspace initialMode={initialMode} />
+      </AvanaSessionsProvider>
+    )
+  }
+
+  return <HomePageWorkspace initialMode={initialMode} />
+}
+
+function HomePageWorkspace({ initialMode }: { initialMode: HomeMode }) {
+  const session = useBorrowSessionContext()
+  const [mode, setMode] = useState<HomeMode>(initialMode)
+  const [attempt, setAttempt] = useState(0)
+
+  // Gate on the full available-pool list (always populated) rather than the
+  // pledged pools — a freshly onboarded wallet with no positions still renders
+  // the card instead of hanging on the loading skeleton forever.
+  const load = useMarketsLoadState(session.availableCollateralPools.length > 0, attempt)
+  if (load === "failed") {
+    return <RouteErrorFallback onRetry={() => setAttempt((n) => n + 1)} />
+  }
+  if (load === "loading") {
+    return <HomeWorkspaceSkeleton />
+  }
+
+  return (
+    <main className="bg-background">
+      <h1 className="sr-only">Avana workspace</h1>
+      <HomeWorkspaceCard mode={mode} onModeChange={setMode}>
+        {mode === "borrow" ? <BorrowActionPageClient kind="borrow" embedded layout="home" closeHref="/" /> : null}
+        {mode === "swap" ? <HomeSwapAction /> : null}
+        {mode === "repay" ? <BorrowActionPageClient kind="repay" embedded layout="home" closeHref="/" /> : null}
+        {mode === "claim" ? <BorrowActionPageClient kind="claim" embedded layout="home" closeHref="/" /> : null}
+        {mode === "remove" ? <BorrowActionPageClient kind="remove" embedded layout="home" closeHref="/" /> : null}
+      </HomeWorkspaceCard>
+    </main>
+  )
+}

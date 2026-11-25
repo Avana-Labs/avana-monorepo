@@ -1,0 +1,46 @@
+{
+  "floor": 80,
+  "unreachable": {
+    "src/integrations/UniswapV4Integration.sol": [
+      {
+        "function": "_isEncumbered",
+        "branch": "a hook outside the allowlist reverts HookNotAllowed",
+        "reason": "The market's PoolKey is fixed at bindMarket, which already refuses any hook outside the allowlist, and the allowlist is empty and immutable (only address(0) passes), so the re-check at receivePosition (REQ-AMM-V4-001) can never fail for a bound market. It stays as the defence the spec requires if an allowlist is ever added.",
+        "tests": "TEST-331 test_TEST_331_bindRefusesHookedPools (the same check refusing at bindMarket)"
+      }
+    ],
+    "src/RiskModule.sol": [
+      {
+        "function": "_coverage",
+        "branch": "no First-Loss Reserve recorded for a Hub asset that has coverage Spokes (funded = 0)",
+        "reason": "_coverage returns early when the Hub asset has no coverage Spoke. A Spoke is added to _coverageSpokes only by setDebtReserve, which refuses a zero firstLossReserve and records it in _firstLossReserveOf in the same call, and nothing ever clears that record (removeDebtReserve removes the Spoke and the reserve, not the record). So once a Spoke is listed the record is non-zero, and the zero side of the ternary cannot run. It stays as the defence that keeps coverage() reading 0 rather than calling address(0) if a later version clears the record.",
+        "tests": "test_coverage_andCheckBorrow (a recorded reserve read as funded), test_coverage_zeroRatioOrNoSpokes (the early return with no Spoke), test_setDebtReserve_reverts (a zero firstLossReserve refused)"
+      }
+    ]
+  },
+  "files": {
+    "src/AaveAdapter.sol": 100,
+    "src/libraries/ClTickMath.sol": 100,
+    "src/integrations/NfpmLPVault.sol": 100,
+    "src/integrations/SlipstreamIntegration.sol": 100,
+    "src/integrations/UniswapV2Integration.sol": 100,
+    "src/integrations/UniswapV2Positions.sol": 100,
+    "src/integrations/UniswapV3Integration.sol": 100,
+    "src/integrations/UniswapV4Integration.sol": 100,
+    "src/integrations/UniswapV4State.sol": 100,
+    "src/LiquidationModule.sol": 100,
+    "src/libraries/LiquidationMath.sol": 100,
+    "src/LPOracle.sol": 100,
+    "src/libraries/AaveReservePrice.sol": 100,
+    "src/libraries/LPPriceMath.sol": 100,
+    "src/FlashloanRepay.sol": 100,
+    "src/libraries/SwapCalls.sol": 100,
+    "src/FirstLossReserve.sol": 100,
+    "src/RiskModule.sol": 100,
+    "src/libraries/AaveConfigLogic.sol": 100,
+    "src/libraries/BandMath.sol": 100,
+    "src/VaultToken.sol": 100,
+    "src/LPVault.sol": 100,
+    "src/libraries/FloorCreditMath.sol": 100
+  }
+}

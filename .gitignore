@@ -1,0 +1,88 @@
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Node
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/out-aave/
+contracts/cache-aave/
+contracts/out-univ3/
+contracts/cache-univ3/
+contracts/out-lite/
+contracts/cache-lite/
+contracts/out-halmos/
+contracts/cache-halmos/
+contracts/dependencies/
+contracts/deployments-local/
+contracts/out-univ3-periphery/
+contracts/cache-univ3-periphery/
+contracts/out-aerodrome/
+contracts/cache-aerodrome/
+contracts/out-aave-v3/
+contracts/cache-aave-v3/
+contracts/out-chainlink-ocr2/
+contracts/cache-chainlink-ocr2/
+contracts/out-chainlink-proxy/
+contracts/cache-chainlink-proxy/
+contracts/out-slipstream-v1/
+contracts/cache-slipstream-v1/
+contracts/out-slipstream-main/
+contracts/cache-slipstream-main/
+contracts/out-univ4/
+contracts/cache-univ4/
+contracts/out-permit2/
+contracts/cache-permit2/
+contracts/broadcast/*/31337/
+contracts/broadcast/*/31338/
+contracts/broadcast/*/11155111/
+contracts/broadcast/*/84532/
+
+# Security tooling (contracts/script/install-security-tools.sh, security-fast.sh, security-slow.sh)
+contracts/out-security/
+contracts/tools/bin/
+contracts/tools/jdk-21/
+contracts/tools/semgrep-smart-contracts/
+contracts/tools/4naly3er/
+contracts/.venv-*/
+contracts/crytic-export/
+
+# Certora local run artifacts
+contracts/.certora_internal/
+contracts/.certora_sources/
+contracts/emv-*/
+
+# Ponder
+.ponder/
+generated/
+
+# Python
+.venv/
+__pycache__/
+
+# Spec verification tooling
+.hypothesis/
+
+# EVM decompiler binary (downloaded, not committed)
+contracts/tools/heimdall/bin/
+
+# Only packages/protocol (the ABIs the services import), packages/export (the export client) and packages/rpc (the RPC
+# manager) are tracked under packages/.
+packages/*
+!packages/protocol/
+!packages/export/
+!packages/rpc/
+
+# Python test cache
+.pytest_cache/
+
+# Empty placeholder folders (tools create them when they first write results)
+**/.gitkeep
