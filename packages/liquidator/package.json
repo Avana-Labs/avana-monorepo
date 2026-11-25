@@ -1,0 +1,31 @@
+{
+  "name": "@avana/liquidator",
+  "version": "0.0.0",
+  "private": true,
+  "license": "BUSL-1.1",
+  "description": "Avana's liquidation bot (LiquidationBot): finds accounts below health factor 1 and liquidates them in kind through the LiquidationModule, directly or through the FlashLiquidator's Aave V3 flash loan. Signs only from an encrypted Foundry keystore. The bot runner (services/keeper) hosts it; bot/src/main.ts runs it alone.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "start": "tsx bot/src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:contracts": "forge test -j 2"
+  },
+  "dependencies": {
+    "@avana/protocol": "file:../protocol",
+    "@avana/services-common": "file:../../services/common",
+    "viem": "2.57.11"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0"
+  },
+  "exports": {
+    "./bot": "./bot/src/index.ts"
+  }
+}

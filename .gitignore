@@ -74,12 +74,13 @@ __pycache__/
 # EVM decompiler binary (downloaded, not committed)
 contracts/tools/heimdall/bin/
 
-# Only packages/protocol (the ABIs the services import), packages/export (the export client) and packages/rpc (the RPC
-# manager) are tracked under packages/.
+# Only packages/protocol (the ABIs the services import), packages/export (the export client), packages/rpc (the RPC
+# manager) and packages/liquidator (the liquidation bot, including the FlashLiquidator ABI) are tracked under packages/.
 packages/*
 !packages/protocol/
 !packages/export/
 !packages/rpc/
+!packages/liquidator/
 
 # Python test cache
 .pytest_cache/

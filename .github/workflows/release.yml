@@ -129,6 +129,12 @@ jobs:
         run: |
           if [ -f tag/packages/protocol/scripts/generate-abis.mjs ]; then
             (cd tag/contracts && FOUNDRY_PROFILE=univ3 forge build)
+            # This tag predates packages/liquidator being tracked. The FlashLiquidator ABI is built from this
+            # commit's sources against the tag's contracts.
+            if [ ! -f tag/packages/liquidator/foundry.toml ]; then
+              mkdir -p tag/packages/liquidator
+              cp -a packages/liquidator/. tag/packages/liquidator/
+            fi
             (cd tag/packages/liquidator && forge build)
             node tag/packages/protocol/scripts/generate-abis.mjs --check
           else
